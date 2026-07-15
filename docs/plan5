@@ -1,0 +1,112 @@
+# Kế hoạch Triển khai Giai đoạn 5 - Website Bệnh nhân (Next.js / Tailwind CSS)
+
+Xây dựng giao diện web (Next.js) dành cho bệnh nhân để tìm kiếm bác sĩ, cơ sở y tế, thực hiện quy trình đặt lịch khám, thanh toán VNPay, theo dõi lịch sử khám bệnh và lịch sử trạng thái lịch hẹn.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Kết nối API & Quản lý Token**:
+> - Frontend kết nối tới NestJS backend chạy tại `http://localhost:3000/api/v1`.
+> - Tích hợp Axios Interceptors tự động đính kèm JWT Token vào header.
+> - Xử lý tự động Refresh Token khi Access Token hết hạn (401) để mang lại trải nghiệm liền mạch cho bệnh nhân.
+
+> [!TIP]
+> **Thanh toán & QR Code**:
+> - Tích hợp chuyển hướng tới VNPay SandBox để thực hiện thanh toán trực tuyến.
+> - Sau khi thanh toán thành công, trang Return sẽ gọi API backend xác nhận trạng thái `PAID`.
+> - Sinh mã QR Code động tại trang chi tiết lịch khám chứa thông tin booking để bệnh nhân check-in nhanh khi đến khám tại cơ sở y tế.
+
+## Proposed Changes
+
+### 1. Project Initialization & Styling
+- Cài đặt đầy đủ các dependencies cần thiết (React Query, Zustand, Axios, Lucide React, Sonner, Radix, QRCode).
+- Cấu hình [tailwind.config.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/tailwind.config.ts) với hệ màu chủ đạo HSL xanh lá và xanh than chuyên nghiệp.
+- Cập nhật [globals.css](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/globals.css) định nghĩa css variables cho theme và CSS utilities.
+
+---
+
+### 2. Core API Integration & Stores
+#### [NEW] API Client
+- `src/lib/api-client.ts`: Axios client quản lý đính kèm Authorization header và xử lý logic refresh token khi gặp mã lỗi 401.
+
+#### [NEW] Services
+Tạo các services kết nối REST endpoints của NestJS backend:
+- `src/services/auth.service.ts`: Đăng nhập, đăng ký, refresh token, lấy thông tin cá nhân.
+- `src/services/doctor.service.ts`: Tìm kiếm bác sĩ, lấy danh sách, lấy slot khám trống.
+- `src/services/hospital.service.ts`: Lấy danh sách bệnh viện, chi nhánh.
+- `src/services/specialty.service.ts`: Lấy danh sách chuyên khoa.
+- `src/services/appointment.service.ts`: Tạo lịch hẹn, đổi lịch, hủy lịch, lấy lịch sử.
+- `src/services/profile.service.ts`: Quản lý hồ sơ bệnh nhân (CRUD).
+- `src/services/payment.service.ts`: Tạo URL thanh toán VNPay, lấy trạng thái thanh toán.
+- `src/services/notification.service.ts`: Lấy thông báo, đánh dấu đã đọc.
+
+#### [NEW] Zustand Stores & Hooks
+- `src/stores/auth.store.ts` & `src/hooks/useAuth.ts`: Quản lý phiên đăng nhập và thông tin người dùng.
+- `src/stores/booking.store.ts`: Lưu trữ trạng thái quy trình đặt lịch qua từng bước (Step 1 -> 5).
+
+---
+
+### 3. Layouts & Common UI Components
+#### [NEW] Layouts
+- `src/app/(public)/layout.tsx`: Layout trang công cộng (Header, Footer, Main).
+- `src/app/(dashboard)/layout.tsx`: Layout trang Dashboard của người dùng (Sidebar, Header, Main, bảo vệ Route bằng JWT).
+
+#### [NEW] Common Components
+- `src/components/layout/Header.tsx`: Thanh điều hướng đầu trang (Logo, Thanh tìm kiếm, Avatar Menu, Thông báo).
+- `src/components/layout/Footer.tsx`: Chân trang thông tin liên hệ.
+- `src/components/layout/Sidebar.tsx`: Sidebar trang Dashboard quản lý tài khoản.
+- `src/app/providers.tsx`: Bọc QueryClientProvider phục vụ caching và gọi API qua React Query.
+
+#### [NEW] UI Primitives (Radix / Tailwind CSS)
+Tạo thủ công các UI Components dùng chung để tránh xung đột interactive CLI:
+- `src/components/ui/button.tsx`, `card.tsx`, `input.tsx`, `label.tsx`, `badge.tsx`, `dialog.tsx`, `dropdown-menu.tsx`, `avatar.tsx`, `tabs.tsx`.
+
+---
+
+### 4. Pages & Booking Flow Components
+#### [NEW] Auth Pages
+- `src/app/(auth)/dang-nhap/page.tsx`: Giao diện đăng nhập.
+- `src/app/(auth)/dang-ky/page.tsx`: Giao diện đăng ký tài khoản mới.
+
+#### [NEW] Public Pages
+- `src/app/(public)/page.tsx`: Trang chủ giới thiệu chuyên khoa nổi bật, bác sĩ tiêu biểu, bệnh viện uy tín kèm thanh tìm kiếm chính.
+- `src/app/(public)/bac-si/page.tsx`: Trang tìm kiếm bác sĩ có bộ lọc theo Chuyên khoa, Bệnh viện và Phí khám.
+- `src/app/(public)/bac-si/[id]/page.tsx`: Chi tiết bác sĩ (giới thiệu, kinh nghiệm, các nơi làm việc và nút đặt khám).
+
+#### [NEW] Booking Flow Components
+- `src/app/(public)/dat-lich/page.tsx`: Trang đặt lịch điều phối 5 bước.
+- `src/components/features/booking/StepSelectDoctor.tsx`: Chọn bác sĩ.
+- `src/components/features/booking/StepSelectTime.tsx`: Chọn khung giờ khám trống của bác sĩ.
+- `src/components/features/booking/StepSelectProfile.tsx`: Chọn hoặc tạo hồ sơ bệnh nhân đi khám.
+- `src/components/features/booking/StepConfirm.tsx`: Xác nhận thông tin khám.
+- `src/components/features/booking/StepPayment.tsx`: Thanh toán trực tuyến VNPay.
+
+#### [NEW] Dashboard Pages
+- `src/app/(dashboard)/ho-so/page.tsx`: Quản lý danh sách hồ sơ bệnh nhân (tạo mới, sửa, xóa, đặt mặc định).
+- `src/app/(dashboard)/lich-kham/page.tsx`: Danh sách lịch khám sắp tới và lịch sử khám bệnh.
+- `src/app/(dashboard)/lich-kham/[id]/page.tsx`: Chi tiết lịch hẹn (thông tin bác sĩ, phòng khám, trạng thái timeline Việt hóa, mã QR Code check-in, nút hủy lịch).
+- `src/app/(dashboard)/thong-bao/page.tsx`: Trung tâm thông báo.
+
+#### [NEW] Payment Return Pages
+- `src/app/(public)/thanh-toan/page.tsx`: Trang thanh toán qua VNPay.
+- `src/app/(public)/thanh-toan/return/page.tsx`: Tiếp nhận kết quả thanh toán từ VNPay, cập nhật CSDL và hiển thị thông báo thành công/thất bại.
+
+---
+
+### 5. Word Report
+- Sinh file Word `Bao_cao_Giai_doan_5.docx` mô tả chi tiết giao diện, mã nguồn và cấu trúc của Website.
+
+## Verification Plan
+
+### Automated Tests
+- Build thử ứng dụng Next.js để kiểm tra tính toàn vẹn kiểu dữ liệu (TypeScript compiler check):
+  ```bash
+  npm run build
+  ```
+
+### Manual Verification
+- Chạy môi trường dev và truy cập trực quan:
+  ```bash
+  npm run dev
+  ```
+- Kiểm tra luồng Đăng nhập -> Tìm bác sĩ -> Chọn khung giờ -> Đặt lịch -> Thanh toán.

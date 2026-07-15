@@ -1,0 +1,63 @@
+# Kết quả Triển khai Giai đoạn 2 - NovaCare Backend (Docker)
+
+Tôi đã hoàn thành triển khai Giai đoạn 2 cho hệ thống NovaCare chạy hoàn toàn trên môi trường Docker.
+
+## 🛠 Những gì đã làm
+
+1. **Khởi tạo và cấu hình NestJS Project**:
+   - Sử dụng NestJS CLI khởi tạo tại thư mục `nova-care-backend`.
+   - Cấu hình TypeScript Path Aliases (`@/*`, `@common/*`, `@config/*`, `@modules/*`, `@database/*`).
+   - Cấu hình ESLint & Prettier chuẩn hóa code.
+
+2. **Database & ORM với Prisma (Phiên bản 6.2.1)**:
+   - Viết database schema (`prisma/schema.prisma`) đầy đủ các thực thể (Users, Refresh Tokens, Patient Profiles, Hospitals, Specialties, v.v.).
+   - Tạo tập tin seed (`prisma/seed.ts`) tự động thêm dữ liệu mẫu (1 tài khoản người dùng, 2 hồ sơ bệnh nhân, 2 bệnh viện, 8 chuyên khoa).
+   - Chạy migration đồng bộ cơ sở dữ liệu.
+
+3. **Modules Backend Core**:
+   - **Users Module**: Quản lý thông tin cá nhân, cập nhật hồ sơ, xoá tài khoản (soft delete).
+   - **Auth Module**: Đăng ký, đăng nhập với mã hóa Argon2id, xác thực JWT Access & Refresh Token với cơ chế Token Rotation (xoay vòng token) để tăng bảo mật.
+   - **Patient Profiles Module**: CRUD đầy đủ hồ sơ bệnh nhân đi khám (CCCD, BHYT, tiền sử bệnh, dị ứng, liên hệ khẩn cấp), đặt làm mặc định.
+
+4. **Lớp hỗ trợ chung (Common Layer)**:
+   - `HttpExceptionFilter`: Xử lý lỗi toàn cục và trả về thông báo Việt hóa chuẩn định dạng.
+   - `LoggingInterceptor`: Log lại thời gian xử lý của mỗi request.
+   - `JwtAuthGuard`: Chặn các route chưa đăng nhập (ngoại trừ các route đánh dấu bằng `@Public()`).
+
+5. **Docker hóa Toàn bộ Hệ thống**:
+   - `Dockerfile`: Thiết lập multi-stage build (tách biệt môi trường development và production).
+   - `docker-compose.yml`: Gom PostgreSQL 16 và NestJS API chạy chung một mạng nội bộ (`novacare_network`).
+   - Thiết lập healthcheck cho database để bảo đảm NestJS chỉ khởi động khi PostgreSQL thực sự sẵn sàng.
+
+6. **Tài liệu API tự động (Swagger)**:
+   - Tích hợp tại đường dẫn `/api-docs` với giao diện màu xanh lá chủ đạo (`#66FF33`) của NovaCare, hỗ trợ Test API trực tiếp trên trình duyệt.
+
+## 🧪 Kết quả Kiểm thử
+- **Unit Tests**: Tất cả 6 test suites của `UsersService` đều vượt qua (`PASS`).
+- **Khởi chạy Docker**: Toàn bộ hệ thống chạy ổn định và kết nối DB thành công.
+
+---
+
+## 🚀 Hướng dẫn Chạy Nhanh
+
+1. Di chuyển vào thư mục dự án:
+   ```bash
+   cd d:\HTTT18B\KLTN\NovaCare\nova-care-backend
+   ```
+
+2. Khởi động tất cả các service trên Docker:
+   ```bash
+   npm run docker:up
+   ```
+
+3. Xem logs ứng dụng:
+   ```bash
+   npm run docker:logs
+   ```
+
+4. Truy cập Swagger Docs để kiểm thử các API:
+   - Địa chỉ: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+
+5. Tài khoản thử nghiệm (đã được tạo sẵn sau khi seed):
+   - **Email**: `user@novacare.vn`
+   - **Mật khẩu**: `Password123!`

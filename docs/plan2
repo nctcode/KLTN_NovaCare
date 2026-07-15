@@ -1,0 +1,67 @@
+# Kế hoạch Triển khai Giai đoạn 2 - NovaCare Backend
+
+## Tổng quan
+
+Xây dựng nền tảng Backend NestJS cho hệ thống đặt lịch khám trực tuyến NovaCare, bao gồm:
+- Xác thực (Auth) với JWT + Refresh Token
+- Quản lý người dùng (Users)
+- Hồ sơ bệnh nhân (Patient Profiles)
+- Prisma ORM + PostgreSQL
+- Swagger API docs
+- Security (Helmet, Rate Limiting, CORS)
+
+## Thư mục dự án
+
+Sẽ tạo tại: `d:\HTTT18B\KLTN\NovaCare\nova-care-backend\`
+
+## Các bước thực hiện
+
+### Bước 1: Khởi tạo dự án NestJS
+- Tạo thư mục `nova-care-backend`
+- Cài đặt NestJS CLI và khởi tạo project
+- Cài đặt tất cả dependencies
+
+### Bước 2: Cấu hình môi trường
+- `tsconfig.json` (với path aliases)
+- `.env.example` và `.env.development`
+- `.eslintrc.js`, `.prettierrc`
+
+### Bước 3: Prisma + Database Schema
+- `prisma/schema.prisma` - toàn bộ schema từ tài liệu
+- `prisma/seed.ts` - dữ liệu mẫu
+
+### Bước 4: Common Layer
+- Guards (JwtAuthGuard)
+- Decorators (CurrentUser, Public)
+- Filters (HttpExceptionFilter)
+- Interceptors (LoggingInterceptor)
+
+### Bước 5: Config Module
+- `src/config/configuration.ts`
+- `src/config/config.module.ts`
+
+### Bước 6: Database Module (Prisma)
+- `src/database/prisma.service.ts`
+- `src/database/prisma.module.ts`
+
+### Bước 7: Module Users
+- DTOs, Service, Controller, Module
+
+### Bước 8: Module Auth
+- DTOs, JWT Strategy, Service, Controller, Module
+
+### Bước 9: Module Patient Profiles
+- DTOs, Service, Controller, Module
+
+### Bước 10: App Module + main.ts
+- Swagger, Helmet, CORS, Validation Pipe
+
+### Bước 11: Unit Tests
+
+## Công nghệ
+- **Framework**: NestJS + TypeScript
+- **ORM**: Prisma
+- **Database**: PostgreSQL
+- **Auth**: JWT (access + refresh tokens) + Argon2
+- **Docs**: Swagger/OpenAPI
+- **Security**: Helmet, Throttler, class-validator

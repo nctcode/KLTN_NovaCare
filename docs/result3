@@ -1,0 +1,57 @@
+# Kết quả Triển khai Giai đoạn 3 - Danh mục Đặt khám
+
+Tôi đã hoàn thành triển khai toàn bộ Giai đoạn 3 (Hệ thống Danh mục Đặt khám) và xuất file báo cáo Word để bàn giao cho bạn.
+
+## 🛠 Những gì đã làm trong Giai đoạn 3
+
+1. **Cập nhật database schema (Prisma v6)**:
+   - Đồng bộ các thay đổi cho `Hospital`, `Doctor`, `MedicalService`, `DoctorSchedule`, và `Appointment`.
+   - Chạy `npx prisma db push --accept-data-loss` để đồng bộ cơ sở dữ liệu trên Docker PostgreSQL.
+
+2. **Triển khai 8 Modules NestJS mới**:
+   - `Specialties`: Quản lý chuyên khoa (GET, POST, PUT, DELETE).
+   - `Hospitals`: Quản lý bệnh viện, hỗ trợ tìm kiếm, lọc theo chuyên khoa.
+   - `HospitalBranches`: Quản lý chi nhánh bệnh viện.
+   - `Doctors`: Quản lý thông tin bác sĩ, lấy các khung giờ trống của bác sĩ theo ngày và nơi làm việc.
+   - `DoctorWorkplaces`: Quản lý liên kết bác sĩ - bệnh viện - chuyên khoa kèm phí khám.
+   - `MedicalServices`: Quản lý dịch vụ khám của bệnh viện.
+   - `DoctorSchedules`: Lịch làm việc cố định trong tuần của bác sĩ (bao gồm cả giờ nghỉ trưa).
+   - `AppointmentSlots`: Khung giờ khám (hỗ trợ tự động tạo khung giờ từ lịch làm việc của bác sĩ).
+
+3. **Mở rộng Seed dữ liệu mẫu**:
+   - Thêm 12 chuyên khoa, 6 bác sĩ làm việc tại các bệnh viện khác nhau.
+   - Tự động sinh **400 khung giờ khám trống (slots)** trong vòng 30 ngày cho mỗi bác sĩ dựa trên lịch làm việc cố định của họ.
+   - Tổng cộng đã tạo thành công **2400 slots** trên database.
+
+4. **Kiểm thử tự động**:
+   - Viết Unit Tests cho `HospitalsService`.
+   - Viết Integration Tests cho các REST API của `HospitalsController`.
+   - Toàn bộ **14 tests** (bao gồm cả các test từ Giai đoạn 2) đều **PASS** thành công.
+
+5. **Báo cáo bàn giao Word**:
+   - Tạo file Word [Bao_cao_Giai_doan_3.docx](file:///d:/HTTT18B/KLTN/NovaCare/Bao_cao_Giai_doan_3.docx) mô tả chi tiết tất cả các file đã tạo, thay đổi và chức năng từng module.
+
+---
+
+## 🚀 Hướng dẫn Chạy Nhanh & Kiểm thử
+
+1. Đứng tại thư mục dự án:
+   ```bash
+   cd d:\HTTT18B\KLTN\NovaCare\nova-care-backend
+   ```
+
+2. Reset và Seed dữ liệu mới:
+   ```bash
+   npm run db:seed
+   ```
+
+3. Khởi chạy Docker:
+   ```bash
+   npm run docker:up
+   ```
+
+4. Truy cập tài liệu Swagger để test trực quan:
+   - URL: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+
+5. File báo cáo Word chi tiết:
+   - Đường dẫn: [Bao_cao_Giai_doan_3.docx](file:///d:/HTTT18B/KLTN/NovaCare/Bao_cao_Giai_doan_3.docx)

@@ -1,0 +1,34 @@
+# Báo cáo kết quả Triển khai Giai đoạn 5 - Website Bệnh nhân (Next.js / Tailwind CSS)
+
+Đã hoàn thành xây dựng toàn bộ ứng dụng Website Frontend bằng Next.js (TypeScript, App Router) và Tailwind CSS cho người bệnh đặt lịch khám y tế.
+
+## Các nội dung đã thực hiện
+
+### 1. Cấu hình Dự án & Thiết kế giao diện (Styling)
+- Cấu hình theme Tailwind v4 động thông qua [globals.css](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/globals.css) sử dụng màu sắc cao cấp: màu Primary xanh lá (`#66FF33`) làm điểm nhấn nhẹ và màu Secondary xanh than sẫm (`#1A2B3C`) cho text và nền chính.
+- Tạo các UI Components Primitives như [button.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/components/ui/button.tsx), [card.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/components/ui/card.tsx), [dialog.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/components/ui/dialog.tsx), [select.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/components/ui/select.tsx), [slider.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/components/ui/slider.tsx), v.v.
+
+### 2. Tích hợp API Backend & Quản lý State
+- Triển khai Axios API Client trong [api-client.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/lib/api-client.ts) hỗ trợ đính kèm Authorization header tự động và cơ chế Refresh Token khi Access Token hết hạn (bắt mã lỗi 401 từ NestJS Backend).
+- Định nghĩa các Zustand stores quản lý phiên đăng nhập ([auth.store.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/stores/auth.store.ts)) và dữ liệu quy trình đặt lịch khám ([booking.store.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/stores/booking.store.ts)).
+- Viết 10 API Services kết nối đầy đủ các REST endpoints của Backend (auth, home, doctor, hospital, specialty, profile, appointment, payment, notification).
+
+### 3. Triển khai các Trang chức năng
+- **Đăng nhập & Đăng ký**: [dang-nhap/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(auth)/dang-nhap/page.tsx) & [dang-ky/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(auth)/dang-ky/page.tsx).
+- **Trang chủ**: [page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(public)/page.tsx) với banner giới thiệu, thanh tìm kiếm nhanh, hiển thị danh mục chuyên khoa, bác sĩ và bệnh viện nổi bật.
+- **Tìm kiếm & Bộ lọc bác sĩ**: [bac-si/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(public)/bac-si/page.tsx) lọc theo chuyên khoa, bệnh viện, thanh trượt khoảng giá khám. Được bọc trong `<Suspense>` để Next.js static prerender hoạt động ổn định.
+- **Đặt lịch khám 5 bước**: [dat-lich/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(public)/dat-lich/page.tsx) tương tác qua 5 bước chọn bác sĩ, chọn cơ sở y tế + ngày khám + khung giờ khám trống (lấy trực tiếp từ DB), nhập lý do khám, kiểm tra thông tin và đặt chỗ giữ lịch (chống trùng lặp bằng idempotencyKey).
+- **Trang Cá nhân (Dashboard)**:
+  - Quản lý hồ sơ bệnh nhân (CRUD): [ho-so/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(dashboard)/ho-so/page.tsx).
+  - Quản lý lịch khám (Sắp tới & Lịch sử): [lich-kham/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(dashboard)/lich-kham/page.tsx).
+  - Chi tiết lịch khám: [lich-kham/[id]/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(dashboard)/lich-kham/[id]/page.tsx) tích hợp QR Code động chứa thông tin đặt lịch để check-in nhanh, hiển thị timeline trạng thái Việt hóa, và Dialog hủy lịch khám.
+  - Trung tâm thông báo & Quản lý tài khoản: [thong-bao/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(dashboard)/thong-bao/page.tsx) & [tai-khoan/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(dashboard)/tai-khoan/page.tsx).
+- **Thanh toán**: [thanh-toan/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(public)/thanh-toan/page.tsx) kết nối cổng VNPay và trang Return [thanh-toan/return/page.tsx](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-web/src/app/(public)/thanh-toan/return/page.tsx) tiếp nhận và xác thực trạng thái `PAID`.
+
+---
+
+## Kết quả kiểm định & Biên dịch
+
+- **TypeScript compiler check**: Hoàn thành không phát sinh lỗi kiểu dữ liệu.
+- **Production Build (Next.js Turbopack compiler)**: Đã chạy `npm run build` thành công, biên dịch thành công toàn bộ 14 routes sang dạng Static & Dynamic pages mà không gặp bất kỳ lỗi prerender nào.
+- **Báo cáo Word**: Đã sinh thành công file báo cáo [Bao_cao_Giai_doan_5.docx](file:///d:/HTTT18B/KLTN/NovaCare/Bao_cao_Giai_doan_5.docx) chứa toàn bộ danh sách các file tạo mới và nghiệp vụ chi tiết của từng module.

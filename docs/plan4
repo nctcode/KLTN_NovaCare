@@ -1,0 +1,87 @@
+# Kế hoạch Triển khai Giai đoạn 4 - Nghiệp vụ Đặt lịch khám (NovaCare)
+
+Triển khai nghiệp vụ cốt lõi: Đặt lịch khám, chống đặt trùng, đổi/hủy lịch và theo dõi lịch sử trạng thái lịch hẹn.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Cơ chế chống đặt trùng (Concurrency & Race Conditions)**:
+> Để giải quyết bài toán đặt trùng khung giờ khi nhiều bệnh nhân cùng đặt một slot khám cuối cùng, chúng tôi áp dụng:
+> 1. Khóa dòng (Row Locking) bằng `SELECT FOR UPDATE` thông qua `$queryRaw` trong database transaction.
+> 2. Idempotency Key gửi từ Client để tránh gửi lặp yêu cầu.
+> 3. Cập nhật trường `version` trên `AppointmentSlot` phục vụ cơ chế Optimistic Locking (nếu cần ở các luồng khác).
+
+> [!NOTE]
+> **Hết hạn giữ chỗ (Reservation Expiration)**:
+> Hệ thống giữ chỗ trong 15 phút. Nếu không thực hiện thanh toán, lịch hẹn sẽ chuyển sang trạng thái `EXPIRED` và giải phóng slot thông qua phương thức `expirePendingAppointments`. Phương thức này có thể kích hoạt bằng cron-job/background task.
+
+## Proposed Changes
+
+### 1. Database & ORM
+#### [MODIFY] [schema.prisma](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/prisma/schema.prisma)
+Cập nhật các trường mới phục vụ Giai đoạn 4:
+- `Appointment`: Thêm `idempotencyKey String? @unique` và `expiresAt DateTime?`.
+- `AppointmentSlot`: Thêm `version Int @default(0)` để quản lý cập nhật đồng thời.
+
+---
+
+### 2. NestJS Backend (Appointments Module)
+
+Chúng tôi sẽ tạo mới module `appointments` chứa tất cả các logic nghiệp vụ đặt lịch:
+
+#### [NEW] DTOs
+- `src/modules/appointments/dto/create-appointment.dto.ts`
+- `src/modules/appointments/dto/update-appointment.dto.ts`
+- `src/modules/appointments/dto/cancel-appointment.dto.ts`
+
+#### [NEW] Services
+- `src/modules/appointments/appointments.service.ts`:
+  - `create`: Đặt lịch khám sử dụng transaction, khóa dòng slot, tính tổng phí và sinh booking code `NOVA-YYYYMMDD-XXXX`.
+  - `confirm`: Xác nhận lịch khám sau khi thanh toán.
+  - `findByUser`, `getUpcoming`, `getHistory`, `findOne`: Tìm kiếm và quản lý lịch khám cá nhân.
+  - `cancel`: Hủy lịch khám (giảm số lượng đã đặt, yêu cầu trước giờ khám tối thiểu 2 tiếng).
+  - `reschedule`: Đổi lịch khám sang khung giờ mới (hoàn trả slot cũ, giữ chỗ slot mới).
+  - `expirePendingAppointments`: Quét và hủy các lịch hẹn quá hạn 15 phút chưa thanh toán.
+  - `complete`: Đánh dấu hoàn thành lịch khám.
+- `src/modules/appointments/appointment-status-history.service.ts`: Quản lý timeline trạng thái lịch khám Việt hóa kèm mã màu.
+
+#### [NEW] Controller
+- `src/modules/appointments/appointments.controller.ts`: REST endpoints cho đặt lịch (`POST`), đổi lịch (`PATCH reschedule`), hủy lịch (`PATCH cancel`), hoàn thành lịch (`PATCH complete`) và tra cứu danh sách.
+
+#### [NEW] Module
+- `src/modules/appointments/appointments.module.ts`
+
+#### [MODIFY] App Module
+Cập nhật [app.module.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/app.module.ts) để đăng ký `AppointmentsModule`.
+
+---
+
+### 3. Kiểm thử & Bàn giao
+#### [NEW] [appointments.service.spec.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/test/unit/appointments.service.spec.ts)
+Unit test cho AppointmentsService (kiểm tra tạo lịch thành công, chống đặt trùng, hủy lịch phân quyền).
+
+#### [NEW] [appointments.controller.spec.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/test/integration/appointments.controller.spec.ts)
+Integration test cho API đặt lịch khám và tra cứu lịch cá nhân.
+
+#### Báo cáo bàn giao Word
+Tự động sinh tài liệu Word `Bao_cao_Giai_doan_4.docx` bàn giao chi tiết các tập tin đã thêm/sửa bằng python script.
+
+## Verification Plan
+
+### Automated Tests
+- Chạy toàn bộ test suites:
+  ```bash
+  npm run test
+  ```
+- Build thử ứng dụng:
+  ```bash
+  npm run build
+  ```
+
+### Manual Verification
+- Restart các container Docker và xem log khởi động NestJS:
+  ```bash
+  npm run docker:restart
+  npm run docker:logs
+  ```
+- Kiểm thử tích hợp các endpoint đặt lịch trên tài liệu Swagger: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)

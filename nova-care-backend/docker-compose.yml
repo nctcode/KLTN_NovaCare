@@ -1,0 +1,84 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL Database ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: novacare_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nova_care
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d nova_care']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - novacare_network
+
+  # ── NestJS Backend API ───────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: novacare_api
+    restart: unless-stopped
+    env_file:
+      - .env.development
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/nova_care?schema=public
+      NODE_ENV: development
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - novacare_network
+    command: npm run start:dev
+
+  # ── Prisma Studio (tuỳ chọn) ─────────────────────────────────────────
+  prisma-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: novacare_prisma_studio
+    restart: unless-stopped
+    env_file:
+      - .env.development
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/nova_care?schema=public
+    ports:
+      - '5555:5555'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - novacare_network
+    command: npx prisma studio --port 5555 --browser none
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    name: novacare_postgres_data
+
+networks:
+  novacare_network:
+    name: novacare_network
+    driver: bridge

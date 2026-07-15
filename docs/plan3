@@ -1,0 +1,132 @@
+# Kế hoạch Triển khai Giai đoạn 3 - Danh mục Đặt khám (NovaCare)
+
+Triển khai toàn bộ các module danh mục phục vụ cho nghiệp vụ đặt lịch khám ở giai đoạn sau theo tài liệu `Giai_doan_3.docx`.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Database Relationship Rules in Prisma**:
+> Trong tài liệu `Giai_doan_3.docx`, thực thể `User` có quan hệ `appointments Appointment[]`, nhưng thực thể `Appointment` không liệt kê trường `userId` hay `user`. Để schema Prisma hợp lệ và không bị lỗi biên dịch, chúng tôi sẽ giữ trường `userId` và quan hệ `user User` trong bảng `Appointment`.
+
+> [!NOTE]
+> **Tạo file Word bàn giao**:
+> Sau khi triển khai xong tất cả các module, chúng tôi sẽ viết một script python để tự động sinh file Word (`Bao_cao_Giai_doan_3.docx` hoặc tương tự) mô tả chi tiết các file đã tạo, các file thay đổi và thông tin chi tiết từng module để bàn giao cho bạn.
+
+## Proposed Changes
+
+### 1. Database & ORM
+#### [MODIFY] [schema.prisma](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/prisma/schema.prisma)
+Cập nhật các trường mới và các ràng buộc unique cho:
+- `Hospital`: Thêm `website`, `email`, `reviewCount`.
+- `Doctor`: Thêm `reviewCount`.
+- `DoctorWorkplace`: Thêm ràng buộc `@unique([doctorId, hospitalId, specialtyId])`.
+- `MedicalService`: Cập nhật giá trị mặc định cho `price` và `duration`.
+- `DoctorSchedule`: Thêm `breakStart`, `breakEnd` và ràng buộc `@unique([doctorId, dayOfWeek])`.
+- `Appointment`: Thêm `medicalServiceId` và quan hệ đến `MedicalService`.
+
+#### [MODIFY] [seed.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/prisma/seed.ts)
+Mở rộng dữ liệu mẫu:
+- 12 Chuyên khoa (`Specialty`)
+- 2 Cơ sở y tế (`Hospital`)
+- 3 Chi nhánh (`HospitalBranch`)
+- 6 Bác sĩ (`Doctor`)
+- 6 Nơi làm việc của bác sĩ (`DoctorWorkplace`) với phí khám đa dạng
+- 6 Dịch vụ y tế (`MedicalService`) cho mỗi bệnh viện
+- Lịch làm việc 6 ngày/tuần cho các bác sĩ (`DoctorSchedule`)
+- Tự động sinh Khung giờ khám (`AppointmentSlot`) trong 30 ngày cho mỗi bác sĩ dựa trên lịch làm việc.
+
+---
+
+### 2. Các Module Backend (NestJS)
+
+Chúng tôi sẽ tạo mới 8 modules sau:
+
+#### [NEW] Module Hospitals
+- `src/modules/hospitals/dto/create-hospital.dto.ts`
+- `src/modules/hospitals/dto/update-hospital.dto.ts`
+- `src/modules/hospitals/dto/hospital-response.dto.ts`
+- `src/modules/hospitals/hospitals.service.ts`: CRUD, tìm kiếm, tìm theo chuyên khoa, lấy chuyên khoa khả dụng.
+- `src/modules/hospitals/hospitals.controller.ts`
+- `src/modules/hospitals/hospitals.module.ts`
+
+#### [NEW] Module Hospital Branches
+- `src/modules/hospital-branches/dto/create-branch.dto.ts`
+- `src/modules/hospital-branches/dto/update-branch.dto.ts`
+- `src/modules/hospital-branches/hospital-branches.service.ts`: CRUD, lấy theo cơ sở y tế.
+- `src/modules/hospital-branches/hospital-branches.controller.ts`
+- `src/modules/hospital-branches/hospital-branches.module.ts`
+
+#### [NEW] Module Specialties
+- `src/modules/specialties/dto/create-specialty.dto.ts`
+- `src/modules/specialties/dto/update-specialty.dto.ts`
+- `src/modules/specialties/specialties.service.ts`: CRUD chuyên khoa.
+- `src/modules/specialties/specialties.controller.ts`
+- `src/modules/specialties/specialties.module.ts`
+
+#### [NEW] Module Doctors
+- `src/modules/doctors/dto/create-doctor.dto.ts`
+- `src/modules/doctors/dto/update-doctor.dto.ts`
+- `src/modules/doctors/doctors.service.ts`: CRUD bác sĩ, tìm kiếm, tìm theo bệnh viện/chuyên khoa, lấy khung giờ trống của bác sĩ theo ngày và nơi làm việc.
+- `src/modules/doctors/doctors.controller.ts`
+- `src/modules/doctors/doctors.module.ts`
+
+#### [NEW] Module Doctor Workplaces
+- `src/modules/doctor-workplaces/dto/create-workplace.dto.ts`
+- `src/modules/doctor-workplaces/dto/update-workplace.dto.ts`
+- `src/modules/doctor-workplaces/doctor-workplaces.service.ts`: CRUD liên kết bác sĩ - cơ sở y tế - chuyên khoa và phí khám.
+- `src/modules/doctor-workplaces/doctor-workplaces.controller.ts`
+- `src/modules/doctor-workplaces/doctor-workplaces.module.ts`
+
+#### [NEW] Module Medical Services
+- `src/modules/medical-services/dto/create-medical-service.dto.ts`
+- `src/modules/medical-services/dto/update-medical-service.dto.ts`
+- `src/modules/medical-services/medical-services.service.ts`: CRUD dịch vụ y tế của bệnh viện.
+- `src/modules/medical-services/medical-services.controller.ts`
+- `src/modules/medical-services/medical-services.module.ts`
+
+#### [NEW] Module Doctor Schedules
+- `src/modules/doctor-schedules/dto/create-schedule.dto.ts`
+- `src/modules/doctor-schedules/dto/update-schedule.dto.ts`
+- `src/modules/doctor-schedules/doctor-schedules.service.ts`: Quản lý lịch làm việc cố định của bác sĩ trong tuần (Thứ 2 - Chủ nhật) bao gồm cả giờ nghỉ trưa.
+- `src/modules/doctor-schedules/doctor-schedules.controller.ts`
+- `src/modules/doctor-schedules/doctor-schedules.module.ts`
+
+#### [NEW] Module Appointment Slots
+- `src/modules/appointment-slots/dto/create-slot.dto.ts`
+- `src/modules/appointment-slots/dto/update-slot.dto.ts`
+- `src/modules/appointment-slots/appointment-slots.service.ts`:
+  - Tạo slot đơn lẻ.
+  - Tự động sinh khung giờ (`generateSlots`) từ ngày A đến ngày B từ lịch làm việc của bác sĩ (loại trừ giờ nghỉ trưa).
+  - Quản lý số lượng đã đặt (`bookedCount`), tự động đóng slot khi hết chỗ (`capacity`).
+- `src/modules/appointment-slots/appointment-slots.controller.ts`
+- `src/modules/appointment-slots/appointment-slots.module.ts`
+
+#### [MODIFY] App Module
+Cập nhật [app.module.ts](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/app.module.ts) để import cả 8 module mới.
+
+---
+
+### 3. Kiểm thử & Bàn giao
+- Viết unit tests cho `HospitalsService`.
+- Viết integration tests cho `HospitalsController`.
+- Tự động sinh file Word `Bao_cao_Giai_doan_3.docx` mô tả toàn bộ mã nguồn đã thêm/sửa bằng python script.
+
+## Verification Plan
+
+### Automated Tests
+- Chạy unit/integration tests:
+  ```bash
+  npm run test
+  ```
+- Build thử ứng dụng NestJS:
+  ```bash
+  npm run build
+  ```
+
+### Manual Verification
+- Chạy ứng dụng trên Docker:
+  ```bash
+  npm run start:dev
+  ```
+- Kiểm tra tài liệu Swagger tại: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+- Thực hiện gọi một số API tìm kiếm/lọc danh mục bằng Postman hoặc trực tiếp trên Swagger.

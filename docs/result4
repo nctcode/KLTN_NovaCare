@@ -1,0 +1,38 @@
+# Kết quả Triển khai Giai đoạn 4 - Nghiệp vụ Đặt lịch khám
+
+Tôi đã hoàn thành triển khai toàn bộ Giai đoạn 4 (Nghiệp vụ Đặt lịch khám) và xuất file báo cáo Word để bàn giao cho bạn.
+
+## 🛠 Những gì đã làm trong Giai đoạn 4
+
+1. **Cập nhật database schema (Prisma v6)**:
+   - Thêm `idempotencyKey` và `expiresAt` vào bảng `appointments`.
+   - Thêm trường `version` vào bảng `appointment_slots` để hỗ trợ kiểm soát phiên cập nhật.
+   - Đồng bộ database PostgreSQL trên Docker thành công.
+
+2. **Triển khai Module `Appointments`**:
+   - Định nghĩa các DTOs phục vụ tạo lịch, đổi lịch và hủy lịch.
+   - Xây dựng `AppointmentsService` triển khai quy trình đặt lịch với transaction và khóa dòng `SELECT FOR UPDATE` ngăn chặn Race Condition.
+   - Xây dựng `AppointmentStatusHistoryService` hỗ trợ sinh timeline tiếng Việt màu sắc tương ứng với mỗi trạng thái.
+   - Tạo REST APIs hỗ trợ đặt lịch, đổi lịch (trả lại slot cũ, cộng slot mới), hủy lịch trước 2 giờ, hoàn thành lịch và background job dọn dẹp giữ chỗ quá hạn 15 phút.
+
+3. **Kiểm thử tự động**:
+   - Viết Unit Tests cho `AppointmentsService` bao gồm kịch bản thành công, đặt trùng, hết chỗ, và hủy lịch.
+   - Viết Integration Tests cho `AppointmentsController` bao gồm quy trình đầy đủ từ đăng nhập, lấy slot trống, tạo lịch khám, và kiểm tra lịch cá nhân.
+   - Toàn bộ **21 tests** (bao gồm cả các giai đoạn trước) đều **PASS** thành công.
+
+4. **Báo cáo bàn giao Word**:
+   - Tạo file Word [Bao_cao_Giai_doan_4.docx](file:///d:/HTTT18B/KLTN/NovaCare/Bao_cao_Giai_doan_4.docx) mô tả chi tiết tất cả các file đã tạo, thay đổi và chức năng từng module của Giai đoạn 4.
+
+---
+
+## 🚀 Hướng dẫn Chạy Nhanh & Kiểm thử
+
+1. Chạy tất cả test suites:
+   ```bash
+   npm run test
+   ```
+
+2. Kiểm tra tài liệu Swagger tại: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+
+3. File báo cáo Word chi tiết:
+   - Đường dẫn: [Bao_cao_Giai_doan_4.docx](file:///d:/HTTT18B/KLTN/NovaCare/Bao_cao_Giai_doan_4.docx)

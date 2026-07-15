@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F8F9FA;
+  --foreground: #212529;
+  --card: #FFFFFF;
+  --card-foreground: #212529;
+  --popover: #FFFFFF;
+  --popover-foreground: #212529;
+  --primary: #4CAF50; /* A slightly darker green for text clarity */
+  --primary-foreground: #FFFFFF;
+  --secondary: #1A2B3C;
+  --secondary-foreground: #FFFFFF;
+  --muted: #F1F3F5;
+  --muted-foreground: #6C757D;
+  --accent: #E9ECEF;
+  --accent-foreground: #212529;
+  --destructive: #DC3545;
+  --destructive-foreground: #FFFFFF;
+  --border: #DEE2E6;
+  --input: #CED4DA;
+  --ring: #66FF33;
+  --radius: 12px;
+}
+
+@theme {
+  --color-primary: #66FF33;
+  --color-primary-light: #85FF5C;
+  --color-primary-dark: #4CAF50;
+  --color-primary-hover: #5AE62E;
+  --color-primary-active: #4CCA2A;
+  --color-secondary: #1A2B3C;
+  --color-secondary-light: #2A4055;
+  --color-secondary-dark: #0D1822;
+  --color-background: #F8F9FA;
+  --color-surface: #FFFFFF;
+  --color-text-primary: #212529;
+  --color-text-secondary: #6C757D;
+  --color-text-muted: #ADB5BD;
+  --color-success: #28A745;
+  --color-warning: #FFC107;
+  --color-danger: #DC3545;
+  --color-info: #17A2B8;
+  
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --radius-sm: 4px;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.container-custom {
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-custom {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-custom {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, #66FF33 0%, #4CAF50 100%);
+}
