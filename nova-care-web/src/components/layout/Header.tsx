@@ -41,11 +41,11 @@ export function Header({ onMenuClick }: HeaderProps) {
             </button>
           )}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-secondary font-bold text-sm">N</span>
+            <div className="w-8 h-8 bg-[#4CAF50] rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-white font-bold text-sm">N</span>
             </div>
-            <span className="text-xl font-bold text-secondary">
-              Nova<span className="text-primary-dark">Care</span>
+            <span className="text-xl font-bold text-[#1A2B3C] tracking-wide">
+              NovaCare
             </span>
           </Link>
         </div>
@@ -58,7 +58,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               <Input
                 type="text"
                 placeholder="Tìm bác sĩ, chuyên khoa, cơ sở y tế..."
-                className="pl-10"
+                className="pl-10 rounded-full border-gray-300 focus-visible:ring-[#4CAF50] bg-[#f8f9fa] h-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />

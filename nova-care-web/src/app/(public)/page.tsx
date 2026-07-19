@@ -5,14 +5,172 @@ import Link from 'next/link';
 import { homeService } from '@/services/home.service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, ChevronRight, Star, MapPin, Clock, Loader2 } from 'lucide-react';
+import {
+  Search,
+  ChevronRight,
+  ChevronLeft,
+  Star,
+  MapPin,
+  Clock,
+  Loader2,
+  User,
+  FileText,
+  Calendar,
+  Building,
+  Tag
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+
+// Specialty mapping to match screenshot aesthetics
+const getSpecialtyDetails = (name: string) => {
+  const normalized = name.toLowerCase();
+  if (normalized.includes('tim mạch')) {
+    return {
+      icon: '❤️',
+      desc: 'Chẩn đoán, điều trị các bệnh lý tim mạch, cao huyết áp, suy tim hiệu quả.',
+    };
+  }
+  if (normalized.includes('thần kinh')) {
+    return {
+      icon: '🧠',
+      desc: 'Chăm sóc và điều trị chuyên sâu về thần kinh, đột quỵ, đau đầu, sa sút trí tuệ.',
+    };
+  }
+  if (normalized.includes('nội tiết') || normalized.includes('nội khoa')) {
+    return {
+      icon: '🫁',
+      desc: 'Theo dõi, khám và điều trị đái tháo đường, bệnh lý tuyến giáp, rối loạn chuyển hóa.',
+    };
+  }
+  if (normalized.includes('nhi')) {
+    return {
+      icon: '👶',
+      desc: 'Khám nhi toàn diện, tư vấn dinh dưỡng, tiêm chủng và theo dõi sự phát triển của trẻ.',
+    };
+  }
+  if (normalized.includes('sản') || normalized.includes('phụ')) {
+    return {
+      icon: '🤰',
+      desc: 'Chăm sóc sức khỏe thai sản, tầm soát ung thư phụ khoa, điều trị vô sinh hiếm muộn.',
+    };
+  }
+  if (normalized.includes('xương') || normalized.includes('khớp')) {
+    return {
+      icon: '🦴',
+      desc: 'Khám và điều trị thoái hóa khớp, cột sống, loãng xương, viêm khớp tự miễn.',
+    };
+  }
+  if (normalized.includes('tai') || normalized.includes('họng')) {
+    return {
+      icon: '👂',
+      desc: 'Điều trị viêm tai, viêm mũi xoang, viêm họng hạt, khàn tiếng ở người lớn và trẻ em.',
+    };
+  }
+  if (normalized.includes('mắt')) {
+    return {
+      icon: '👁️',
+      desc: 'Khám khúc xạ, điều trị đục thủy tinh thể, tăng nhãn áp và các bệnh lý về mắt.',
+    };
+  }
+  return {
+    icon: '🩺',
+    desc: 'Cung cấp dịch vụ khám chữa bệnh chất lượng cao với trang thiết bị y tế hiện đại.',
+  };
+};
+
+// Realistic Doctor visuals mapping
+const getDoctorVisuals = (fullName: string) => {
+  const name = fullName.toLowerCase();
+  if (name.includes('an')) {
+    return {
+      image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200',
+      title: 'Cố vấn Y khoa Cao cấp',
+    };
+  }
+  if (name.includes('bình')) {
+    return {
+      image: 'https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=200',
+      title: 'Trưởng khoa Thần kinh',
+    };
+  }
+  if (name.includes('cường')) {
+    return {
+      image: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=200',
+      title: 'Bác sĩ Nội tiết chính',
+    };
+  }
+  if (name.includes('dung')) {
+    return {
+      image: 'https://images.unsplash.com/photo-1651008011912-bde62b57915a?auto=format&fit=crop&q=80&w=200',
+      title: 'Bác sĩ Nhi khoa ưu tú',
+    };
+  }
+  if (name.includes('em')) {
+    return {
+      image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200',
+      title: 'Chuyên gia Cơ xương khớp',
+    };
+  }
+  if (name.includes('phương')) {
+    return {
+      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200',
+      title: 'Trưởng khoa Sản phụ khoa',
+    };
+  }
+  return {
+    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200',
+    title: 'Bác sĩ chuyên khoa',
+  };
+};
+
+const MOCK_PACKAGES = [
+  {
+    id: 'pkg-1',
+    title: 'Gói khám Bệnh Tiêu Hoá - Gan Mật',
+    location: 'Trung Tâm Nội Soi Tiêu Hoá Doctor Check',
+    price: '200.000đ',
+    image: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=400',
+  },
+  {
+    id: 'pkg-2',
+    title: 'Gói khám mắt tổng quát',
+    location: 'Trung Tâm Mắt Quốc Tế Phương Đông',
+    price: '500.000đ',
+    image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=400',
+  },
+  {
+    id: 'pkg-3',
+    title: 'Gói khám tiểu đường',
+    location: 'Phòng Khám Đa khoa Quốc Tế Golden Healthcare',
+    price: '720.000đ',
+    image: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&q=80&w=400',
+  },
+  {
+    id: 'pkg-4',
+    title: 'Khám sức khỏe xin việc',
+    location: 'Phòng Khám Đa Khoa Phước Anh',
+    price: '380.000đ',
+    image: 'https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&q=80&w=400',
+  },
+];
 
 export default function HomePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const packagesScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollPackages = (direction: 'left' | 'right') => {
+    if (packagesScrollRef.current) {
+      const { scrollLeft, clientWidth } = packagesScrollRef.current;
+      const scrollTo = direction === 'left'
+        ? scrollLeft - clientWidth / 2
+        : scrollLeft + clientWidth / 2;
+      packagesScrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
   const { data: specialties = [], isLoading: loadingSpecialties } = useQuery({
     queryKey: ['featured-specialties'],
@@ -36,52 +194,111 @@ export default function HomePage() {
     }
   };
 
-  const isLoading = loadingSpecialties || loadingDoctors || loadingHospitals;
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left'
+        ? scrollLeft - clientWidth / 2
+        : scrollLeft + clientWidth / 2;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
   return (
-    <div>
+    <div className="bg-[#F8F9FA]">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary/10 via-white to-primary/5 py-16 md:py-24">
-        <div className="container-custom">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-secondary mb-4 leading-tight">
-              Đặt lịch khám{' '}
-              <span className="text-primary-dark">dễ dàng</span>,{' '}
-              <span className="text-primary-dark">nhanh chóng</span>
+      <section className="relative bg-[#0c4b39] pt-16 md:pt-24 pb-0 text-white overflow-hidden">
+        <div className="container-custom relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
+              Đặt lịch khám dễ dàng, <br className="hidden sm:inline" />
+              <span className="text-[#66FF33] inline-block mt-1">nhanh chóng</span>
             </h1>
-            <p className="text-lg text-gray-600 mb-8">
+            <p className="text-base md:text-lg text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
               Kết nối với hàng ngàn bác sĩ và cơ sở y tế uy tín trên toàn quốc.
               Đặt lịch khám chỉ với vài cú nhấp chuột.
             </p>
+
             {/* Search Box */}
-            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto bg-white/10 p-2 rounded-xl backdrop-blur-sm border border-white/10 shadow-2xl">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/60" />
                 <Input
                   type="text"
                   placeholder="Tìm bác sĩ, chuyên khoa, bệnh viện..."
-                  className="pl-10 h-12 text-base"
+                  className="pl-12 h-12 w-full bg-white text-gray-900 placeholder:text-gray-400 border-none rounded-lg focus-visible:ring-[#66FF33] text-base"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button type="submit" size="lg" className="h-12 px-8">
+              <Button
+                type="submit"
+                className="h-12 px-8 bg-[#66FF33] hover:bg-[#5ae62e] text-[#1A2B3C] font-bold text-base rounded-lg transition shadow-md shrink-0 cursor-pointer"
+              >
                 Tìm kiếm
               </Button>
             </form>
+
             {/* Quick stats */}
-            <div className="grid grid-cols-3 gap-4 mt-12 max-w-md mx-auto">
+            <div className="grid grid-cols-3 gap-6 mt-14 max-w-xl mx-auto border-t border-white/10 pt-10 pb-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary-dark">500+</div>
-                <div className="text-sm text-gray-500">Bác sĩ</div>
+                <div className="text-3xl md:text-4xl font-extrabold text-white">500+</div>
+                <div className="text-sm text-white/70 mt-1">Bác sĩ</div>
+              </div>
+              <div className="text-center border-x border-white/10 px-4">
+                <div className="text-3xl md:text-4xl font-extrabold text-white">100+</div>
+                <div className="text-sm text-white/70 mt-1">Cơ sở y tế</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary-dark">100+</div>
-                <div className="text-sm text-gray-500">Cơ sở y tế</div>
+                <div className="text-3xl md:text-4xl font-extrabold text-white">10K+</div>
+                <div className="text-sm text-white/70 mt-1">Lịch hẹn</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary-dark">10K+</div>
-                <div className="text-sm text-gray-500">Lịch hẹn</div>
+            </div>
+          </div>
+        </div>
+
+        {/* How it works banner */}
+        <div className="container-custom mt-8">
+          <div className="bg-[#083327] rounded-t-3xl pt-6 pb-6 px-8 max-w-5xl mx-auto border-t border-x border-white/10 shadow-2xl relative z-10">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              {/* Left steps */}
+              <div className="flex items-center gap-12 flex-1 justify-end w-full md:w-auto">
+                <div className="flex flex-col items-center group cursor-pointer text-center">
+                  <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <span className="text-white/80 text-xs mt-2 font-medium">Bệnh nhân</span>
+                </div>
+                <div className="flex flex-col items-center group cursor-pointer text-center">
+                  <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <span className="text-white/80 text-xs mt-2 font-medium">Thông tin</span>
+                </div>
+              </div>
+
+              {/* Center Title */}
+              <div className="text-center px-4 shrink-0">
+                <h3 className="text-white font-bold text-lg md:text-xl uppercase tracking-wider relative inline-block py-1">
+                  Cách thức hoạt động
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#66FF33]"></span>
+                </h3>
+              </div>
+
+              {/* Right steps */}
+              <div className="flex items-center gap-12 flex-1 justify-start w-full md:w-auto">
+                <div className="flex flex-col items-center group cursor-pointer text-center">
+                  <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
+                    <Search className="h-5 w-5" />
+                  </div>
+                  <span className="text-white/80 text-xs mt-2 font-medium">Tìm bác sĩ</span>
+                </div>
+                <div className="flex flex-col items-center group cursor-pointer text-center">
+                  <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <span className="text-white/80 text-xs mt-2 font-medium">Đặt lịch</span>
+                </div>
               </div>
             </div>
           </div>
@@ -89,140 +306,289 @@ export default function HomePage() {
       </section>
 
       {/* Specialties Section */}
-      <section className="py-16">
+      <section className="py-16 bg-white border-b border-gray-100">
         <div className="container-custom">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-secondary">Chuyên khoa nổi bật</h2>
-            <Link href="/chuyen-khoa" className="text-primary-dark hover:underline flex items-center font-semibold">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-secondary tracking-tight">Chuyên khoa nổi bật</h2>
+            <Link href="/chuyen-khoa" className="text-[#4CAF50] hover:text-[#3d9c41] transition-colors flex items-center font-bold text-sm uppercase tracking-wider">
               Xem tất cả <ChevronRight className="h-4 w-4 ml-1" />
             </Link>
           </div>
+
           {loadingSpecialties ? (
-            <div className="flex justify-center py-6">
+            <div className="flex justify-center py-12">
               <Loader2 className="animate-spin h-8 w-8 text-primary" />
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {specialties.map((specialty) => (
-                <Link
-                  key={specialty.id}
-                  href={`/bac-si?specialtyId=${specialty.id}`}
-                  className="group"
-                >
-                  <Card className="text-center hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="text-4xl mb-2">{specialty.icon || '🏥'}</div>
-                      <p className="text-sm font-medium group-hover:text-primary-dark transition text-secondary">
-                        {specialty.name}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+            <div className="relative px-2">
+              {/* Left Scroll Trigger */}
+              <button
+                onClick={() => scroll('left')}
+                className="absolute left-[-16px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white shadow-md border border-gray-100 rounded-full flex items-center justify-center hover:bg-gray-50 transition cursor-pointer text-gray-700 hover:scale-105 animate-fade-in"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+
+              {/* Slider list */}
+              <div
+                ref={scrollRef}
+                className="flex gap-5 overflow-x-auto scrollbar-none pb-4 scroll-smooth"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {specialties.map((specialty) => {
+                  const details = getSpecialtyDetails(specialty.name);
+                  return (
+                    <div
+                      key={specialty.id}
+                      className="min-w-[260px] max-w-[280px] flex-shrink-0 bg-[#0c4b39]/5 border border-[#0c4b39]/10 rounded-2xl p-6 text-gray-800 flex flex-col justify-between h-[210px] group hover:border-[#0c4b39]/30 hover:bg-[#0c4b39]/8 hover:shadow-md transition-all duration-300 shadow-sm relative overflow-hidden"
+                    >
+                      <div>
+                        <div className="text-3xl mb-3 group-hover:scale-105 transition-transform duration-300">
+                          {specialty.icon || details.icon}
+                        </div>
+                        <h3 className="font-bold text-[#0c4b39] text-base leading-tight line-clamp-1">{specialty.name}</h3>
+                        <p className="text-xs text-[#0c4b39]/70 mt-2 line-clamp-2 leading-relaxed font-medium">
+                          {specialty.description || details.desc}
+                        </p>
+                      </div>
+                      <div>
+                        <Link
+                          href={`/bac-si?specialtyId=${specialty.id}`}
+                          className="inline-block bg-[#0c4b39] text-white hover:bg-[#083629] transition-all duration-300 text-xs font-extrabold py-1.5 px-6 rounded-md text-center mt-3 uppercase tracking-wider cursor-pointer shadow-sm"
+                        >
+                          view
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right Scroll Trigger */}
+              <button
+                onClick={() => scroll('right')}
+                className="absolute right-[-16px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white shadow-md border border-gray-100 rounded-full flex items-center justify-center hover:bg-gray-50 transition cursor-pointer text-gray-700 hover:scale-105 animate-fade-in"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
           )}
         </div>
       </section>
 
       {/* Doctors Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-[#F8F9FA] border-b border-gray-100">
         <div className="container-custom">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-secondary">Bác sĩ tiêu biểu</h2>
-            <Link href="/bac-si" className="text-primary-dark hover:underline flex items-center font-semibold">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-secondary tracking-tight">Bác sĩ tiêu biểu</h2>
+            <Link href="/bac-si" className="text-[#4CAF50] hover:text-[#3d9c41] transition-colors flex items-center font-bold text-sm uppercase tracking-wider">
               Xem tất cả <ChevronRight className="h-4 w-4 ml-1" />
             </Link>
           </div>
+
           {loadingDoctors ? (
-            <div className="flex justify-center py-6">
+            <div className="flex justify-center py-12">
               <Loader2 className="animate-spin h-8 w-8 text-primary" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {doctors.map((doctor) => (
-                <Link key={doctor.id} href={`/bac-si/${doctor.id}`} className="block">
-                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer h-full">
-                    <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {doctors.slice(0, 3).map((doctor) => {
+                const details = getDoctorVisuals(doctor.fullName);
+                const firstWorkplaceId = doctor.workPlaces && doctor.workPlaces.length > 0
+                  ? doctor.workPlaces[0].id
+                  : null;
+                const bookingUrl = firstWorkplaceId
+                  ? `/dat-lich?workplaceId=${firstWorkplaceId}`
+                  : `/bac-si/${doctor.id}`;
+
+                return (
+                  <Card key={doctor.id} className="hover:shadow-lg transition-all duration-200 border border-gray-200/60 overflow-hidden flex flex-col justify-between h-full bg-white rounded-2xl">
+                    <CardContent className="p-6 flex-1">
                       <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl flex-shrink-0 text-secondary">
-                          {doctor.fullName.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-secondary text-lg truncate">{doctor.fullName}</h3>
-                          <p className="text-sm text-gray-500 truncate">{doctor.qualification || 'Bác sĩ chuyên khoa'}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                            <span className="text-sm font-medium">{doctor.rating || 4.8}</span>
-                            <span className="text-sm text-gray-400">
-                              ({doctor.reviewCount || 12} đánh giá)
+                        <img
+                          src={details.image}
+                          alt={doctor.fullName}
+                          className="w-16 h-16 rounded-full object-cover border border-gray-100 shadow-sm flex-shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-secondary text-base leading-snug truncate hover:text-[#4CAF50] transition-colors">
+                            <Link href={`/bac-si/${doctor.id}`}>{doctor.fullName}</Link>
+                          </h3>
+                          <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">
+                            {doctor.qualification || details.title}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-2">
+                            <div className="flex items-center gap-0.5">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+                              ))}
+                            </div>
+                            <span className="text-xs font-bold text-gray-700">5</span>
+                            <span className="text-xs text-gray-400">
+                              ({doctor.reviewCount || 28} rating thực tế)
                             </span>
                           </div>
                         </div>
                       </div>
                     </CardContent>
+                    <div className="px-6 pb-6">
+                      <Link
+                        href={bookingUrl}
+                        className="block w-full text-center py-2.5 px-4 bg-[#2a6d54] hover:bg-[#205340] active:bg-[#1a4434] text-white font-semibold rounded-lg text-sm transition shadow-sm cursor-pointer"
+                      >
+                        Đặt Lịch
+                      </Link>
+                    </div>
                   </Card>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </section>
 
       {/* Hospitals Section */}
-      <section className="py-16">
+      <section className="py-16 bg-white">
         <div className="container-custom">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-secondary">Cơ sở y tế uy tín</h2>
-            <Link href="/co-so-y-te" className="text-primary-dark hover:underline flex items-center font-semibold">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-secondary tracking-tight">Cơ sở y tế uy tín</h2>
+            <Link href="/co-so-y-te" className="text-[#4CAF50] hover:text-[#3d9c41] transition-colors flex items-center font-bold text-sm uppercase tracking-wider">
               Xem tất cả <ChevronRight className="h-4 w-4 ml-1" />
             </Link>
           </div>
+
           {loadingHospitals ? (
-            <div className="flex justify-center py-6">
+            <div className="flex justify-center py-12">
               <Loader2 className="animate-spin h-8 w-8 text-primary" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {hospitals.map((hospital) => (
-                <Link key={hospital.id} href={`/co-so-y-te/${hospital.id}`} className="block">
-                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer h-full">
-                    <CardContent className="p-6">
-                      <div className="flex gap-4">
-                        <div className="w-20 h-20 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          {hospital.logoUrl ? (
-                            <img
-                              src={hospital.logoUrl}
-                              alt={hospital.name}
-                              className="w-16 h-16 object-contain"
-                            />
-                          ) : (
-                            <span className="text-3xl">🏥</span>
-                          )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {hospitals.slice(0, 3).map((hospital) => {
+                const hospitalImages: Record<string, string> = {
+                  'Bệnh viện Đa khoa NovaCare': 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?auto=format&fit=crop&q=80&w=400',
+                  'Bệnh viện Chuyên khoa Sài Gòn': 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=400',
+                };
+                const image = hospitalImages[hospital.name] || 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=400';
+
+                return (
+                  <Card key={hospital.id} className="hover:shadow-lg transition-all duration-200 border border-gray-200/60 overflow-hidden flex flex-col h-full bg-white rounded-2xl">
+                    <div className="h-44 w-full relative overflow-hidden bg-gray-100 flex-shrink-0">
+                      <img
+                        src={image}
+                        alt={hospital.name}
+                        className="w-full h-full object-cover hover:scale-102 transition-transform duration-300"
+                      />
+                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-md text-xs font-bold text-gray-800 flex items-center gap-1 shadow-sm">
+                        <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                        <span>{hospital.rating || 4.8}</span>
+                      </div>
+                    </div>
+                    <CardContent className="p-6 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-bold text-secondary text-base leading-snug line-clamp-1 hover:text-[#4CAF50] transition-colors">
+                          <Link href={`/co-so-y-te/${hospital.id}`}>{hospital.name}</Link>
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1 font-medium">Bệnh viện Tư nhân</p>
+                        <div className="flex items-start gap-1.5 text-xs text-gray-500 mt-3">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400 mt-0.5" />
+                          <span className="line-clamp-2 leading-relaxed">{hospital.address}</span>
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-secondary text-lg">{hospital.name}</h3>
-                          <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                            <MapPin className="h-4 w-4 shrink-0" />
-                            <span className="truncate">{hospital.address}</span>
-                          </div>
-                          <div className="flex items-center gap-4 mt-2">
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                              <span className="text-sm font-medium">{hospital.rating || 4.7}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-500">
-                              <Clock className="h-4 w-4" />
-                              <span>Đang mở cửa</span>
-                            </div>
-                          </div>
-                        </div>
+                      </div>
+                      <div className="mt-5">
+                        <Link
+                          href={`/co-so-y-te/${hospital.id}`}
+                          className="block w-full text-center py-2.5 px-4 bg-[#2a6d54] hover:bg-[#205340] active:bg-[#1a4434] text-white font-semibold rounded-lg text-sm transition shadow-sm cursor-pointer"
+                        >
+                          Chi tiết
+                        </Link>
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Comprehensive Health Packages Section */}
+      <section className="py-16 bg-[#F8F9FA] border-t border-gray-100">
+        <div className="container-custom">
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            {/* Left Title */}
+            <div className="w-full lg:w-1/4 lg:sticky lg:top-24">
+              <h2 className="text-3xl md:text-4xl font-extrabold text-secondary leading-tight tracking-tight">
+                Chương trình <br />
+                chăm sóc sức khỏe <br />
+                toàn diện
+              </h2>
+              <p className="text-gray-500 text-sm mt-4 max-w-xs">
+                Lựa chọn đa dạng các gói khám chuyên sâu, tầm soát sức khỏe định kỳ phù hợp với nhu cầu cá nhân.
+              </p>
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={() => scrollPackages('left')}
+                  className="w-9 h-9 bg-white shadow-md border border-gray-150 rounded-full flex items-center justify-center hover:bg-gray-50 transition cursor-pointer text-gray-700 hover:scale-105"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => scrollPackages('right')}
+                  className="w-9 h-9 bg-white shadow-md border border-gray-150 rounded-full flex items-center justify-center hover:bg-gray-50 transition cursor-pointer text-gray-700 hover:scale-105"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Right Slider */}
+            <div className="w-full lg:w-3/4 overflow-hidden relative">
+              <div
+                ref={packagesScrollRef}
+                className="flex gap-5 overflow-x-auto scrollbar-none pb-4 scroll-smooth"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {MOCK_PACKAGES.map((pkg) => (
+                  <Card
+                    key={pkg.id}
+                    className="min-w-[280px] max-w-[280px] hover:shadow-[0_15px_30px_-5px_rgba(12,75,57,0.3),0_0_15px_rgba(102,255,51,0.15)] hover:border-[#66FF33]/20 border border-gray-100 hover:scale-[1.02] transition-all duration-300 overflow-hidden flex flex-col h-[340px] bg-white rounded-2xl flex-shrink-0"
+                  >
+                    <div className="h-32 w-full relative overflow-hidden bg-gray-100 flex-shrink-0">
+                      <img
+                        src={pkg.image}
+                        alt={pkg.title}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+                    </div>
+                    <div className="p-4 bg-gradient-to-br from-[#0e523f] via-[#0a3a2c] to-[#06241c] border-t border-white/5 flex-1 flex flex-col justify-between text-white relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-tr before:from-white/0 before:via-white/5 before:to-white/10 before:pointer-events-none">
+                      <div>
+                        <h3 className="font-bold text-sm leading-snug line-clamp-2 h-10 hover:text-[#66FF33] transition-colors">
+                          {pkg.title}
+                        </h3>
+                        <div className="flex items-start gap-1.5 text-xs text-white/70 mt-2">
+                          <Building className="h-3.5 w-3.5 shrink-0 text-white/60 mt-0.5" />
+                          <span className="line-clamp-2 leading-relaxed">{pkg.location}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 text-sm font-bold text-[#66FF33] mt-2">
+                          <Tag className="h-4 w-4 text-[#66FF33]" />
+                          <span>{pkg.price}</span>
+                        </div>
+                        <Link
+                          href={`/dat-lich?packageId=${pkg.id}`}
+                          className="block w-full text-center py-2 bg-[#66FF33] hover:bg-[#5ae62e] active:bg-[#4dd323] text-[#0c4b39] font-extrabold rounded-lg text-xs uppercase tracking-wider mt-3 transition duration-300 shadow-[0_4px_12px_rgba(102,255,51,0.3)] hover:shadow-[0_0_15px_rgba(102,255,51,0.6)] hover:scale-[1.02] cursor-pointer"
+                        >
+                          Đặt khám ngay
+                        </Link>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
