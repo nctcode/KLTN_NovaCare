@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search, ChevronRight, Star, Loader2 } from 'lucide-react';
+import { Doctor } from '@/types';
+import { formatPrice } from '@/lib/utils';
 
 interface StepSelectDoctorProps {
   onNext: () => void;
@@ -65,21 +67,21 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-secondary">Chọn bác sĩ khám</h2>
+      <h2 className="text-2xl font-bold text-gray-800">Chọn bác sĩ khám</h2>
 
-      {/* Filters */}
+      {/* Filters with Green Styling */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Tìm bác sĩ..."
-            className="pl-10"
+            className="pl-10 border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#4caf50] focus-visible:outline-none transition-all"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <Select value={selectedHospitalId} onValueChange={setSelectedHospitalId}>
-          <SelectTrigger>
+          <SelectTrigger className="border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-[#4caf50] focus:outline-none transition-all">
             <SelectValue placeholder="Cơ sở y tế" />
           </SelectTrigger>
           <SelectContent>
@@ -92,7 +94,7 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
           </SelectContent>
         </Select>
         <Select value={selectedSpecialtyId} onValueChange={setSelectedSpecialtyId}>
-          <SelectTrigger>
+          <SelectTrigger className="border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-[#4caf50] focus:outline-none transition-all">
             <SelectValue placeholder="Chuyên khoa" />
           </SelectTrigger>
           <SelectContent>
@@ -106,62 +108,88 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
         </Select>
       </div>
 
-      {/* Doctor List */}
-      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+      {/* Doctor Grid (2 columns as shown in the image) */}
+      <div className="max-h-[500px] overflow-y-auto pr-2 space-y-4">
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin h-10 w-10 text-primary" />
+            <Loader2 className="animate-spin h-10 w-10 text-[#4caf50]" />
           </div>
         ) : doctors.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             Không tìm thấy bác sĩ nào phù hợp
           </div>
         ) : (
-          doctors.map((doctor) => (
-            <Card
-              key={doctor.id}
-              className={`cursor-pointer transition hover:shadow-md ${
-                selectedDoctorId === doctor.id ? 'border-2 border-primary bg-primary/5' : ''
-              }`}
-              onClick={() => handleSelectDoctor(doctor.id)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-secondary">
-                    {doctor.fullName.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-secondary truncate">{doctor.fullName}</h3>
-                    <p className="text-sm text-gray-500 truncate">{doctor.qualification || 'Bác sĩ'}</p>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 flex-wrap">
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Star className="h-3.5 w-3.5 text-yellow-400 fill-current" />
-                        <span className="font-medium text-secondary">{doctor.rating || 4.8}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {doctors.map((doctor) => {
+              const workplace = doctor.workPlaces?.[0];
+              const isSelected = selectedDoctorId === doctor.id;
+              
+              return (
+                <Card
+                  key={doctor.id}
+                  className={`cursor-pointer transition-all duration-200 border rounded-2xl bg-white hover:shadow-md ${
+                    isSelected 
+                      ? 'border-2 border-[#4caf50] bg-[#4caf50]/5 shadow-sm' 
+                      : 'border-gray-200 hover:border-[#4caf50]/50'
+                  }`}
+                  onClick={() => handleSelectDoctor(doctor.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4 justify-between h-full">
+                      {/* Left: Avatar and Info */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-20 h-20 rounded-full bg-[#4caf50]/10 flex items-center justify-center text-[#4caf50] font-bold text-2xl shrink-0">
+                          {doctor.fullName.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-900 text-base truncate">
+                            {doctor.fullName}
+                          </h3>
+                          <p className="text-xs text-gray-500 truncate mt-0.5">
+                            {doctor.qualification || 'Bác sĩ chuyên khoa'}
+                          </p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <div className="flex items-center gap-0.5">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                              ))}
+                            </div>
+                            <span className="text-xs font-semibold text-gray-600 ml-1 mt-0.5">
+                              {doctor.rating || 4.7}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-gray-300">|</span>
-                      <span className="truncate">
-                        {doctor.workPlaces?.[0]?.hospital?.name || ''}
-                      </span>
+
+                      {/* Right: Pricing and Choose Link */}
+                      <div className="flex flex-col items-end justify-between self-stretch flex-shrink-0 text-right min-w-[100px] pl-2">
+                        <div className="mb-2">
+                          <p className="text-[10px] text-gray-400 font-medium">Phí khám</p>
+                          <p className="font-bold text-gray-800 text-sm mt-0.5">
+                            {workplace?.consultationFee ? `${formatPrice(workplace.consultationFee)}đ` : '350.000đ'}
+                          </p>
+                        </div>
+                        <div className="text-xs font-bold text-[#4caf50] hover:text-[#439e47] flex items-center gap-0.5">
+                          Chọn lịch hẹn
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs text-gray-500">Phí khám</p>
-                    <p className="font-bold text-secondary">
-                      {doctor.workPlaces?.[0]?.consultationFee?.toLocaleString() || 0}đ
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         )}
       </div>
-
-      {/* Actions */}
-      <div className="flex justify-end pt-4 border-t">
-        <Button onClick={handleNext} disabled={!selectedDoctorId}>
+      <div className="flex justify-end pt-4 border-t border-gray-100">
+        <Button 
+          onClick={handleNext} 
+          disabled={!selectedDoctorId}
+          className="bg-[#4caf50] hover:bg-[#439e47] text-white px-6 py-2 rounded-lg font-bold flex items-center gap-1 cursor-pointer transition-all disabled:opacity-50"
+        >
           Tiếp tục
-          <ChevronRight className="h-4 w-4 ml-1" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

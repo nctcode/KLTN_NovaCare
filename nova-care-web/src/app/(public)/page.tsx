@@ -22,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useState, useRef } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 // Specialty mapping to match screenshot aesthetics
 const getSpecialtyDetails = (name: string) => {
@@ -103,7 +104,7 @@ const getDoctorVisuals = (fullName: string) => {
   }
   if (name.includes('dung')) {
     return {
-      image: 'https://images.unsplash.com/photo-1651008011912-bde62b57915a?auto=format&fit=crop&q=80&w=200',
+      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200',
       title: 'Bác sĩ Nhi khoa ưu tú',
     };
   }
@@ -158,6 +159,7 @@ const MOCK_PACKAGES = [
 
 export default function HomePage() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const packagesScrollRef = useRef<HTMLDivElement>(null);
@@ -208,6 +210,50 @@ export default function HomePage() {
     <div className="bg-[#F8F9FA]">
       {/* Hero Section */}
       <section className="relative bg-[#0c4b39] pt-16 md:pt-24 pb-0 text-white overflow-hidden">
+        {/* Glow effects */}
+        <div className="absolute top-1/4 left-1/10 w-96 h-96 bg-[#66FF33]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/10 w-96 h-96 bg-[#4CAF50]/15 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Medical Watermark Pattern (EKG Wave & Crosses) */}
+        <div className="absolute inset-0 pointer-events-none opacity-25 select-none">
+          <svg className="w-full h-full min-w-[1000px]" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ekg-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#4CAF50" stopOpacity="0.2" />
+                <stop offset="50%" stopColor="#66FF33" stopOpacity="1" />
+                <stop offset="100%" stopColor="#4CAF50" stopOpacity="0.2" />
+              </linearGradient>
+            </defs>
+            {/* Background grids */}
+            <pattern id="hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(102, 255, 51, 0.05)" strokeWidth="1" />
+            </pattern>
+            <rect width="100%" height="100%" fill="url(#hero-grid)" />
+
+            {/* Giant EKG wave across the center */}
+            <path
+              d="M -100 220 L 200 220 L 220 200 L 240 220 L 260 300 L 280 80 L 300 240 L 320 220 L 350 200 L 380 220 L 600 220 L 620 200 L 640 220 L 660 300 L 680 80 L 700 240 L 720 220 L 1500 220"
+              fill="none"
+              stroke="url(#ekg-gradient)"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="opacity-70 animate-pulse"
+            />
+
+            {/* Floating Medical Cross Icons */}
+            <g fill="none" stroke="#66FF33" strokeWidth="2.5" strokeLinecap="round" className="opacity-50">
+              {/* Cross 1 */}
+              <path d="M 120 100 L 120 120 M 110 110 L 130 110" />
+              {/* Cross 2 */}
+              <path d="M 850 80 L 850 100 M 840 90 L 860 90" />
+              {/* Cross 3 */}
+              <path d="M 780 320 L 780 340 M 770 330 L 790 330" />
+              {/* Cross 4 */}
+              <path d="M 280 340 L 280 360 M 270 350 L 290 350" />
+            </g>
+          </svg>
+        </div>
         <div className="container-custom relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
@@ -263,18 +309,18 @@ export default function HomePage() {
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               {/* Left steps */}
               <div className="flex items-center gap-12 flex-1 justify-end w-full md:w-auto">
-                <div className="flex flex-col items-center group cursor-pointer text-center">
+                <Link href={isAuthenticated ? "/tai-khoan" : "/dang-nhap"} className="flex flex-col items-center group cursor-pointer text-center no-underline">
                   <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
                     <User className="h-5 w-5" />
                   </div>
                   <span className="text-white/80 text-xs mt-2 font-medium">Bệnh nhân</span>
-                </div>
-                <div className="flex flex-col items-center group cursor-pointer text-center">
+                </Link>
+                <Link href={isAuthenticated ? "/ho-so" : "/dang-nhap"} className="flex flex-col items-center group cursor-pointer text-center no-underline">
                   <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
                     <FileText className="h-5 w-5" />
                   </div>
                   <span className="text-white/80 text-xs mt-2 font-medium">Thông tin</span>
-                </div>
+                </Link>
               </div>
 
               {/* Center Title */}
@@ -287,18 +333,18 @@ export default function HomePage() {
 
               {/* Right steps */}
               <div className="flex items-center gap-12 flex-1 justify-start w-full md:w-auto">
-                <div className="flex flex-col items-center group cursor-pointer text-center">
+                <Link href="/bac-si" className="flex flex-col items-center group cursor-pointer text-center no-underline">
                   <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
                     <Search className="h-5 w-5" />
                   </div>
                   <span className="text-white/80 text-xs mt-2 font-medium">Tìm bác sĩ</span>
-                </div>
-                <div className="flex flex-col items-center group cursor-pointer text-center">
+                </Link>
+                <Link href="/dat-lich" className="flex flex-col items-center group cursor-pointer text-center no-underline">
                   <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
                     <Calendar className="h-5 w-5" />
                   </div>
                   <span className="text-white/80 text-xs mt-2 font-medium">Đặt lịch</span>
-                </div>
+                </Link>
               </div>
             </div>
           </div>
@@ -528,13 +574,13 @@ export default function HomePage() {
               <div className="flex gap-2 mt-6">
                 <button
                   onClick={() => scrollPackages('left')}
-                  className="w-9 h-9 bg-white shadow-md border border-gray-150 rounded-full flex items-center justify-center hover:bg-gray-50 transition cursor-pointer text-gray-700 hover:scale-105"
+                  className="w-9 h-9 bg-white shadow-md border border-gray-100 rounded-full flex items-center justify-center hover:bg-gray-50 transition cursor-pointer text-gray-700 hover:scale-105"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => scrollPackages('right')}
-                  className="w-9 h-9 bg-white shadow-md border border-gray-150 rounded-full flex items-center justify-center hover:bg-gray-50 transition cursor-pointer text-gray-700 hover:scale-105"
+                  className="w-9 h-9 bg-white shadow-md border border-gray-100 rounded-full flex items-center justify-center hover:bg-gray-50 transition cursor-pointer text-gray-700 hover:scale-105"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>

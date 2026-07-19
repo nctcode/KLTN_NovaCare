@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star, MapPin, Clock, Award, ChevronRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { formatPrice } from '@/lib/utils';
 
 export default function DoctorDetailPage() {
   const params = useParams();
@@ -46,24 +47,22 @@ export default function DoctorDetailPage() {
     return (
       <div className="container-custom py-12 text-center bg-white border rounded-lg max-w-md mx-auto my-12 p-6">
         <h1 className="text-2xl font-bold text-secondary">Không tìm thấy bác sĩ</h1>
-        <p className="text-gray-500 mt-2">Bác sĩ bạn tìm kiếm không tồn tại hoặc đã bị khóa</p>
-        <Link href="/bac-si" className="text-primary-dark hover:underline mt-4 inline-block font-semibold">
+        <Link href="/bac-si" className="text-[#4caf50] hover:text-[#439e47] mt-4 inline-block font-semibold transition hover:underline">
           Quay lại danh sách
         </Link>
       </div>
     );
   }
-
   return (
     <div className="container-custom py-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Doctor Info */}
-          <Card>
+          <Card className="border border-gray-100 rounded-2xl shadow-sm overflow-hidden bg-white">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-6">
-                <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0 text-secondary">
+                <div className="w-24 h-24 rounded-full bg-[#4caf50]/10 flex items-center justify-center text-[#4caf50] font-bold text-3xl shrink-0">
                   {doctor.fullName.charAt(0)}
                 </div>
                 <div className="flex-1">
@@ -89,7 +88,7 @@ export default function DoctorDetailPage() {
 
           {/* Bio */}
           {doctor.bio && (
-            <Card>
+            <Card className="border border-gray-100 rounded-2xl shadow-sm overflow-hidden bg-white">
               <CardHeader>
                 <CardTitle className="text-secondary">Giới thiệu</CardTitle>
               </CardHeader>
@@ -101,13 +100,13 @@ export default function DoctorDetailPage() {
 
           {/* Experience */}
           {doctor.experience && (
-            <Card>
+            <Card className="border border-gray-100 rounded-2xl shadow-sm overflow-hidden bg-white">
               <CardHeader>
                 <CardTitle className="text-secondary">Kinh nghiệm chuyên môn</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-start gap-3">
-                  <Award className="h-5 w-5 text-primary-dark flex-shrink-0 mt-1" />
+                  <Award className="h-5 w-5 text-[#4caf50] flex-shrink-0 mt-1" />
                   <p className="text-gray-600">{doctor.experience}</p>
                 </div>
               </CardContent>
@@ -115,7 +114,7 @@ export default function DoctorDetailPage() {
           )}
 
           {/* Workplaces */}
-          <Card>
+          <Card className="border border-gray-100 rounded-2xl shadow-sm overflow-hidden bg-white">
             <CardHeader>
               <CardTitle className="text-secondary">Nơi làm việc & Lịch khám</CardTitle>
             </CardHeader>
@@ -123,26 +122,26 @@ export default function DoctorDetailPage() {
               {doctor.workPlaces?.map((workplace) => (
                 <div
                   key={workplace.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-100 rounded-xl gap-4 bg-gray-50/50"
                 >
                   <div>
                     <h4 className="font-semibold text-secondary">{workplace.hospital.name}</h4>
-                    <p className="text-sm text-primary-dark font-medium">
+                    <p className="text-sm text-[#4caf50] font-semibold">
                       Chuyên khoa: {workplace.specialty.name}
                     </p>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                      <MapPin className="h-4 w-4 shrink-0" />
+                      <MapPin className="h-4 w-4 shrink-0 text-gray-400" />
                       <span>{workplace.hospital.address}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 justify-between sm:justify-end">
                     <div className="text-left sm:text-right">
                       <p className="text-xs text-gray-500">Phí khám</p>
-                      <p className="font-bold text-secondary text-lg">
-                        {workplace.consultationFee.toLocaleString()}đ
+                      <p className="font-extrabold text-[#4caf50] text-lg">
+                        {formatPrice(workplace.consultationFee)}đ
                       </p>
                     </div>
-                    <Button asChild>
+                    <Button asChild className="bg-[#4caf50] hover:bg-[#439e47] text-white font-bold transition">
                       <Link href={`/dat-lich?workplaceId=${workplace.id}`}>
                         Đặt lịch
                         <ChevronRight className="h-4 w-4 ml-1" />
@@ -158,7 +157,7 @@ export default function DoctorDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Quick Booking */}
-          <Card>
+          <Card className="border border-gray-100 rounded-2xl shadow-sm overflow-hidden bg-white">
             <CardHeader>
               <CardTitle className="text-lg text-secondary">Đặt lịch nhanh</CardTitle>
             </CardHeader>
@@ -168,7 +167,7 @@ export default function DoctorDetailPage() {
                 <select
                   value={quickWpId}
                   onChange={(e) => setQuickWpId(e.target.value)}
-                  className="w-full p-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full p-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:border-[#4caf50] transition-all"
                 >
                   {doctor.workPlaces?.map((wp) => (
                     <option key={wp.id} value={wp.id}>
@@ -183,24 +182,24 @@ export default function DoctorDetailPage() {
                   type="date"
                   value={quickDate}
                   onChange={(e) => setQuickDate(e.target.value)}
-                  className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:border-[#4caf50] transition-all"
                 />
               </div>
-              <Button className="w-full" onClick={handleQuickBook} disabled={!quickWpId}>
+              <Button className="w-full bg-[#4caf50] hover:bg-[#439e47] text-white font-bold transition" onClick={handleQuickBook} disabled={!quickWpId}>
                 Tìm lịch trống
               </Button>
             </CardContent>
           </Card>
 
           {/* Quick Info */}
-          <Card>
+          <Card className="border border-gray-100 rounded-2xl shadow-sm overflow-hidden bg-white">
             <CardContent className="p-4 space-y-2 text-sm">
               <div className="flex items-center gap-2 text-gray-600">
-                <Clock className="h-4 w-4 text-primary-dark" />
+                <Clock className="h-4 w-4 text-[#4caf50]" />
                 <span>Thời gian khám mỗi ca: ~30 phút</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
-                <MapPin className="h-4 w-4 text-primary-dark" />
+                <MapPin className="h-4 w-4 text-[#4caf50]" />
                 <span>Khám trực tiếp tại cơ sở y tế</span>
               </div>
             </CardContent>

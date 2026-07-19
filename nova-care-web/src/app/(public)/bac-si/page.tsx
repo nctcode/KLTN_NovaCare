@@ -14,8 +14,8 @@ import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search, SlidersHorizontal, X, Loader2 } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
-
 import { Suspense } from 'react';
+import { formatPrice } from '@/lib/utils';
 
 function DoctorListContent() {
   const searchParams = useSearchParams();
@@ -86,7 +86,7 @@ function DoctorListContent() {
           <Input
             type="text"
             placeholder="Tìm bác sĩ theo tên, chuyên khoa..."
-            className="pl-10"
+            className="pl-10 border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#4caf50] focus-visible:outline-none transition-all"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -96,7 +96,7 @@ function DoctorListContent() {
       <div className="flex flex-col md:flex-row gap-6">
         {/* Filters - Desktop & Responsive */}
         <div className={`md:block ${showFilters ? 'block' : 'hidden'} w-full md:w-72 flex-shrink-0`}>
-          <Card>
+          <Card className="border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-white">
             <CardContent className="p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-secondary">Bộ lọc</h3>
@@ -114,7 +114,7 @@ function DoctorListContent() {
                     setFilters({ ...filters, specialtyId: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-[#4caf50] focus:outline-none transition-all">
                     <SelectValue placeholder="Tất cả chuyên khoa" />
                   </SelectTrigger>
                   <SelectContent>
@@ -136,7 +136,7 @@ function DoctorListContent() {
                     setFilters({ ...filters, hospitalId: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border-gray-200 focus:ring-0 focus:ring-offset-0 focus:border-[#4caf50] focus:outline-none transition-all">
                     <SelectValue placeholder="Tất cả cơ sở" />
                   </SelectTrigger>
                   <SelectContent>
@@ -152,7 +152,7 @@ function DoctorListContent() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-750 block">
-                  Phí khám tối đa: {filters.maxPrice.toLocaleString()}đ
+                  Phí khám tối đa: {formatPrice(filters.maxPrice)}đ
                 </label>
                 <Slider
                   min={0}
@@ -165,7 +165,7 @@ function DoctorListContent() {
                 />
               </div>
 
-              <Button className="w-full" onClick={() => setShowFilters(false)}>
+              <Button className="w-full bg-[#4caf50] hover:bg-[#439e47] text-white font-bold transition" onClick={() => setShowFilters(false)}>
                 Áp dụng bộ lọc
               </Button>
             </CardContent>

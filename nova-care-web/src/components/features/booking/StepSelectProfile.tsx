@@ -54,10 +54,10 @@ export function StepSelectProfile({ onNext, onBack }: StepSelectProfileProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-secondary">Chọn hồ sơ người bệnh</h2>
+        <h2 className="text-xl font-bold text-gray-800">Chọn hồ sơ người bệnh</h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm">
+            <Button size="sm" className="bg-[#4caf50] hover:bg-[#439e47] text-white">
               <Plus className="h-4 w-4 mr-1" />
               Thêm hồ sơ
             </Button>
@@ -80,7 +80,7 @@ export function StepSelectProfile({ onNext, onBack }: StepSelectProfileProps) {
       <div className="space-y-3">
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin h-10 w-10 text-primary" />
+            <Loader2 className="animate-spin h-10 w-10 text-[#4caf50]" />
           </div>
         ) : profiles.length === 0 ? (
           <Card className="border-dashed bg-gray-50/50">
@@ -95,18 +95,22 @@ export function StepSelectProfile({ onNext, onBack }: StepSelectProfileProps) {
                 key={profile.id}
                 onClick={() => handleSelectProfile(profile.id)}
                 className={`cursor-pointer transition hover:shadow ${
-                  selectedProfileId === profile.id ? 'border-2 border-primary bg-primary/5' : ''
+                  selectedProfileId === profile.id ? 'border-2 border-[#4caf50] bg-[#4caf50]/5' : 'border-gray-200'
                 }`}
               >
                 <CardContent className="p-4 space-y-1">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary-dark" />
+                    <User className="h-4 w-4 text-[#4caf50]" />
                     <span className="font-semibold text-secondary">{profile.fullName}</span>
-                    {profile.isDefault && (
-                      <span className="text-[10px] font-bold bg-primary text-secondary px-1.5 py-0.5 rounded ml-auto">
+                    {selectedProfileId === profile.id ? (
+                      <span className="text-[10px] font-bold bg-[#4caf50] text-white px-1.5 py-0.5 rounded ml-auto flex items-center gap-0.5 shadow-sm">
+                        Đang chọn
+                      </span>
+                    ) : profile.isDefault ? (
+                      <span className="text-[10px] font-bold bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded ml-auto">
                         Mặc định
                       </span>
-                    )}
+                    ) : null}
                   </div>
                   <p className="text-xs text-gray-500">Mối quan hệ: {profile.relation || 'Bản thân'}</p>
                   <p className="text-xs text-gray-500">Số điện thoại: {profile.phone || '---'}</p>
@@ -132,6 +136,7 @@ export function StepSelectProfile({ onNext, onBack }: StepSelectProfileProps) {
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Ví dụ: Đau ngực, đau đầu kéo dài..."
+              className="border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#4caf50] focus-visible:outline-none transition-all"
             />
           </div>
           <div className="space-y-2">
@@ -144,6 +149,7 @@ export function StepSelectProfile({ onNext, onBack }: StepSelectProfileProps) {
               value={symptoms}
               onChange={(e) => setSymptoms(e.target.value)}
               placeholder="Ví dụ: Triệu chứng xuất hiện 3 ngày trước, đau nhiều hơn về đêm..."
+              className="border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#4caf50] focus-visible:outline-none transition-all"
             />
           </div>
         </div>
@@ -155,9 +161,13 @@ export function StepSelectProfile({ onNext, onBack }: StepSelectProfileProps) {
           <ArrowLeft className="h-4 w-4 mr-1" />
           Quay lại
         </Button>
-        <Button onClick={handleNext} disabled={!selectedProfileId}>
+        <Button 
+          onClick={handleNext} 
+          disabled={!selectedProfileId}
+          className="bg-[#4caf50] hover:bg-[#439e47] text-white px-6 py-2 rounded-lg font-bold flex items-center gap-1 cursor-pointer transition-all disabled:opacity-50"
+        >
           Tiếp tục
-          <ChevronRight className="h-4 w-4 ml-1" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

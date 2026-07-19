@@ -83,14 +83,14 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-secondary">Xác nhận thông tin đặt lịch</h2>
+      <h2 className="text-xl font-bold text-gray-800">Xác nhận thông tin đặt lịch</h2>
 
       <div className="space-y-4">
         {/* Doctor & Location Info */}
         <Card className="bg-gray-50/50">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-start gap-3">
-              <User className="h-5 w-5 text-primary-dark shrink-0 mt-0.5" />
+              <User className="h-5 w-5 text-[#4caf50] shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-gray-500 font-medium">Bác sĩ khám</p>
                 <p className="font-semibold text-secondary">{doctor?.fullName}</p>
@@ -98,7 +98,7 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
               </div>
             </div>
             <div className="flex items-start gap-3 border-t pt-3">
-              <MapPin className="h-5 w-5 text-primary-dark shrink-0 mt-0.5" />
+              <MapPin className="h-5 w-5 text-[#4caf50] shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-gray-500 font-medium">Địa điểm khám</p>
                 <p className="font-semibold text-secondary">{workplace?.hospital?.name}</p>
@@ -112,14 +112,14 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
         <Card className="bg-gray-50/50">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-start gap-3">
-              <Calendar className="h-5 w-5 text-primary-dark shrink-0 mt-0.5" />
+              <Calendar className="h-5 w-5 text-[#4caf50] shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-gray-500 font-medium">Ngày khám</p>
                 <p className="font-semibold text-secondary capitalize">{formattedDate}</p>
               </div>
             </div>
             <div className="flex items-start gap-3 border-t pt-3">
-              <Clock className="h-5 w-5 text-primary-dark shrink-0 mt-0.5" />
+              <Clock className="h-5 w-5 text-[#4caf50] shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-gray-500 font-medium">Thời gian khám</p>
                 <p className="font-semibold text-secondary">{formattedTime}</p>
@@ -132,7 +132,7 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
         <Card className="bg-gray-50/50">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-start gap-3">
-              <User className="h-5 w-5 text-primary-dark shrink-0 mt-0.5" />
+              <User className="h-5 w-5 text-[#4caf50] shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-gray-500 font-medium">Người khám</p>
                 <p className="font-semibold text-secondary">{profile?.fullName}</p>
@@ -141,10 +141,10 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
             </div>
             {reason && (
               <div className="flex items-start gap-3 border-t pt-3">
-                <FileText className="h-5 w-5 text-primary-dark shrink-0 mt-0.5" />
+                <FileText className="h-5 w-5 text-[#4caf50] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-gray-500 font-medium">Lý do khám</p>
-                  <p className="text-sm text-gray-650 leading-relaxed">{reason}</p>
+                  <p className="text-sm text-gray-600 leading-relaxed">{reason}</p>
                 </div>
               </div>
             )}
@@ -152,9 +152,9 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
         </Card>
 
         {/* Price Info */}
-        <div className="flex justify-between items-center bg-primary/10 border border-primary/20 rounded-lg p-4">
+        <div className="flex justify-between items-center bg-[#4caf50]/10 border border-[#4caf50]/20 rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary-dark" />
+            <DollarSign className="h-5 w-5 text-[#4caf50]" />
             <span className="font-semibold text-secondary text-sm">Phí khám bệnh</span>
           </div>
           <span className="font-bold text-secondary text-lg">{fee.toLocaleString()}đ</span>
@@ -167,7 +167,11 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
           <ArrowLeft className="h-4 w-4 mr-1" />
           Quay lại
         </Button>
-        <Button onClick={handleConfirm} disabled={mutation.isPending}>
+        <Button 
+          onClick={handleConfirm} 
+          disabled={mutation.isPending}
+          className="bg-[#4caf50] hover:bg-[#439e47] text-white px-6 py-2 rounded-lg font-bold flex items-center gap-1 cursor-pointer transition-all disabled:opacity-50"
+        >
           {mutation.isPending ? (
             <>
               <Loader2 className="animate-spin mr-2 h-4 w-4" />

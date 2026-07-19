@@ -42,20 +42,20 @@ export function StepPayment() {
   if (loadingAppointment) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="animate-spin h-10 w-10 text-primary" />
+        <Loader2 className="animate-spin h-10 w-10 text-[#4caf50]" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-secondary">Thanh toán lịch khám</h2>
+      <h2 className="text-xl font-bold text-gray-800">Thanh toán lịch khám</h2>
 
-      <div className="bg-success/10 border border-success/20 rounded-lg p-4 flex gap-3 items-start">
-        <CheckCircle className="h-6 w-6 text-success shrink-0" />
+      <div className="bg-[#4caf50]/10 border border-[#4caf50]/20 rounded-lg p-4 flex gap-3 items-start">
+        <CheckCircle className="h-6 w-6 text-[#4caf50] shrink-0" />
         <div>
           <p className="font-semibold text-secondary">Lịch hẹn đã được giữ chỗ!</p>
-          <p className="text-sm text-gray-650">
+          <p className="text-sm text-gray-600">
             Vui lòng thực hiện thanh toán trong vòng 15 phút để hoàn tất quy trình xác nhận lịch khám.
           </p>
         </div>
@@ -88,7 +88,7 @@ export function StepPayment() {
             </div>
             <div className="flex justify-between font-bold pt-3 border-t text-base text-secondary">
               <span>Tổng tiền thanh toán:</span>
-              <span className="text-primary-dark">{appointment.totalPrice?.toLocaleString() || 0}đ</span>
+              <span className="text-[#4caf50]">{appointment.totalPrice?.toLocaleString() || 0}đ</span>
             </div>
           </CardContent>
         </Card>
@@ -97,24 +97,29 @@ export function StepPayment() {
       <div className="space-y-3">
         <h3 className="font-medium text-secondary text-sm">Chọn phương thức thanh toán</h3>
         <Card
-          className="border-2 border-primary bg-primary/5 cursor-pointer"
+          className="border-2 border-[#4caf50] bg-[#4caf50]/5 cursor-pointer"
           onClick={handlePayment}
         >
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <CreditCard className="h-5 w-5 text-primary-dark" />
+              <CreditCard className="h-5 w-5 text-[#4caf50]" />
               <div>
                 <p className="font-semibold text-secondary">VNPay</p>
                 <p className="text-xs text-gray-500">Thanh toán qua tài khoản ngân hàng, ví điện tử</p>
               </div>
             </div>
-            <CheckCircle className="h-5 w-5 text-primary-dark" />
+            <CheckCircle className="h-5 w-5 text-[#4caf50]" />
           </CardContent>
         </Card>
       </div>
 
       <div className="flex flex-col gap-2 pt-4 border-t">
-        <Button size="lg" className="w-full" onClick={handlePayment} disabled={isProcessing}>
+        <Button 
+          size="lg" 
+          className="w-full bg-[#4caf50] hover:bg-[#439e47] text-white font-bold cursor-pointer transition-all disabled:opacity-50" 
+          onClick={handlePayment} 
+          disabled={isProcessing}
+        >
           {isProcessing ? (
             <>
               <Loader2 className="animate-spin mr-2 h-4 w-4" />

@@ -11,48 +11,56 @@ export function BookingStepper({
   currentStep: number;
 }) {
   return (
-    <div className="flex items-center justify-between w-full py-4 px-2">
-      {steps.map((step, index) => {
-        const isCompleted = currentStep > step.id;
-        const isActive = currentStep === step.id;
+    <div className="w-full py-2">
+      <div className="flex items-center justify-between relative max-w-4xl mx-auto px-4">
+        {/* Connecting Line Background */}
+        <div className="absolute left-10 right-10 top-6 h-0.5 bg-gray-200 -translate-y-1/2 z-0" />
+        
+        {/* Active/Completed Line Progress */}
+        <div 
+          className="absolute left-10 top-6 h-0.5 bg-[#4caf50] -translate-y-1/2 transition-all duration-300 z-0"
+          style={{ 
+            width: `${((currentStep - 1) / (steps.length - 1)) * 90}%` // Adjust slightly to not overshoot last circle
+          }}
+        />
 
-        return (
-          <div key={step.id} className="flex items-center flex-1 last:flex-initial">
-            <div className="flex flex-col items-center relative">
+        {steps.map((step) => {
+          const isCompleted = currentStep > step.id;
+          const isActive = currentStep === step.id;
+
+          return (
+            <div key={step.id} className="flex flex-col items-center relative z-10 flex-1">
+              {/* Step Circle */}
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition",
-                  isCompleted
-                    ? "bg-primary border-primary text-secondary font-bold"
-                    : isActive
-                    ? "border-primary text-primary bg-white font-bold"
-                    : "border-gray-300 text-gray-400 bg-white"
+                  "w-12 h-12 rounded-full flex items-center justify-center text-base font-semibold border-2 transition-all duration-300",
+                  isCompleted || isActive
+                    ? "bg-[#4caf50] border-[#4caf50] text-white shadow-sm"
+                    : "bg-white border-gray-300 text-gray-400"
                 )}
               >
-                {isCompleted ? <Check className="h-4 w-4 stroke-[3px]" /> : step.id}
+                {isCompleted ? (
+                  <Check className="h-5 w-5 stroke-[3px]" />
+                ) : (
+                  <span>{step.id}</span>
+                )}
               </div>
+
+              {/* Step Label */}
               <span
                 className={cn(
-                  "absolute top-10 text-xs font-medium whitespace-nowrap text-center hidden md:block",
-                  isActive ? "text-primary font-bold" : "text-gray-500"
+                  "mt-3 text-xs md:text-sm font-medium text-center transition-all duration-300 block",
+                  isActive || isCompleted
+                    ? "text-[#4caf50] font-semibold"
+                    : "text-gray-500"
                 )}
               >
                 {step.label}
               </span>
             </div>
-
-            {index < steps.length - 1 && (
-              <div
-                className={cn(
-                  "h-0.5 mx-2 flex-1 transition",
-                  isCompleted ? "bg-primary" : "bg-gray-200"
-                )}
-              />
-            )}
-          </div>
-        );
-      })}
-      <div className="h-4 md:h-6" /> {/* Spacer for labels */}
+          );
+        })}
+      </div>
     </div>
   );
 }

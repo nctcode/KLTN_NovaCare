@@ -41,7 +41,17 @@
   --color-warning: #FFC107;
   --color-danger: #DC3545;
   --color-info: #17A2B8;
-  
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
   --radius-lg: 12px;
   --radius-md: 8px;
   --radius-sm: 4px;

@@ -77,7 +77,7 @@ function PaymentPageContent() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Summary */}
-            <div className="bg-gray-150/50 rounded-lg p-4 space-y-2 text-sm text-gray-700">
+            <div className="bg-gray-100/50 rounded-lg p-4 space-y-2 text-sm text-gray-700">
               <div className="flex justify-between">
                 <span className="text-gray-500">Mã lịch khám:</span>
                 <span className="font-semibold text-secondary">{appointment.bookingCode}</span>

@@ -13,6 +13,7 @@ import { StepPayment } from '@/components/features/booking/StepPayment';
 import { Card, CardContent } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { doctorService } from '@/services/doctor.service';
+import { BookingSummary } from '@/components/features/booking/BookingSummary';
 
 const steps = [
   { id: 1, label: 'Chọn bác sĩ' },
@@ -67,25 +68,35 @@ function BookingPageContent() {
   };
 
   return (
-    <div className="container-custom py-8 max-w-4xl">
+    <div className="container-custom py-8 max-w-5xl">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-secondary">Đặt lịch khám bệnh</h1>
         <p className="text-gray-500 mt-1">Hoàn thành các bước dưới đây để đặt lịch hẹn với bác sĩ</p>
       </div>
 
-      <div className="bg-white border rounded-lg p-6 mb-6">
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-6">
         <BookingStepper steps={steps} currentStep={currentStep} />
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          {currentStep === 1 && <StepSelectDoctor onNext={handleNext} />}
-          {currentStep === 2 && <StepSelectTime onNext={handleNext} onBack={handleBack} />}
-          {currentStep === 3 && <StepSelectProfile onNext={handleNext} onBack={handleBack} />}
-          {currentStep === 4 && <StepConfirm onNext={handleNext} onBack={handleBack} />}
-          {currentStep === 5 && <StepPayment />}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className={currentStep > 1 ? "lg:col-span-2" : "lg:col-span-3"}>
+          <Card className="rounded-2xl border border-gray-100 shadow-sm overflow-hidden bg-white">
+            <CardContent className="p-6">
+              {currentStep === 1 && <StepSelectDoctor onNext={handleNext} />}
+              {currentStep === 2 && <StepSelectTime onNext={handleNext} onBack={handleBack} />}
+              {currentStep === 3 && <StepSelectProfile onNext={handleNext} onBack={handleBack} />}
+              {currentStep === 4 && <StepConfirm onNext={handleNext} onBack={handleBack} />}
+              {currentStep === 5 && <StepPayment />}
+            </CardContent>
+          </Card>
+        </div>
+
+        {currentStep > 1 && (
+          <div className="lg:col-span-1">
+            <BookingSummary />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
