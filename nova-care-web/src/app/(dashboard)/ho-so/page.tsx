@@ -14,6 +14,7 @@ import {
   Calendar, 
   Heart, 
   Shield, 
+  ShieldAlert,
   Trash2, 
   CheckCircle2, 
   Loader2, 
@@ -296,10 +297,34 @@ export default function ProfilePage() {
                     <span>CCCD: <strong className="text-slate-900 font-bold">{profile.identityNumber || 'Chưa cung cấp'}</strong></span>
                   </div>
 
+                  {profile.healthInsurance && (
+                    <div className="col-span-2 flex items-center gap-2 text-slate-700 border-t border-slate-200 pt-2 mt-0.5">
+                      <ShieldAlert className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <span>Thẻ BHYT: <strong className="text-slate-900 font-bold font-mono">{profile.healthInsurance}</strong></span>
+                    </div>
+                  )}
+
                   {profile.address && (
-                    <div className="col-span-2 flex items-center gap-2 text-slate-700 border-t border-slate-200 pt-2.5 mt-1">
+                    <div className="col-span-2 flex items-center gap-2 text-slate-700 border-t border-slate-200 pt-2">
                       <MapPin className="h-4 w-4 text-slate-600 shrink-0" />
                       <span className="truncate">Địa chỉ: <strong className="text-slate-900 font-bold">{profile.address}</strong></span>
+                    </div>
+                  )}
+
+                  {(profile.emergencyContact || profile.emergencyPhone) && (
+                    <div className="col-span-2 flex items-center gap-2 text-slate-700 border-t border-slate-200 pt-2">
+                      <Phone className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Liên hệ khẩn cấp: <strong className="text-slate-900 font-bold">{profile.emergencyContact || ''} ({profile.emergencyPhone || '---'})</strong></span>
+                    </div>
+                  )}
+
+                  {(profile.medicalHistory || profile.allergies) && (
+                    <div className="col-span-2 flex items-start gap-2 text-slate-700 border-t border-slate-200 pt-2">
+                      <Heart className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        {profile.medicalHistory && <p className="truncate">Tiền sử: <strong className="text-slate-900 font-bold">{profile.medicalHistory}</strong></p>}
+                        {profile.allergies && <p className="truncate text-red-600">Dị ứng: <strong className="font-bold">{profile.allergies}</strong></p>}
+                      </div>
                     </div>
                   )}
                 </div>
