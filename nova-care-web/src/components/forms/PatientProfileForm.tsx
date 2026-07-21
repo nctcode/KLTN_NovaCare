@@ -67,27 +67,27 @@ export function PatientProfileForm({ onSuccess }: PatientProfileFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-      <div className="space-y-2">
-        <Label htmlFor="fullName">Họ và tên *</Label>
+    <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <div className="space-y-1.5">
+        <Label htmlFor="fullName" className="text-xs font-semibold text-slate-700">Họ và tên *</Label>
         <Input
           id="fullName"
           value={formData.fullName}
           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
           placeholder="Nguyễn Văn A"
-          className={errors.fullName ? 'border-danger' : ''}
+          className={`bg-slate-50 border-slate-200 focus-visible:ring-slate-900 ${errors.fullName ? 'border-red-500' : ''}`}
         />
-        {errors.fullName && <p className="text-xs text-danger">{errors.fullName}</p>}
+        {errors.fullName && <p className="text-xs text-red-500">{errors.fullName}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="gender">Giới tính</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="gender" className="text-xs font-semibold text-slate-700">Giới tính</Label>
           <Select
             value={formData.gender}
             onValueChange={(val) => setFormData({ ...formData, gender: val as 'MALE' | 'FEMALE' | 'OTHER' })}
           >
-            <SelectTrigger>
+            <SelectTrigger className="bg-slate-50 border-slate-200">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -97,62 +97,66 @@ export function PatientProfileForm({ onSuccess }: PatientProfileFormProps) {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="dateOfBirth">Ngày sinh *</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="dateOfBirth" className="text-xs font-semibold text-slate-700">Ngày sinh *</Label>
           <Input
             id="dateOfBirth"
             type="date"
             value={formData.dateOfBirth}
             onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-            className={errors.dateOfBirth ? 'border-danger' : ''}
+            className={`bg-slate-50 border-slate-200 focus-visible:ring-slate-900 ${errors.dateOfBirth ? 'border-red-500' : ''}`}
           />
-          {errors.dateOfBirth && <p className="text-xs text-danger">{errors.dateOfBirth}</p>}
+          {errors.dateOfBirth && <p className="text-xs text-red-500">{errors.dateOfBirth}</p>}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="phone">Số điện thoại liên hệ</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">Số điện thoại liên hệ</Label>
           <Input
             id="phone"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             placeholder="0123456789"
+            className="bg-slate-50 border-slate-200 focus-visible:ring-slate-900"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="identityNumber">Số CCCD / Hộ chiếu</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="identityNumber" className="text-xs font-semibold text-slate-700">Số CCCD / Hộ chiếu</Label>
           <Input
             id="identityNumber"
             value={formData.identityNumber}
             onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value })}
-            placeholder="Số CCCD"
+            placeholder="Mã số CCCD"
+            className="bg-slate-50 border-slate-200 focus-visible:ring-slate-900"
           />
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="relation">Mối quan hệ</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="relation" className="text-xs font-semibold text-slate-700">Mối quan hệ</Label>
         <Input
           id="relation"
           value={formData.relation}
           onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
-          placeholder="Ví dụ: Bản thân, Bố, Mẹ, Con..."
+          placeholder="Bản thân, Bố, Mẹ, Con, Vợ/Chồng..."
+          className="bg-slate-50 border-slate-200 focus-visible:ring-slate-900"
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="address">Địa chỉ thường trú</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="address" className="text-xs font-semibold text-slate-700">Địa chỉ thường trú</Label>
         <Input
           id="address"
           value={formData.address}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
           placeholder="Số nhà, đường, phường/xã, quận/huyện..."
+          className="bg-slate-50 border-slate-200 focus-visible:ring-slate-900"
         />
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="submit" disabled={mutation.isPending} className="w-full sm:w-auto">
+      <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <Button type="submit" disabled={mutation.isPending} className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white">
           {mutation.isPending ? (
             <>
               <Loader2 className="animate-spin mr-2 h-4 w-4" />

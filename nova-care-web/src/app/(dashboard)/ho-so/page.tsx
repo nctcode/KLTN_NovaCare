@@ -5,14 +5,34 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profileService } from '@/services/profile.service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { PatientProfileForm } from '@/components/forms/PatientProfileForm';
-import { Plus, User, Phone, Calendar, Heart, Shield, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
+import { 
+  Plus, 
+  User, 
+  Phone, 
+  Calendar, 
+  Heart, 
+  Shield, 
+  Trash2, 
+  CheckCircle2, 
+  Loader2, 
+  Search, 
+  FileCheck, 
+  UserCheck, 
+  Users,
+  CalendarCheck,
+  MapPin,
+  ArrowRight
+} from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [relationFilter, setRelationFilter] = useState<string>('ALL');
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ['profiles'],
@@ -23,7 +43,7 @@ export default function ProfilePage() {
     mutationFn: profileService.setDefault,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
-      toast.success('Đã đặt hồ sơ mặc định');
+      toast.success('Đã thiết lập hồ sơ khám mặc định');
     },
     onError: () => {
       toast.error('Không thể thiết lập hồ sơ mặc định');
@@ -51,23 +71,50 @@ export default function ProfilePage() {
     }
   };
 
+  // Filter profiles by query and relationship
+  const filteredProfiles = profiles.filter((p) => {
+    const matchesSearch = 
+      p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.phone && p.phone.includes(searchQuery)) ||
+      (p.identityNumber && p.identityNumber.includes(searchQuery));
+
+    if (!matchesSearch) return false;
+    if (relationFilter === 'SELF') return p.relation === 'Bản thân';
+    if (relationFilter === 'RELATIVE') return p.relation !== 'Bản thân';
+    return true;
+  });
+
+  const defaultProfile = profiles.find((p) => p.isDefault);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="w-full space-y-6">
+      {/* Header Banner - Full Width Minimalist */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-secondary">Hồ sơ bệnh nhân</h1>
-          <p className="text-sm text-gray-500">Quản lý hồ sơ y tế của bạn và người thân để đặt lịch khám nhanh hơn</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Hồ sơ bệnh nhân</h1>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-900 text-white">
+              {profiles.length} hồ sơ
+            </span>
+          </div>
+          <p className="text-sm text-slate-600 mt-1 font-medium">
+            Quản lý thông tin y tế của bản thân và người thân để đăng ký khám bệnh nhanh chóng
+          </p>
         </div>
+
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Thêm hồ sơ
+            <Button className="bg-slate-900 hover:bg-slate-800 text-white gap-2 font-semibold shadow-xs self-start md:self-auto">
+              <Plus className="h-4 w-4" />
+              Thêm hồ sơ mới
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto">
+          <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto border-slate-200">
             <DialogHeader>
-              <DialogTitle>Thêm hồ sơ bệnh nhân mới</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-slate-900">Thêm hồ sơ bệnh nhân mới</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Nhập đầy đủ thông tin bệnh nhân để sử dụng cho các lần đặt lịch khám tiếp theo
+              </DialogDescription>
             </DialogHeader>
             <PatientProfileForm
               onSuccess={() => {
@@ -79,87 +126,208 @@ export default function ProfilePage() {
         </Dialog>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin h-10 w-10 text-primary" />
+      {/* Stats Summary Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tổng số hồ sơ</p>
+            <p className="text-3xl font-extrabold text-slate-900 mt-1">{profiles.length}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800">
+            <Users className="w-5 h-5" />
+          </div>
         </div>
-      ) : profiles.length === 0 ? (
-        <Card className="border-dashed bg-gray-50/50">
-          <CardContent className="py-12 text-center text-gray-500">
-            Bạn chưa tạo hồ sơ bệnh nhân nào. Vui lòng bấm &quot;Thêm hồ sơ&quot; để tạo.
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hồ sơ khám chính</p>
+            <p className="text-base font-extrabold text-emerald-700 mt-1 truncate max-w-[180px]">
+              {defaultProfile ? defaultProfile.fullName : 'Chưa chọn'}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+            <UserCheck className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Đã cập nhật CCCD</p>
+            <p className="text-3xl font-extrabold text-slate-900 mt-1">
+              {profiles.filter((p) => p.identityNumber).length}/{profiles.length}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800">
+            <FileCheck className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar - Search & Filter */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Tìm theo họ tên, SĐT, CCCD..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900 text-slate-900 placeholder:text-slate-400"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setRelationFilter('ALL')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+              relationFilter === 'ALL'
+                ? 'bg-slate-900 text-white'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            Tất cả ({profiles.length})
+          </button>
+          <button
+            onClick={() => setRelationFilter('SELF')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+              relationFilter === 'SELF'
+                ? 'bg-slate-900 text-white'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            Bản thân
+          </button>
+          <button
+            onClick={() => setRelationFilter('RELATIVE')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+              relationFilter === 'RELATIVE'
+                ? 'bg-slate-900 text-white'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            Người thân
+          </button>
+        </div>
+      </div>
+
+      {/* Content Grid */}
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="animate-spin h-8 w-8 text-slate-900" />
+        </div>
+      ) : filteredProfiles.length === 0 ? (
+        <Card className="border-dashed border-slate-300 bg-white">
+          <CardContent className="py-16 text-center text-slate-500 space-y-3">
+            <User className="h-10 w-10 text-slate-400 mx-auto" />
+            <p className="font-bold text-slate-900">Không tìm thấy hồ sơ bệnh nhân nào</p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {searchQuery
+                ? 'Không có kết quả khớp với từ khóa tìm kiếm của bạn.'
+                : 'Bạn chưa tạo hồ sơ bệnh nhân nào. Bấm nút "Thêm hồ sơ mới" để khởi tạo.'}
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {profiles.map((profile) => (
-            <Card key={profile.id} className="relative hover:shadow transition border border-gray-200">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary-dark">
-                      <User className="h-5 w-5" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredProfiles.map((profile) => (
+            <Card
+              key={profile.id}
+              className={`bg-white border transition-all duration-200 ${
+                profile.isDefault
+                  ? 'border-emerald-500 shadow-md ring-2 ring-emerald-500/10'
+                  : 'border-slate-200 hover:border-slate-400 shadow-sm'
+              }`}
+            >
+              <CardContent className="p-6 space-y-5">
+                {/* Header Profile info */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg shrink-0">
+                      {profile.fullName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-secondary text-lg flex items-center gap-2">
-                        {profile.fullName}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-extrabold text-slate-900 text-base">
+                          {profile.fullName}
+                        </h3>
                         {profile.isDefault && (
-                          <span className="text-[10px] bg-primary text-secondary px-2 py-0.5 rounded-full font-bold">
-                            Mặc định
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            Hồ sơ chính
                           </span>
                         )}
-                      </h3>
-                      <p className="text-sm text-gray-500">Mối quan hệ: {profile.relation || 'Bản thân'}</p>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5 font-medium">
+                        Mối quan hệ: <span className="font-bold text-slate-900">{profile.relation || 'Bản thân'}</span>
+                      </p>
                     </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm border-t pt-4">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Phone className="h-4 w-4 text-gray-400 shrink-0" />
-                    <span>{profile.phone || 'Chưa cung cấp'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
-                    <span>
-                      {profile.dateOfBirth
-                        ? new Date(profile.dateOfBirth).toLocaleDateString('vi-VN')
-                        : 'Chưa cung cấp'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Heart className="h-4 w-4 text-gray-400 shrink-0" />
-                    <span>Giới tính: {profile.gender === 'MALE' ? 'Nam' : profile.gender === 'FEMALE' ? 'Nữ' : 'Khác'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Shield className="h-4 w-4 text-gray-400 shrink-0" />
-                    <span>CCCD: {profile.identityNumber || 'Chưa cung cấp'}</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center border-t pt-4">
-                  {!profile.isDefault ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSetDefault(profile.id)}
-                      className="text-primary-dark font-medium"
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                      Đặt làm mặc định
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                      <CheckCircle2 className="h-4 w-4 text-success" />
-                      Hồ sơ đặt lịch chính
-                    </span>
-                  )}
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => handleDelete(profile.id)}
-                    className="text-danger hover:bg-red-50"
+                    className="text-slate-400 hover:text-red-600 hover:bg-red-50 -mr-2 -mt-2"
+                    title="Xóa hồ sơ"
                   >
                     <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Phone className="h-4 w-4 text-slate-600 shrink-0" />
+                    <span>SĐT: <strong className="text-slate-900 font-bold">{profile.phone || 'Chưa cung cấp'}</strong></span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Calendar className="h-4 w-4 text-slate-600 shrink-0" />
+                    <span>Ngày sinh: <strong className="text-slate-900 font-bold">{profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa cung cấp'}</strong></span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Heart className="h-4 w-4 text-slate-600 shrink-0" />
+                    <span>Giới tính: <strong className="text-slate-900 font-bold">{profile.gender === 'MALE' ? 'Nam' : profile.gender === 'FEMALE' ? 'Nữ' : 'Khác'}</strong></span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Shield className="h-4 w-4 text-slate-600 shrink-0" />
+                    <span>CCCD: <strong className="text-slate-900 font-bold">{profile.identityNumber || 'Chưa cung cấp'}</strong></span>
+                  </div>
+
+                  {profile.address && (
+                    <div className="col-span-2 flex items-center gap-2 text-slate-700 border-t border-slate-200 pt-2.5 mt-1">
+                      <MapPin className="h-4 w-4 text-slate-600 shrink-0" />
+                      <span className="truncate">Địa chỉ: <strong className="text-slate-900 font-bold">{profile.address}</strong></span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
+                  {!profile.isDefault ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSetDefault(profile.id)}
+                      disabled={setDefaultMutation.isPending}
+                      className="text-xs text-slate-800 font-semibold border-slate-300 hover:bg-slate-50"
+                    >
+                      Đặt làm hồ sơ chính
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-slate-600 flex items-center gap-1.5 font-bold">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      Tự động chọn khi đặt lịch
+                    </span>
+                  )}
+
+                  <Button asChild size="sm" className="bg-slate-900 hover:bg-slate-800 text-white text-xs gap-1 font-semibold">
+                    <Link href="/bac-si">
+                      Đặt lịch khám
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
@@ -170,3 +338,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
