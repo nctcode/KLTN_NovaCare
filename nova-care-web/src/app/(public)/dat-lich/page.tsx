@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useBookingStore } from '@/stores/booking.store';
-import { useAuth } from '@/hooks/useAuth';
 import { BookingStepper } from '@/components/features/BookingStepper';
 import { StepSelectDoctor } from '@/components/features/booking/StepSelectDoctor';
 import { StepSelectTime } from '@/components/features/booking/StepSelectTime';
@@ -14,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { doctorService } from '@/services/doctor.service';
 import { BookingSummary } from '@/components/features/booking/BookingSummary';
+import { Loader2, ShieldCheck, HeartHandshake } from 'lucide-react';
 
 const steps = [
   { id: 1, label: 'Chọn bác sĩ' },
@@ -23,14 +23,10 @@ const steps = [
   { id: 5, label: 'Thanh toán' },
 ];
 
-import { Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
-
 function BookingPageContent() {
   const { currentStep, bookingData, setStep, setBookingData, resetBooking } = useBookingStore();
   const searchParams = useSearchParams();
   const workplaceId = searchParams.get('workplaceId');
-  const dateStr = searchParams.get('date');
 
   // Load workplace preselected if passed in URL
   const { data: workplace } = useQuery({
@@ -40,8 +36,10 @@ function BookingPageContent() {
   });
 
   useEffect(() => {
-    // Reset booking state when loading page for the first time
-    resetBooking();
+    // Reset booking state when loading page for the first time if no workplace preloaded
+    if (!workplaceId) {
+      resetBooking();
+    }
 
     if (workplace) {
       setBookingData({
@@ -51,9 +49,9 @@ function BookingPageContent() {
         hospitalId: workplace.hospitalId,
         workplaceId: workplace.id,
       });
-      setStep(2); // Jump directly to select time step!
+      setStep(2); // Jump directly to select time step
     }
-  }, [workplace, setBookingData, setStep, resetBooking]);
+  }, [workplace, workplaceId, setBookingData, setStep, resetBooking]);
 
   const handleNext = () => {
     if (currentStep < 5) {
@@ -68,34 +66,47 @@ function BookingPageContent() {
   };
 
   return (
-    <div className="container-custom py-8 max-w-5xl">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-secondary">Đặt lịch khám bệnh</h1>
-        <p className="text-gray-500 mt-1">Hoàn thành các bước dưới đây để đặt lịch hẹn với bác sĩ</p>
-      </div>
-
-      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-6">
-        <BookingStepper steps={steps} currentStep={currentStep} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className={currentStep > 1 ? "lg:col-span-2" : "lg:col-span-3"}>
-          <Card className="rounded-2xl border border-gray-100 shadow-sm overflow-hidden bg-white">
-            <CardContent className="p-6">
-              {currentStep === 1 && <StepSelectDoctor onNext={handleNext} />}
-              {currentStep === 2 && <StepSelectTime onNext={handleNext} onBack={handleBack} />}
-              {currentStep === 3 && <StepSelectProfile onNext={handleNext} onBack={handleBack} />}
-              {currentStep === 4 && <StepConfirm onNext={handleNext} onBack={handleBack} />}
-              {currentStep === 5 && <StepPayment />}
-            </CardContent>
-          </Card>
+    <div className="min-h-screen bg-slate-50/60 py-8 md:py-12">
+      <div className="container-custom max-w-6xl space-y-6">
+        {/* Page Title & Subtitle Banner */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-2xs text-xs font-semibold text-gray-600 mb-1">
+            <HeartHandshake className="w-4 h-4 text-[#4caf50]" />
+            Nền tảng đặt khám y tế số 1 NovaCare
+          </div>
+          <h1 className="text-2xl md:text-4xl font-extrabold text-secondary tracking-tight">
+            Đặt Lịch Khám Bệnh Trực Tuyến
+          </h1>
+          <p className="text-sm md:text-base text-gray-500 max-w-2xl mx-auto">
+            Đặt khám nhanh chóng trong 5 bước • Chọn bác sĩ chuyên khoa • Giữ chỗ tức thì
+          </p>
         </div>
 
-        {currentStep > 1 && (
-          <div className="lg:col-span-1">
-            <BookingSummary />
+        {/* Stepper Card Header */}
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 md:p-6 shadow-xs">
+          <BookingStepper steps={steps} currentStep={currentStep} />
+        </div>
+
+        {/* Main Content & Sidebar Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className={currentStep > 1 ? 'lg:col-span-2' : 'lg:col-span-3'}>
+            <Card className="rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white">
+              <CardContent className="p-5 md:p-8">
+                {currentStep === 1 && <StepSelectDoctor onNext={handleNext} />}
+                {currentStep === 2 && <StepSelectTime onNext={handleNext} onBack={handleBack} />}
+                {currentStep === 3 && <StepSelectProfile onNext={handleNext} onBack={handleBack} />}
+                {currentStep === 4 && <StepConfirm onNext={handleNext} onBack={handleBack} />}
+                {currentStep === 5 && <StepPayment />}
+              </CardContent>
+            </Card>
           </div>
-        )}
+
+          {currentStep > 1 && (
+            <div className="lg:col-span-1">
+              <BookingSummary />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -103,12 +114,16 @@ function BookingPageContent() {
 
 export default function BookingPage() {
   return (
-    <Suspense fallback={
-      <div className="flex justify-center py-12">
-        <Loader2 className="animate-spin h-10 w-10 text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col items-center justify-center py-20 text-gray-400">
+          <Loader2 className="animate-spin h-10 w-10 text-[#4caf50] mb-3" />
+          <p className="text-sm font-medium">Đang tải luồng đặt lịch NovaCare...</p>
+        </div>
+      }
+    >
       <BookingPageContent />
     </Suspense>
   );
 }
+

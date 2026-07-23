@@ -35,6 +35,11 @@ export class CreatePatientProfileDto {
   @IsString()
   address?: string;
 
+  @ApiProperty({ example: 'Bản thân', description: 'Mối quan hệ với chủ tài khoản', required: false })
+  @IsOptional()
+  @IsString()
+  relation?: string;
+
   @ApiProperty({ example: '001201012345', description: 'Số CCCD/CMND', required: false })
   @IsOptional()
   @IsString()
