@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, ChevronRight, Star, Loader2, Stethoscope, Building2, MapPin, CheckCircle2, Filter } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { Search, ChevronRight, Star, Loader2, Stethoscope, Building2, MapPin, CheckCircle2, Filter, Users } from 'lucide-react';
+import { formatPrice, getDoctorSpecialtyName } from '@/lib/utils';
 
 interface StepSelectDoctorProps {
   onNext: () => void;
@@ -148,6 +148,7 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
             {doctors.map((doctor) => {
               const workplace = doctor.workPlaces?.[0];
               const isSelected = selectedDoctorId === doctor.id;
+              const visitsCount = doctor.consultationCount || (doctor.reviewCount ? doctor.reviewCount * 12 + 50 : 350);
 
               return (
                 <Card
@@ -181,12 +182,15 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
                         <h3 className="font-bold text-secondary text-base truncate leading-snug">
                           {doctor.fullName}
                         </h3>
-                        <p className="text-xs font-semibold text-[#4caf50] mt-0.5 truncate">
-                          {doctor.qualification || 'Bác sĩ chuyên khoa'}
-                        </p>
                         
-                        {/* Rating & Reviews */}
-                        <div className="flex items-center gap-1.5 mt-1.5">
+                        {/* Chuyên khoa badge */}
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-[#0c4b39] bg-[#0c4b39]/10 px-2 py-0.5 rounded-md mt-1 w-fit">
+                          <Stethoscope className="w-3 h-3 text-[#0c4b39]" />
+                          <span>Chuyên khoa: {getDoctorSpecialtyName(doctor)}</span>
+                        </div>
+
+                        {/* Rating & Reviews & Lượt khám */}
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                           <div className="flex items-center text-amber-400">
                             {[...Array(5)].map((_, i) => (
                               <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
@@ -195,7 +199,10 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
                           <span className="text-xs font-bold text-gray-700">
                             {doctor.rating || 4.9}
                           </span>
-                          <span className="text-[11px] text-gray-400">(120+ lượt khám)</span>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                            <Users className="w-3 h-3 text-emerald-600" />
+                            {visitsCount}+ lượt khám
+                          </span>
                         </div>
                       </div>
                     </div>

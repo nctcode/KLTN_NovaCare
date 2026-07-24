@@ -90,7 +90,7 @@ async function main() {
   console.log(`✅ Created ${specialties.length} specialties`);
 
   // ==========================================
-  // 4. Tạo Hospitals
+  // 4. Tạo Hospitals (Cơ sở y tế)
   // ==========================================
   const hospital1 = await prisma.hospital.upsert({
     where: { name: 'Bệnh viện Đa khoa NovaCare' },
@@ -99,12 +99,12 @@ async function main() {
       name: 'Bệnh viện Đa khoa NovaCare',
       address: '456 Đường ABC, Quận 2, TP.HCM',
       phone: '028 1234 5678',
-      description: 'Bệnh viện đa khoa hiện đại với đội ngũ bác sĩ giàu kinh nghiệm',
+      description: 'Bệnh viện đa khoa hiện đại với đầy đủ các chuyên khoa mũi nhọn',
       logoUrl: 'https://via.placeholder.com/200x100/66FF33/000000?text=NovaCare',
       website: 'https://novacare.vn',
       email: 'contact@novacare.vn',
-      rating: 4.8,
-      reviewCount: 156,
+      rating: 4.9,
+      reviewCount: 230,
     },
   });
 
@@ -115,15 +115,49 @@ async function main() {
       name: 'Bệnh viện Chuyên khoa Sài Gòn',
       address: '789 Đường DEF, Quận 3, TP.HCM',
       phone: '028 9876 5432',
-      description: 'Chuyên khoa tim mạch và thần kinh hàng đầu',
+      description: 'Trung tâm y tế chuyên khoa sâu đạt chuẩn quốc tế',
       logoUrl: 'https://via.placeholder.com/200x100/66FF33/000000?text=NovaCare',
       website: 'https://saigonhospital.vn',
       email: 'info@saigonhospital.vn',
-      rating: 4.6,
-      reviewCount: 98,
+      rating: 4.8,
+      reviewCount: 145,
     },
   });
-  console.log('✅ Created hospitals');
+
+  const hospital3 = await prisma.hospital.upsert({
+    where: { name: 'Bệnh viện Y Dược NovaCare' },
+    update: {},
+    create: {
+      name: 'Bệnh viện Y Dược NovaCare',
+      address: '120 Đường Nguyễn Chí Thanh, Quận 5, TP.HCM',
+      phone: '028 3456 7890',
+      description: 'Bệnh viện đại học y dược chất lượng cao hàng đầu khu vực',
+      logoUrl: 'https://via.placeholder.com/200x100/66FF33/000000?text=NovaCare',
+      website: 'https://yduocnovacare.vn',
+      email: 'contact@yduocnovacare.vn',
+      rating: 4.7,
+      reviewCount: 180,
+    },
+  });
+
+  const hospital4 = await prisma.hospital.upsert({
+    where: { name: 'Bệnh viện Quốc tế Nova Central' },
+    update: {},
+    create: {
+      name: 'Bệnh viện Quốc tế Nova Central',
+      address: '88 Đường Lê Duẩn, Quận 1, TP.HCM',
+      phone: '028 5555 8888',
+      description: 'Bệnh viện cao cấp tiêu chuẩn 5 sao trung tâm TP.HCM',
+      logoUrl: 'https://via.placeholder.com/200x100/66FF33/000000?text=NovaCare',
+      website: 'https://novacentral.vn',
+      email: 'info@novacentral.vn',
+      rating: 4.9,
+      reviewCount: 310,
+    },
+  });
+  console.log('✅ Created 4 hospitals');
+
+  const allHospitals = [hospital1, hospital2, hospital3, hospital4];
 
   // ==========================================
   // 5. Tạo Hospital Branches
@@ -155,27 +189,45 @@ async function main() {
         latitude: 10.776634,
         longitude: 106.683021,
       },
+      {
+        hospitalId: hospital3.id,
+        name: 'Cơ sở Quận 5',
+        address: '120 Đường Nguyễn Chí Thanh, Quận 5, TP.HCM',
+        phone: '028 3456 7890',
+        latitude: 10.755432,
+        longitude: 106.662123,
+      },
+      {
+        hospitalId: hospital4.id,
+        name: 'Cơ sở Quận 1',
+        address: '88 Đường Lê Duẩn, Quận 1, TP.HCM',
+        phone: '028 5555 8888',
+        latitude: 10.780123,
+        longitude: 106.699876,
+      },
     ],
   });
   console.log('✅ Created hospital branches');
 
   // ==========================================
-  // 6. Tạo Doctors
+  // 6. Tạo Doctors (14 bác sĩ phủ đủ 12 chuyên khoa)
   // ==========================================
   const doctorsData = [
     {
       fullName: 'TS.BS. Nguyễn Văn An',
       qualification: 'Tiến sĩ Y khoa, Bác sĩ chuyên khoa II',
-      experience: '15 năm kinh nghiệm trong lĩnh vực tim mạch can thiệp',
-      bio: 'Chuyên về các bệnh lý tim mạch, tăng huyết áp, suy tim, rối loạn nhịp tim',
+      experience: '15 năm kinh nghiệm tim mạch can thiệp',
+      bio: 'Chuyên khám và điều trị tăng huyết áp, suy tim, mạch thần kinh',
+      specialtyName: 'Tim mạch',
       rating: 4.9,
       reviewCount: 89,
     },
     {
       fullName: 'PGS.TS. Trần Thị Bình',
       qualification: 'Phó Giáo sư - Tiến sĩ, Bác sĩ chuyên khoa II',
-      experience: '20 năm kinh nghiệm trong lĩnh vực thần kinh học',
-      bio: 'Chuyên về đột quỵ, Parkinson, động kinh, đau đầu',
+      experience: '20 năm kinh nghiệm thần kinh học',
+      bio: 'Chuyên về đột quỵ, Parkinson, động kinh, đau đầu mãn tính',
+      specialtyName: 'Thần kinh',
       rating: 4.8,
       reviewCount: 76,
     },
@@ -183,7 +235,8 @@ async function main() {
       fullName: 'BS.CKII. Lê Văn Cường',
       qualification: 'Bác sĩ chuyên khoa II, Thạc sĩ',
       experience: '12 năm kinh nghiệm nội tiết học',
-      bio: 'Chuyên về tiểu đường, rối loạn nội tiết, tuyến giáp',
+      bio: 'Chuyên về tiểu đường, rối loạn chuyển hóa, bệnh tuyến giáp',
+      specialtyName: 'Nội tiết',
       rating: 4.7,
       reviewCount: 45,
     },
@@ -191,7 +244,8 @@ async function main() {
       fullName: 'BS.CKII. Phạm Thị Dung',
       qualification: 'Bác sĩ chuyên khoa II',
       experience: '10 năm kinh nghiệm nhi khoa',
-      bio: 'Chuyên về nhiễm trùng hô hấp, tiêu hóa trẻ em, dinh dưỡng',
+      bio: 'Chuyên khám nhi tổng quát, tiêu hóa nhi, dinh dưỡng trẻ em',
+      specialtyName: 'Nhi khoa',
       rating: 4.9,
       reviewCount: 112,
     },
@@ -199,7 +253,8 @@ async function main() {
       fullName: 'BS.CKII. Hoàng Văn Em',
       qualification: 'Bác sĩ chuyên khoa II, Thạc sĩ',
       experience: '14 năm kinh nghiệm cơ xương khớp',
-      bio: 'Chuyên về thoái hóa khớp, đau cột sống, viêm khớp',
+      bio: 'Chuyên thoái hóa khớp, thoát vị đệm, viêm cột sống',
+      specialtyName: 'Cơ xương khớp',
       rating: 4.6,
       reviewCount: 67,
     },
@@ -207,55 +262,140 @@ async function main() {
       fullName: 'TS.BS. Ngô Thị Phương',
       qualification: 'Tiến sĩ Y khoa, Bác sĩ chuyên khoa II',
       experience: '18 năm kinh nghiệm sản phụ khoa',
-      bio: 'Chuyên về vô sinh hiếm muộn, thai kỳ nguy cơ cao, u xơ tử cung',
+      bio: 'Chuyên sản phụ khoa, vô sinh hiếm muộn, theo dõi thai kỳ nguy cơ cao',
+      specialtyName: 'Sản phụ khoa',
       rating: 4.9,
       reviewCount: 134,
     },
+    {
+      fullName: 'BS.CKII. Võ Văn Giang',
+      qualification: 'Bác sĩ chuyên khoa II',
+      experience: '16 năm kinh nghiệm Tai Mũi Họng',
+      bio: 'Chuyên vi phẫu tai, điều trị viêm xoang mãn tính, thính học',
+      specialtyName: 'Tai Mũi Họng',
+      rating: 4.8,
+      reviewCount: 95,
+    },
+    {
+      fullName: 'ThS.BS. Trịnh Thị Hà',
+      qualification: 'Thạc sĩ Y khoa, Bác sĩ chuyên khoa I',
+      experience: '11 năm kinh nghiệm nhãn khoa',
+      bio: 'Chuyên mổ Lasik, đục thủy tinh thể, đo cúc khúc xạ mắt',
+      specialtyName: 'Mắt',
+      rating: 4.7,
+      reviewCount: 58,
+    },
+    {
+      fullName: 'BS.CKII. Đặng Văn Hùng',
+      qualification: 'Bác sĩ chuyên khoa II Răng Hàm Mặt',
+      experience: '13 năm kinh nghiệm niềng răng, chỉnh hình mặt',
+      bio: 'Chuyên Implant nha khoa, chỉnh hình răng thẩm mỹ, phẫu thuật hàm',
+      specialtyName: 'Răng Hàm Mặt',
+      rating: 4.9,
+      reviewCount: 104,
+    },
+    {
+      fullName: 'TS.BS. Mai Thị Hương',
+      qualification: 'Tiến sĩ Y khoa Da liễu',
+      experience: '17 năm kinh nghiệm da liễu thẩm mỹ',
+      bio: 'Chuyên điều trị mụn trứng cá, nám da, trẻ hóa da công nghệ cao',
+      specialtyName: 'Da liễu',
+      rating: 4.9,
+      reviewCount: 142,
+    },
+    {
+      fullName: 'BS.CKII. Bùi Văn Khanh',
+      qualification: 'Bác sĩ chuyên khoa II Tiêu hóa',
+      experience: '15 năm kinh nghiệm nội soi tiêu hóa',
+      bio: 'Chuyên nội soi dạ dày đại tràng, điều trị viêm loét, gan mật',
+      specialtyName: 'Tiêu hóa',
+      rating: 4.8,
+      reviewCount: 88,
+    },
+    {
+      fullName: 'PGS.TS. Lâm Thị Liên',
+      qualification: 'Phó Giáo sư - Tiến sĩ Hô hấp',
+      experience: '22 năm kinh nghiệm phổi & hô hấp',
+      bio: 'Chuyên điều trị hen suyễn, COPD, viêm phổi, dị ứng hô hấp',
+      specialtyName: 'Hô hấp',
+      rating: 4.9,
+      reviewCount: 165,
+    },
+    {
+      fullName: 'ThS.BS. Đỗ Văn Minh',
+      qualification: 'Thạc sĩ Tim mạch can thiệp',
+      experience: '9 năm kinh nghiệm tim mạch',
+      bio: 'Chuyên khám tim mạch, siêu âm tim màu, tim mạch dự phòng',
+      specialtyName: 'Tim mạch',
+      rating: 4.7,
+      reviewCount: 52,
+    },
+    {
+      fullName: 'BS.CKII. Dương Thị Nga',
+      qualification: 'Bác sĩ chuyên khoa II Nhi',
+      experience: '14 năm kinh nghiệm sơ sinh & nhi khoa',
+      bio: 'Chuyên theo dõi phát triển trẻ nhỏ, tư vấn tiêm chủng, hô hấp nhi',
+      specialtyName: 'Nhi khoa',
+      rating: 4.8,
+      reviewCount: 91,
+    },
   ];
 
-  await prisma.doctorWorkplace.deleteMany({}); // Cleanup linked workspaces/slots first
+  await prisma.appointment.deleteMany({});
   await prisma.appointmentSlot.deleteMany({});
   await prisma.doctorSchedule.deleteMany({});
+  await prisma.doctorWorkplace.deleteMany({});
   await prisma.doctor.deleteMany({});
 
   const doctors = [];
-  for (const data of doctorsData) {
+  for (const item of doctorsData) {
+    const { specialtyName, ...doctorFields } = item;
     const doctor = await prisma.doctor.create({
-      data,
+      data: doctorFields,
     });
-    doctors.push(doctor);
+    doctors.push({ ...doctor, specialtyName });
   }
-  console.log(`✅ Created ${doctors.length} doctors`);
+  console.log(`✅ Created ${doctors.length} doctors covering all 12 specialties`);
 
   // ==========================================
-  // 7. Tạo Doctor Workplaces
+  // 7. Tạo Doctor Workplaces (1 Bác sĩ chỉ ở 1 Bệnh viện duy nhất, có 1 hoặc 2 chuyên khoa)
   // ==========================================
   const workplaces = [];
-  // Bệnh viện 1 - Các chuyên khoa
-  for (let i = 0; i < 3; i++) {
-    const workplace = await prisma.doctorWorkplace.create({
+
+  for (let i = 0; i < doctors.length; i++) {
+    const doc = doctors[i];
+    // Mỗi bác sĩ thuộc DUY NHẤT 1 Cơ sở y tế (Bệnh viện)
+    const hospital = allHospitals[i % allHospitals.length];
+
+    // Chuyên khoa 1 (Chuyên khoa chính)
+    const primarySpecialty = specialties.find(s => s.name === doc.specialtyName) || specialties[i % specialties.length];
+    const primaryWp = await prisma.doctorWorkplace.create({
       data: {
-        doctorId: doctors[i].id,
-        hospitalId: hospital1.id,
-        specialtyId: specialties[i % specialties.length].id,
-        consultationFee: 200000 + (i + 1) * 50000,
+        doctorId: doc.id,
+        hospitalId: hospital.id,
+        specialtyId: primarySpecialty.id,
+        consultationFee: 200000 + (i % 6 + 1) * 50000,
       },
     });
-    workplaces.push(workplace);
+    workplaces.push(primaryWp);
+
+    // Chuyên khoa 2 (Nếu có) TẠI CÙNG CƠ SỞ Y TẾ NÀY
+    if (i % 2 === 0) {
+      const secondarySpecialty = specialties[(i + 4) % specialties.length];
+      if (secondarySpecialty.id !== primarySpecialty.id) {
+        const secondaryWp = await prisma.doctorWorkplace.create({
+          data: {
+            doctorId: doc.id,
+            hospitalId: hospital.id, // Đảm bảo giữ nguyên 1 cơ sở duy nhất!
+            specialtyId: secondarySpecialty.id,
+            consultationFee: 250000 + (i % 6 + 1) * 50000,
+          },
+        });
+        workplaces.push(secondaryWp);
+      }
+    }
   }
-  // Bệnh viện 2 - Các chuyên khoa
-  for (let i = 3; i < doctors.length; i++) {
-    const workplace = await prisma.doctorWorkplace.create({
-      data: {
-        doctorId: doctors[i].id,
-        hospitalId: hospital2.id,
-        specialtyId: specialties[(i + 3) % specialties.length].id,
-        consultationFee: 250000 + (i + 1) * 50000,
-      },
-    });
-    workplaces.push(workplace);
-  }
-  console.log(`✅ Created ${workplaces.length} doctor workplaces`);
+  console.log(`✅ Created ${workplaces.length} doctor workplaces (Each doctor belongs to 1 hospital, with 1-2 specialties)`);
 
   // ==========================================
   // 8. Tạo Medical Services

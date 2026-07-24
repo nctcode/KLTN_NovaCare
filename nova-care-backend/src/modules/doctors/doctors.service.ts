@@ -17,6 +17,73 @@ export class DoctorsService {
   async findAll(): Promise<Doctor[]> {
     return this.prisma.doctor.findMany({
       where: { isActive: true, deletedAt: null },
+      include: {
+        workPlaces: {
+          where: { isActive: true },
+          include: {
+            hospital: true,
+            specialty: true,
+          },
+        },
+      },
+      orderBy: { fullName: 'asc' },
+    });
+  }
+
+  async findFiltered(params: {
+    q?: string;
+    hospitalId?: string;
+    specialtyId?: string;
+  }): Promise<Doctor[]> {
+    const { q, hospitalId, specialtyId } = params;
+
+    const conditions: any[] = [{ deletedAt: null }, { isActive: true }];
+
+    if (q) {
+      conditions.push({
+        OR: [
+          { fullName: { contains: q, mode: 'insensitive' } },
+          { qualification: { contains: q, mode: 'insensitive' } },
+          { bio: { contains: q, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    if (hospitalId && hospitalId !== 'all') {
+      conditions.push({
+        workPlaces: {
+          some: {
+            hospitalId,
+            isActive: true,
+          },
+        },
+      });
+    }
+
+    if (specialtyId && specialtyId !== 'all') {
+      conditions.push({
+        workPlaces: {
+          some: {
+            specialtyId,
+            isActive: true,
+          },
+        },
+      });
+    }
+
+    return this.prisma.doctor.findMany({
+      where: {
+        AND: conditions,
+      },
+      include: {
+        workPlaces: {
+          where: { isActive: true },
+          include: {
+            hospital: true,
+            specialty: true,
+          },
+        },
+      },
       orderBy: { fullName: 'asc' },
     });
   }
@@ -24,6 +91,15 @@ export class DoctorsService {
   async findOne(id: string): Promise<Doctor> {
     const doctor = await this.prisma.doctor.findFirst({
       where: { id, deletedAt: null },
+      include: {
+        workPlaces: {
+          where: { isActive: true },
+          include: {
+            hospital: true,
+            specialty: true,
+          },
+        },
+      },
     });
     if (!doctor) {
       throw new NotFoundException('Bác sĩ không tồn tại');
@@ -70,71 +146,19 @@ export class DoctorsService {
   }
 
   async search(query: string): Promise<Doctor[]> {
-    return this.prisma.doctor.findMany({
-      where: {
-        AND: [
-          { deletedAt: null },
-          { isActive: true },
-          {
-            OR: [
-              { fullName: { contains: query, mode: 'insensitive' } },
-              { qualification: { contains: query, mode: 'insensitive' } },
-              { bio: { contains: query, mode: 'insensitive' } },
-            ],
-          },
-        ],
-      },
-      take: 20,
-    });
+    return this.findFiltered({ q: query });
   }
 
   async findByHospital(hospitalId: string): Promise<Doctor[]> {
-    return this.prisma.doctor.findMany({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        workPlaces: {
-          some: {
-            hospitalId,
-            isActive: true,
-          },
-        },
-      },
-      orderBy: { fullName: 'asc' },
-    });
+    return this.findFiltered({ hospitalId });
   }
 
   async findBySpecialty(specialtyId: string): Promise<Doctor[]> {
-    return this.prisma.doctor.findMany({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        workPlaces: {
-          some: {
-            specialtyId,
-            isActive: true,
-          },
-        },
-      },
-      orderBy: { fullName: 'asc' },
-    });
+    return this.findFiltered({ specialtyId });
   }
 
   async findByHospitalAndSpecialty(hospitalId: string, specialtyId: string): Promise<Doctor[]> {
-    return this.prisma.doctor.findMany({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        workPlaces: {
-          some: {
-            hospitalId,
-            specialtyId,
-            isActive: true,
-          },
-        },
-      },
-      orderBy: { fullName: 'asc' },
-    });
+    return this.findFiltered({ hospitalId, specialtyId });
   }
 
   // Lấy khung giờ trống của bác sĩ theo ngày và nơi làm việc

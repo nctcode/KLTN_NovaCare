@@ -6,8 +6,9 @@ import { hospitalService } from '@/services/hospital.service';
 import { doctorService } from '@/services/doctor.service';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Globe, Mail, Phone, Star, Loader2, User, ChevronRight, Stethoscope } from 'lucide-react';
+import { MapPin, Globe, Mail, Phone, Star, Loader2, User, ChevronRight, Stethoscope, Users } from 'lucide-react';
 import Link from 'next/link';
+import { formatPrice, getDoctorSpecialtyName } from '@/lib/utils';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -114,29 +115,55 @@ export default function HospitalDetailPage({ params }: PageProps) {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {doctors.map((doctor) => {
-                    const firstWorkplaceId = doctor.workPlaces && doctor.workPlaces.length > 0
-                      ? doctor.workPlaces[0].id
+                    const firstWorkplace = doctor.workPlaces && doctor.workPlaces.length > 0
+                      ? doctor.workPlaces[0]
                       : null;
+                    const firstWorkplaceId = firstWorkplace?.id || null;
                     const bookingUrl = firstWorkplaceId
                       ? `/dat-lich?workplaceId=${firstWorkplaceId}`
                       : `/bac-si/${doctor.id}`;
+
+                    const specialtyName = getDoctorSpecialtyName(doctor);
+                    const fee = firstWorkplace?.consultationFee || 200000;
+                    const visitsCount = doctor.consultationCount || (doctor.reviewCount ? doctor.reviewCount * 12 + 60 : 300);
 
                     return (
                       <Card key={doctor.id} className="hover:shadow-md transition border border-gray-200/60 bg-white rounded-xl overflow-hidden flex flex-col justify-between h-full">
                         <CardContent className="p-5 flex-1">
                           <div className="flex items-start gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-500 font-bold overflow-hidden border border-gray-100">
-                              <User className="h-6 w-6" />
+                            <div className="w-12 h-12 rounded-full bg-emerald-50 flex-shrink-0 flex items-center justify-center text-[#2a6d54] font-bold overflow-hidden border border-emerald-100">
+                              {doctor.fullName.charAt(0)}
                             </div>
                             <div className="min-w-0 flex-1">
                               <h4 className="font-bold text-secondary text-sm leading-snug truncate hover:text-[#4CAF50] transition-colors">
                                 <Link href={`/bac-si/${doctor.id}`}>{doctor.fullName}</Link>
                               </h4>
-                              <p className="text-xs text-gray-400 mt-0.5 truncate">{doctor.qualification || 'Bác sĩ chuyên khoa'}</p>
-                              <div className="flex items-center gap-1 mt-2">
-                                <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                                <span className="text-xs font-bold text-gray-700">5.0</span>
-                                <span className="text-xs text-gray-400">({doctor.reviewCount || 20} đánh giá)</span>
+
+                              {/* Chuyên khoa */}
+                              <div className="flex items-center gap-1 text-[11px] font-bold text-[#2a6d54] mt-1.5 truncate">
+                                <Stethoscope className="h-3 w-3 shrink-0 text-[#2a6d54]" />
+                                <span className="truncate">{specialtyName}</span>
+                              </div>
+
+                              {/* Rating & Lượt khám */}
+                              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                <div className="flex items-center gap-0.5">
+                                  <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                                  <span className="text-xs font-bold text-gray-700">5.0</span>
+                                </div>
+                                <span className="text-xs text-gray-400">({doctor.reviewCount || 20})</span>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                  <Users className="h-2.5 w-2.5 text-emerald-600" />
+                                  {visitsCount}+ lượt khám
+                                </span>
+                              </div>
+
+                              {/* Phí khám / Giá tiền */}
+                              <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-xs">
+                                <span className="text-gray-400">Giá khám:</span>
+                                <span className="font-extrabold text-[#2a6d54]">
+                                  {formatPrice(fee)}đ
+                                </span>
                               </div>
                             </div>
                           </div>

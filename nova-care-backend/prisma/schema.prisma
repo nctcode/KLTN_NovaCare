@@ -119,7 +119,6 @@ model PatientProfile {
   allergies        String?
   emergencyContact String?
   emergencyPhone   String?
-  relation         String?
   isDefault        Boolean   @default(false)
   isActive         Boolean   @default(true)
   createdAt        DateTime  @default(now())

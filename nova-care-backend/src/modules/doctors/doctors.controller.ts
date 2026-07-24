@@ -43,27 +43,23 @@ export class DoctorsController {
 
   @Public()
   @Get()
-  @ApiOperation({ summary: 'Lấy danh sách bác sĩ' })
+  @ApiOperation({ summary: 'Lấy danh sách bác sĩ có bộ lọc' })
   @ApiQuery({ name: 'hospitalId', required: false, description: 'Lọc theo cơ sở y tế' })
   @ApiQuery({ name: 'specialtyId', required: false, description: 'Lọc theo chuyên khoa' })
   @ApiQuery({ name: 'query', required: false, description: 'Từ khóa tìm kiếm' })
+  @ApiQuery({ name: 'q', required: false, description: 'Từ khóa tìm kiếm' })
   async findAll(
     @Query('hospitalId') hospitalId?: string,
     @Query('specialtyId') specialtyId?: string,
-    @Query('query') query?: string
+    @Query('query') query?: string,
+    @Query('q') q?: string,
   ) {
-    let data;
-    if (query) {
-      data = await this.service.search(query);
-    } else if (hospitalId && specialtyId) {
-      data = await this.service.findByHospitalAndSpecialty(hospitalId, specialtyId);
-    } else if (hospitalId) {
-      data = await this.service.findByHospital(hospitalId);
-    } else if (specialtyId) {
-      data = await this.service.findBySpecialty(specialtyId);
-    } else {
-      data = await this.service.findAll();
-    }
+    const searchTerm = q || query;
+    const data = await this.service.findFiltered({
+      q: searchTerm,
+      hospitalId,
+      specialtyId,
+    });
     return {
       statusCode: HttpStatus.OK,
       message: 'Lấy danh sách bác sĩ thành công',

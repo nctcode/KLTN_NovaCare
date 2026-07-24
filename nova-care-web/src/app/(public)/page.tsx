@@ -17,68 +17,40 @@ import {
   FileText,
   Calendar,
   Building,
-  Tag
+  Tag,
+  HeartPulse,
+  Brain,
+  Activity,
+  Baby,
+  Sparkles,
+  Bone,
+  Ear,
+  Eye,
+  Smile,
+  Microscope,
+  Stethoscope,
+  Users
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { formatPrice, getDoctorSpecialtyName } from '@/lib/utils';
 
-// Specialty mapping to match screenshot aesthetics
-const getSpecialtyDetails = (name: string) => {
+// Render Lucide icons matching specialty names with NovaCare green palette
+const renderSpecialtyIcon = (name: string, className = "h-7 w-7 text-[#0c4b39] group-hover:text-white transition-colors duration-300") => {
   const normalized = name.toLowerCase();
-  if (normalized.includes('tim mạch')) {
-    return {
-      icon: '❤️',
-      desc: 'Chẩn đoán, điều trị các bệnh lý tim mạch, cao huyết áp, suy tim hiệu quả.',
-    };
-  }
-  if (normalized.includes('thần kinh')) {
-    return {
-      icon: '🧠',
-      desc: 'Chăm sóc và điều trị chuyên sâu về thần kinh, đột quỵ, đau đầu, sa sút trí tuệ.',
-    };
-  }
-  if (normalized.includes('nội tiết') || normalized.includes('nội khoa')) {
-    return {
-      icon: '🫁',
-      desc: 'Theo dõi, khám và điều trị đái tháo đường, bệnh lý tuyến giáp, rối loạn chuyển hóa.',
-    };
-  }
-  if (normalized.includes('nhi')) {
-    return {
-      icon: '👶',
-      desc: 'Khám nhi toàn diện, tư vấn dinh dưỡng, tiêm chủng và theo dõi sự phát triển của trẻ.',
-    };
-  }
-  if (normalized.includes('sản') || normalized.includes('phụ')) {
-    return {
-      icon: '🤰',
-      desc: 'Chăm sóc sức khỏe thai sản, tầm soát ung thư phụ khoa, điều trị vô sinh hiếm muộn.',
-    };
-  }
-  if (normalized.includes('xương') || normalized.includes('khớp')) {
-    return {
-      icon: '🦴',
-      desc: 'Khám và điều trị thoái hóa khớp, cột sống, loãng xương, viêm khớp tự miễn.',
-    };
-  }
-  if (normalized.includes('tai') || normalized.includes('họng')) {
-    return {
-      icon: '👂',
-      desc: 'Điều trị viêm tai, viêm mũi xoang, viêm họng hạt, khàn tiếng ở người lớn và trẻ em.',
-    };
-  }
-  if (normalized.includes('mắt')) {
-    return {
-      icon: '👁️',
-      desc: 'Khám khúc xạ, điều trị đục thủy tinh thể, tăng nhãn áp và các bệnh lý về mắt.',
-    };
-  }
-  return {
-    icon: '🩺',
-    desc: 'Cung cấp dịch vụ khám chữa bệnh chất lượng cao với trang thiết bị y tế hiện đại.',
-  };
+  if (normalized.includes('tim mạch')) return <HeartPulse className={className} />;
+  if (normalized.includes('thần kinh')) return <Brain className={className} />;
+  if (normalized.includes('nội tiết') || normalized.includes('nội khoa')) return <Activity className={className} />;
+  if (normalized.includes('nhi')) return <Baby className={className} />;
+  if (normalized.includes('sản') || normalized.includes('phụ')) return <Sparkles className={className} />;
+  if (normalized.includes('xương') || normalized.includes('khớp')) return <Bone className={className} />;
+  if (normalized.includes('tai') || normalized.includes('họng')) return <Ear className={className} />;
+  if (normalized.includes('mắt')) return <Eye className={className} />;
+  if (normalized.includes('răng')) return <Smile className={className} />;
+  if (normalized.includes('tiêu hóa')) return <Microscope className={className} />;
+  return <Stethoscope className={className} />;
 };
 
 // Realistic Doctor visuals mapping
@@ -214,42 +186,126 @@ export default function HomePage() {
         <div className="absolute top-1/4 left-1/10 w-96 h-96 bg-[#66FF33]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/10 w-96 h-96 bg-[#4CAF50]/15 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Medical Watermark Pattern (EKG Wave & Crosses) */}
-        <div className="absolute inset-0 pointer-events-none opacity-25 select-none">
-          <svg className="w-full h-full min-w-[1000px]" xmlns="http://www.w3.org/2000/svg">
+        {/* Medical Watermark Pattern (Horizontal Animated EKG Pulse Wave) */}
+        <div className="absolute inset-0 pointer-events-none select-none opacity-60 overflow-hidden">
+          <svg className="w-full h-full min-w-[1200px]" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 1400 400">
             <defs>
-              <linearGradient id="ekg-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#4CAF50" stopOpacity="0.2" />
-                <stop offset="50%" stopColor="#66FF33" stopOpacity="1" />
-                <stop offset="100%" stopColor="#4CAF50" stopOpacity="0.2" />
+              <style>{`
+                @keyframes ecgDashFlow {
+                  0% { stroke-dashoffset: 1400; }
+                  100% { stroke-dashoffset: 0; }
+                }
+                .ecg-path-animated {
+                  stroke-dasharray: 450, 950;
+                  animation: ecgDashFlow 3.5s linear infinite;
+                }
+                .ecg-path-fast {
+                  stroke-dasharray: 250, 1150;
+                  animation: ecgDashFlow 2.2s linear infinite;
+                }
+              `}</style>
+
+              <linearGradient id="ekg-line-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#4CAF50" stopOpacity="0.1" />
+                <stop offset="30%" stopColor="#66FF33" stopOpacity="1" />
+                <stop offset="70%" stopColor="#00C9A7" stopOpacity="1" />
+                <stop offset="100%" stopColor="#4CAF50" stopOpacity="0.1" />
               </linearGradient>
+
+              <filter id="glow-light" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="5" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
             </defs>
+
             {/* Background grids */}
             <pattern id="hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(102, 255, 51, 0.05)" strokeWidth="1" />
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(102, 255, 51, 0.06)" strokeWidth="1" />
             </pattern>
             <rect width="100%" height="100%" fill="url(#hero-grid)" />
 
-            {/* Giant EKG wave across the center */}
+            {/* Subtle Base Static Wave Track Line */}
             <path
-              d="M -100 220 L 200 220 L 220 200 L 240 220 L 260 300 L 280 80 L 300 240 L 320 220 L 350 200 L 380 220 L 600 220 L 620 200 L 640 220 L 660 300 L 680 80 L 700 240 L 720 220 L 1500 220"
+              d="M -100 200 L 150 200 Q 170 200 180 180 T 190 200 L 220 200 L 235 150 L 250 260 L 270 70 L 290 230 L 310 200 L 330 200 Q 350 200 360 215 T 370 200 L 500 200 L 520 180 L 535 220 L 550 140 L 570 280 L 590 50 L 610 240 L 630 200 L 780 200 Q 800 200 810 185 T 820 200 L 850 200 L 865 160 L 880 250 L 900 80 L 920 230 L 940 200 L 1100 200 L 1120 180 L 1135 220 L 1150 150 L 1170 270 L 1190 60 L 1210 240 L 1230 200 L 1500 200"
               fill="none"
-              stroke="url(#ekg-gradient)"
-              strokeWidth="3.5"
+              stroke="rgba(102, 255, 51, 0.2)"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="opacity-70 animate-pulse"
             />
+
+            {/* Primary Horizontal Moving ECG Pulse Wave */}
+            <path
+              d="M -100 200 L 150 200 Q 170 200 180 180 T 190 200 L 220 200 L 235 150 L 250 260 L 270 70 L 290 230 L 310 200 L 330 200 Q 350 200 360 215 T 370 200 L 500 200 L 520 180 L 535 220 L 550 140 L 570 280 L 590 50 L 610 240 L 630 200 L 780 200 Q 800 200 810 185 T 820 200 L 850 200 L 865 160 L 880 250 L 900 80 L 920 230 L 940 200 L 1100 200 L 1120 180 L 1135 220 L 1150 150 L 1170 270 L 1190 60 L 1210 240 L 1230 200 L 1500 200"
+              fill="none"
+              stroke="url(#ekg-line-grad)"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              filter="url(#glow-light)"
+              className="ecg-path-animated"
+            >
+              <animate
+                attributeName="stroke-dashoffset"
+                from="1400"
+                to="0"
+                dur="3.5s"
+                repeatCount="indefinite"
+              />
+            </path>
+
+            {/* Fast Overlay Pulse Wave */}
+            <path
+              d="M -100 200 L 150 200 Q 170 200 180 180 T 190 200 L 220 200 L 235 150 L 250 260 L 270 70 L 290 230 L 310 200 L 330 200 Q 350 200 360 215 T 370 200 L 500 200 L 520 180 L 535 220 L 550 140 L 570 280 L 590 50 L 610 240 L 630 200 L 780 200 Q 800 200 810 185 T 820 200 L 850 200 L 865 160 L 880 250 L 900 80 L 920 230 L 940 200 L 1100 200 L 1120 180 L 1135 220 L 1150 150 L 1170 270 L 1190 60 L 1210 240 L 1230 200 L 1500 200"
+              fill="none"
+              stroke="#66FF33"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="ecg-path-fast"
+            >
+              <animate
+                attributeName="stroke-dashoffset"
+                from="1400"
+                to="0"
+                dur="2.2s"
+                repeatCount="indefinite"
+              />
+            </path>
+
+            {/* High-visibility horizontal traveling pulse light dot 1 */}
+            <g>
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                from="-100 0"
+                to="1500 0"
+                dur="3.5s"
+                repeatCount="indefinite"
+              />
+              <circle cx="0" cy="200" r="9" fill="#66FF33" filter="url(#glow-light)" />
+              <circle cx="0" cy="200" r="4" fill="#FFFFFF" />
+            </g>
+
+            {/* High-visibility horizontal traveling pulse light dot 2 */}
+            <g>
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                from="-800 0"
+                to="800 0"
+                dur="3.5s"
+                repeatCount="indefinite"
+              />
+              <circle cx="0" cy="200" r="9" fill="#00C9A7" filter="url(#glow-light)" />
+              <circle cx="0" cy="200" r="4" fill="#FFFFFF" />
+            </g>
 
             {/* Floating Medical Cross Icons */}
             <g fill="none" stroke="#66FF33" strokeWidth="2.5" strokeLinecap="round" className="opacity-50">
-              {/* Cross 1 */}
               <path d="M 120 100 L 120 120 M 110 110 L 130 110" />
-              {/* Cross 2 */}
               <path d="M 850 80 L 850 100 M 840 90 L 860 90" />
-              {/* Cross 3 */}
               <path d="M 780 320 L 780 340 M 770 330 L 790 330" />
-              {/* Cross 4 */}
               <path d="M 280 340 L 280 360 M 270 350 L 290 350" />
             </g>
           </svg>
@@ -382,30 +438,22 @@ export default function HomePage() {
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {specialties.map((specialty) => {
-                  const details = getSpecialtyDetails(specialty.name);
                   return (
-                    <div
+                    <Link
                       key={specialty.id}
-                      className="min-w-[260px] max-w-[280px] flex-shrink-0 bg-[#0c4b39]/5 border border-[#0c4b39]/10 rounded-2xl p-6 text-gray-800 flex flex-col justify-between h-[210px] group hover:border-[#0c4b39]/30 hover:bg-[#0c4b39]/8 hover:shadow-md transition-all duration-300 shadow-sm relative overflow-hidden"
+                      href={`/bac-si?specialtyId=${specialty.id}`}
+                      className="min-w-[190px] max-w-[210px] flex-shrink-0 bg-white border border-slate-200/80 hover:border-[#0c4b39]/40 rounded-2xl p-5 text-gray-800 flex flex-col items-center justify-between h-[175px] group hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 shadow-xs relative overflow-hidden cursor-pointer no-underline"
                     >
-                      <div>
-                        <div className="text-3xl mb-3 group-hover:scale-105 transition-transform duration-300">
-                          {specialty.icon || details.icon}
-                        </div>
-                        <h3 className="font-bold text-[#0c4b39] text-base leading-tight line-clamp-1">{specialty.name}</h3>
-                        <p className="text-xs text-[#0c4b39]/70 mt-2 line-clamp-2 leading-relaxed font-medium">
-                          {specialty.description || details.desc}
-                        </p>
+                      <div className="w-14 h-14 rounded-2xl bg-[#0c4b39]/8 group-hover:bg-[#0c4b39] flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-xs mb-1">
+                        {renderSpecialtyIcon(specialty.name)}
                       </div>
-                      <div>
-                        <Link
-                          href={`/bac-si?specialtyId=${specialty.id}`}
-                          className="inline-block bg-[#0c4b39] text-white hover:bg-[#083629] transition-all duration-300 text-xs font-extrabold py-1.5 px-6 rounded-md text-center mt-3 uppercase tracking-wider cursor-pointer shadow-sm"
-                        >
-                          view
-                        </Link>
-                      </div>
-                    </div>
+                      <h3 className="font-bold text-[#1A2B3C] group-hover:text-[#0c4b39] text-sm md:text-base leading-tight text-center line-clamp-2 max-w-full px-1">
+                        {specialty.name}
+                      </h3>
+                      <span className="inline-block bg-[#0c4b39]/10 group-hover:bg-[#0c4b39] text-[#0c4b39] group-hover:text-white transition-all duration-300 text-[11px] font-extrabold py-1 px-5 rounded-full text-center uppercase tracking-wider shadow-xs mt-1">
+                        Đặt khám
+                      </span>
+                    </Link>
                   );
                 })}
               </div>
@@ -440,12 +488,17 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {doctors.slice(0, 3).map((doctor) => {
                 const details = getDoctorVisuals(doctor.fullName);
-                const firstWorkplaceId = doctor.workPlaces && doctor.workPlaces.length > 0
-                  ? doctor.workPlaces[0].id
+                const firstWorkplace = doctor.workPlaces && doctor.workPlaces.length > 0
+                  ? doctor.workPlaces[0]
                   : null;
+                const firstWorkplaceId = firstWorkplace?.id || null;
                 const bookingUrl = firstWorkplaceId
                   ? `/dat-lich?workplaceId=${firstWorkplaceId}`
                   : `/bac-si/${doctor.id}`;
+
+                const specialtyName = getDoctorSpecialtyName(doctor);
+                const consultationFee = firstWorkplace?.consultationFee || 200000;
+                const visitsCount = doctor.consultationCount || (doctor.reviewCount ? doctor.reviewCount * 14 + 80 : 350);
 
                 return (
                   <Card key={doctor.id} className="hover:shadow-lg transition-all duration-200 border border-gray-200/60 overflow-hidden flex flex-col justify-between h-full bg-white rounded-2xl">
@@ -460,18 +513,33 @@ export default function HomePage() {
                           <h3 className="font-bold text-secondary text-base leading-snug truncate hover:text-[#4CAF50] transition-colors">
                             <Link href={`/bac-si/${doctor.id}`}>{doctor.fullName}</Link>
                           </h3>
-                          <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">
-                            {doctor.qualification || details.title}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-2">
-                            <div className="flex items-center gap-0.5">
-                              {[...Array(5)].map((_, i) => (
-                                <Star key={i} className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-                              ))}
+
+                          {/* Chuyên khoa */}
+                          <div className="flex items-center gap-1.5 text-xs text-[#0c4b39] font-bold mt-1.5 truncate bg-[#0c4b39]/5 px-2 py-0.5 rounded-md w-fit">
+                            <Stethoscope className="h-3.5 w-3.5 shrink-0 text-[#0c4b39]" />
+                            <span className="truncate">{specialtyName}</span>
+                          </div>
+
+                          {/* Rating & Lượt khám */}
+                          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                            <div className="flex items-center gap-1">
+                              <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+                              <span className="text-xs font-bold text-gray-700">5.0</span>
                             </div>
-                            <span className="text-xs font-bold text-gray-700">5</span>
                             <span className="text-xs text-gray-400">
-                              ({doctor.reviewCount || 28} rating thực tế)
+                              ({doctor.reviewCount || 28} đánh giá)
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                              <Users className="h-3 w-3 text-emerald-600" />
+                              {visitsCount}+ lượt khám
+                            </span>
+                          </div>
+
+                          {/* Phí khám / Giá tiền */}
+                          <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between">
+                            <span className="text-xs text-gray-500 font-medium">Giá khám:</span>
+                            <span className="text-sm font-extrabold text-[#0c4b39]">
+                              {formatPrice(consultationFee)}đ
                             </span>
                           </div>
                         </div>

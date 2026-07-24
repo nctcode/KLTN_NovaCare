@@ -98,3 +98,35 @@ body {
 .primary-gradient {
   background: linear-gradient(135deg, #66FF33 0%, #4CAF50 100%);
 }
+
+/* Horizontal ECG Heartbeat Wave Flow Animation */
+@keyframes ecgFlow {
+  0% {
+    stroke-dashoffset: 1400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ecgPulseGlow {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.animate-ecg-wave {
+  stroke-dasharray: 450 950;
+  animation: ecgFlow 4.5s linear infinite;
+}
+
+.animate-ecg-wave-fast {
+  stroke-dasharray: 300 1100;
+  animation: ecgFlow 2.8s linear infinite;
+}
+

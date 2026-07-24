@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { doctorService } from '@/services/doctor.service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, MapPin, Clock, Award, ChevronRight, Loader2 } from 'lucide-react';
+import { Star, MapPin, Clock, Award, ChevronRight, Loader2, Stethoscope, Users, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { formatPrice } from '@/lib/utils';
@@ -53,6 +53,13 @@ export default function DoctorDetailPage() {
       </div>
     );
   }
+
+  // Calculate pricing & specialties
+  const specialties = Array.from(new Set(doctor.workPlaces?.map(wp => wp.specialty.name) || []));
+  const fees = doctor.workPlaces?.map(wp => Number(wp.consultationFee)) || [];
+  const minFee = fees.length > 0 ? Math.min(...fees) : 200000;
+  const visitsCount = doctor.consultationCount || (doctor.reviewCount ? doctor.reviewCount * 15 + 100 : 450);
+
   return (
     <div className="container-custom py-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -62,23 +69,43 @@ export default function DoctorDetailPage() {
           <Card className="border border-gray-100 rounded-2xl shadow-sm overflow-hidden bg-white">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-6">
-                <div className="w-24 h-24 rounded-full bg-[#4caf50]/10 flex items-center justify-center text-[#4caf50] font-bold text-3xl shrink-0">
+                <div className="w-24 h-24 rounded-full bg-[#0c4b39]/10 flex items-center justify-center text-[#0c4b39] font-bold text-3xl shrink-0 border border-[#0c4b39]/20">
                   {doctor.fullName.charAt(0)}
                 </div>
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold text-secondary">{doctor.fullName}</h1>
-                  <p className="text-gray-600">{doctor.qualification || 'Bác sĩ chuyên khoa'}</p>
-                  <div className="flex items-center gap-4 mt-2 flex-wrap">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                      <span className="font-medium">{doctor.rating || 4.8}</span>
-                      <span className="text-gray-500 text-sm">
-                        ({doctor.reviewCount || 10} đánh giá)
-                      </span>
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h1 className="text-2xl font-bold text-secondary">{doctor.fullName}</h1>
+                  </div>
+
+                  {/* Chuyên khoa */}
+                  {specialties.length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Chuyên khoa:</span>
+                      {specialties.map((spec, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 px-3 py-1 bg-[#0c4b39]/10 text-[#0c4b39] font-bold text-xs rounded-full border border-[#0c4b39]/20">
+                          <Stethoscope className="w-3.5 h-3.5" />
+                          {spec}
+                        </span>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
-                      <Clock className="h-4 w-4" />
-                      <span>Đang nhận lịch đặt</span>
+                  )}
+
+                  {/* Rating & Lượt khám & Giá tiền */}
+                  <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-gray-100">
+                    <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100">
+                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                      <span className="font-bold text-sm text-gray-800">{doctor.rating || 4.8}</span>
+                      <span className="text-xs text-gray-500">({doctor.reviewCount || 10} đánh giá)</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">
+                      <Users className="h-4 w-4 text-emerald-600" />
+                      <span>{visitsCount}+ lượt khám</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-xs font-extrabold text-[#0c4b39] bg-[#0c4b39]/5 px-3 py-1 rounded-lg border border-[#0c4b39]/15">
+                      <Tag className="h-3.5 w-3.5 text-[#0c4b39]" />
+                      <span>Giá từ: {formatPrice(minFee)}đ</span>
                     </div>
                   </div>
                 </div>

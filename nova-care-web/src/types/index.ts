@@ -30,6 +30,7 @@ export interface Doctor {
   avatarUrl?: string;
   rating?: number;
   reviewCount?: number;
+  consultationCount?: number;
   isActive: boolean;
   workPlaces?: DoctorWorkplace[];
 }
