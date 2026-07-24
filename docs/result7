@@ -1,0 +1,51 @@
+# Báo cáo Kết quả Triển khai Giai đoạn 7 - Thanh toán và Thông báo
+
+Dựa trên kế hoạch chi tiết tại tệp [Giai_doan_7.docx](file:///d:/HTTT18B/KLTN/NovaCare/docs/Giai_doan_7.docx), tôi đã triển khai hoàn tất 100% tất cả các hạng mục của **Giai đoạn 7: Thanh toán và Thông báo (Payment and Notification)** cho nền tảng **NovaCare**.
+
+---
+
+## Các hạng mục đã triển khai
+
+### 1. Cập nhật Cơ sở dữ liệu Prisma (PostgreSQL)
+- **User Model**: Bổ sung các trường `resetPasswordToken`, `resetPasswordExpiresAt`, `otpCode`, `otpExpiresAt`, `otpVerified` hỗ trợ luồng OTP quên mật khẩu.
+- **Appointment Model**: Bổ sung `reminderSentAt`, `reminderCount` theo dõi lịch nhắc hẹn.
+- **Notification Model**: Bổ sung `channel`, `externalId`.
+- **NotificationLog Model**: Tạo mới bảng [notification_logs](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/prisma/schema.prisma#L220-L231) ghi nhật ký lịch sử gửi email và push notification.
+- **Đồng bộ Schema**: Đã chạy thành công `npx prisma db push --accept-data-loss` và `npx prisma generate`.
+
+### 2. Module Thanh toán VNPay (Payments Module)
+- **[PaymentsService](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/modules/payments/payments.service.ts)**:
+  - Sinh URL thanh toán VNPay chuẩn V2.1.0 với mã băm bảo mật **HMAC SHA512**.
+  - Xử lý **IPN Webhook** (`/api/v1/payments/vnpay-ipn`), xác minh chữ ký checksum SHA512, cập nhật giao dịch thành `PAID` và trạng thái lịch khám thành `PAID`, lưu lịch sử `AppointmentStatusHistory`.
+  - Tự động kích hoạt đẩy Job gửi email và push notification thông báo thanh toán thành công.
+- **[PaymentsController](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/modules/payments/payments.controller.ts)**:
+  - `POST /api/v1/payments/create`: Tạo link thanh toán VNPay.
+  - `GET / POST /api/v1/payments/vnpay-ipn`: Tiếp nhận Webhook từ VNPay.
+  - `GET /api/v1/payments/status/:appointmentId`: Tra cứu trạng thái thanh toán.
+
+### 3. Hàng đợi xử lý nền BullMQ & Redis 7
+- **Redis 7 Container**: Cấu hình khởi chạy Redis 7 trên Docker (Port 6380).
+- **[QueueModule](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/queue/queue.module.ts)** & **[QueueService](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/queue/queue.service.ts)**: Đăng ký 4 hàng đợi `email`, `push`, `reminder`, `expire-appointments` kèm cơ chế retry (attempts: 3) và fallback trực tiếp.
+- **[ExpireAppointmentsProcessor](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/queue/expire-appointments.processor.ts)**: Tự động quét và chuyển trạng thái các lịch quá hạn giữ chỗ sang `EXPIRED`, giải phóng slot trống (`bookedCount - 1`).
+
+### 4. Module Email (Nodemailer) & FCM Push Notification
+- **[EmailService](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/modules/email/email.service.ts)**: Tích hợp Nodemailer gửi Email HTML cho 4 kịch bản:
+  1. Xác nhận đặt lịch khám.
+  2. Xác nhận thanh toán thành công.
+  3. Nhắc nhở lịch hẹn sắp tới.
+  4. Mã OTP 6 chữ số quên mật khẩu.
+- **[FcmService](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/modules/notifications/fcm.service.ts)**: Tích hợp Firebase Admin SDK (ES Module v12+) hỗ trợ gửi Push Notification multicast.
+- **[NotificationsController](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/modules/notifications/notifications.controller.ts)**: API đăng ký thiết bị di động (`POST /register-device`), danh sách thông báo (`GET /`), đếm chưa đọc (`GET /unread-count`), đánh dấu đã đọc (`PATCH /:id/read`, `PATCH /read-all`).
+
+### 5. Quên mật khẩu & Xác thực OTP
+- **[AuthService & AuthController](file:///d:/HTTT18B/KLTN/NovaCare/nova-care-backend/src/modules/auth/auth.service.ts#L160-L215)**:
+  - Endpoint `POST /api/v1/auth/forgot-password`: Sinh ngẫu nhiên mã OTP 6 chữ số (hiệu lực 5 phút), gửi email tới người dùng.
+  - Endpoint `POST /api/v1/auth/reset-password`: Xác thực OTP và thời gian hiệu lực, cập nhật mật khẩu mới bằng **Argon2id**.
+
+---
+
+## Kết quả Kiểm định (Verification)
+
+- **Biên dịch TypeScript**: Chạy lệnh `npm run build` đạt **BUILD SUCCESSFUL 100%**.
+- **Kiểm thử tự động Jest**: Chạy lệnh `npm test` đạt **7 Test Suites PASSED, 25 Tests PASSED 100%**.
+- **Tệp báo cáo Word bàn giao**: Đã sinh tệp báo cáo chi tiết tại [Bao_cao_Giai_doan_7.docx](file:///d:/HTTT18B/KLTN/NovaCare/docs/Bao_cao_Giai_doan_7.docx) và copy tại [Bao_cao_Giai_doan_7.docx](file:///d:/HTTT18B/KLTN/NovaCare/Bao_cao_Giai_doan_7.docx).

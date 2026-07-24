@@ -14,6 +14,12 @@ import { MedicalServicesModule } from '@/modules/medical-services/medical-servic
 import { DoctorSchedulesModule } from '@/modules/doctor-schedules/doctor-schedules.module';
 import { AppointmentSlotsModule } from '@/modules/appointment-slots/appointment-slots.module';
 import { AppointmentsModule } from '@/modules/appointments/appointments.module';
+import { EmailModule } from '@/modules/email/email.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { PaymentsModule } from '@/modules/payments/payments.module';
+import { QueueModule } from '@/queue/queue.module';
+import { PreExamModule } from '@/modules/pre-exam/pre-exam.module';
+import { MedicalPassportModule } from '@/modules/medical-passport/medical-passport.module';
 
 @Module({
   imports: [
@@ -25,6 +31,9 @@ import { AppointmentsModule } from '@/modules/appointments/appointments.module';
       },
     ]),
     PrismaModule,
+    EmailModule,
+    NotificationsModule,
+    QueueModule,
     AuthModule,
     UsersModule,
     PatientProfilesModule,
@@ -37,6 +46,9 @@ import { AppointmentsModule } from '@/modules/appointments/appointments.module';
     DoctorSchedulesModule,
     AppointmentSlotsModule,
     AppointmentsModule,
+    PaymentsModule,
+    PreExamModule,
+    MedicalPassportModule,
   ],
 })
 export class AppModule {}

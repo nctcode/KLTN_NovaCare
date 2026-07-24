@@ -21,13 +21,18 @@ export interface AuthResponse {
   user: Omit<User, 'passwordHash'>;
 }
 
+import { EmailService } from '@/modules/email/email.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    private prisma: PrismaService
+    private prisma: PrismaService,
+    private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
@@ -149,6 +154,65 @@ export class AuthService {
       where: { userId, isRevoked: false },
       data: { isRevoked: true },
     });
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: { email: dto.email, deletedAt: null },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Email không tồn tại trong hệ thống');
+    }
+
+    // Generate 6-digit random OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otpCode,
+        otpExpiresAt,
+        otpVerified: false,
+      },
+    });
+
+    await this.emailService.sendForgotPasswordOtp(user.email!, user.fullName, otpCode, user.id);
+
+    return { message: 'Mã OTP đã được gửi thành công đến email của bạn' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: { email: dto.email, deletedAt: null },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Email không tồn tại trong hệ thống');
+    }
+
+    if (!user.otpCode || user.otpCode !== dto.otpCode) {
+      throw new BadRequestException('Mã OTP không chính xác');
+    }
+
+    if (!user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+      throw new BadRequestException('Mã OTP đã hết hạn (hiệu lực 5 phút)');
+    }
+
+    const passwordHash = await argon2.hash(dto.newPassword);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        otpCode: null,
+        otpExpiresAt: null,
+        otpVerified: true,
+      },
+    });
+
+    return { message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.' };
   }
 
   private async generateTokens(user: User): Promise<{

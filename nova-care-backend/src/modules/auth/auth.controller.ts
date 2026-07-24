@@ -17,6 +17,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { Public } from '@/common/decorators/public.decorator';
@@ -70,6 +72,32 @@ export class AuthController {
       statusCode: HttpStatus.OK,
       message: 'Làm mới token thành công',
       data: result,
+    };
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Yêu cầu gửi mã OTP quên mật khẩu' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    const res = await this.authService.forgotPassword(dto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: res.message,
+      data: null,
+    };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Xác minh OTP và đặt lại mật khẩu' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    const res = await this.authService.resetPassword(dto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: res.message,
+      data: null,
     };
   }
 

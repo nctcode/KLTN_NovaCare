@@ -65,6 +65,11 @@ export class CreatePatientProfileDto {
   @IsString()
   emergencyPhone?: string;
 
+  @ApiProperty({ example: 'Bản thân', description: 'Mối quan hệ với tài khoản chủ', required: false })
+  @IsOptional()
+  @IsString()
+  relation?: string;
+
   @ApiProperty({ example: true, description: 'Đặt làm hồ sơ mặc định', default: false })
   @IsOptional()
   @IsBoolean()

@@ -1,0 +1,465 @@
+**KẾ HOẠCH TRIỂN KHAI CHI TIẾT - GIAI ĐOẠN 7**
+**THANH TOÁN VÀ THÔNG BÁO**
+**NỀN TẢNG ĐẶT LỊCH KHÁM TRỰC TUYẾN ĐA CƠ SỞ "NOVACARE"**
+| **Thông tin dự án** | **Chi tiết** |
+|---------------------|--------------|
+| **Tên dự án**       | NovaCare - Nền tảng đặt lịch khám trực tuyến |
+| **Giai đoạn**       | 7 - Thanh toán và Thông báo |
+| **Mục tiêu**        | Hoàn thiện tích hợp thanh toán VNPay, xử lý IPN, triển khai hàng đợi nền (BullMQ), gửi email và push notification (FCM) |
+| **Công nghệ chính** | NestJS, BullMQ, Redis, Nodemailer, Firebase Cloud Messaging, VNPay |
+| **Màu sắc chủ đạo** | #66FF33 (Xanh lá tươi sáng) |
+| **Phiên bản**       | 1.0 |
+| **Ngày**            | 20/07/2026 |
+---
+**MỤC LỤC**
+1. Mục tiêu và Phạm vi Giai đoạn 7
+2. Cập nhật Schema Prisma
+3. Module Thanh toán (Payment)
+   - 3.1. Tạo yêu cầu thanh toán VNPay
+   - 3.2. Xử lý IPN (Instant Payment Notification)
+   - 3.3. Kiểm tra trạng thái giao dịch
+   - 3.4. Xử lý hết hạn giữ chỗ
+4. Hàng đợi nền với BullMQ
+   - 4.1. Cấu hình Redis và BullMQ
+   - 4.2. Định nghĩa các Job
+   - 4.3. Worker xử lý Job
+5. Module Email (Nodemailer)
+   - 5.1. Cấu hình SMTP
+   - 5.2. Gửi email xác nhận, nhắc lịch
+6. Module Thông báo (Notifications)
+   - 6.1. Quản lý thiết bị và FCM token
+   - 6.2. Gửi push notification
+   - 6.3. Đồng bộ thông báo trong hệ thống
+7. Tích hợp Quên mật khẩu và OTP
+8. Bảo mật và Giới hạn tần suất
+9. Kiểm thử
+10. Kết luận và Bàn giao
+---
+## 1. MỤC TIÊU VÀ PHẠM VI GIAI ĐOẠN 7
+### 1.1. Mục tiêu tổng quát
+Hoàn thiện các chức năng thanh toán và thông báo, đảm bảo hệ thống có thể xử lý giao dịch thực tế qua VNPay, gửi email và push notification một cách ổn định và bảo mật. Đồng thời, triển khai cơ chế quên mật khẩu và xác thực OTP.
+### 1.2. Mục tiêu cụ thể
+| STT | Mục tiêu | Mô tả chi tiết |
+|-----|----------|----------------|
+| 1   | Tích hợp VNPay hoàn chỉnh | Tạo URL thanh toán, xử lý IPN, kiểm tra chữ ký và số tiền, chống callback lặp. |
+| 2   | Xử lý hết hạn giữ chỗ | Tự động chuyển trạng thái lịch từ `AWAITING_PAYMENT` sang `EXPIRED` và giải phóng slot. |
+| 3   | Hàng đợi BullMQ | Đưa các tác vụ nặng (gửi email, push, nhắc lịch) vào hàng đợi để xử lý bất đồng bộ. |
+| 4   | Gửi email | Dùng Nodemailer gửi email xác nhận đặt lịch, nhắc lịch, thông báo thanh toán. |
+| 5   | Push notification | Tích hợp Firebase Cloud Messaging (FCM) để gửi thông báo đến thiết bị di động. |
+| 6   | Quên mật khẩu | Gửi OTP qua email/SMS, xác nhận và cho phép đặt lại mật khẩu. |
+| 7   | Giới hạn tần suất | Bảo vệ các endpoint nhạy cảm (gửi OTP, thanh toán) khỏi bị lạm dụng. |
+### 1.3. Phạm vi thực hiện
+| **Thực hiện trong Giai đoạn 7** | **Không thực hiện (sẽ làm ở giai đoạn sau)** |
+|---------------------------------|-----------------------------------------------|
+| ✅ Tích hợp VNPay thực tế (production) | ❌ Tích hợp các cổng thanh toán khác (Momo, ZaloPay) |
+| ✅ Xử lý IPN và webhook | ❌ Xây dựng giao diện quản trị cho bệnh viện |
+| ✅ Hàng đợi BullMQ và worker | ❌ Tích hợp AI nâng cao |
+| ✅ Gửi email (Nodemailer) | ❌ Hỗ trợ đa ngôn ngữ |
+| ✅ Push notification (FCM) | ❌ Xuất báo cáo thống kê chi tiết |
+| ✅ Quên mật khẩu và OTP | ❌ Tích hợp SMS (sẽ dùng email thay thế cho demo) |
+| ✅ Giới hạn tần suất | |
+---
+## 2. CẬP NHẬT SCHEMA PRISMA
+**File:** `prisma/schema.prisma`
+Bổ sung các trường cần thiết cho OTP và queue.
+```prisma
+model User {
+  // ... existing fields
+  resetPasswordToken String? @unique
+  resetPasswordExpiresAt DateTime?
+  otpCode String?
+  otpExpiresAt DateTime?
+  otpVerified Boolean @default(false)
+}
+model Appointment {
+  // ... existing fields
+  reminderSentAt DateTime? // Thời điểm đã gửi nhắc lịch
+  reminderCount Int @default(0) // Số lần đã nhắc
+}
+model Notification {
+  // ... existing fields
+  channel String? // 'email', 'push', 'in_app'
+  externalId String? // ID từ dịch vụ ngoài (FCM message ID)
+}
+// Bảng mới: Lưu trạng thái gửi thông báo
+model NotificationLog {
+  id String @id @default(uuid())
+  appointmentId String?
+  userId String
+  type String // 'reminder', 'confirmation', 'payment_success'
+  channel String // 'email', 'push'
+  status String // 'pending', 'sent', 'failed'
+  errorMessage String?
+  sentAt DateTime?
+  createdAt DateTime @default(now())
+}
+Migration:
+bash
+npx prisma migrate dev --name add_otp_and_notification_logs
+npx prisma migrate deploy
+3. MODULE THANH TOÁN (PAYMENT)
+3.1. Tạo yêu cầu thanh toán VNPay
+File: src/modules/payments/payments.service.ts
+typescript
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
+import { PrismaService } from '@/database/prisma.service';
+@Injectable()
+export class PaymentsService {
+  constructor(
+    private configService: ConfigService,
+    private prisma: PrismaService,
+  ) {}
+  async createPaymentUrl(appointmentId: string, ipAddress: string): Promise<string> {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: { patientProfile: true },
+    });
+    if (!appointment) throw new BadRequestException('Lịch khám không tồn tại');
+    if (appointment.status !== 'AWAITING_PAYMENT') {
+      throw new BadRequestException('Lịch khám không ở trạng thái chờ thanh toán');
+    }
+    // Tạo mã giao dịch duy nhất
+    const transactionCode = `NOVA${Date.now()}`;
+    const vnpParams: any = {
+      vnp_Version: '2.1.0',
+      vnp_Command: 'pay',
+      vnp_TmnCode: this.configService.get('VNP_TMN_CODE'),
+      vnp_Amount: Math.round(Number(appointment.totalPrice) * 100),
+      vnp_CurrCode: 'VND',
+      vnp_TxnRef: transactionCode,
+      vnp_OrderInfo: `Thanh toan lich kham ${appointment.bookingCode}`,
+      vnp_OrderType: 'billpayment',
+      vnp_Locale: 'vn',
+      vnp_ReturnUrl: this.configService.get('VNP_RETURN_URL'),
+      vnp_IpAddr: ipAddress,
+      vnp_CreateDate: new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14),
+    };
+    // Sắp xếp tham số
+    const sortedKeys = Object.keys(vnpParams).sort();
+    const signData = sortedKeys.map(key => `${key}=${vnpParams[key]}`).join('&');
+    const secretKey = this.configService.get('VNP_HASH_SECRET');
+    const secureHash = crypto.createHmac('sha512', secretKey).update(signData).digest('hex');
+    vnpParams.vnp_SecureHash = secureHash;
+    // Lưu giao dịch
+    await this.prisma.paymentTransaction.create({
+      data: {
+        appointmentId,
+        amount: appointment.totalPrice,
+        paymentMethod: 'VNPAY',
+        transactionCode,
+        status: 'PENDING',
+      },
+    });
+    const baseUrl = this.configService.get('VNP_URL');
+    const queryString = Object.keys(vnpParams)
+      .map(key => `${key}=${encodeURIComponent(vnpParams[key])}`)
+      .join('&');
+    return `${baseUrl}?${queryString}`;
+  }
+}
+3.2. Xử lý IPN (Instant Payment Notification)
+File: src/modules/payments/payments.controller.ts
+typescript
+@Post('vnpay-ipn')
+async handleIpn(@Req() req: Request) {
+  const params = req.query;
+  const secureHash = params.vnp_SecureHash;
+  delete params.vnp_SecureHash;
+  delete params.vnp_SecureHashType;
+  // Kiểm tra chữ ký
+  const sortedKeys = Object.keys(params).sort();
+  const signData = sortedKeys.map(key => `${key}=${params[key]}`).join('&');
+  const secretKey = this.configService.get('VNP_HASH_SECRET');
+  const computedHash = crypto.createHmac('sha512', secretKey).update(signData).digest('hex');
+  if (computedHash !== secureHash) {
+    return { RspCode: '97', Message: 'Chữ ký không hợp lệ' };
+  }
+  const transactionCode = params.vnp_TxnRef;
+  const responseCode = params.vnp_ResponseCode;
+  // Xử lý trong transaction
+  await this.prisma.$transaction(async (tx) => {
+    const payment = await tx.paymentTransaction.findUnique({
+      where: { transactionCode },
+      include: { appointment: true },
+    });
+    if (!payment) return { RspCode: '01', Message: 'Giao dịch không tồn tại' };
+    if (payment.status === 'PAID') return { RspCode: '02', Message: 'Giao dịch đã được xử lý' };
+    if (responseCode === '00') {
+      // Thành công
+      await tx.paymentTransaction.update({
+        where: { id: payment.id },
+        data: {
+          status: 'PAID',
+          vnpResponseCode: responseCode,
+          vnpTransactionNo: params.vnp_TransactionNo,
+          paidAt: new Date(),
+          callbackData: params,
+        },
+      });
+      await tx.appointment.update({
+        where: { id: payment.appointmentId },
+        data: { status: 'PAID' },
+      });
+      await tx.appointmentStatusHistory.create({
+        data: {
+          appointmentId: payment.appointmentId,
+          status: 'PAID',
+          note: 'Thanh toán qua VNPay thành công',
+        },
+      });
+      // Đẩy job gửi email và push
+      await this.queueService.addEmailJob(payment.appointmentId, 'payment_success');
+      await this.queueService.addPushJob(payment.appointmentId, 'payment_success');
+    } else {
+      // Thất bại
+      await tx.paymentTransaction.update({
+        where: { id: payment.id },
+        data: {
+          status: 'FAILED',
+          vnpResponseCode: responseCode,
+          callbackData: params,
+        },
+      });
+    }
+  });
+  return { RspCode: '00', Message: 'Xác nhận thành công' };
+}
+3.3. Kiểm tra trạng thái giao dịch
+Endpoint: GET /api/v1/payments/status/:appointmentId
+Trả về trạng thái thanh toán từ bảng payment_transactions.
+3.4. Xử lý hết hạn giữ chỗ
+Worker xử lý background job (BullMQ)
+typescript
+@Processor('expire-appointments')
+export class ExpireAppointmentsProcessor {
+  @Process()
+  async handleExpire() {
+    const now = new Date();
+    const expired = await this.prisma.appointment.findMany({
+      where: {
+        status: 'AWAITING_PAYMENT',
+        expiresAt: { lt: now },
+      },
+      include: { slot: true },
+    });
+    for (const appt of expired) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.appointment.update({
+          where: { id: appt.id },
+          data: { status: 'EXPIRED' },
+        });
+        await tx.$executeRaw`
+          UPDATE "appointment_slots"
+          SET booked_count = booked_count - 1, is_available = true
+          WHERE id = ${appt.slotId}
+        `;
+        await tx.appointmentStatusHistory.create({
+          data: {
+            appointmentId: appt.id,
+            status: 'EXPIRED',
+            note: 'Hết hạn giữ chỗ do không thanh toán',
+          },
+        });
+      });
+    }
+  }
+}
+4. HÀNG ĐỢI NỀN VỚI BULLMQ
+4.1. Cấu hình Redis và BullMQ
+File: src/queue/queue.module.ts
+typescript
+import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
+@Module({
+  imports: [
+    BullModule.forRootAsync({
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get('REDIS_HOST'),
+          port: config.get('REDIS_PORT'),
+          password: config.get('REDIS_PASSWORD'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue(
+      { name: 'email' },
+      { name: 'push' },
+      { name: 'reminder' },
+      { name: 'expire-appointments' },
+    ),
+  ],
+  exports: [BullModule],
+})
+export class QueueModule {}
+4.2. Định nghĩa các Job
+Email Job: Gửi email xác nhận, nhắc lịch, thanh toán thành công.
+Push Job: Gửi thông báo đến thiết bị di động.
+Reminder Job: Gửi nhắc lịch 24h và 2h trước giờ khám.
+Expire Job: Xử lý hết hạn giữ chỗ.
+4.3. Worker xử lý Job
+Ví dụ Email Worker:
+typescript
+@Processor('email')
+export class EmailProcessor {
+  @Process()
+  async handleEmailJob(job: Job) {
+    const { appointmentId, type } = job.data;
+    // Logic gửi email bằng Nodemailer
+    await this.emailService.sendAppointmentEmail(appointmentId, type);
+  }
+}
+5. MODULE EMAIL (NODEMAILER)
+5.1. Cấu hình SMTP
+File: src/email/email.service.ts
+typescript
+import * as nodemailer from 'nodemailer';
+import { ConfigService } from '@nestjs/config';
+export class EmailService {
+  private transporter;
+  constructor(private config: ConfigService) {
+    this.transporter = nodemailer.createTransport({
+      host: this.config.get('SMTP_HOST'),
+      port: this.config.get('SMTP_PORT'),
+      secure: false,
+      auth: {
+        user: this.config.get('SMTP_USER'),
+        pass: this.config.get('SMTP_PASS'),
+      },
+    });
+  }
+  async sendMail(to: string, subject: string, html: string) {
+    await this.transporter.sendMail({
+      from: `"NovaCare" <${this.config.get('SMTP_FROM')}>`,
+      to,
+      subject,
+      html,
+    });
+  }
+}
+5.2. Gửi email xác nhận, nhắc lịch
+Sử dụng template HTML để gửi email với thông tin chi tiết lịch khám.
+6. MODULE THÔNG BÁO (NOTIFICATIONS)
+6.1. Quản lý thiết bị và FCM token
+File: src/modules/notifications/device-token.service.ts
+typescript
+@Injectable()
+export class DeviceTokenService {
+  async registerToken(userId: string, token: string, deviceType: string) {
+    return this.prisma.deviceToken.upsert({
+      where: { deviceToken: token },
+      update: { userId, deviceType, isActive: true, updatedAt: new Date() },
+      create: { userId, deviceToken: token, deviceType },
+    });
+  }
+  async getActiveTokens(userId: string): Promise<string[]> {
+    const tokens = await this.prisma.deviceToken.findMany({
+      where: { userId, isActive: true },
+    });
+    return tokens.map(t => t.deviceToken);
+  }
+}
+6.2. Gửi push notification (FCM)
+File: src/modules/notifications/fcm.service.ts
+typescript
+import * as admin from 'firebase-admin';
+@Injectable()
+export class FcmService {
+  constructor() {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+    });
+  }
+  async sendPush(token: string, title: string, body: string, data?: any) {
+    try {
+      const message = {
+        token,
+        notification: { title, body },
+        data: data || {},
+        android: { priority: 'high' },
+        apns: { payload: { aps: { sound: 'default' } } },
+      };
+      await admin.messaging().send(message);
+    } catch (error) {
+      // Xóa token nếu lỗi (token hết hạn)
+      if (error.code === 'messaging/invalid-registration-token') {
+        await this.prisma.deviceToken.updateMany({
+          where: { deviceToken: token },
+          data: { isActive: false },
+        });
+      }
+      throw error;
+    }
+  }
+}
+6.3. Đồng bộ thông báo trong hệ thống
+Mọi thông báo đều được lưu vào bảng notifications và đồng thời gửi qua kênh tương ứng (email, push). Dùng transaction để đảm bảo nhất quán.
+7. TÍCH HỢP QUÊN MẬT KHẨU VÀ OTP
+7.1. Gửi OTP qua email
+Endpoint: POST /api/v1/auth/forgot-password
+Nhận email, kiểm tra tồn tại.
+Tạo OTP 6 chữ số, lưu vào database (có thời gian hết hạn).
+Gửi email chứa OTP.
+7.2. Xác nhận OTP và đặt lại mật khẩu
+Endpoint: POST /api/v1/auth/reset-password
+Nhận OTP và mật khẩu mới.
+Xác minh OTP, cập nhật mật khẩu.
+Bảo mật: OTP có thời hạn 5 phút, giới hạn số lần thử (rate limit).
+8. BẢO MẬT VÀ GIỚI HẠN TẦN SUẤT
+8.1. Rate Limit
+Sử dụng @nestjs/throttler để giới hạn:
+Đăng nhập: 5 lần/phút
+Quên mật khẩu: 3 lần/giờ
+Đặt lịch: 10 lần/phút
+Gửi OTP: 3 lần/giờ
+8.2. Xác thực và chống lạm dụng
+Sử dụng reCAPTCHA cho các form quan trọng (đăng nhập, đăng ký, quên mật khẩu).
+Kiểm tra IP và thiết bị lạ khi đăng nhập.
+9. KIỂM THỬ
+9.1. Unit Test
+Kiểm tra tạo URL thanh toán VNPay.
+Kiểm tra xác minh chữ ký IPN.
+Kiểm tra logic hết hạn giữ chỗ.
+9.2. Integration Test
+Gửi yêu cầu thanh toán và mô phỏng callback VNPay.
+Kiểm tra hàng đợi BullMQ với Redis test.
+9.3. End-to-End Test (Sandbox)
+Thực hiện đặt lịch và thanh toán qua VNPay Sandbox.
+Kiểm tra email và push notification nhận được.
+10. KẾT LUẬN VÀ BÀN GIAO
+10.1. Tổng kết Giai đoạn 7
+10.2. Các API mới hoàn thành
+10.3. Bàn giao cho Giai đoạn 8
+10.4. Công việc tiếp theo (Giai đoạn 8 - AI hỗ trợ chọn chuyên khoa)
+Xây dựng module AI Assistant
+Tích hợp với dịch vụ AI (OpenAI, Google Gemini hoặc model tùy chỉnh)
+Xây dựng prompt và xử lý kết quả có cấu trúc
+Lưu lịch sử trao đổi với bệnh nhân
+Kiểm thử và tinh chỉnh
+📝 Ghi chú: Tài liệu này được xây dựng dựa trên kết quả của các Giai đoạn 1-6 và là nền tảng để triển khai các chức năng thanh toán và thông báo hoàn chỉnh cho dự án NovaCare.
+Tài liệu này được bảo vệ bản quyền bởi NovaCare Team. Không sao chép hoặc phân phối khi chưa được phép
+STT | Hạng mục | Trạng thái
+1 | Tích hợp VNPay (URL, IPN, check sum) | ✅ Hoàn thành
+2 | Xử lý hết hạn giữ chỗ (BullMQ) | ✅ Hoàn thành
+3 | Hàng đợi nền BullMQ (email, push, reminder) | ✅ Hoàn thành
+4 | Gửi email (Nodemailer) | ✅ Hoàn thành
+5 | Gửi push notification (FCM) | ✅ Hoàn thành
+6 | Quên mật khẩu và OTP | ✅ Hoàn thành
+7 | Giới hạn tần suất và bảo mật | ✅ Hoàn thành
+8 | Kiểm thử Unit và Integration | ✅ Hoàn thành
+Module | Method | Endpoint | Mô tả
+Payment | POST | /api/v1/payments/create | Tạo URL thanh toán VNPay
+Payment | POST | /api/v1/payments/vnpay-ipn | IPN từ VNPay
+Payment | GET | /api/v1/payments/status/:appointmentId | Kiểm tra trạng thái
+Auth | POST | /api/v1/auth/forgot-password | Gửi OTP quên mật khẩu
+Auth | POST | /api/v1/auth/reset-password | Đặt lại mật khẩu
+Notifications | POST | /api/v1/notifications/register-device | Đăng ký FCM token
+Notifications | GET | /api/v1/notifications | Lấy danh sách thông báo
+Hạng mục | Mô tả | Người nhận
+Mã nguồn Backend | Hoàn thiện thanh toán, thông báo, queue | Team phát triển
+Cấu hình VNPay | Cung cấp thông tin sandbox/production | Team phát triển
+Firebase config | File cấu hình FCM | Team phát triển
+Tài liệu API | Cập nhật Swagger | Team FE, Tester

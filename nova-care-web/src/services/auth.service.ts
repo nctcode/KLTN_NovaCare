@@ -43,4 +43,12 @@ export const authService = {
     });
     return response.data;
   },
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return apiClient.post('/auth/forgot-password', { email });
+  },
+
+  async resetPassword(data: { email: string; otpCode: string; newPassword: string }): Promise<{ message: string }> {
+    return apiClient.post('/auth/reset-password', data);
+  },
 };

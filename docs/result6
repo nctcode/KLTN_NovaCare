@@ -1,0 +1,47 @@
+# Báo cáo kết quả Triển khai Giai đoạn 6 - Ứng dụng di động Bệnh nhân (Native Android / Jetpack Compose)
+
+Đã hoàn thành xây dựng toàn bộ ứng dụng di động Native Android (Kotlin & Jetpack Compose) cho bệnh nhân phục vụ tra cứu thông tin và đặt lịch khám trực tiếp trên thiết bị di động.
+
+## Các nội dung đã thực hiện
+
+### 1. Cấu hình Dự án & Thiết kế giao diện (Theme)
+- Thêm dependencies vào [libs.versions.toml](file:///d:/HTTT18B/KLTN/NovaCare/mobile/gradle/libs.versions.toml) và [build.gradle.kts](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/build.gradle.kts) gồm Retrofit, OkHttp Logging Interceptor, Navigation Compose, Coil Compose hỗ trợ tải ảnh và thư viện Material Icons Extended.
+- Cấu hình quyền Internet và Cleartext Traffic trong [AndroidManifest.xml](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/AndroidManifest.xml) để tương thích với NestJS Backend ở localhost (Emulator loopback IP `10.0.2.2:3000`).
+- Thiết lập hệ màu y tế cao cấp trong [Color.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/theme/Color.kt) (Primary Green và Secondary Dark Charcoal) và cấu hình Light Theme đồng nhất trong [Theme.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/theme/Theme.kt).
+
+### 2. Xây dựng Lớp dữ liệu & API Layer (Data & Retrofit Connection)
+- Tạo các thực thể dữ liệu khớp JSON trong [Models.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/data/model/Models.kt).
+- Triển khai [TokenManager.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/data/remote/TokenManager.kt) lưu trữ JWT Token vào SharedPreferences bảo mật.
+- Triển khai [ApiClient.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/data/remote/ApiClient.kt) cấu hình đính kèm Bearer Token qua Interceptor và OkHttp Authenticator đồng bộ hóa gọi API refresh token `/auth/refresh` khi accessToken hết hạn.
+- Định nghĩa các interface API Retrofit trong [ApiService.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/data/remote/ApiService.kt).
+- Xây dựng 4 Repositories bọc suspend functions: [AuthRepository.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/data/repository/AuthRepository.kt), [DoctorRepository.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/data/repository/DoctorRepository.kt), [PatientRepository.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/data/repository/PatientRepository.kt), và [AppointmentRepository.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/data/repository/AppointmentRepository.kt).
+
+### 3. Sơ đồ Điều hướng & ViewModels (MVVM & Navigation)
+- Khai báo các tuyến đường router của ứng dụng trong [Screen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/navigation/Screen.kt).
+- Triển khai sơ đồ chuyển đổi màn hình và quản lý ViewModels trong [NavGraph.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/navigation/NavGraph.kt).
+- Phát triển 5 ViewModels quản lý dữ liệu UI: `AuthViewModel`, `DoctorViewModel`, `PatientViewModel`, `BookingViewModel`, và `AppointmentViewModel`.
+
+### 4. Triển khai các màn hình Jetpack Compose (Screens)
+- **Xác thực**: [LoginScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/auth/LoginScreen.kt) và [RegisterScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/auth/RegisterScreen.kt).
+- **Trang chủ & Tra cứu**:
+  - [HomeScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/home/HomeScreen.kt): Hiển thị Banner, chuyên khoa, bệnh viện, bác sĩ tiêu biểu và badge thông báo chưa đọc.
+  - [DoctorListScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/doctor/DoctorListScreen.kt): Bộ lọc kết hợp thông minh chuyên khoa, bệnh viện kèm thanh tìm kiếm.
+  - [DoctorDetailScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/doctor/DoctorDetailScreen.kt): Chi tiết học vị bác sĩ, cơ sở làm việc, đánh giá và giá khám bệnh.
+- **Quy trình đặt khám 5 bước**:
+  - [BookingScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/booking/BookingScreen.kt): Gồm Stepper chọn ngày giờ từ CSDL, chọn hồ sơ bệnh nhân, lý do khám, xác nhận thông tin và thanh toán.
+- **Hồ sơ bệnh nhân & Lịch hẹn**:
+  - [ProfileListScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/profile/ProfileListScreen.kt): CRUD hồ sơ người thân và gán hồ sơ mặc định.
+  - [AppointmentListScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/appointment/AppointmentListScreen.kt): Danh sách lịch hẹn sắp tới (Upcoming) và lịch sử khám (History).
+  - [AppointmentDetailScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/appointment/AppointmentDetailScreen.kt): Tích hợp thành phần tự vẽ QR Code [QRCodeDraw.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/components/QRCodeDraw.kt) phục vụ check-in nhanh, timeline cập nhật lịch sử trạng thái đặt khám Việt hóa sinh động và Dialog hủy lịch khám nhập lý do.
+- **Thanh toán WebView**:
+  - [PaymentScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/payment/PaymentScreen.kt): Nhúng WebView cổng thanh toán VNPay Sandbox, tự động chặn chuyển hướng kết quả thành công/thất bại để đưa người dùng quay lại danh sách lịch khám.
+- **Thông báo & Cài đặt**:
+  - [NotificationScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/notification/NotificationScreen.kt) (Trung tâm nhắc nhở) và [SettingsScreen.kt](file:///d:/HTTT18B/KLTN/NovaCare/mobile/app/src/main/java/com/example/kltn_novacare/ui/screens/settings/SettingsScreen.kt) (Thông tin cá nhân, hotline hỗ trợ, điều khoản chính sách và nút Đăng xuất).
+
+---
+
+## Kết quả kiểm định & Biên dịch (Build & Verification)
+
+- **Gradle Build status**: Chạy thành công lệnh `.\gradlew assembleDebug` tạo ra tệp debug APK cài đặt thành công 100%.
+- **Đồng bộ workspace**: Đồng bộ toàn bộ cấu trúc dự án sang thư mục workspace chính tại `d:\HTTT18B\KLTN\NovaCare\mobile`.
+- **Báo cáo Word**: Đã sinh tệp báo cáo bàn giao [Bao_cao_Giai_doan_6.docx](file:///d:/HTTT18B/KLTN/NovaCare/docs/Bao_cao_Giai_doan_6.docx) và copy tại [Bao_cao_Giai_doan_6.docx](file:///d:/HTTT18B/KLTN/NovaCare/Bao_cao_Giai_doan_6.docx) ghi nhận thông tin chi tiết từng module.

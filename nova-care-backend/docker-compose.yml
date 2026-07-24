@@ -36,6 +36,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/nova_care?schema=public
       NODE_ENV: development
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - '3000:3000'
     volumes:
@@ -44,6 +46,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - novacare_network
     command: npm run start:dev
@@ -74,9 +78,23 @@ services:
     profiles:
       - tools
 
+  # ── Redis Server ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: novacare_redis
+    restart: unless-stopped
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - novacare_network
+
 volumes:
   postgres_data:
     name: novacare_postgres_data
+  redis_data:
+    name: novacare_redis_data
 
 networks:
   novacare_network:

@@ -27,16 +27,27 @@ export class PatientProfilesService {
       where: { userId, deletedAt: null },
     });
 
-    const profile = await this.prisma.patientProfile.create({
-      data: {
-        ...createDto,
-        userId,
-        isDefault: createDto.isDefault ?? count === 0,
-        dateOfBirth: createDto.dateOfBirth ? new Date(createDto.dateOfBirth) : null,
-      },
-    });
+    try {
+      const profile = await this.prisma.patientProfile.create({
+        data: {
+          ...createDto,
+          userId,
+          isDefault: createDto.isDefault ?? count === 0,
+          dateOfBirth: createDto.dateOfBirth ? new Date(createDto.dateOfBirth) : null,
+        },
+      });
 
-    return profile;
+      return profile;
+    } catch (error: any) {
+      // Prisma P2002: Unique constraint violation
+      if (error.code === 'P2002') {
+        const fields = error.meta?.target?.join(', ') || 'unknown';
+        throw new BadRequestException(
+          `Thông tin đã tồn tại trong hệ thống: ${fields}. Vui lòng kiểm tra lại số CCCD/CMND hoặc các thông tin định danh.`
+        );
+      }
+      throw error;
+    }
   }
 
   async findAll(userId: string): Promise<PatientProfile[]> {
@@ -105,7 +116,10 @@ export class PatientProfilesService {
 
     await this.prisma.patientProfile.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        identityNumber: profile.identityNumber ? `${profile.identityNumber}_del_${Date.now()}` : null,
+      },
     });
   }
 

@@ -17,8 +17,8 @@ describe('AppointmentsService', () => {
     bookedCount: 0,
     isAvailable: true,
     isActive: true,
-    startTime: new Date('2026-07-20T08:00:00'),
-    endTime: new Date('2026-07-20T08:30:00'),
+    startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    endTime: new Date(Date.now() + 24.5 * 60 * 60 * 1000),
     doctorWorkplaceId: 'workplace-1',
   };
 

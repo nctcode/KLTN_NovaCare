@@ -69,12 +69,20 @@ model User {
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
 
-  patientProfiles PatientProfile[]
-  appointments    Appointment[]
-  refreshTokens   RefreshToken[]
-  notifications   Notification[]
-  deviceTokens    DeviceToken[]
-  auditLogs       AuditLog[]
+  resetPasswordToken     String?   @unique
+  resetPasswordExpiresAt DateTime?
+  otpCode                String?
+  otpExpiresAt           DateTime?
+  otpVerified            Boolean   @default(false)
+
+  patientProfiles  PatientProfile[]
+  appointments     Appointment[]
+  refreshTokens    RefreshToken[]
+  notifications    Notification[]
+  deviceTokens     DeviceToken[]
+  auditLogs        AuditLog[]
+  preExamSessions  PreExamSession[]
+  medicalPassport  MedicalPassport?
 
   @@map("users")
 }
@@ -110,6 +118,7 @@ model PatientProfile {
   allergies        String?
   emergencyContact String?
   emergencyPhone   String?
+  relation         String?
   isDefault        Boolean   @default(false)
   isActive         Boolean   @default(true)
   createdAt        DateTime  @default(now())
@@ -141,6 +150,8 @@ model Appointment {
   updatedAt        DateTime          @updatedAt
   cancelledAt      DateTime?
   completedAt      DateTime?
+  reminderSentAt   DateTime?
+  reminderCount    Int               @default(0)
 
   patientProfile PatientProfile           @relation(fields: [patientProfileId], references: [id])
   user           User                     @relation(fields: [userId], references: [id])
@@ -212,12 +223,28 @@ model Notification {
   isRead    Boolean          @default(false)
   readAt    DateTime?
   data      Json?
+  channel   String?
+  externalId String?
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model NotificationLog {
+  id            String    @id @default(uuid())
+  appointmentId String?
+  userId        String
+  type          String
+  channel       String
+  status        String
+  errorMessage  String?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@map("notification_logs")
 }
 
 model DeviceToken {
@@ -381,4 +408,87 @@ model DoctorSchedule {
 
   @@unique([doctorId, dayOfWeek])
   @@map("doctor_schedules")
+}
+
+// ============================================
+// Phase 8 – Pre-Exam AI & Medical Passport
+// ============================================
+
+model PreExamSession {
+  id              String    @id @default(uuid())
+  userId          String
+  status          String    @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, EXPIRED
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  initialText     String?
+  voiceTranscript String?
+  bodyDiagramData Json?
+  uploadedFiles   String[]
+  structuredData  Json?
+  recommendations Json?
+  expiresAt       DateTime
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions PreExamQuestion[]
+
+  @@map("pre_exam_sessions")
+}
+
+model PreExamQuestion {
+  id        String  @id @default(uuid())
+  sessionId String
+  question  String
+  answer    String?
+  order     Int
+  context   Json?
+
+  preExamSession PreExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("pre_exam_questions")
+}
+
+model MedicalPassport {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  summary   Json
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+
+  user   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares MedicalPassportShare[]
+
+  @@map("medical_passports")
+}
+
+model MedicalPassportShare {
+  id               String    @id @default(uuid())
+  passportId       String
+  shareToken       String    @unique
+  qrCode           String    @unique
+  pinCode          String?
+  allowedSections  String[]
+  validUntil       DateTime
+  isActive         Boolean   @default(true)
+  lastAccessedAt   DateTime?
+  accessCount      Int       @default(0)
+  sharedWith       String?
+  createdAt        DateTime  @default(now())
+  revokedAt        DateTime?
+
+  medicalPassport MedicalPassport              @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  accessLogs      MedicalPassportAccessLog[]
+
+  @@map("medical_passport_shares")
+}
+
+model MedicalPassportAccessLog {
+  id        String   @id @default(uuid())
+  shareId   String
+  ipAddress String?
+  userAgent String?
+  accessedAt DateTime @default(now())
+
+  share MedicalPassportShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+
+  @@map("medical_passport_access_logs")
 }
