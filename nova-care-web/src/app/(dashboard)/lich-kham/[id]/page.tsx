@@ -102,8 +102,23 @@ export default function AppointmentDetailPage() {
     },
   });
 
+  const completeMutation = useMutation({
+    mutationFn: () => appointmentService.complete(appointmentId),
+    onSuccess: () => {
+      toast.success('Giả lập hoàn thành khám thành công! Tiến trình đã cập nhật.');
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Hoàn thành lịch khám thất bại');
+    },
+  });
+
   const handleCancel = () => {
     cancelMutation.mutate();
+  };
+
+  const handleComplete = () => {
+    completeMutation.mutate();
   };
 
   const handlePrint = () => {
@@ -398,6 +413,38 @@ export default function AppointmentDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Complete Exam Simulation Card (When PAID or CONFIRMED) */}
+          {(appointment.status === 'PAID' || appointment.status === 'CONFIRMED') && (
+            <Card className="border-emerald-200 bg-emerald-50/60 shadow-sm rounded-2xl overflow-hidden">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-[#4caf50]" />
+                  <span>Giả lập quy trình Y tế & Bác sĩ</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Lịch khám đã được xác nhận & thanh toán. Bạn có thể thử nghiệm tính năng Bác sĩ xác nhận hoàn thành buổi khám bên dưới.
+                </p>
+                <Button
+                  onClick={handleComplete}
+                  disabled={completeMutation.isPending}
+                  className="w-full bg-[#4caf50] hover:bg-[#439e47] text-white font-bold text-xs py-2.5 rounded-xl shadow-xs transition-all gap-2 cursor-pointer mt-1"
+                >
+                  {completeMutation.isPending ? (
+                    <>
+                      <Loader2 className="animate-spin h-4 w-4" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Giả lập Bác sĩ hoàn thành khám
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Cancel Action */}
           {['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'PAID'].includes(appointment.status) && (

@@ -125,6 +125,7 @@ export class AppointmentsController {
     };
   }
 
+  @Public()
   @Patch(':id/complete')
   @ApiOperation({ summary: 'Hoàn thành lịch khám' })
   async complete(@Param('id') id: string) {
