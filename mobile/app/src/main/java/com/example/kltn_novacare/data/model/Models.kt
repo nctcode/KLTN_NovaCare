@@ -125,6 +125,41 @@ data class Notification(
     val createdAt: String
 )
 
+data class MedicalService(
+    val id: String,
+    val hospitalId: String,
+    val name: String,
+    val description: String?,
+    val price: Double,
+    val duration: Int = 30,
+    val isActive: Boolean = true,
+    val hospital: Hospital? = null
+)
+
+data class HealthPackage(
+    val id: String,
+    val hospitalId: String?,
+    val name: String,
+    val description: String?,
+    val price: Double,
+    val duration: Int = 60,
+    val services: List<String>? = null,
+    val isActive: Boolean = true,
+    val hospital: Hospital? = null
+)
+
+data class HospitalBranch(
+    val id: String,
+    val hospitalId: String,
+    val name: String?,
+    val address: String,
+    val phone: String?,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val isActive: Boolean = true,
+    val hospital: Hospital? = null
+)
+
 // Base API wrapper structures
 data class ApiResponse<T>(
     val statusCode: Int?,

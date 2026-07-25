@@ -20,6 +20,7 @@ import { PaymentsModule } from '@/modules/payments/payments.module';
 import { QueueModule } from '@/queue/queue.module';
 import { PreExamModule } from '@/modules/pre-exam/pre-exam.module';
 import { MedicalPassportModule } from '@/modules/medical-passport/medical-passport.module';
+import { HealthPackagesModule } from '@/modules/health-packages/health-packages.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { MedicalPassportModule } from '@/modules/medical-passport/medical-passpo
     DoctorsModule,
     DoctorWorkplacesModule,
     MedicalServicesModule,
+    HealthPackagesModule,
     DoctorSchedulesModule,
     AppointmentSlotsModule,
     AppointmentsModule,

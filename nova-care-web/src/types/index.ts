@@ -53,3 +53,38 @@ export interface DoctorSearchParams {
   page?: number;
   limit?: number;
 }
+
+export interface MedicalService {
+  id: string;
+  hospitalId: string;
+  name: string;
+  description?: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+  hospital?: Hospital;
+}
+
+export interface HealthPackage {
+  id: string;
+  hospitalId?: string;
+  name: string;
+  description?: string;
+  price: number;
+  duration: number;
+  services?: string[];
+  isActive: boolean;
+  hospital?: Hospital;
+}
+
+export interface HospitalBranch {
+  id: string;
+  hospitalId: string;
+  name?: string;
+  address: string;
+  phone?: string;
+  latitude?: number;
+  longitude?: number;
+  isActive: boolean;
+  hospital?: Hospital;
+}

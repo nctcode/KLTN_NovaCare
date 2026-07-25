@@ -341,8 +341,11 @@ async function main() {
     },
   ];
 
+  await prisma.paymentTransaction.deleteMany({});
+  await prisma.appointmentStatusHistory.deleteMany({});
   await prisma.appointment.deleteMany({});
   await prisma.appointmentSlot.deleteMany({});
+  await prisma.doctorWorkplace.deleteMany({});
   await prisma.doctorSchedule.deleteMany({});
   await prisma.doctorWorkplace.deleteMany({});
   await prisma.doctor.deleteMany({});
@@ -426,6 +429,51 @@ async function main() {
     });
   }
   console.log('✅ Created medical services');
+
+  // ==========================================
+  // 8.5. Tạo Health Packages (Gói khám)
+  // ==========================================
+  await prisma.healthPackage.deleteMany({});
+  const packagesData = [
+    {
+      name: 'Gói khám sức khỏe tổng quát cơ bản',
+      description: 'Đánh giá tổng quát tình trạng sức khỏe, phát hiện sớm các nguy cơ bệnh lý cơ bản.',
+      price: 1500000,
+      duration: 60,
+      services: ['Khám tổng quát', 'Xét nghiệm máu', 'Điện tâm đồ', 'Siêu âm ổ bụng'],
+      hospitalId: hospital1.id,
+    },
+    {
+      name: 'Gói tầm soát tim mạch chuyên sâu',
+      description: 'Kiểm tra toàn diện hệ thống tim mạch, siêu âm tim, đo điện tim và tư vấn chuyên khoa.',
+      price: 2800000,
+      duration: 90,
+      services: ['Khám tim mạch', 'Siêu âm tim Doppler', 'Điện tâm đồ 12 chuyển đạo', 'Xét nghiệm mỡ máu'],
+      hospitalId: hospital1.id,
+    },
+    {
+      name: 'Gói khám sức khỏe nhi khoa toàn diện',
+      description: 'Theo dõi sự phát triển thể chất và tinh thần của trẻ, tư vấn dinh dưỡng và tiêm chủng.',
+      price: 1200000,
+      duration: 45,
+      services: ['Khám nhi khoa', 'Tư vấn dinh dưỡng', 'Kiểm tra vi chất', 'Tư vấn tiêm ngừa'],
+      hospitalId: hospital2.id,
+    },
+    {
+      name: 'Gói tầm soát ung thư sớm',
+      description: 'Tầm soát chỉ số sinh hóa và các vi dấu ung thư phổ biến cho nam và nữ.',
+      price: 3500000,
+      duration: 120,
+      services: ['Khám tổng quát', 'Xét nghiệm Marker ung thư', 'Chụp X-quang ngực', 'Siêu âm tuyến giáp & bụng'],
+      hospitalId: hospital2.id,
+    },
+  ];
+  for (const pkg of packagesData) {
+    await prisma.healthPackage.create({
+      data: pkg,
+    });
+  }
+  console.log('✅ Created health packages');
 
   // ==========================================
   // 9. Tạo Doctor Schedules
