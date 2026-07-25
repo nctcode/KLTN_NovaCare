@@ -195,6 +195,12 @@ export function Header({ onMenuClick }: HeaderProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link href="/tra-cuu-ho-so" className="cursor-pointer font-medium text-xs py-2 text-[#0c4b39] font-bold">
+                      <ShieldCheck className="mr-2 h-4 w-4 text-[#0c4b39]" />
+                      Cổng Liên thông Hồ sơ Y tế
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/lich-kham" className="cursor-pointer font-medium text-xs py-2">
                       <Activity className="mr-2 h-4 w-4 text-[#0c4b39]" />
                       Lịch hẹn khám của tôi
@@ -431,6 +437,12 @@ export function Header({ onMenuClick }: HeaderProps) {
                     <Link href="/ho-so" className="cursor-pointer font-medium text-xs py-2">
                       <FileText className="mr-2 h-4 w-4 text-[#0c4b39]" />
                       Hồ sơ Bệnh nhân
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/tra-cuu-ho-so" className="cursor-pointer font-medium text-xs py-2 text-[#0c4b39] font-bold">
+                      <ShieldCheck className="mr-2 h-4 w-4 text-[#0c4b39]" />
+                      Cổng Liên thông Hồ sơ Y tế
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

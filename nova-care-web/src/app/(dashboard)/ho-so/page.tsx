@@ -127,6 +127,26 @@ export default function ProfilePage() {
         </Dialog>
       </div>
 
+      {/* Inter-Hospital EHR Passport Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white rounded-2xl p-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold uppercase tracking-wider border border-emerald-500/30">
+            <Shield className="w-3.5 h-3.5" />
+            Liên thông Hồ sơ Đa Bệnh viện
+          </div>
+          <h3 className="text-lg font-bold">Hộ chiếu Y tế Số (Medical Passport)</h3>
+          <p className="text-xs text-slate-300">
+            Cho phép Bác sĩ tại Bệnh viện B xem tiền sử khám, chẩn đoán & đơn thuốc từ Bệnh viện A qua Mã QR chia sẻ.
+          </p>
+        </div>
+        <Button asChild className="bg-[#4caf50] hover:bg-[#439e47] text-white font-bold text-xs gap-2 shrink-0 rounded-xl px-4 py-2">
+          <Link href="/tra-cuu-ho-so">
+            Mở Cổng Tra cứu Liên thông
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </Button>
+      </div>
+
       {/* Stats Summary Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
