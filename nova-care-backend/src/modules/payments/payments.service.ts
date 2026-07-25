@@ -201,4 +201,78 @@ export class PaymentsService {
       bookingCode: payment.appointment.bookingCode,
     };
   }
+
+  async simulatePaymentSuccess(appointmentId: string, paymentMethodStr: string = 'MOMO') {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment) throw new NotFoundException('Lịch khám không tồn tại');
+
+    // Map incoming string to PaymentMethod enum value
+    const methodMap: Record<string, any> = {
+      MOMO: 'MOMO',
+      VIETQR: 'VIETQR',
+      CARD: 'CARD',
+      VNPAY: 'VNPAY',
+      CASH: 'CASH',
+      BANKING: 'BANKING',
+    };
+    const paymentMethod = methodMap[paymentMethodStr.toUpperCase()] ?? 'MOMO';
+    const transactionCode = `${paymentMethod}_${Date.now()}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      // Check if a transaction already exists
+      const existing = await tx.paymentTransaction.findUnique({ where: { appointmentId } });
+
+      if (existing) {
+        await tx.paymentTransaction.update({
+          where: { appointmentId },
+          data: {
+            status: 'PAID',
+            paymentMethod,
+            paidAt: new Date(),
+          },
+        });
+      } else {
+        await tx.paymentTransaction.create({
+          data: {
+            appointmentId,
+            amount: appointment.totalPrice,
+            paymentMethod,
+            transactionCode,
+            status: 'PAID',
+            paidAt: new Date(),
+          },
+        });
+      }
+
+      await tx.appointment.update({
+        where: { id: appointmentId },
+        data: { status: 'PAID' },
+      });
+
+      await tx.appointmentStatusHistory.create({
+        data: {
+          appointmentId,
+          status: 'PAID',
+          note: `Thanh toán giả lập qua ${paymentMethod} thành công`,
+        },
+      });
+    });
+
+    try {
+      await this.queueService.addEmailJob(appointmentId, 'payment_success');
+      await this.queueService.addPushJob(appointmentId, 'payment_success');
+    } catch (e: any) {
+      this.logger.warn(`Failed to queue notification: ${e.message}`);
+    }
+
+    return {
+      appointmentId,
+      status: 'PAID',
+      paymentMethod,
+      bookingCode: appointment.bookingCode,
+    };
+  }
 }

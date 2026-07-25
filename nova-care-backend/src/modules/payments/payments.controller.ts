@@ -14,6 +14,16 @@ export class CreatePaymentDto {
   appointmentId: string;
 }
 
+export class SimulatePaymentDto {
+  @ApiProperty({ example: 'uuid-string', description: 'Mã lịch hẹn' })
+  @IsNotEmpty({ message: 'Mã lịch hẹn không được để trống' })
+  @IsString({ message: 'Mã lịch hẹn phải là chuỗi' })
+  appointmentId: string;
+
+  @ApiProperty({ example: 'MOMO', description: 'Phương thức thanh toán (MOMO, VIETQR, CARD)' })
+  paymentMethod?: string;
+}
+
 @ApiTags('Thanh toán')
 @Controller('api/v1/payments')
 export class PaymentsController {
@@ -30,6 +40,22 @@ export class PaymentsController {
       statusCode: 200,
       message: 'Tạo link thanh toán VNPay thành công',
       data: { paymentUrl },
+    };
+  }
+
+  @Post('simulate-success')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Giả lập thanh toán MoMo / VietQR / Thẻ thành công' })
+  async simulateSuccess(@Body() dto: SimulatePaymentDto) {
+    const result = await this.paymentsService.simulatePaymentSuccess(
+      dto.appointmentId,
+      dto.paymentMethod || 'MOMO'
+    );
+    return {
+      statusCode: 200,
+      message: 'Giả lập thanh toán thành công',
+      data: result,
     };
   }
 

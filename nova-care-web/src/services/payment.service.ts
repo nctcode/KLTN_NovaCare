@@ -10,4 +10,12 @@ export const paymentService = {
     const response = await apiClient.get<any>(`/payments/status/${appointmentId}`);
     return response.data;
   },
+
+  async simulateSuccess(appointmentId: string, paymentMethod: string): Promise<any> {
+    const response = await apiClient.post<any>('/payments/simulate-success', {
+      appointmentId,
+      paymentMethod,
+    });
+    return response.data;
+  },
 };

@@ -42,6 +42,9 @@ enum PaymentMethod {
   VNPAY
   CASH
   BANKING
+  MOMO
+  VIETQR
+  CARD
 }
 
 enum NotificationType {
