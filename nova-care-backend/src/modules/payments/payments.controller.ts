@@ -5,7 +5,7 @@ import { Public } from '@/common/decorators/public.decorator';
 import { PaymentsService } from './payments.service';
 import { Request } from 'express';
 
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreatePaymentDto {
   @ApiProperty({ example: 'uuid-string', description: 'Mã lịch hẹn' })
@@ -20,7 +20,9 @@ export class SimulatePaymentDto {
   @IsString({ message: 'Mã lịch hẹn phải là chuỗi' })
   appointmentId: string;
 
-  @ApiProperty({ example: 'MOMO', description: 'Phương thức thanh toán (MOMO, VIETQR, CARD)' })
+  @ApiProperty({ example: 'MOMO', description: 'Phương thức thanh toán (MOMO, VIETQR, CARD)', required: false })
+  @IsOptional()
+  @IsString()
   paymentMethod?: string;
 }
 
@@ -43,9 +45,8 @@ export class PaymentsController {
     };
   }
 
+  @Public()
   @Post('simulate-success')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Giả lập thanh toán MoMo / VietQR / Thẻ thành công' })
   async simulateSuccess(@Body() dto: SimulatePaymentDto) {
     const result = await this.paymentsService.simulatePaymentSuccess(
@@ -74,9 +75,8 @@ export class PaymentsController {
     return this.paymentsService.handleIpn(params);
   }
 
+  @Public()
   @Get('status/:appointmentId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Kiểm tra trạng thái thanh toán giao dịch' })
   async getStatus(@Param('appointmentId') appointmentId: string) {
     const result = await this.paymentsService.getPaymentStatus(appointmentId);
