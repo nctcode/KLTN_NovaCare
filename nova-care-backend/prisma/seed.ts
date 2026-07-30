@@ -8,9 +8,25 @@ async function main() {
   console.log('🌱 Seeding database...');
 
   // ==========================================
-  // 1. Tạo User
+  // 1. Tạo User & Admin
   // ==========================================
   const hashedPassword = await argon2.hash('Password123!');
+  const adminPassword = await argon2.hash('Admin@123');
+
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@novacare.vn' },
+    update: { role: 'ADMIN' },
+    create: {
+      email: 'admin@novacare.vn',
+      phone: '0909090909',
+      passwordHash: adminPassword,
+      fullName: 'Quản trị viên NovaCare',
+      role: 'ADMIN',
+      isActive: true,
+    },
+  });
+  console.log(`✅ Created admin user: ${admin.fullName} (${admin.email})`);
+
   const user = await prisma.user.upsert({
     where: { email: 'user@novacare.vn' },
     update: {},
@@ -19,6 +35,7 @@ async function main() {
       phone: '0123456789',
       passwordHash: hashedPassword,
       fullName: 'Nguyễn Văn A',
+      role: 'PATIENT',
       isActive: true,
     },
   });

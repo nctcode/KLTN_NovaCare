@@ -21,6 +21,7 @@ import { QueueModule } from '@/queue/queue.module';
 import { PreExamModule } from '@/modules/pre-exam/pre-exam.module';
 import { MedicalPassportModule } from '@/modules/medical-passport/medical-passport.module';
 import { HealthPackagesModule } from '@/modules/health-packages/health-packages.module';
+import { AdminModule } from '@/modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { HealthPackagesModule } from '@/modules/health-packages/health-packages.
     PaymentsModule,
     PreExamModule,
     MedicalPassportModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

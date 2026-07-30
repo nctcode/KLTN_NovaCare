@@ -439,6 +439,14 @@ export function Header({ onMenuClick }: HeaderProps) {
                       Hồ sơ Bệnh nhân
                     </Link>
                   </DropdownMenuItem>
+                  {user?.role === 'ADMIN' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="cursor-pointer font-bold text-xs py-2 text-[#0c4b39] bg-emerald-50">
+                        <Activity className="mr-2 h-4 w-4 text-[#0c4b39]" />
+                        Trang Quản trị Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/tra-cuu-ho-so" className="cursor-pointer font-medium text-xs py-2 text-[#0c4b39] font-bold">
                       <ShieldCheck className="mr-2 h-4 w-4 text-[#0c4b39]" />
