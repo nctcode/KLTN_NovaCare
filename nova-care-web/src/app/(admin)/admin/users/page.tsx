@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAdminTheme } from '@/components/admin/AdminThemeContext';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,18 +13,31 @@ import {
   Lock,
   Unlock,
   ShieldCheck,
-  Calendar,
   Loader2,
   ChevronLeft,
   ChevronRight,
-  UserCheck,
 } from 'lucide-react';
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
+  const { theme } = useAdminTheme();
+  const isLight = theme === 'light';
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+
+  const cardStyle = isLight
+    ? 'bg-white border-slate-200 text-slate-900 shadow-sm'
+    : 'bg-slate-950 border-slate-800 text-white shadow-sm';
+
+  const inputStyle = isLight
+    ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
+    : 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-500';
+
+  const tableHeaderStyle = isLight
+    ? 'bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider'
+    : 'bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider';
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', page, search, roleFilter],
@@ -51,18 +65,18 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-white flex items-center gap-2">
-            <Users className="w-6 h-6 text-[#66FF33]" />
+          <h1 className={`text-xl font-black flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+            <Users className="w-6 h-6 text-[#0c4b39] dark:text-[#66FF33]" />
             Quản Lý Tài Khoản Người Dùng
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className={`text-xs mt-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
             Xem danh sách bệnh nhân, khóa/mở khóa tài khoản và phân quyền quản trị viên.
           </p>
         </div>
       </div>
 
       {/* Filters Bar */}
-      <Card className="bg-slate-950 border-slate-800 text-white shadow-sm p-4">
+      <Card className={`${cardStyle} p-4`}>
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -74,7 +88,7 @@ export default function AdminUsersPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 bg-slate-900 border-slate-800 text-xs text-white placeholder:text-slate-500 rounded-xl"
+              className={`pl-9 text-xs rounded-xl ${inputStyle}`}
             />
           </div>
 
@@ -84,7 +98,9 @@ export default function AdminUsersPage() {
               setRoleFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-slate-900 border border-slate-800 text-xs font-semibold text-white px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#66FF33] w-full sm:w-48"
+            className={`border text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#0c4b39] w-full sm:w-48 ${
+              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+            }`}
           >
             <option value="">Tất cả Vai trò (Roles)</option>
             <option value="PATIENT">Bệnh nhân (PATIENT)</option>
@@ -94,15 +110,15 @@ export default function AdminUsersPage() {
       </Card>
 
       {/* Users Table */}
-      <Card className="bg-slate-950 border-slate-800 text-white shadow-sm overflow-hidden">
+      <Card className={`${cardStyle} overflow-hidden`}>
         <CardContent className="p-0 overflow-x-auto">
           {isLoading ? (
             <div className="p-12 flex justify-center">
-              <Loader2 className="w-8 h-8 text-[#66FF33] animate-spin" />
+              <Loader2 className="w-8 h-8 text-[#0c4b39] animate-spin" />
             </div>
           ) : (
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+              <thead className={tableHeaderStyle}>
                 <tr>
                   <th className="p-4">Họ và Tên</th>
                   <th className="p-4">Email / SĐT</th>
@@ -113,7 +129,7 @@ export default function AdminUsersPage() {
                   <th className="p-4 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
                 {data?.items?.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-6 text-center text-slate-500 font-medium">
@@ -122,40 +138,40 @@ export default function AdminUsersPage() {
                   </tr>
                 ) : (
                   data?.items?.map((user: any) => (
-                    <tr key={user.id} className="hover:bg-slate-900/50 transition">
-                      <td className="p-4 font-bold text-white">
+                    <tr key={user.id} className={`transition ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-900/50'}`}>
+                      <td className={`p-4 font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                         {user.fullName}
                       </td>
-                      <td className="p-4 text-slate-300">
+                      <td className={isLight ? 'p-4 text-slate-700' : 'p-4 text-slate-300'}>
                         <div>{user.email || 'Chưa đăng ký email'}</div>
-                        <div className="text-[11px] text-slate-400 font-mono">{user.phone || 'Chưa có SĐT'}</div>
+                        <div className={`text-[11px] font-mono ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{user.phone || 'Chưa có SĐT'}</div>
                       </td>
                       <td className="p-4">
                         <span
                           className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
                             user.role === 'ADMIN'
-                              ? 'bg-amber-950 text-amber-400 border-amber-800'
-                              : 'bg-slate-800 text-slate-300 border-slate-700'
+                              ? isLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-950 text-amber-400 border-amber-800'
+                              : isLight ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-slate-800 text-slate-300 border-slate-700'
                           }`}
                         >
                           {user.role}
                         </span>
                       </td>
-                      <td className="p-4 text-slate-300 font-medium">
+                      <td className={`p-4 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
                         {user._count?.patientProfiles || 0} hồ sơ / {user._count?.appointments || 0} lịch
                       </td>
                       <td className="p-4">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                             user.isActive
-                              ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                              : 'bg-rose-950 text-rose-400 border border-rose-800'
+                              ? isLight ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                              : isLight ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-rose-950 text-rose-400 border border-rose-800'
                           }`}
                         >
                           {user.isActive ? 'Hoạt động' : 'Bị khóa'}
                         </span>
                       </td>
-                      <td className="p-4 text-slate-400">
+                      <td className={isLight ? 'p-4 text-slate-600' : 'p-4 text-slate-400'}>
                         {new Date(user.createdAt).toLocaleDateString('vi-VN')}
                       </td>
                       <td className="p-4 text-right space-x-2">
@@ -166,8 +182,8 @@ export default function AdminUsersPage() {
                           onClick={() => toggleStatusMutation.mutate(user.id)}
                           className={`text-xs font-bold rounded-xl ${
                             user.isActive
-                              ? 'border-rose-800 text-rose-400 hover:bg-rose-950'
-                              : 'border-emerald-800 text-emerald-400 hover:bg-emerald-950'
+                              ? isLight ? 'border-rose-300 text-rose-700 hover:bg-rose-50' : 'border-rose-800 text-rose-400 hover:bg-rose-950'
+                              : isLight ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' : 'border-emerald-800 text-emerald-400 hover:bg-emerald-950'
                           }`}
                         >
                           {user.isActive ? (
@@ -191,9 +207,11 @@ export default function AdminUsersPage() {
                               role: user.role === 'ADMIN' ? 'PATIENT' : 'ADMIN',
                             })
                           }
-                          className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs font-bold rounded-xl"
+                          className={`text-xs font-bold rounded-xl ${
+                            isLight ? 'border-slate-300 text-slate-800 hover:bg-slate-100' : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                          }`}
                         >
-                          <ShieldCheck className="w-3.5 h-3.5 mr-1 text-[#66FF33]" />
+                          <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
                           {user.role === 'ADMIN' ? 'Gỡ Admin' : 'Thành Admin'}
                         </Button>
                       </td>
@@ -208,7 +226,9 @@ export default function AdminUsersPage() {
 
       {/* Pagination */}
       {data?.totalPages > 1 && (
-        <div className="flex items-center justify-between bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-400">
+        <div className={`flex items-center justify-between p-4 rounded-xl border text-xs ${
+          isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
+        }`}>
           <span>
             Hiển thị trang <strong>{data.page}</strong> / <strong>{data.totalPages}</strong> (Tổng {data.total} người dùng)
           </span>
@@ -218,7 +238,7 @@ export default function AdminUsersPage() {
               size="sm"
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="border-slate-800 text-white rounded-xl"
+              className={isLight ? 'border-slate-300 text-slate-800 rounded-xl' : 'border-slate-800 text-white rounded-xl'}
             >
               <ChevronLeft className="w-4 h-4 mr-1" /> Trang trước
             </Button>
@@ -227,7 +247,7 @@ export default function AdminUsersPage() {
               size="sm"
               disabled={page >= data.totalPages}
               onClick={() => setPage(page + 1)}
-              className="border-slate-800 text-white rounded-xl"
+              className={isLight ? 'border-slate-300 text-slate-800 rounded-xl' : 'border-slate-800 text-white rounded-xl'}
             >
               Trang sau <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
