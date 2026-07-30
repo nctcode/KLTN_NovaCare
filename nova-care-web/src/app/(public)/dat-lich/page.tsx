@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useBookingStore } from '@/stores/booking.store';
 import { BookingStepper } from '@/components/features/BookingStepper';
+import { PreExamScreening } from '@/components/features/booking/PreExamScreening';
 import { StepSelectDoctor } from '@/components/features/booking/StepSelectDoctor';
 import { StepSelectTime } from '@/components/features/booking/StepSelectTime';
 import { StepSelectProfile } from '@/components/features/booking/StepSelectProfile';
@@ -13,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { doctorService } from '@/services/doctor.service';
 import { BookingSummary } from '@/components/features/booking/BookingSummary';
-import { Loader2, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Loader2, HeartHandshake } from 'lucide-react';
 
 const steps = [
   { id: 1, label: 'Chọn bác sĩ' },
@@ -24,9 +25,12 @@ const steps = [
 ];
 
 function BookingPageContent() {
-  const { currentStep, bookingData, setStep, setBookingData, resetBooking } = useBookingStore();
+  const { currentStep, bookingData, preExamResult, setStep, setBookingData, resetBooking } = useBookingStore();
   const searchParams = useSearchParams();
   const workplaceId = searchParams.get('workplaceId');
+  const mode = searchParams.get('mode');
+
+  const [skipScreening, setSkipScreening] = useState(false);
 
   // Load workplace preselected if passed in URL
   const { data: workplace } = useQuery({
@@ -36,8 +40,12 @@ function BookingPageContent() {
   });
 
   useEffect(() => {
-    // Reset booking state when loading page for the first time if no workplace preloaded
-    if (!workplaceId) {
+    // If preselected workplace or mode passed
+    if (workplaceId || mode === 'traditional' || mode === 'skip-screening') {
+      setSkipScreening(true);
+    }
+
+    if (!workplaceId && !preExamResult && !mode) {
       resetBooking();
     }
 
@@ -51,7 +59,7 @@ function BookingPageContent() {
       });
       setStep(2); // Jump directly to select time step
     }
-  }, [workplace, workplaceId, setBookingData, setStep, resetBooking]);
+  }, [workplace, workplaceId, mode, preExamResult, setBookingData, setStep, resetBooking]);
 
   const handleNext = () => {
     if (currentStep < 5) {
@@ -64,6 +72,20 @@ function BookingPageContent() {
       setStep((currentStep - 1) as any);
     }
   };
+
+  // Show Pre-Exam Screening wizard first unless user skipped or already completed screening
+  if (!skipScreening && !preExamResult && !workplaceId && mode !== 'pre-filled') {
+    return (
+      <div className="min-h-screen bg-slate-50/60 py-8 md:py-12">
+        <div className="container-custom max-w-4xl space-y-6">
+          <PreExamScreening
+            onSkip={() => setSkipScreening(true)}
+            onCompleted={() => setSkipScreening(true)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50/60 py-8 md:py-12">
@@ -126,4 +148,3 @@ export default function BookingPage() {
     </Suspense>
   );
 }
-
