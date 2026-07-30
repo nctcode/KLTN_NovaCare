@@ -31,4 +31,12 @@ export default registerAs('app', () => ({
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || '',
   },
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY,
+    modelVision: process.env.OPENAI_MODEL_VISION || 'gpt-4o',
+    modelChat: process.env.OPENAI_MODEL_CHAT || 'gpt-4o',
+    modelWhisper: process.env.OPENAI_MODEL_WHISPER || 'whisper-1',
+    maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '2000', 10),
+    temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.3'),
+  },
 }));

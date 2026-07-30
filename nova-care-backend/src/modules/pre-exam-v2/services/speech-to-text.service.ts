@@ -1,23 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { OpenAIService } from '@/modules/ai/openai.service';
 
 @Injectable()
 export class GoogleSpeechToTextService {
   private readonly logger = new Logger(GoogleSpeechToTextService.name);
 
+  constructor(private readonly openAIService: OpenAIService) {}
+
   async transcribe(file: any): Promise<string> {
     try {
-      const apiKey = process.env.GOOGLE_SPEECH_API_KEY || process.env.OPENAI_API_KEY;
-      if (apiKey) {
-        this.logger.log(`Transcribing audio file ${file.originalname || file.path} via Cloud Speech API`);
-        // If API key is present, calling real speech service...
+      this.logger.log(`Transcribing audio: ${file.originalname || file.path || 'audio'}`);
+      const buffer: Buffer = Buffer.isBuffer(file.buffer)
+        ? file.buffer
+        : file.path
+          ? require('fs').readFileSync(file.path)
+          : Buffer.alloc(0);
+
+      if (buffer.length === 0) {
+        return 'Không có dữ liệu âm thanh để xử lý.';
       }
 
-      // Offline Fallback Speech Engine
-      this.logger.log('Using Offline Local Fallback Speech-to-Text Engine');
-      return 'Bệnh nhân mô tả: Tôi bị tức ngực nhẹ và đau họng khó nuốt từ hôm qua.';
+      const ext = (file.originalname || file.filename || 'audio.wav').split('.').pop() || 'wav';
+      return await this.openAIService.transcribeAudio(buffer, ext);
     } catch (error) {
-      this.logger.error('Error transcribing audio, returning local fallback transcript', error);
-      return 'Bệnh nhân có triệu chứng ho và mệt mỏi nhẹ (Local Fallback Transcript).';
+      this.logger.error('Lỗi xử lý giọng nói', error);
+      return 'Không thể nhận diện giọng nói. Vui lòng nhập văn bản mô tả triệu chứng.';
     }
   }
 }

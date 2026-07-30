@@ -20,6 +20,7 @@ import { PaymentsModule } from '@/modules/payments/payments.module';
 import { QueueModule } from '@/queue/queue.module';
 import { PreExamModule } from '@/modules/pre-exam/pre-exam.module';
 import { PreExamV2Module } from '@/modules/pre-exam-v2/pre-exam-v2.module';
+import { AIModule } from '@/modules/ai/ai.module';
 import { MedicalPassportModule } from '@/modules/medical-passport/medical-passport.module';
 import { HealthPackagesModule } from '@/modules/health-packages/health-packages.module';
 import { AdminModule } from '@/modules/admin/admin.module';
@@ -52,6 +53,7 @@ import { AdminModule } from '@/modules/admin/admin.module';
     AppointmentsModule,
     PaymentsModule,
     PreExamModule,
+    AIModule,
     PreExamV2Module,
     MedicalPassportModule,
     AdminModule,

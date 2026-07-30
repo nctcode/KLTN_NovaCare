@@ -1,54 +1,38 @@
 import { Injectable, Logger } from '@nestjs/common';
-
-export interface ImageAnalysisResult {
-  type: string;
-  findings: string;
-  suggestion: string;
-}
+import { OpenAIService, ImageAnalysisResult } from '@/modules/ai/openai.service';
 
 @Injectable()
 export class OpenAIVisionService {
   private readonly logger = new Logger(OpenAIVisionService.name);
 
+  constructor(private readonly openAIService: OpenAIService) {}
+
   async analyzeImage(file: any): Promise<ImageAnalysisResult> {
     try {
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (apiKey) {
-        this.logger.log(`Analyzing image ${file.originalname || file.path} via OpenAI Vision API`);
-        // If API key is present, calling Vision API...
-      }
+      this.logger.log(`Analyzing image: ${file.originalname || file.path || 'image'}`);
 
-      // Offline Local Vision Engine Fallback
-      this.logger.log('Using Offline Local Fallback Vision Engine');
+      const buffer: Buffer = Buffer.isBuffer(file.buffer)
+        ? file.buffer
+        : file.path
+          ? require('fs').readFileSync(file.path)
+          : Buffer.alloc(0);
+
+      // Detect image type from filename
       const filename = (file.originalname || file.filename || '').toLowerCase();
+      let imageType: 'skin' | 'eye' | 'throat' | 'wound' | 'nail' = 'skin';
+      if (filename.includes('eye') || filename.includes('mat')) imageType = 'eye';
+      else if (filename.includes('throat') || filename.includes('hong')) imageType = 'throat';
+      else if (filename.includes('wound') || filename.includes('vet')) imageType = 'wound';
+      else if (filename.includes('nail') || filename.includes('mong')) imageType = 'nail';
 
-      if (filename.includes('throat') || filename.includes('hong')) {
-        return {
-          type: 'vùng họng',
-          findings: 'Ghi nhận hiện tượng niêm mạc họng sung huyết nhẹ',
-          suggestion: 'Theo dõi chỉ số sốt và tham khảo chuyên khoa Tai Mũi Họng',
-        };
-      }
-
-      if (filename.includes('eye') || filename.includes('mat')) {
-        return {
-          type: 'vùng mắt',
-          findings: 'Phát hiện vùng kết mạc có dấu hiệu đỏ nhẹ',
-          suggestion: 'Nên khám chuyên khoa Mắt để kiểm tra nguy cơ viêm kết mạc',
-        };
-      }
-
-      return {
-        type: 'tổn thương ngoài da / bề mặt',
-        findings: 'Hình ảnh ghi nhận phản ứng nổi mẩn hoặc sưng huyết nông',
-        suggestion: 'Khuyên dùng tư vấn chuyên khoa Da liễu hoặc Nội tổng quát',
-      };
+      return await this.openAIService.analyzeImage(buffer, imageType);
     } catch (error) {
-      this.logger.error('Error analyzing image, using local fallback', error);
+      this.logger.error('Lỗi phân tích hình ảnh', error);
       return {
         type: 'tổn thương lâm sàng',
         findings: 'Dữ liệu hình ảnh được tiếp nhận thành công',
-        suggestion: 'Chuyên khoa bác sĩ sẽ trực tiếp xem xét hình ảnh khi thăm khám',
+        suggestion: 'Bác sĩ sẽ trực tiếp xem xét hình ảnh khi thăm khám',
+        severity: 'MEDIUM',
       };
     }
   }

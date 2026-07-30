@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { AuditLogService } from '@/common/services/audit-log.service';
+import { OpenAIService } from '@/modules/ai/openai.service';
 import { TriageEngineService } from './services/triage-engine.service';
 import { RecommendationService } from './services/recommendation.service';
 import { GoogleSpeechToTextService } from './services/speech-to-text.service';
@@ -14,6 +15,7 @@ export class PreExamV2Service {
   constructor(
     private prisma: PrismaService,
     private auditLogService: AuditLogService,
+    private openAIService: OpenAIService,
     private triageEngine: TriageEngineService,
     private recommendationService: RecommendationService,
     private speechService: GoogleSpeechToTextService,
@@ -26,25 +28,23 @@ export class PreExamV2Service {
         userId,
         structuredData: { patientInfo: { ...dto } } as any,
         status: 'IN_PROGRESS',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7-day expiration
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
     return session.id;
   }
 
   async submitSymptoms(sessionId: string, dto: SubmitSymptomDto, files?: { voiceFile?: any; imageFiles?: any[] }) {
-    const session = await this.prisma.preExamSession.findUnique({
-      where: { id: sessionId },
-    });
+    const session = await this.prisma.preExamSession.findUnique({ where: { id: sessionId } });
     if (!session) throw new NotFoundException('Session không tồn tại');
 
-    // 1. Process Voice
+    // 1. Process Voice via Whisper API
     let transcript = '';
     if (files?.voiceFile) {
       transcript = await this.speechService.transcribe(files.voiceFile);
     }
 
-    // 2. Process Images
+    // 2. Process Images via GPT-4o Vision API
     const imageAnalysis: any[] = [];
     if (files?.imageFiles && files.imageFiles.length > 0) {
       for (const img of files.imageFiles) {
@@ -53,7 +53,7 @@ export class PreExamV2Service {
       }
     }
 
-    // Parse body diagram & vitals JSON safely
+    // 3. Parse body diagram & vitals safely
     let parsedBodyDiagram = null;
     if (dto.bodyDiagram) {
       try {
@@ -72,7 +72,7 @@ export class PreExamV2Service {
       }
     }
 
-    // 3. Update session
+    // 4. Update session in DB
     const uploadedFiles: string[] = [];
     if (files?.voiceFile) uploadedFiles.push(files.voiceFile.path || files.voiceFile.filename || 'voice.wav');
     if (files?.imageFiles) {
@@ -85,119 +85,106 @@ export class PreExamV2Service {
         initialText: dto.text,
         voiceTranscript: transcript,
         bodyDiagramData: parsedBodyDiagram,
-        imageAnalysis: imageAnalysis,
+        imageAnalysis: imageAnalysis as any,
         uploadedFiles: uploadedFiles,
       },
     });
 
-    // 4. Generate Adaptive AI Questions
-    const questions = await this.generateAdaptiveQuestions(sessionId, dto.text, parsedBodyDiagram);
+    // 5. Generate Adaptive AI Questions via GPT-4o Chat
+    const questions = await this.generateAdaptiveQuestions(sessionId, dto.text, parsedBodyDiagram, session);
     return { sessionId, transcript, imageAnalysis, questions };
   }
 
-  private async generateAdaptiveQuestions(sessionId: string, text: string, bodyDiagram: any) {
-    const lower = (text || '').toLowerCase();
-
+  private async generateAdaptiveQuestions(sessionId: string, text: string, bodyDiagram: any, session: any) {
     // Clear old questions
     await this.prisma.preExamQuestion.deleteMany({ where: { sessionId } });
 
-    const qList: { question: string; order: number; options?: string[] }[] = [];
+    const patientInfo = (session.structuredData as any)?.patientInfo || {};
 
-    if (lower.includes('đau') || lower.includes('tức') || lower.includes('nhức')) {
-      qList.push({
-        question: 'Mức độ đau của bạn ở mức nào trên thang điểm từ 1 đến 10?',
-        order: 1,
-        options: ['1-3 (Nhẹ)', '4-6 (Vừa)', '7-8 (Nặng)', '9-10 (Dữ dội)'],
-      });
-      qList.push({
-        question: 'Triệu chứng xuất hiện liên tục hay từng cơn?',
-        order: 2,
-        options: ['Liên tục kéo dài', 'Từng cơn bùng phát', 'Thi thoảng xuất hiện'],
-      });
-    } else {
-      qList.push({
-        question: 'Triệu chứng này đã kéo dài bao lâu?',
-        order: 1,
-        options: ['Dưới 24 giờ', 'Từ 1-3 ngày', 'Từ 3-7 ngày', 'Trên 1 tuần'],
-      });
-    }
-
-    qList.push({
-      question: 'Bạn có kèm theo triệu chứng nào sau đây không?',
-      order: 3,
-      options: ['Sốt / Nóng lạnh', 'Vã mồ hôi / Khó thở', 'Chóng mặt / Buồn nôn', 'Không có triệu chứng khác'],
+    // Get previous answers (empty for first call)
+    const prevQs = await this.prisma.preExamQuestion.findMany({
+      where: { sessionId },
+      orderBy: { order: 'asc' },
     });
 
+    // Call GPT-4o to generate adaptive questions
+    const aiQuestions = await this.openAIService.generateAdaptiveQuestions(
+      text || '',
+      { age: patientInfo.age, gender: patientInfo.gender, medicalHistory: patientInfo.medicalHistory },
+      prevQs.map((q) => ({ question: q.question, answer: q.answer })),
+    );
+
     const createdQuestions = [];
-    for (const q of qList) {
+    for (let i = 0; i < aiQuestions.length; i++) {
+      const q = aiQuestions[i];
       const created = await this.prisma.preExamQuestion.create({
         data: {
           sessionId,
           question: q.question,
-          order: q.order,
-          context: q.options ? { options: q.options } : undefined,
+          order: i + 1,
+          context: { context: q.context } as any,
         },
       });
-      createdQuestions.push({
-        id: created.id,
-        question: created.question,
-        order: created.order,
-        options: q.options || [],
-      });
+      createdQuestions.push({ id: created.id, question: created.question, order: created.order });
     }
-
     return createdQuestions;
   }
 
   async answerQuestion(sessionId: string, dto: AnswerQuestionDto) {
-    const question = await this.prisma.preExamQuestion.findUnique({
-      where: { id: dto.questionId },
-    });
+    const question = await this.prisma.preExamQuestion.findUnique({ where: { id: dto.questionId } });
     if (!question) throw new NotFoundException('Câu hỏi không tồn tại');
-
-    await this.prisma.preExamQuestion.update({
-      where: { id: dto.questionId },
-      data: { answer: dto.answer },
-    });
-
+    await this.prisma.preExamQuestion.update({ where: { id: dto.questionId }, data: { answer: dto.answer } });
     return { success: true };
   }
 
   async completeSession(sessionId: string) {
     const session = await this.prisma.preExamSession.findUnique({
       where: { id: sessionId },
-      include: { questions: true },
+      include: { questions: { orderBy: { order: 'asc' } } },
     });
     if (!session) throw new NotFoundException('Session không tồn tại');
+
+    // 1. AI Summarize Pre-Exam (GPT-4o Chat)
+    const aiSummary = await this.openAIService.summarizePreExam({
+      patientInfo: (session.structuredData as any)?.patientInfo,
+      initialText: session.initialText ?? undefined,
+      voiceTranscript: session.voiceTranscript ?? undefined,
+      bodyDiagramData: session.bodyDiagramData,
+      questions: session.questions.map((q: any) => ({ question: q.question, answer: q.answer })),
+    });
 
     const structuredData = {
       ...(typeof session.structuredData === 'object' ? (session.structuredData as any) : {}),
       initialText: session.initialText,
       voiceTranscript: session.voiceTranscript,
       bodyDiagramData: session.bodyDiagramData,
-      imageAnalysis: session.imageAnalysis,
+      imageAnalysis: (session as any).imageAnalysis,
       answers: session.questions.map((q: any) => ({ question: q.question, answer: q.answer })),
+      aiSummary,
     };
 
-    // 1. Risk Triage Assessment
-    const riskAssessment = this.triageEngine.assess(structuredData);
+    // 2. Risk Triage Assessment (Rules + AI data)
+    const riskAssessment = this.triageEngine.assess({
+      ...structuredData,
+      ...aiSummary,
+    });
 
-    // 2. Recommendations Engine
+    // 3. Recommendations Engine
     const recommendations = await this.recommendationService.generate(structuredData, riskAssessment);
 
-    // 3. Update session in DB
+    // 4. Update session in DB
     const updated = await this.prisma.preExamSession.update({
       where: { id: sessionId },
       data: {
         structuredData,
-        riskLevel: riskAssessment.level,
+        riskLevel: riskAssessment.level as any,
         recommendations,
         status: 'COMPLETED',
         completedAt: new Date(),
       },
     });
 
-    // 4. Audit Log Integration
+    // 5. Audit Log
     try {
       await this.auditLogService.logAction({
         userId: session.userId,
@@ -206,7 +193,7 @@ export class PreExamV2Service {
         entityId: sessionId,
         newValue: {
           riskLevel: riskAssessment.level,
-          suggestedSpecialty: (recommendations as any)?.suggestedSpecialty,
+          suggestedSpecialty: aiSummary.suggestedSpecialty || (recommendations as any)?.suggestedSpecialty,
           completedAt: new Date().toISOString(),
         },
       });
@@ -214,18 +201,13 @@ export class PreExamV2Service {
       // Ignore log error
     }
 
-    return {
-      sessionId: updated.id,
-      riskAssessment,
-      recommendations,
-      structuredData,
-    };
+    return { sessionId: updated.id, riskAssessment, recommendations, structuredData };
   }
 
   async getSession(sessionId: string) {
     const session = await this.prisma.preExamSession.findUnique({
       where: { id: sessionId },
-      include: { questions: true },
+      include: { questions: { orderBy: { order: 'asc' } } },
     });
     if (!session) throw new NotFoundException('Session không tồn tại');
     return session;
