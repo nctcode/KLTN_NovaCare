@@ -36,6 +36,8 @@ import {
 import { formatPrice, getDoctorSpecialtyName } from '@/lib/utils';
 import { HealthPackage, MedicalService, HospitalBranch } from '@/types';
 
+import { useRouter } from 'next/navigation';
+
 interface StepSelectDoctorProps {
   onNext: () => void;
 }
@@ -43,6 +45,7 @@ interface StepSelectDoctorProps {
 type BookingTab = 'doctor' | 'specialty' | 'hospital' | 'clinic' | 'service' | 'package';
 
 export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
+  const router = useRouter();
   const { bookingData, setBookingData } = useBookingStore();
   const [activeTab, setActiveTab] = useState<BookingTab>('doctor');
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,13 +116,7 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
   };
 
   const handleSelectSpecialty = (specialtyId: string) => {
-    setSelectedSpecialtyId(specialtyId);
-    setBookingData({
-      specialtyId,
-      bookingType: 'specialty',
-    });
-    // Switch to doctor tab filtered by specialty
-    setActiveTab('doctor');
+    router.push(`/dat-kham-chuyen-khoa/${specialtyId}`);
   };
 
   const handleSelectHospital = (hospitalId: string) => {
@@ -420,7 +417,24 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
 
         {/* TAB 2: SPECIALTIES GRID */}
         {activeTab === 'specialty' && (
-          <>
+          <div className="space-y-4">
+            <div className="bg-[#0c4b39] text-white p-4 rounded-2xl flex items-center justify-between gap-4 shadow-sm">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#66FF33]" />
+                  <span className="text-xs font-bold text-[#66FF33] uppercase tracking-wider">
+                    Luồng đặt lịch chuyên khoa thông minh
+                  </span>
+                </div>
+                <h4 className="font-black text-sm sm:text-base">
+                  Tìm & Xếp hạng Bệnh viện theo Thuật toán Phù hợp nhất
+                </h4>
+                <p className="text-xs text-emerald-100/90 font-medium">
+                  Chọn chuyên khoa bên dưới để xem danh sách bệnh viện được tự động xếp hạng dựa trên khoảng cách GPS, lịch trống sớm nhất, chi phí và rating.
+                </p>
+              </div>
+            </div>
+
             {isLoadingSpecialties ? (
               <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                 <Loader2 className="animate-spin h-8 w-8 text-[#4caf50] mb-2" />
@@ -432,25 +446,25 @@ export function StepSelectDoctor({ onNext }: StepSelectDoctorProps) {
                   <Card
                     key={spec.id}
                     onClick={() => handleSelectSpecialty(spec.id)}
-                    className="cursor-pointer transition-all duration-200 hover:border-[#4caf50] hover:shadow-md border border-gray-200 rounded-2xl bg-white p-4 flex items-center gap-3.5 group"
+                    className="cursor-pointer transition-all duration-200 hover:border-[#0c4b39] hover:shadow-md border border-gray-200 rounded-2xl bg-white p-4 flex items-center gap-3.5 group"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#0c4b39] flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
                       {spec.icon || '🩺'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-secondary text-sm group-hover:text-[#4caf50] transition-colors truncate">
+                      <h3 className="font-bold text-secondary text-sm group-hover:text-[#0c4b39] transition-colors truncate">
                         {spec.name}
                       </h3>
                       <p className="text-xs text-gray-400 line-clamp-1 mt-0.5">
                         {spec.description || 'Đội ngũ bác sĩ chuyên khoa giàu kinh nghiệm'}
                       </p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#4caf50] transition-colors shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#0c4b39] transition-colors shrink-0" />
                   </Card>
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* TAB 3: HOSPITALS LIST */}

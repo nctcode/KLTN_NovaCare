@@ -155,4 +155,72 @@ export class HospitalsService {
       },
     });
   }
+
+  async getDoctorsBySpecialty(hospitalId: string, specialtyId: string): Promise<any[]> {
+    const workplaces = await this.prisma.doctorWorkplace.findMany({
+      where: {
+        hospitalId,
+        specialtyId,
+        isActive: true,
+        doctor: {
+          isActive: true,
+          deletedAt: null,
+        },
+      },
+      include: {
+        doctor: true,
+        hospital: true,
+        branch: true,
+        specialty: true,
+      },
+      orderBy: {
+        doctor: {
+          rating: 'desc',
+        },
+      },
+    });
+
+    const now = new Date();
+    const results = [];
+
+    for (const wp of workplaces) {
+      const earliestSlotObj = await this.prisma.appointmentSlot.findFirst({
+        where: {
+          doctorWorkplaceId: wp.id,
+          isActive: true,
+          isAvailable: true,
+          startTime: { gte: now },
+        },
+        orderBy: {
+          startTime: 'asc',
+        },
+      });
+
+      let earliestSlot = null;
+      if (earliestSlotObj && earliestSlotObj.bookedCount < earliestSlotObj.capacity) {
+        earliestSlot = earliestSlotObj.startTime;
+      }
+
+      results.push({
+        workplaceId: wp.id,
+        doctorId: wp.doctor.id,
+        fullName: wp.doctor.fullName,
+        title: wp.doctor.title,
+        qualification: wp.doctor.qualification,
+        yearsOfExperience: wp.doctor.yearsOfExperience,
+        avatarUrl: wp.doctor.avatarUrl,
+        bio: wp.doctor.bio,
+        rating: wp.doctor.rating,
+        reviewCount: wp.doctor.reviewCount,
+        consultationFee: Number(wp.consultationFee),
+        position: wp.position,
+        branch: wp.branch,
+        hospital: wp.hospital,
+        specialty: wp.specialty,
+        earliestSlot,
+      });
+    }
+
+    return results;
+  }
 }

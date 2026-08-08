@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpStatus,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SpecialtiesService } from './specialties.service';
 import { CreateSpecialtyDto } from './dto/create-specialty.dto';
 import { UpdateSpecialtyDto } from './dto/update-specialty.dto';
+import { FilterHospitalsBySpecialtyDto } from './dto/filter-hospitals.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { Public } from '@/common/decorators/public.decorator';
 
@@ -42,6 +44,21 @@ export class SpecialtiesController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Lấy danh sách chuyên khoa thành công',
+      data,
+    };
+  }
+
+  @Public()
+  @Get(':id/hospitals')
+  @ApiOperation({ summary: 'Tìm & lọc danh sách bệnh viện theo chuyên khoa (Đặt lịch theo chuyên khoa)' })
+  async getHospitals(
+    @Param('id') id: string,
+    @Query() filter: FilterHospitalsBySpecialtyDto,
+  ) {
+    const data = await this.service.getHospitalsBySpecialty(id, filter);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy danh sách bệnh viện theo chuyên khoa thành công',
       data,
     };
   }

@@ -441,7 +441,7 @@ export default function HomePage() {
                   return (
                     <Link
                       key={specialty.id}
-                      href={`/bac-si?specialtyId=${specialty.id}`}
+                      href={`/dat-kham-chuyen-khoa/${specialty.id}`}
                       className="min-w-[190px] max-w-[210px] flex-shrink-0 bg-white border border-slate-200/80 hover:border-[#0c4b39]/40 rounded-2xl p-5 text-gray-800 flex flex-col items-center justify-between h-[175px] group hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 shadow-xs relative overflow-hidden cursor-pointer no-underline"
                     >
                       <div className="w-14 h-14 rounded-2xl bg-[#0c4b39]/8 group-hover:bg-[#0c4b39] flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-xs mb-1">

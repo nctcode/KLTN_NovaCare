@@ -6,7 +6,7 @@ import { Doctor, AppointmentSlot } from '@prisma/client';
 
 @Injectable()
 export class DoctorsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(createDto: CreateDoctorDto): Promise<Doctor> {
     return this.prisma.doctor.create({

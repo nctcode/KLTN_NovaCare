@@ -300,13 +300,13 @@ async function main() {
   // ==========================================
   const hospitalsData = [
     {
-      name: 'Bệnh viện Đa khoa NovaCare',
-      address: '456 Nguyễn Thị Minh Khai, Quận 3, TP. Hồ Chí Minh',
+      name: 'Bệnh viện Đa khoa NovaCare Sài Gòn',
+      address: '456 Nguyễn Thị Minh Khai, Phường 5, Quận 3, TP. Hồ Chí Minh',
       city: 'TP. Hồ Chí Minh',
       phone: '028 3822 1234',
       hotline: '1900 1234',
       emergencyHotline: '028 3822 9999',
-      description: 'Bệnh viện đa khoa hàng đầu với hệ thống trang thiết bị hiện đại tiêu chuẩn Châu Âu.',
+      description: 'Bệnh viện đa khoa hàng đầu tại TP.HCM với hệ thống trang thiết bị hiện đại tiêu chuẩn Châu Âu và mạng lưới chi nhánh rộng khắp.',
       logoUrl: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=300&auto=format&fit=crop&q=80',
       coverImageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&auto=format&fit=crop&q=80',
       website: 'https://novacare.vn',
@@ -321,12 +321,12 @@ async function main() {
     },
     {
       name: 'Bệnh viện Quốc tế Nova Central',
-      address: '88 Lê Duẩn, Quận 1, TP. Hồ Chí Minh',
+      address: '88 Lê Duẩn, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
       city: 'TP. Hồ Chí Minh',
       phone: '028 5555 8888',
       hotline: '1900 8888',
       emergencyHotline: '028 5555 9999',
-      description: 'Bệnh viện quốc tế 5 sao đạt chứng nhận y tế quốc tế JCI.',
+      description: 'Bệnh viện quốc tế 5 sao đạt chứng nhận y tế quốc tế JCI trung tâm Sài Gòn.',
       logoUrl: 'https://images.unsplash.com/photo-1512678080530-7760d81faba6?w=300&auto=format&fit=crop&q=80',
       coverImageUrl: 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=1200&auto=format&fit=crop&q=80',
       website: 'https://novacentral.vn',
@@ -340,13 +340,13 @@ async function main() {
       bedCount: 350,
     },
     {
-      name: 'Bệnh viện Y Dược NovaCare',
-      address: '215 Hồng Bàng, Quận 5, TP. Hồ Chí Minh',
+      name: 'Bệnh viện Y Dược NovaCare Chợ Lớn',
+      address: '215 Hồng Bàng, Phường 11, Quận 5, TP. Hồ Chí Minh',
       city: 'TP. Hồ Chí Minh',
       phone: '028 3855 4321',
       hotline: '1900 5432',
       emergencyHotline: '028 3855 0000',
-      description: 'Trung tâm nghiên cứu và điều trị y khoa uy tín hàng đầu miền Nam.',
+      description: 'Trung tâm nghiên cứu và điều trị y khoa uy tín hàng đầu khu vực Chợ Lớn - Quận 5.',
       logoUrl: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=300&auto=format&fit=crop&q=80',
       coverImageUrl: 'https://images.unsplash.com/photo-1629909615184-74f495363b67?w=1200&auto=format&fit=crop&q=80',
       website: 'https://yduocnovacare.vn',
@@ -360,17 +360,17 @@ async function main() {
       bedCount: 800,
     },
     {
-      name: 'Bệnh viện Đa khoa Quốc tế Hà Nội',
-      address: '10 Hai Bà Trưng, Hoàn Kiếm, Hà Nội',
-      city: 'Hà Nội',
-      phone: '024 3999 8888',
+      name: 'Bệnh viện Đa khoa NovaCare Tân Bình',
+      address: '286 Hoàng Văn Thụ, Phường 4, Quận Tân Bình, TP. Hồ Chí Minh',
+      city: 'TP. Hồ Chí Minh',
+      phone: '028 3999 8888',
       hotline: '1900 9999',
-      emergencyHotline: '024 3999 1115',
-      description: 'Cơ sở y tế hiện đại trung tâm Thủ đô với đội ngũ Giáo sư chuyên khoa giàu kinh nghiệm.',
+      emergencyHotline: '028 3999 1115',
+      description: 'Cơ sở y tế hiện đại khu vực cửa ngõ sân bay Tân Sơn Nhất với đội ngũ Giáo sư chuyên khoa giàu kinh nghiệm.',
       logoUrl: 'https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=300&auto=format&fit=crop&q=80',
       coverImageUrl: 'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=1200&auto=format&fit=crop&q=80',
-      website: 'https://hanoihospital.vn',
-      email: 'hanoi@novacare.vn',
+      website: 'https://novacaretanbinh.vn',
+      email: 'tanbinh@novacare.vn',
       operatingHours: '07:30 - 18:00 (Thứ 2 - Chủ Nhật)',
       type: HospitalType.INTERNATIONAL,
       status: PartnershipStatus.ACTIVE,
@@ -380,17 +380,17 @@ async function main() {
       bedCount: 400,
     },
     {
-      name: 'Bệnh viện Sản Nhi Đà Nẵng Nova',
-      address: '402 Lê Duẩn, Thanh Khê, Đà Nẵng',
-      city: 'Đà Nẵng',
-      phone: '0236 3888 777',
+      name: 'Bệnh viện Sản Nhi NovaCare TP.HCM',
+      address: '318 Nguyễn Trãi, Phường Nguyễn Cư Trinh, Quận 1, TP. Hồ Chí Minh',
+      city: 'TP. Hồ Chí Minh',
+      phone: '028 3888 7777',
       hotline: '1900 7777',
-      emergencyHotline: '0236 3888 115',
-      description: 'Chuyên khoa sản nhi và chăm sóc sức khỏe phụ nữ gia đình khu vực Miền Trung.',
+      emergencyHotline: '028 3888 1115',
+      description: 'Chuyên khoa sản nhi và chăm sóc sức khỏe phụ nữ gia đình hàng đầu TP. Hồ Chí Minh.',
       logoUrl: 'https://images.unsplash.com/photo-1584515933487-779824d29309?w=300&auto=format&fit=crop&q=80',
       coverImageUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&auto=format&fit=crop&q=80',
-      website: 'https://sannhidang.vn',
-      email: 'danang@novacare.vn',
+      website: 'https://sannhinovacare.vn',
+      email: 'sannhi@novacare.vn',
       operatingHours: '07:00 - 19:00',
       type: HospitalType.PRIVATE,
       status: PartnershipStatus.ACTIVE,
@@ -406,18 +406,32 @@ async function main() {
     const created = await prisma.hospital.create({ data: h });
     hospitals.push(created);
   }
-  console.log(`✅ Created ${hospitals.length} Hospitals`);
+  console.log(`✅ Created ${hospitals.length} Hospitals in TP.HCM`);
 
   // ==========================================
-  // 5. Hospital Branches
+  // 5. Hospital Branches (Tất cả Cơ sở thuộc TP.HCM)
   // ==========================================
   const branchesData = [
-    { hospitalId: hospitals[0].id, name: 'Cơ sở 1 - Quận 3', address: '456 Nguyễn Thị Minh Khai, Quận 3, TP.HCM', phone: '028 3822 1234', latitude: 10.776634, longitude: 106.683021 },
-    { hospitalId: hospitals[0].id, name: 'Cơ sở 2 - Quận 7', address: '101 Nguyễn Văn Linh, Quận 7, TP.HCM', phone: '028 3877 5678', latitude: 10.740478, longitude: 106.715064 },
-    { hospitalId: hospitals[1].id, name: 'Cơ sở Trung tâm Quận 1', address: '88 Lê Duẩn, Quận 1, TP.HCM', phone: '028 5555 8888', latitude: 10.780123, longitude: 106.699876 },
-    { hospitalId: hospitals[2].id, name: 'Cơ sở Chợ Lớn Quận 5', address: '215 Hồng Bàng, Quận 5, TP.HCM', phone: '028 3855 4321', latitude: 10.755432, longitude: 106.662123 },
-    { hospitalId: hospitals[3].id, name: 'Cơ sở Hoàn Kiếm', address: '10 Hai Bà Trưng, Hoàn Kiếm, Hà Nội', phone: '024 3999 8888', latitude: 21.0245, longitude: 105.8521 },
-    { hospitalId: hospitals[4].id, name: 'Cơ sở Đà Nẵng', address: '402 Lê Duẩn, Thanh Khê, Đà Nẵng', phone: '0236 3888 777', latitude: 16.068, longitude: 108.212 },
+    // Bệnh viện Đa khoa NovaCare Sài Gòn
+    { hospitalId: hospitals[0].id, name: 'Cơ sở 1 - Trụ sở Quận 3', address: '456 Nguyễn Thị Minh Khai, Phường 5, Quận 3, TP.HCM', phone: '028 3822 1234', latitude: 10.776634, longitude: 106.683021 },
+    { hospitalId: hospitals[0].id, name: 'Cơ sở 2 - Nam Sài Gòn (Quận 7)', address: '101 Nguyễn Văn Linh, Phường Tân Thuận Tây, Quận 7, TP.HCM', phone: '028 3877 5678', latitude: 10.740478, longitude: 106.715064 },
+    { hospitalId: hospitals[0].id, name: 'Cơ sở 3 - Tây Sài Gòn (Bình Tân)', address: '532A Kinh Dương Vương, Phường An Lạc, Quận Bình Tân, TP.HCM', phone: '028 3899 9999', latitude: 10.742351, longitude: 106.609452 },
+
+    // Bệnh viện Quốc tế Nova Central
+    { hospitalId: hospitals[1].id, name: 'Cơ sở Trung tâm - Quận 1', address: '88 Lê Duẩn, Phường Bến Nghé, Quận 1, TP.HCM', phone: '028 5555 8888', latitude: 10.780123, longitude: 106.699876 },
+    { hospitalId: hospitals[1].id, name: 'Cơ sở Thảo Điền - TP. Thủ Đức', address: '215 Nguyễn Văn Hưởng, Phường Thảo Điền, TP. Thủ Đức, TP.HCM', phone: '028 5555 9999', latitude: 10.806241, longitude: 106.732891 },
+
+    // Bệnh viện Y Dược NovaCare Chợ Lớn
+    { hospitalId: hospitals[2].id, name: 'Cơ sở Chợ Lớn - Quận 5', address: '215 Hồng Bàng, Phường 11, Quận 5, TP.HCM', phone: '028 3855 4321', latitude: 10.755432, longitude: 106.662123 },
+    { hospitalId: hospitals[2].id, name: 'Cơ sở Lý Thường Kiệt - Quận 10', address: '201 Lý Thường Kiệt, Phường 6, Quận 10, TP.HCM', phone: '028 3855 8888', latitude: 10.771234, longitude: 106.657890 },
+
+    // Bệnh viện Đa khoa NovaCare Tân Bình
+    { hospitalId: hospitals[3].id, name: 'Cơ sở Tân Bình - Hoàng Văn Thụ', address: '286 Hoàng Văn Thụ, Phường 4, Quận Tân Bình, TP.HCM', phone: '028 3999 8888', latitude: 10.798765, longitude: 106.654321 },
+    { hospitalId: hospitals[3].id, name: 'Cơ sở Gò Vấp - Nguyễn Oanh', address: '175 Nguyễn Oanh, Phường 17, Quận Gò Vấp, TP.HCM', phone: '028 3999 7777', latitude: 10.835412, longitude: 106.678912 },
+
+    // Bệnh viện Sản Nhi NovaCare TP.HCM
+    { hospitalId: hospitals[4].id, name: 'Cơ sở Nguyễn Trãi - Quận 1', address: '318 Nguyễn Trãi, Phường Nguyễn Cư Trinh, Quận 1, TP.HCM', phone: '028 3888 7777', latitude: 10.762341, longitude: 106.685412 },
+    { hospitalId: hospitals[4].id, name: 'Cơ sở Thủ Đức - Võ Văn Ngân', address: '1 Võ Văn Ngân, Phường Linh Chiểu, TP. Thủ Đức, TP.HCM', phone: '028 3888 6666', latitude: 10.850123, longitude: 106.771234 },
   ];
 
   const branches = [];
@@ -425,7 +439,7 @@ async function main() {
     const created = await prisma.hospitalBranch.create({ data: b });
     branches.push(created);
   }
-  console.log(`✅ Created ${branches.length} Hospital Branches`);
+  console.log(`✅ Created ${branches.length} Hospital Branches in TP.HCM`);
 
   // ==========================================
   // 6. Link HospitalSpecialty
@@ -444,9 +458,9 @@ async function main() {
   console.log('✅ Linked all Specialties to Hospitals');
 
   // ==========================================
-  // 7. Generate 3 Doctors per Specialty for EVERY Hospital (5 Hosp x 12 Spec x 3 Docs = 180 Doctors)
+  // 7. Generate Doctors & Assign to ALL Branches (Bắt buộc tất cả Cơ sở phải có Bác sĩ)
   // ==========================================
-  console.log('🩺 Generating 3 Doctors for EVERY Specialty in EVERY Hospital (Total 180 Doctors)...');
+  console.log('🩺 Generating Doctors for EVERY Branch & Specialty in EVERY Hospital...');
 
   const createdDoctors: any[] = [];
   const createdWorkplaces: any[] = [];
@@ -454,98 +468,88 @@ async function main() {
   let nameCounter = 0;
 
   for (const hosp of hospitals) {
-    // Find primary branch for hospital
-    const primaryBranch = branches.find((b) => b.hospitalId === hosp.id) || branches[0];
+    const hospBranches = branches.filter((b) => b.hospitalId === hosp.id);
 
-    for (const spec of specialties) {
-      const bios = SPECIALTY_BIOS[spec.name] || [
-        `Chuyên gia giàu kinh nghiệm trong lĩnh vực ${spec.name}.`,
-        `Chẩn đoán và lập phác đồ điều trị chuyên sâu về ${spec.name}.`,
-        `Khám và tư vấn y khoa tiêu chuẩn cao về ${spec.name}.`,
-      ];
+    for (const branch of hospBranches) {
+      for (const spec of specialties) {
+        const bios = SPECIALTY_BIOS[spec.name] || [
+          `Chuyên gia giàu kinh nghiệm trong lĩnh vực ${spec.name}.`,
+          `Chẩn đoán và lập phác đồ điều trị chuyên sâu về ${spec.name}.`,
+          `Khám và tư vấn y khoa tiêu chuẩn cao về ${spec.name}.`,
+        ];
 
-      for (let docIdx = 0; docIdx < 3; docIdx++) {
-        nameCounter++;
+        for (let docIdx = 0; docIdx < 2; docIdx++) {
+          nameCounter++;
 
-        // Determine gender based on index (even = female, odd = male)
-        const isFemale = nameCounter % 2 === 0;
-        const gender = isFemale ? Gender.FEMALE : Gender.MALE;
+          const isFemale = nameCounter % 2 === 0;
+          const gender = isFemale ? Gender.FEMALE : Gender.MALE;
 
-        // Choose name
-        const fn = isFemale
-          ? FEMALE_FIRST_NAMES[nameCounter % FEMALE_FIRST_NAMES.length]
-          : MALE_FIRST_NAMES[nameCounter % MALE_FIRST_NAMES.length];
-        const mn = isFemale
-          ? FEMALE_MIDDLE_NAMES[nameCounter % FEMALE_MIDDLE_NAMES.length]
-          : MALE_MIDDLE_NAMES[nameCounter % MALE_MIDDLE_NAMES.length];
-        const ln = isFemale
-          ? FEMALE_LAST_NAMES[nameCounter % FEMALE_LAST_NAMES.length]
-          : MALE_LAST_NAMES[nameCounter % MALE_LAST_NAMES.length];
+          const fn = isFemale
+            ? FEMALE_FIRST_NAMES[nameCounter % FEMALE_FIRST_NAMES.length]
+            : MALE_FIRST_NAMES[nameCounter % MALE_FIRST_NAMES.length];
+          const mn = isFemale
+            ? FEMALE_MIDDLE_NAMES[nameCounter % FEMALE_MIDDLE_NAMES.length]
+            : MALE_MIDDLE_NAMES[nameCounter % MALE_MIDDLE_NAMES.length];
+          const ln = isFemale
+            ? FEMALE_LAST_NAMES[nameCounter % FEMALE_LAST_NAMES.length]
+            : MALE_LAST_NAMES[nameCounter % MALE_LAST_NAMES.length];
 
-        const fullName = `${fn} ${mn} ${ln}`;
+          const fullName = `${fn} ${mn} ${ln}`;
 
-        // Select Title and Qualification
-        const titleObj = DOCTOR_TITLES[docIdx % DOCTOR_TITLES.length];
-        const yearsExp = Math.floor(Math.random() * (titleObj.expMax - titleObj.expMin + 1)) + titleObj.expMin;
+          const titleObj = DOCTOR_TITLES[(nameCounter + docIdx) % DOCTOR_TITLES.length];
+          const yearsExp = Math.floor(Math.random() * (titleObj.expMax - titleObj.expMin + 1)) + titleObj.expMin;
 
-        // Select Avatar
-        const avatarPool = isFemale ? FEMALE_AVATARS : MALE_AVATARS;
-        const avatarUrl = avatarPool[nameCounter % avatarPool.length];
+          const avatarPool = isFemale ? FEMALE_AVATARS : MALE_AVATARS;
+          const avatarUrl = avatarPool[nameCounter % avatarPool.length];
 
-        // Select Bio
-        const bio = bios[docIdx % bios.length];
+          const bio = bios[nameCounter % bios.length];
 
-        // Ratings & Stats
-        const rating = Number((4.7 + (nameCounter % 4) * 0.08).toFixed(2));
-        const reviewCount = 45 + (nameCounter % 15) * 12;
-        const consultationCount = 120 + (nameCounter % 20) * 35;
+          const rating = Number((4.7 + (nameCounter % 4) * 0.08).toFixed(2));
+          const reviewCount = 45 + (nameCounter % 15) * 12;
+          const consultationCount = 120 + (nameCounter % 20) * 35;
 
-        // Position in hospital
-        const position = docIdx === 0
-          ? `Trưởng khoa ${spec.name}`
-          : docIdx === 1
-          ? `Phó khoa ${spec.name}`
-          : `Bác sĩ Chuyên khoa chính ${spec.name}`;
+          const position = docIdx === 0
+            ? `Trưởng khoa ${spec.name} - ${branch.name}`
+            : `Bác sĩ Chuyên khoa ${spec.name} - ${branch.name}`;
 
-        // Create Doctor record
-        const doctor = await prisma.doctor.create({
-          data: {
-            fullName,
-            title: titleObj.title,
-            qualification: titleObj.qualification,
-            yearsOfExperience: yearsExp,
-            gender,
-            bio,
-            avatarUrl,
-            rating,
-            reviewCount,
-            consultationCount,
-            source: DataSource.MANUAL,
-            isActive: true,
-          },
-        });
-        createdDoctors.push(doctor);
+          const doctor = await prisma.doctor.create({
+            data: {
+              fullName,
+              title: titleObj.title,
+              qualification: titleObj.qualification,
+              yearsOfExperience: yearsExp,
+              gender,
+              bio,
+              avatarUrl,
+              rating,
+              reviewCount,
+              consultationCount,
+              source: DataSource.MANUAL,
+              isActive: true,
+            },
+          });
+          createdDoctors.push(doctor);
 
-        // Create Doctor Workplace linking doctor to hospital & specialty
-        const wp = await prisma.doctorWorkplace.create({
-          data: {
-            doctorId: doctor.id,
-            hospitalId: hosp.id,
-            branchId: primaryBranch.id,
-            specialtyId: spec.id,
-            consultationFee: titleObj.fee,
-            position,
-            joinedAt: new Date(2020 + (nameCounter % 4), (nameCounter % 12), 15),
-            isPrimary: true,
-            isActive: true,
-          },
-        });
-        createdWorkplaces.push(wp);
+          const wp = await prisma.doctorWorkplace.create({
+            data: {
+              doctorId: doctor.id,
+              hospitalId: hosp.id,
+              branchId: branch.id,
+              specialtyId: spec.id,
+              consultationFee: titleObj.fee,
+              position,
+              joinedAt: new Date(2020 + (nameCounter % 4), (nameCounter % 12), 15),
+              isPrimary: true,
+              isActive: true,
+            },
+          });
+          createdWorkplaces.push(wp);
+        }
       }
     }
   }
 
-  console.log(`✅ Successfully created ${createdDoctors.length} Doctors and ${createdWorkplaces.length} Doctor Workplaces (3 per Specialty/Hospital)!`);
+  console.log(`✅ Successfully created ${createdDoctors.length} Doctors and ${createdWorkplaces.length} Doctor Workplaces (2 Doctors per Specialty per Branch across all 11 Branches)!`);
 
   // ==========================================
   // 8. Medical Services & Health Packages (Specialty-mapped)
@@ -758,7 +762,7 @@ async function main() {
     if (!slot) continue;
 
     const patientProf = profiles[i % profiles.length];
-    const userObj = patientUsers[i % patientUsers.length];
+    const userObj = patientUsers.find((u) => u.id === patientProf.userId) || patientUsers[0];
     const status = appointmentStatuses[i % appointmentStatuses.length];
     const code = `BK-${bookingCodeCounter + i}`;
     const wp = createdWorkplaces.find((w) => w.id === slot.doctorWorkplaceId);
@@ -768,8 +772,8 @@ async function main() {
     const serviceFee = Number(service?.price || 300000);
     const price = consultationFee + serviceFee;
 
-    // Update slot status if booked
-    const isBooked = status === 'CONFIRMED' || status === 'PAID' || status === 'COMPLETED';
+    // Update slot status if booked (not cancelled)
+    const isBooked = status !== AppointmentStatus.CANCELLED;
     if (isBooked) {
       await prisma.appointmentSlot.update({
         where: { id: slot.id },

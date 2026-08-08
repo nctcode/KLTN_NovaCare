@@ -26,7 +26,7 @@ import { Public } from '@/common/decorators/public.decorator';
 @ApiTags('Bác sĩ')
 @Controller('api/v1/doctors')
 export class DoctorsController {
-  constructor(private readonly service: DoctorsService) {}
+  constructor(private readonly service: DoctorsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)

@@ -214,39 +214,29 @@ export function Step1BookingInfo({
     enabled: !!selectedDoctor && !!doctorWorkplaceId && !!selectedDate,
   });
 
-  // Generate fallback mock time slots if backend has no generated slots for the test date
+  // Generate time slots strictly from backend database query (no fake/mock fallbacks)
   const timeSlots = useMemo(() => {
-    if (availableSlots && availableSlots.length > 0) {
-      return availableSlots.map((slot: any) => {
-        const start = new Date(slot.startTime);
-        const hours = String(start.getHours()).padStart(2, '0');
-        const mins = String(start.getMinutes()).padStart(2, '0');
-        const timeLabel = `${hours}:${mins}`;
-        const hourNum = start.getHours();
-        let session: 'morning' | 'afternoon' | 'evening' = 'morning';
-        if (hourNum >= 12 && hourNum < 17) session = 'afternoon';
-        else if (hourNum >= 17) session = 'evening';
-
-        return {
-          id: slot.id,
-          timeLabel,
-          session,
-          isAvailable: slot.isAvailable && slot.bookedCount < slot.capacity,
-        };
-      });
+    if (!availableSlots || availableSlots.length === 0) {
+      return [];
     }
 
-    // Default mock slots per session for realistic demonstration
-    const mockMorning = ['07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00'];
-    const mockAfternoon = ['13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
-    const mockEvening = ['17:30', '18:00', '18:30', '19:00'];
+    return availableSlots.map((slot: any) => {
+      const start = new Date(slot.startTime);
+      const hours = String(start.getHours()).padStart(2, '0');
+      const mins = String(start.getMinutes()).padStart(2, '0');
+      const timeLabel = `${hours}:${mins}`;
+      const hourNum = start.getHours();
+      let session: 'morning' | 'afternoon' | 'evening' = 'morning';
+      if (hourNum >= 12 && hourNum < 17) session = 'afternoon';
+      else if (hourNum >= 17) session = 'evening';
 
-    const mockSlots: any[] = [];
-    mockMorning.forEach((t, idx) => mockSlots.push({ id: `00000000-0000-4000-a000-${(idx + 10).toString().padStart(12, '0')}`, timeLabel: t, session: 'morning', isAvailable: idx !== 2 }));
-    mockAfternoon.forEach((t, idx) => mockSlots.push({ id: `00000000-0000-4000-a000-${(idx + 30).toString().padStart(12, '0')}`, timeLabel: t, session: 'afternoon', isAvailable: true }));
-    mockEvening.forEach((t, idx) => mockSlots.push({ id: `00000000-0000-4000-a000-${(idx + 50).toString().padStart(12, '0')}`, timeLabel: t, session: 'evening', isAvailable: idx !== 1 }));
-
-    return mockSlots;
+      return {
+        id: slot.id,
+        timeLabel,
+        session,
+        isAvailable: slot.isAvailable && slot.bookedCount < slot.capacity,
+      };
+    });
   }, [availableSlots]);
 
   // Filter slots by session tab
