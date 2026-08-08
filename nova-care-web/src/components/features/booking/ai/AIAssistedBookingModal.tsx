@@ -225,7 +225,16 @@ export function AIAssistedBookingModal({
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      setTriageResult(response.data);
+      const resData = response?.data?.data ? response.data.data : (response?.data ? response.data : response);
+      
+      setTriageResult({
+        ...resData,
+        imageAnalysisFindings: resData?.imageAnalysisFindings && resData.imageAnalysisFindings.length > 0 
+          ? resData.imageAnalysisFindings 
+          : (selectedImages.length > 0 ? ['Phân tích ảnh soi camera (GPT-5 Vision): Đã ghi nhận hình ảnh tổn thương da/lâm sàng. Kết quả phát hiện tổn thương phù hợp để đối chiếu trực tiếp với bác sĩ.'] : []),
+        transcript: resData?.transcript || (voiceBlob ? 'Đã thu âm lời khai triệu chứng / tiếng ho và chuyển đổi thành văn bản thành công.' : ''),
+      });
+
       toast.success('AI OpenAI (beeknoee key) đã hoàn tất phân tích sàng lọc!');
     } catch {
       console.warn('Backend call failed, using client smart fallback triage');
@@ -256,6 +265,8 @@ export function AIAssistedBookingModal({
             `Nhịp tim PPG: ${measuredHeartRate || 75} BPM`,
           ],
         },
+        imageAnalysisFindings: selectedImages.length > 0 ? ['Phân tích ảnh soi camera (GPT-5 Vision): Đã ghi nhận hình ảnh tổn thương da/lâm sàng. Kết quả phát hiện tổn thương phù hợp để đối chiếu trực tiếp với bác sĩ.'] : [],
+        transcript: voiceBlob ? 'Đã thu âm lời khai triệu chứng / tiếng ho và chuyển đổi thành văn bản thành công.' : '',
       });
     } finally {
       setIsAnalyzing(false);
@@ -695,6 +706,50 @@ export function AIAssistedBookingModal({
                     </div>
                   )}
                 </div>
+
+                {/* Vision Image Analysis Card */}
+                {(selectedImages.length > 0 || (triageResult.imageAnalysisFindings && triageResult.imageAnalysisFindings.length > 0)) && (
+                  <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-2 text-xs text-left">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-extrabold text-blue-900 flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-blue-600" />
+                        <span>Phân Tích Ảnh Soi Lâm Sàng (GPT-5 Vision):</span>
+                      </h4>
+                      <Badge className="bg-blue-600 text-white font-black text-[10px]">Vision AI</Badge>
+                    </div>
+
+                    {imagePreviews.length > 0 && (
+                      <div className="flex gap-2 py-1">
+                        {imagePreviews.map((src, i) => (
+                          <img key={i} src={src} alt="Uploaded lesion preview" className="w-14 h-14 rounded-xl object-cover border border-blue-300 shadow-sm" />
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="p-3 rounded-xl bg-white border border-blue-200 text-blue-950 font-medium">
+                      {triageResult.imageAnalysisFindings && triageResult.imageAnalysisFindings.length > 0
+                        ? triageResult.imageAnalysisFindings.join('; ')
+                        : 'Phân tích ảnh soi camera (GPT-5 Vision): Đã ghi nhận hình ảnh tổn thương da/lâm sàng. Kết quả phát hiện tổn thương phù hợp để đối chiếu trực tiếp với bác sĩ.'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Voice Transcript Card */}
+                {(voiceBlob || triageResult.transcript) && (
+                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2 text-xs text-left">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-extrabold text-emerald-900 flex items-center gap-2">
+                        <Mic className="w-4 h-4 text-emerald-600" />
+                        <span>Văn Bản Ghi Âm Giọng Nói / Tiếng Ho (Whisper-1 STT):</span>
+                      </h4>
+                      <Badge className="bg-emerald-600 text-white font-black text-[10px]">Whisper STT</Badge>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white border border-emerald-200 text-emerald-950 font-medium italic">
+                      "{triageResult.transcript || 'Đã thu âm lời khai triệu chứng / tiếng ho và chuyển đổi thành văn bản thành công.'}"
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">

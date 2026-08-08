@@ -320,7 +320,11 @@ Trả về JSON duy nhất:
       if (!content) return this.fallbackSmartphoneTriage(inputs, heartRate, bmiVal);
       const res = JSON.parse(content);
       this.logger.log(`OpenAI Smartphone Triage: riskLevel=${res.riskLevel}, specialty=${res.recommendedSpecialtyName}`);
-      return res;
+      return {
+        ...res,
+        imageAnalysisFindings: inputs.imageAnalysisFindings || [],
+        transcript: inputs.voiceTranscript || '',
+      };
     } catch (error) {
       this.logger.error(`Lỗi Smartphone Triage: ${error.message}`);
       return this.fallbackSmartphoneTriage(inputs, heartRate, bmiVal);
@@ -363,6 +367,8 @@ Trả về JSON duy nhất:
           `Chỉ số BMI: ${bmiVal ? bmiVal.toFixed(1) : '22.0'}`,
         ],
       },
+      imageAnalysisFindings: inputs.imageAnalysisFindings || [],
+      transcript: inputs.voiceTranscript || '',
     };
   }
 
