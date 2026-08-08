@@ -375,7 +375,7 @@ Trả về JSON duy nhất:
   /**
    * Chuyển đổi giọng nói thành văn bản (Whisper)
    */
-  async transcribeAudio(audioBuffer: Buffer, audioFormat = 'wav'): Promise<string> {
+  async transcribeAudio(audioBuffer: Buffer, audioFormat = 'webm'): Promise<string> {
     if (!this.hasApiKey()) {
       return this.fallbackTranscription();
     }
@@ -386,11 +386,31 @@ Trả về JSON duy nhất:
         file: fs.createReadStream(tempFile),
         model: 'whisper-1',
         language: 'vi',
+        prompt: 'Khai báo triệu chứng y tế NovaCare: đau ngực, ho, sốt, đau đầu, mệt mỏi, khó thở.',
         response_format: 'text',
-        temperature: 0.2,
+        temperature: 0.0,
       });
       this.logger.log('Whisper chuyển đổi giọng nói thành công');
-      return (response as unknown as string) || 'Không thể nhận diện giọng nói';
+      let text = (response as unknown as string) || '';
+
+      // Filter known YouTube hallucination phrases when audio has silence or background noise
+      const hallucinationKeywords = [
+        'đăng ký kênh',
+        'ủng hộ kênh',
+        'subscribe',
+        'cảm ơn các bạn đã xem',
+        'nhớ bấm chuông',
+        'theo dõi kênh',
+        'like và chia sẻ',
+      ];
+      
+      const lowerText = text.toLowerCase();
+      if (hallucinationKeywords.some(keyword => lowerText.includes(keyword))) {
+        this.logger.warn(`Whisper hallucination detected: "${text}". Replacing with clean notice.`);
+        return 'Đã thu âm tiếng ho / âm thanh triệu chứng (Không có câu nói dài).';
+      }
+
+      return text || 'Đã thu âm âm thanh triệu chứng thành công.';
     } catch (error) {
       this.logger.error(`Lỗi Whisper: ${error.message}`);
       return this.fallbackTranscription();

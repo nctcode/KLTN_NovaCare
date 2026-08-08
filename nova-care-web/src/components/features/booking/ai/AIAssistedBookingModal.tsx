@@ -141,17 +141,27 @@ export function AIAssistedBookingModal({
   const startVoiceRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : 'audio/mp4';
+
+      const recorder = new MediaRecorder(stream, { mimeType });
       const chunks: BlobPart[] = [];
 
-      recorder.ondataavailable = (e) => chunks.push(e.data);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const actualType = mimeType.split(';')[0];
+        const blob = new Blob(chunks, { type: actualType });
         setVoiceBlob(blob);
         stream.getTracks().forEach((track) => track.stop());
       };
 
-      recorder.start();
+      recorder.start(200);
       setMediaRecorder(recorder);
       setIsRecording(true);
       toast.info('Đang ghi âm giọng nói / tiếng ho...');
@@ -215,7 +225,8 @@ export function AIAssistedBookingModal({
       formData.append('questionnaire', JSON.stringify(questionnaireData));
 
       if (voiceBlob) {
-        formData.append('voice', voiceBlob, 'voice.wav');
+        const ext = voiceBlob.type.includes('webm') ? 'webm' : voiceBlob.type.includes('mp4') ? 'mp4' : 'wav';
+        formData.append('voice', voiceBlob, `voice.${ext}`);
       }
       selectedImages.forEach((img) => {
         formData.append('images', img);
