@@ -1,5 +1,5 @@
-import { PrismaClient, Gender, Role, AppointmentStatus, PaymentStatus, PaymentMethod, HospitalType, PartnershipStatus, DataSource } from '@prisma/client';
-import * as argon2 from 'argon2';
+const { PrismaClient } = require('@prisma/client');
+const argon2 = require('argon2');
 
 const prisma = new PrismaClient();
 
@@ -39,7 +39,7 @@ const DOCTOR_TITLES = [
   { title: 'BS.CKI', qualification: 'Bác sĩ Chuyên khoa I', fee: 200000, expMin: 5, expMax: 10 },
 ];
 
-const SPECIALTY_BIOS: Record<string, string[]> = {
+const SPECIALTY_BIOS = {
   'Tim mạch': [
     'Chuyên gia tầm soát và điều trị các bệnh lý tim mạch, tăng huyết áp, suy tim và xơ vữa động mạch.',
     'Chuyên sâu về can thiệp tim mạch, đo điện tâm đồ và siêu âm tim Doppler màu tiêu chuẩn Châu Âu.',
@@ -148,7 +148,7 @@ async function main() {
       phone: '0909090909',
       passwordHash: adminPassword,
       fullName: 'Quản trị viên NovaCare',
-      role: Role.ADMIN,
+      role: 'ADMIN',
       isActive: true,
       lastLoginAt: new Date(),
     },
@@ -170,7 +170,7 @@ async function main() {
         phone: u.phone,
         passwordHash: hashedPassword,
         fullName: u.fullName,
-        role: Role.PATIENT,
+        role: 'PATIENT',
         isActive: true,
         lastLoginAt: new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000)),
       },
@@ -187,7 +187,7 @@ async function main() {
     {
       userId: patientUsers[0].id,
       fullName: 'Nguyễn Văn An',
-      gender: Gender.MALE,
+      gender: 'MALE',
       dateOfBirth: new Date('1988-03-12'),
       phone: '0912345678',
       address: '72 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh',
@@ -200,7 +200,7 @@ async function main() {
     {
       userId: patientUsers[0].id,
       fullName: 'Nguyễn Minh Khôi',
-      gender: Gender.MALE,
+      gender: 'MALE',
       dateOfBirth: new Date('2018-09-20'),
       phone: '0912345678',
       address: '72 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh',
@@ -213,7 +213,7 @@ async function main() {
     {
       userId: patientUsers[1].id,
       fullName: 'Trần Thị Bình',
-      gender: Gender.FEMALE,
+      gender: 'FEMALE',
       dateOfBirth: new Date('1992-07-24'),
       phone: '0923456789',
       address: '154 Xuân Thủy, Cầu Giấy, Hà Nội',
@@ -226,7 +226,7 @@ async function main() {
     {
       userId: patientUsers[2].id,
       fullName: 'Lê Hoàng Cường',
-      gender: Gender.MALE,
+      gender: 'MALE',
       dateOfBirth: new Date('1975-11-05'),
       phone: '0934567890',
       address: '45 Nguyễn Văn Linh, Hải Châu, Đà Nẵng',
@@ -239,7 +239,7 @@ async function main() {
     {
       userId: patientUsers[3].id,
       fullName: 'Phạm Minh Dung',
-      gender: Gender.FEMALE,
+      gender: 'FEMALE',
       dateOfBirth: new Date('1995-01-18'),
       phone: '0945678901',
       address: '228 Lê Lợi, Ngô Quyền, Hải Phòng',
@@ -252,7 +252,7 @@ async function main() {
     {
       userId: patientUsers[4].id,
       fullName: 'Vũ Thị Ngọc',
-      gender: Gender.FEMALE,
+      gender: 'FEMALE',
       dateOfBirth: new Date('1990-06-30'),
       phone: '0956789012',
       address: '89 Võ Văn Tần, Quận 3, TP. Hồ Chí Minh',
@@ -312,8 +312,8 @@ async function main() {
       website: 'https://novacare.vn',
       email: 'contact@novacare.vn',
       operatingHours: '07:00 - 20:00 (Thứ 2 - Chủ Nhật)',
-      type: HospitalType.PUBLIC,
-      status: PartnershipStatus.ACTIVE,
+      type: 'PUBLIC',
+      status: 'ACTIVE',
       rating: 4.9,
       reviewCount: 320,
       establishedYear: 2015,
@@ -332,8 +332,8 @@ async function main() {
       website: 'https://novacentral.vn',
       email: 'info@novacentral.vn',
       operatingHours: '24/7 (Phục vụ cả lễ tết)',
-      type: HospitalType.INTERNATIONAL,
-      status: PartnershipStatus.ACTIVE,
+      type: 'INTERNATIONAL',
+      status: 'ACTIVE',
       rating: 4.95,
       reviewCount: 480,
       establishedYear: 2018,
@@ -352,8 +352,8 @@ async function main() {
       website: 'https://yduocnovacare.vn',
       email: 'yduoc@novacare.vn',
       operatingHours: '06:30 - 17:30 (Thứ 2 - Thứ 7)',
-      type: HospitalType.PUBLIC,
-      status: PartnershipStatus.ACTIVE,
+      type: 'PUBLIC',
+      status: 'ACTIVE',
       rating: 4.8,
       reviewCount: 290,
       establishedYear: 2010,
@@ -372,8 +372,8 @@ async function main() {
       website: 'https://hanoihospital.vn',
       email: 'hanoi@novacare.vn',
       operatingHours: '07:30 - 18:00 (Thứ 2 - Chủ Nhật)',
-      type: HospitalType.INTERNATIONAL,
-      status: PartnershipStatus.ACTIVE,
+      type: 'INTERNATIONAL',
+      status: 'ACTIVE',
       rating: 4.75,
       reviewCount: 210,
       establishedYear: 2016,
@@ -392,8 +392,8 @@ async function main() {
       website: 'https://sannhidang.vn',
       email: 'danang@novacare.vn',
       operatingHours: '07:00 - 19:00',
-      type: HospitalType.PRIVATE,
-      status: PartnershipStatus.ACTIVE,
+      type: 'PRIVATE',
+      status: 'ACTIVE',
       rating: 4.7,
       reviewCount: 155,
       establishedYear: 2019,
@@ -448,13 +448,12 @@ async function main() {
   // ==========================================
   console.log('🩺 Generating 3 Doctors for EVERY Specialty in EVERY Hospital (Total 180 Doctors)...');
 
-  const createdDoctors: any[] = [];
-  const createdWorkplaces: any[] = [];
+  const createdDoctors = [];
+  const createdWorkplaces = [];
 
   let nameCounter = 0;
 
   for (const hosp of hospitals) {
-    // Find primary branch for hospital
     const primaryBranch = branches.find((b) => b.hospitalId === hosp.id) || branches[0];
 
     for (const spec of specialties) {
@@ -467,11 +466,9 @@ async function main() {
       for (let docIdx = 0; docIdx < 3; docIdx++) {
         nameCounter++;
 
-        // Determine gender based on index (even = female, odd = male)
         const isFemale = nameCounter % 2 === 0;
-        const gender = isFemale ? Gender.FEMALE : Gender.MALE;
+        const gender = isFemale ? 'FEMALE' : 'MALE';
 
-        // Choose name
         const fn = isFemale
           ? FEMALE_FIRST_NAMES[nameCounter % FEMALE_FIRST_NAMES.length]
           : MALE_FIRST_NAMES[nameCounter % MALE_FIRST_NAMES.length];
@@ -484,30 +481,24 @@ async function main() {
 
         const fullName = `${fn} ${mn} ${ln}`;
 
-        // Select Title and Qualification
         const titleObj = DOCTOR_TITLES[docIdx % DOCTOR_TITLES.length];
         const yearsExp = Math.floor(Math.random() * (titleObj.expMax - titleObj.expMin + 1)) + titleObj.expMin;
 
-        // Select Avatar
         const avatarPool = isFemale ? FEMALE_AVATARS : MALE_AVATARS;
         const avatarUrl = avatarPool[nameCounter % avatarPool.length];
 
-        // Select Bio
         const bio = bios[docIdx % bios.length];
 
-        // Ratings & Stats
         const rating = Number((4.7 + (nameCounter % 4) * 0.08).toFixed(2));
         const reviewCount = 45 + (nameCounter % 15) * 12;
         const consultationCount = 120 + (nameCounter % 20) * 35;
 
-        // Position in hospital
         const position = docIdx === 0
           ? `Trưởng khoa ${spec.name}`
           : docIdx === 1
           ? `Phó khoa ${spec.name}`
           : `Bác sĩ Chuyên khoa chính ${spec.name}`;
 
-        // Create Doctor record
         const doctor = await prisma.doctor.create({
           data: {
             fullName,
@@ -520,13 +511,12 @@ async function main() {
             rating,
             reviewCount,
             consultationCount,
-            source: DataSource.MANUAL,
+            source: 'MANUAL',
             isActive: true,
           },
         });
         createdDoctors.push(doctor);
 
-        // Create Doctor Workplace linking doctor to hospital & specialty
         const wp = await prisma.doctorWorkplace.create({
           data: {
             doctorId: doctor.id,
@@ -624,7 +614,7 @@ async function main() {
   // 9. Doctor Schedules (Lịch làm việc cố định)
   // ==========================================
   console.log('📅 Generating Doctor Schedules for 180 workplaces...');
-  const scheduleList: any[] = [];
+  const scheduleList = [];
   for (const wp of createdWorkplaces) {
     for (let day = 1; day <= 6; day++) {
       scheduleList.push({
@@ -647,12 +637,11 @@ async function main() {
   console.log('⏳ Generating Appointment Slots across all 180 doctor workplaces...');
 
   const now = new Date();
-  const slotList: any[] = [];
+  const slotList = [];
 
-  // Generate slots for 7 days into future and 3 days in past
   for (let dayOffset = -3; dayOffset <= 7; dayOffset++) {
     const slotDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset);
-    if (slotDate.getDay() === 0) continue; // Skip Sunday
+    if (slotDate.getDay() === 0) continue;
 
     const times = [
       { start: '08:00', end: '08:30' },
@@ -688,24 +677,22 @@ async function main() {
     }
   }
 
-  // Use createMany for ultra-fast seeding
   await prisma.appointmentSlot.createMany({ data: slotList });
   console.log(`✅ Generated ${slotList.length} Appointment Slots`);
 
-  // Fetch created slots to create rich appointments
   const allCreatedSlots = await prisma.appointmentSlot.findMany({
     take: 100,
     orderBy: { startTime: 'asc' },
   });
 
-  const appointmentStatuses: AppointmentStatus[] = [
-    AppointmentStatus.COMPLETED,
-    AppointmentStatus.COMPLETED,
-    AppointmentStatus.CONFIRMED,
-    AppointmentStatus.PAID,
-    AppointmentStatus.PENDING,
-    AppointmentStatus.AWAITING_PAYMENT,
-    AppointmentStatus.CANCELLED,
+  const appointmentStatuses = [
+    'COMPLETED',
+    'COMPLETED',
+    'CONFIRMED',
+    'PAID',
+    'PENDING',
+    'AWAITING_PAYMENT',
+    'CANCELLED',
   ];
 
   let bookingCodeCounter = 100500;
@@ -726,7 +713,6 @@ async function main() {
     const serviceFee = Number(service?.price || 300000);
     const price = consultationFee + serviceFee;
 
-    // Update slot status if booked
     const isBooked = status === 'CONFIRMED' || status === 'PAID' || status === 'COMPLETED';
     if (isBooked) {
       await prisma.appointmentSlot.update({
@@ -754,11 +740,10 @@ async function main() {
     });
     apptCount++;
 
-    // Create Appointment Status History timeline
     await prisma.appointmentStatusHistory.create({
       data: {
         appointmentId: createdAppt.id,
-        status: AppointmentStatus.PENDING,
+        status: 'PENDING',
         note: 'Bệnh nhân khởi tạo đơn đặt khám thành công',
         createdAt: new Date(createdAppt.createdAt.getTime() - 3600000),
       },
@@ -775,15 +760,14 @@ async function main() {
       });
     }
 
-    // Create Payment Transaction if applicable
     if (status === 'CONFIRMED' || status === 'PAID' || status === 'COMPLETED') {
       await prisma.paymentTransaction.create({
         data: {
           appointmentId: createdAppt.id,
           amount: price,
-          paymentMethod: PaymentMethod.VNPAY,
+          paymentMethod: 'VNPAY',
           transactionCode: `VNP-${Date.now()}-${i}`,
-          status: PaymentStatus.PAID,
+          status: 'PAID',
           vnpResponseCode: '00',
           vnpTransactionNo: `14092026${i}`,
           paidAt: new Date(createdAppt.createdAt.getTime() - 1800000),
