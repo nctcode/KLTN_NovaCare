@@ -219,6 +219,8 @@ export class PreExamV2Service {
     heightCm?: number;
     weightKg?: number;
     hospitalId?: string;
+    bodyAreas?: any;
+    questionnaire?: any;
   }, files?: { voiceFile?: any; imageFiles?: any[] }) {
     // 1. Process Voice via Whisper if uploaded
     let transcript = '';
@@ -243,7 +245,30 @@ export class PreExamV2Service {
       }
     }
 
-    // 3. Fetch hospital and available specialties if hospitalId provided
+    // 3. Parse Body Areas and Questionnaire JSON safely
+    let parsedBodyAreas: string[] = [];
+    if (dto.bodyAreas) {
+      if (Array.isArray(dto.bodyAreas)) {
+        parsedBodyAreas = dto.bodyAreas;
+      } else {
+        try {
+          parsedBodyAreas = JSON.parse(dto.bodyAreas);
+        } catch {
+          parsedBodyAreas = [dto.bodyAreas];
+        }
+      }
+    }
+
+    let parsedQuestionnaire: any = null;
+    if (dto.questionnaire) {
+      try {
+        parsedQuestionnaire = typeof dto.questionnaire === 'string' ? JSON.parse(dto.questionnaire) : dto.questionnaire;
+      } catch {
+        parsedQuestionnaire = null;
+      }
+    }
+
+    // 4. Fetch hospital and available specialties if hospitalId provided
     let hospitalName = 'Bệnh viện NovaCare';
     let availableSpecialties: string[] = [];
     if (dto.hospitalId) {
@@ -257,7 +282,7 @@ export class PreExamV2Service {
       }
     }
 
-    // 4. Run OpenAIService Smartphone Triage
+    // 5. Run OpenAIService Smartphone Triage
     const result = await this.openAIService.analyzeSmartphoneInputs({
       symptoms: dto.symptoms,
       voiceTranscript: transcript,
@@ -265,6 +290,8 @@ export class PreExamV2Service {
       heightCm: dto.heightCm ? Number(dto.heightCm) : undefined,
       weightKg: dto.weightKg ? Number(dto.weightKg) : undefined,
       imageAnalysisFindings,
+      bodyAreas: parsedBodyAreas,
+      questionnaire: parsedQuestionnaire,
       hospitalName,
       availableSpecialties,
     });
@@ -273,6 +300,8 @@ export class PreExamV2Service {
       ...result,
       transcript,
       imageAnalysisFindings,
+      bodyAreas: parsedBodyAreas,
+      questionnaire: parsedQuestionnaire,
     };
   }
 }

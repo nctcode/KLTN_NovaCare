@@ -232,6 +232,13 @@ Trả về JSON:
     weightKg?: number;
     bmi?: number;
     imageAnalysisFindings?: string[];
+    bodyAreas?: string[];
+    questionnaire?: {
+      duration?: string;
+      painLevel?: number;
+      warningSigns?: string[];
+      medicalHistory?: string[];
+    };
     hospitalName?: string;
     availableSpecialties?: string[];
   }): Promise<{
@@ -257,17 +264,23 @@ Trả về JSON:
     try {
       const prompt = `Bạn là hệ thống AI Sàng Lọc & Phân Loại Cấp Cứu (Triage Engine) y tế NovaCare.
 Phân tích dữ liệu từ Điện thoại thông minh (100% Smartphone-Only):
-- Triệu chứng khai báo/giọng nói: "${inputs.symptoms || inputs.voiceTranscript || 'Chưa rõ'}"
+- Vùng bất thường trên cơ thể (Sơ đồ cơ thể Body Map): ${inputs.bodyAreas?.join(', ') || 'Chưa chọn'}
+- Khảo sát trắc nghiệm triệu chứng:
+  + Thời gian xuất hiện: ${inputs.questionnaire?.duration || 'Chưa rõ'}
+  + Mức độ đau/khó chịu: ${inputs.questionnaire?.painLevel || 0}/10
+  + Dấu hiệu cảnh báo: ${inputs.questionnaire?.warningSigns?.join(', ') || 'Không có'}
+  + Tiền sử bệnh lý: ${inputs.questionnaire?.medicalHistory?.join(', ') || 'Không có'}
+- Mô tả triệu chứng/Giọng nói: "${inputs.symptoms || inputs.voiceTranscript || 'Chưa rõ'}"
 - Nhịp tim đo qua Camera PPG: ${heartRate ? `${heartRate} BPM` : 'Chưa đo'}
 - Chiều cao/Cân nặng/BMI: ${inputs.heightCm || '?'}cm, ${inputs.weightKg || '?'}kg (BMI: ${bmiVal ? bmiVal.toFixed(1) : '?'})
 - Kết quả soi camera tổn thương/xét nghiệm: ${inputs.imageAnalysisFindings?.join('; ') || 'Không có ảnh'}
 - Cơ sở y tế đã chọn: ${inputs.hospitalName || 'Bệnh viện NovaCare'}
-- Chuyên khoa sẵn có tại bệnh viện: ${inputs.availableSpecialties?.join(', ') || 'Nội tổng quát, Tim mạch, Da liễu, Tai Mũi Họng, Nhi khoa'}
+- Chuyên khoa sẵn có tại bệnh viện: ${inputs.availableSpecialties?.join(', ') || 'Nội tổng quát, Tim mạch, Da liễu, Tai Mũi Họng, Nhi khoa, Mắt, Thần kinh, Xương khớp'}
 
 Yêu cầu phân loại Mức độ nguy cơ (Triage 3 Cấp):
 - MONITOR: Nhẹ, theo dõi tại nhà hoặc khám thường
 - CONSULT: Cần khám bác sĩ chuyên khoa trong ngày hoặc sớm
-- EMERGENCY: Cấp cứu khẩn cấp (đau ngực kéo dài, suy hô hấp, co giật, nhịp tim > 130 hoặc < 45 BPM)
+- EMERGENCY: Cấp cứu khẩn cấp (đau ngực kéo dài, khó thở nặng, sốt cao kèm giật, nhịp tim > 130 hoặc < 45 BPM, mức đau >= 8/10 kèm dấu hiệu nguy hiểm)
 
 Gợi ý Chuyên khoa phù hợp nhất từ danh sách chuyên khoa sẵn có trên.
 
