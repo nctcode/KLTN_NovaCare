@@ -31,6 +31,8 @@ import { Hospital, Specialty, Doctor, MedicalService } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 
+import { AIAssistedBookingModal } from '../ai/AIAssistedBookingModal';
+
 interface Step1BookingInfoProps {
   hospital: Hospital;
   selectedSpecialty: Specialty | null;
@@ -68,9 +70,15 @@ export function Step1BookingInfo({
   const [isSpecialtyModalOpen, setIsSpecialtyModalOpen] = useState(false);
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-
-  // Time session filter: 'all' | 'morning' | 'afternoon' | 'evening'
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [timeSession, setTimeSession] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
+
+  const handleApplyAIRecommendation = (rec: { specialtyId: string; specialtyName: string; reason: string }) => {
+    const targetSpec = specialties.find((s: any) => s.id === rec.specialtyId || s.name?.toLowerCase().includes(rec.specialtyName?.toLowerCase()));
+    if (targetSpec) {
+      setSelectedSpecialty(targetSpec);
+    }
+  };
 
   // Fetch Specialties available at this hospital
   const { data: specialties = [], isLoading: loadingSpecialties } = useQuery({
@@ -213,6 +221,44 @@ export function Step1BookingInfo({
           Cơ sở: {hospital.name}
         </Badge>
       </div>
+
+      {/* AI Assistant Callout Banner */}
+      <div className="bg-gradient-to-r from-emerald-950 via-[#0c4b39] to-teal-900 rounded-3xl p-5 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border border-emerald-400/30">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 text-amber-300">
+            <Sparkles className="w-6 h-6 animate-pulse" />
+          </div>
+          <div className="space-y-0.5 text-left">
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-sm text-white">Chưa biết chọn Chuyên khoa nào phù hợp?</h3>
+              <Badge className="bg-amber-400 text-slate-950 font-black text-[10px]">
+                100% Smartphone AI
+              </Badge>
+            </div>
+            <p className="text-xs text-emerald-100/90 font-medium">
+              Sử dụng AI đo Nhịp tim PPG bằng Camera, phân tích ảnh tổn thương/xét nghiệm & giọng nói để gợi ý ngay
+            </p>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          onClick={() => setIsAIModalOpen(true)}
+          className="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs h-11 px-6 rounded-2xl shadow-md shrink-0 flex items-center justify-center gap-2 transition-transform active:scale-95"
+        >
+          <Sparkles className="w-4 h-4 text-slate-950" />
+          <span>Nhờ AI Sàng Lọc & Gợi Ý Ngay</span>
+        </Button>
+      </div>
+
+      {/* AI Assisted Booking Modal */}
+      <AIAssistedBookingModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        hospital={hospital}
+        specialties={specialties}
+        onApplyAIRecommendation={handleApplyAIRecommendation}
+      />
 
       {/* Grid of 3 Popup Pickers: Specialty, Doctor, Service */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

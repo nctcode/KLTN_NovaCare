@@ -212,4 +212,67 @@ export class PreExamV2Service {
     if (!session) throw new NotFoundException('Session không tồn tại');
     return session;
   }
+
+  async analyzeSmartphoneInputs(dto: {
+    symptoms?: string;
+    heartRateBpm?: number;
+    heightCm?: number;
+    weightKg?: number;
+    hospitalId?: string;
+  }, files?: { voiceFile?: any; imageFiles?: any[] }) {
+    // 1. Process Voice via Whisper if uploaded
+    let transcript = '';
+    if (files?.voiceFile) {
+      try {
+        transcript = await this.speechService.transcribe(files.voiceFile);
+      } catch (err) {
+        transcript = '';
+      }
+    }
+
+    // 2. Process Images via GPT-4o Vision
+    const imageAnalysisFindings: string[] = [];
+    if (files?.imageFiles && files.imageFiles.length > 0) {
+      for (const img of files.imageFiles) {
+        try {
+          const result = await this.visionService.analyzeImage(img);
+          if (result?.findings) imageAnalysisFindings.push(result.findings);
+        } catch {
+          // ignore error
+        }
+      }
+    }
+
+    // 3. Fetch hospital and available specialties if hospitalId provided
+    let hospitalName = 'Bệnh viện NovaCare';
+    let availableSpecialties: string[] = [];
+    if (dto.hospitalId) {
+      const hosp = await this.prisma.hospital.findUnique({
+        where: { id: dto.hospitalId },
+        include: { hospitalSpecialties: { include: { specialty: true } } },
+      });
+      if (hosp) {
+        hospitalName = hosp.name;
+        availableSpecialties = hosp.hospitalSpecialties.map((hs) => hs.specialty.name);
+      }
+    }
+
+    // 4. Run OpenAIService Smartphone Triage
+    const result = await this.openAIService.analyzeSmartphoneInputs({
+      symptoms: dto.symptoms,
+      voiceTranscript: transcript,
+      heartRateBpm: dto.heartRateBpm ? Number(dto.heartRateBpm) : undefined,
+      heightCm: dto.heightCm ? Number(dto.heightCm) : undefined,
+      weightKg: dto.weightKg ? Number(dto.weightKg) : undefined,
+      imageAnalysisFindings,
+      hospitalName,
+      availableSpecialties,
+    });
+
+    return {
+      ...result,
+      transcript,
+      imageAnalysisFindings,
+    };
+  }
 }

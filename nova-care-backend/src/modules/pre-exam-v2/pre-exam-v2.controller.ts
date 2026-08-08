@@ -72,4 +72,24 @@ export class PreExamV2Controller {
     const session = await this.service.getSession(id);
     return { data: session };
   }
+
+  @Post('analyze-smartphone')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'voice', maxCount: 1 },
+      { name: 'images', maxCount: 5 },
+    ]),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Phân tích sàng lọc 100% Smartphone (PPG nhịp tim, BMI, Voice, Vision & Triage 3 cấp)' })
+  async analyzeSmartphone(
+    @Body() dto: any,
+    @UploadedFiles() files: { voice?: any[]; images?: any[] },
+  ) {
+    const voiceFile = files?.voice && files.voice.length > 0 ? files.voice[0] : undefined;
+    const imageFiles = files?.images || [];
+
+    const result = await this.service.analyzeSmartphoneInputs(dto, { voiceFile, imageFiles });
+    return { data: result };
+  }
 }
