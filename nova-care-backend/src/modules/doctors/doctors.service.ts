@@ -116,10 +116,10 @@ export class DoctorsService {
           include: {
             hospital: true,
             specialty: true,
+            schedules: {
+              where: { isActive: true },
+            },
           },
-        },
-        schedules: {
-          where: { isActive: true },
         },
       },
     });

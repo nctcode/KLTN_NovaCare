@@ -52,7 +52,7 @@ function BookingPageContent() {
     if (workplace) {
       setBookingData({
         doctorId: workplace.doctorId,
-        doctorName: workplace.doctor.fullName,
+        doctorName: workplace.doctor?.fullName || '',
         specialtyId: workplace.specialtyId,
         hospitalId: workplace.hospitalId,
         workplaceId: workplace.id,

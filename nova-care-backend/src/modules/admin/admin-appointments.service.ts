@@ -10,13 +10,49 @@ export class AdminAppointmentsService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
+  async getStats() {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    const [todayTotal, confirmed, completed, cancelled] = await Promise.all([
+      this.prisma.appointment.count({
+        where: {
+          slot: {
+            startTime: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+        },
+      }),
+      this.prisma.appointment.count({
+        where: {
+          status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.PAID] },
+        },
+      }),
+      this.prisma.appointment.count({
+        where: { status: AppointmentStatus.COMPLETED },
+      }),
+      this.prisma.appointment.count({
+        where: { status: AppointmentStatus.CANCELLED },
+      }),
+    ]);
+
+    return { todayTotal, confirmed, completed, cancelled };
+  }
+
   async findAll(params: {
     page?: number;
     limit?: number;
     search?: string;
     status?: AppointmentStatus;
     hospitalId?: string;
+    branchId?: string;
     doctorId?: string;
+    specialtyId?: string;
+    medicalServiceId?: string;
+    date?: string;
   }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
@@ -28,12 +64,31 @@ export class AdminAppointmentsService {
       where.status = params.status;
     }
 
-    if (params.hospitalId) {
-      where.slot = { doctorWorkplace: { hospitalId: params.hospitalId } };
+    if (params.medicalServiceId) {
+      where.medicalServiceId = params.medicalServiceId;
     }
 
-    if (params.doctorId) {
-      where.slot = { doctorWorkplace: { doctorId: params.doctorId } };
+    const workplaceWhere: any = {};
+    if (params.hospitalId) workplaceWhere.hospitalId = params.hospitalId;
+    if (params.branchId) workplaceWhere.branchId = params.branchId;
+    if (params.doctorId) workplaceWhere.doctorId = params.doctorId;
+    if (params.specialtyId) workplaceWhere.specialtyId = params.specialtyId;
+
+    if (Object.keys(workplaceWhere).length > 0) {
+      where.slot = { doctorWorkplace: workplaceWhere };
+    }
+
+    if (params.date) {
+      const selectedDate = new Date(params.date);
+      const startOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0);
+      const endOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59);
+      where.slot = {
+        ...where.slot,
+        startTime: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      };
     }
 
     if (params.search) {
@@ -42,6 +97,7 @@ export class AdminAppointmentsService {
         { patientProfile: { fullName: { contains: params.search, mode: 'insensitive' } } },
         { patientProfile: { phone: { contains: params.search, mode: 'insensitive' } } },
         { user: { fullName: { contains: params.search, mode: 'insensitive' } } },
+        { slot: { doctorWorkplace: { doctor: { fullName: { contains: params.search, mode: 'insensitive' } } } } },
       ];
     }
 
@@ -55,10 +111,11 @@ export class AdminAppointmentsService {
           patientProfile: true,
           user: { select: { id: true, fullName: true, email: true, phone: true } },
           payment: true,
+          medicalService: true,
           slot: {
             include: {
               doctorWorkplace: {
-                include: { doctor: true, hospital: true },
+                include: { doctor: true, hospital: true, branch: true, specialty: true },
               },
             },
           },
@@ -77,11 +134,12 @@ export class AdminAppointmentsService {
         patientProfile: true,
         user: { select: { id: true, fullName: true, email: true, phone: true } },
         payment: true,
+        medicalService: true,
         statusHistory: { orderBy: { createdAt: 'desc' } },
         slot: {
           include: {
             doctorWorkplace: {
-              include: { doctor: true, hospital: true },
+              include: { doctor: true, hospital: true, branch: true, specialty: true },
             },
           },
         },

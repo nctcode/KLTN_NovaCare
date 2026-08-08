@@ -8,9 +8,10 @@ import {
   Users,
   UserCheck,
   Building2,
+  Stethoscope,
   Package,
+  Activity,
   CalendarCheck,
-  CreditCard,
   History,
   ExternalLink,
   ChevronLeft,
@@ -20,12 +21,13 @@ import { useState } from 'react';
 
 const ADMIN_MENU_ITEMS = [
   { href: '/admin', label: 'Dashboard Thống kê', icon: LayoutDashboard },
-  { href: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
-  { href: '/admin/doctors', label: 'Quản lý Bác sĩ', icon: UserCheck },
   { href: '/admin/hospitals', label: 'Quản lý Bệnh viện', icon: Building2 },
+  { href: '/admin/doctors', label: 'Quản lý Bác sĩ', icon: UserCheck },
+  { href: '/admin/specialties', label: 'Quản lý Chuyên khoa', icon: Stethoscope },
   { href: '/admin/health-packages', label: 'Quản lý Gói khám', icon: Package },
-  { href: '/admin/appointments', label: 'Quản lý Lịch khám', icon: CalendarCheck },
-  { href: '/admin/payments', label: 'Quản lý Thanh toán', icon: CreditCard },
+  { href: '/admin/medical-services', label: 'Quản lý Dịch vụ', icon: Activity },
+  { href: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
+  { href: '/admin/appointments', label: 'Quản lý lịch', icon: CalendarCheck },
   { href: '/admin/audit-logs', label: 'Nhật ký Hệ thống', icon: History },
 ];
 

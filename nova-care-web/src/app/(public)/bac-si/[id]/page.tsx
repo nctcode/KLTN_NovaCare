@@ -55,7 +55,7 @@ export default function DoctorDetailPage() {
   }
 
   // Calculate pricing & specialties
-  const specialties = Array.from(new Set(doctor.workPlaces?.map(wp => wp.specialty.name) || []));
+  const specialties = Array.from(new Set(doctor.workPlaces?.map(wp => wp.specialty?.name).filter(Boolean) || []));
   const fees = doctor.workPlaces?.map(wp => Number(wp.consultationFee)) || [];
   const minFee = fees.length > 0 ? Math.min(...fees) : 200000;
   const visitsCount = doctor.consultationCount || (doctor.reviewCount ? doctor.reviewCount * 15 + 100 : 450);
@@ -152,13 +152,13 @@ export default function DoctorDetailPage() {
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-100 rounded-xl gap-4 bg-gray-50/50"
                 >
                   <div>
-                    <h4 className="font-semibold text-secondary">{workplace.hospital.name}</h4>
+                    <h4 className="font-semibold text-secondary">{workplace.hospital?.name}</h4>
                     <p className="text-sm text-[#4caf50] font-semibold">
-                      Chuyên khoa: {workplace.specialty.name}
+                      Chuyên khoa: {workplace.specialty?.name}
                     </p>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                       <MapPin className="h-4 w-4 shrink-0 text-gray-400" />
-                      <span>{workplace.hospital.address}</span>
+                      <span>{workplace.hospital?.address}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 justify-between sm:justify-end">
@@ -198,7 +198,7 @@ export default function DoctorDetailPage() {
                 >
                   {doctor.workPlaces?.map((wp) => (
                     <option key={wp.id} value={wp.id}>
-                      {wp.hospital.name} - {wp.specialty.name}
+                      {wp.hospital?.name} - {wp.specialty?.name}
                     </option>
                   ))}
                 </select>

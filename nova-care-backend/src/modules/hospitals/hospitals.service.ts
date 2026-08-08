@@ -42,6 +42,12 @@ export class HospitalsService {
             specialty: true,
           },
         },
+        hospitalSpecialties: {
+          where: { isActive: true },
+          include: {
+            specialty: true,
+          },
+        },
         services: {
           where: { isActive: true },
         },
@@ -102,12 +108,24 @@ export class HospitalsService {
       where: {
         deletedAt: null,
         isActive: true,
-        workPlaces: {
-          some: {
-            specialtyId,
-            isActive: true,
+        OR: [
+          {
+            hospitalSpecialties: {
+              some: {
+                specialtyId,
+                isActive: true,
+              },
+            },
           },
-        },
+          {
+            workPlaces: {
+              some: {
+                specialtyId,
+                isActive: true,
+              },
+            },
+          },
+        ],
       },
       distinct: ['id'],
     });
@@ -116,12 +134,24 @@ export class HospitalsService {
   async getAvailableSpecialties(hospitalId: string): Promise<any[]> {
     return this.prisma.specialty.findMany({
       where: {
-        workPlaces: {
-          some: {
-            hospitalId,
-            isActive: true,
+        OR: [
+          {
+            hospitalSpecialties: {
+              some: {
+                hospitalId,
+                isActive: true,
+              },
+            },
           },
-        },
+          {
+            workPlaces: {
+              some: {
+                hospitalId,
+                isActive: true,
+              },
+            },
+          },
+        ],
       },
     });
   }

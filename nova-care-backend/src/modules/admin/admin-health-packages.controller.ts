@@ -27,19 +27,34 @@ export class AdminHealthPackagesController {
   constructor(private readonly service: AdminHealthPackagesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Danh sách các gói khám (Phân trang, tìm kiếm)' })
+  @ApiOperation({ summary: 'Danh sách các gói khám (Phân trang, tìm kiếm, lọc theo Bệnh viện, Chuyên khoa, Trạng thái)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'hospitalId', required: false, type: String })
+  @ApiQuery({ name: 'specialtyId', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'sortOrder', required: false, type: String })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Query('hospitalId') hospitalId?: string,
+    @Query('specialtyId') specialtyId?: string,
+    @Query('status') status?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
     return this.service.findAll({
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 10,
       search,
+      hospitalId,
+      specialtyId,
+      status,
+      sortBy,
+      sortOrder,
     });
   }
 
@@ -70,6 +85,18 @@ export class AdminHealthPackagesController {
     @Headers('user-agent') ua: string,
   ) {
     return this.service.update(id, body, req.user.id, ip, ua);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Bật/Tắt trạng thái hoạt động của gói khám' })
+  toggleStatus(
+    @Param('id') id: string,
+    @Body('isActive') isActive: boolean,
+    @Req() req: any,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ) {
+    return this.service.toggleStatus(id, isActive, req.user.id, ip, ua);
   }
 
   @Delete(':id')

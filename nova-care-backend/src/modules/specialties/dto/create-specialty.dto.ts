@@ -29,6 +29,15 @@ export class CreateSpecialtyDto {
   icon?: string;
 
   @ApiProperty({
+    example: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d',
+    description: 'Ảnh Banner (Cover Image) chuyên khoa',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string;
+
+  @ApiProperty({
     example: true,
     description: 'Trạng thái hoạt động',
     default: true,

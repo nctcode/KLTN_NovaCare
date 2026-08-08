@@ -3,11 +3,11 @@ import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Max, Min } 
 
 export class CreateScheduleDto {
   @ApiProperty({
-    example: 'uuid-of-doctor',
-    description: 'ID bác sĩ',
+    example: 'uuid-of-doctor-workplace',
+    description: 'ID nơi làm việc của bác sĩ',
   })
   @IsUUID()
-  doctorId: string;
+  doctorWorkplaceId: string;
 
   @ApiProperty({
     example: 1,

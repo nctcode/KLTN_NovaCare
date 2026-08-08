@@ -23,6 +23,12 @@ import { AdminAppointmentsController } from './admin-appointments.controller';
 import { AdminPaymentsService } from './admin-payments.service';
 import { AdminPaymentsController } from './admin-payments.controller';
 
+import { AdminSpecialtiesService } from './admin-specialties.service';
+import { AdminSpecialtiesController } from './admin-specialties.controller';
+
+import { AdminMedicalServicesService } from './admin-medical-services.service';
+import { AdminMedicalServicesController } from './admin-medical-services.controller';
+
 @Module({
   imports: [PrismaModule],
   controllers: [
@@ -33,6 +39,8 @@ import { AdminPaymentsController } from './admin-payments.controller';
     AdminHealthPackagesController,
     AdminAppointmentsController,
     AdminPaymentsController,
+    AdminSpecialtiesController,
+    AdminMedicalServicesController,
   ],
   providers: [
     AuditLogService,
@@ -43,6 +51,8 @@ import { AdminPaymentsController } from './admin-payments.controller';
     AdminHealthPackagesService,
     AdminAppointmentsService,
     AdminPaymentsService,
+    AdminSpecialtiesService,
+    AdminMedicalServicesService,
   ],
   exports: [
     AuditLogService,
@@ -53,6 +63,8 @@ import { AdminPaymentsController } from './admin-payments.controller';
     AdminHealthPackagesService,
     AdminAppointmentsService,
     AdminPaymentsService,
+    AdminSpecialtiesService,
+    AdminMedicalServicesService,
   ],
 })
 export class AdminModule {}

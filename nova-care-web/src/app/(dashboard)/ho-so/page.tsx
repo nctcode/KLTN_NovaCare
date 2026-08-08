@@ -7,31 +7,35 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { PatientProfileForm } from '@/components/forms/PatientProfileForm';
-import { 
-  Plus, 
-  User, 
-  Phone, 
-  Calendar, 
-  Heart, 
-  Shield, 
+import {
+  Plus,
+  User,
+  Phone,
+  Calendar,
+  Heart,
+  Shield,
   ShieldAlert,
-  Trash2, 
-  CheckCircle2, 
-  Loader2, 
-  Search, 
-  FileCheck, 
-  UserCheck, 
+  Trash2,
+  CheckCircle2,
+  Loader2,
+  Search,
+  FileCheck,
+  UserCheck,
   Users,
   CalendarCheck,
   MapPin,
-  ArrowRight
+  ArrowRight,
+  QrCode,
+  Edit3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { PatientProfile } from '@/types/profile.types';
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<PatientProfile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [relationFilter, setRelationFilter] = useState<string>('ALL');
 
@@ -74,7 +78,7 @@ export default function ProfilePage() {
 
   // Filter profiles by query and relationship
   const filteredProfiles = profiles.filter((p) => {
-    const matchesSearch = 
+    const matchesSearch =
       p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.phone && p.phone.includes(searchQuery)) ||
       (p.identityNumber && p.identityNumber.includes(searchQuery));
@@ -200,31 +204,28 @@ export default function ProfilePage() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => setRelationFilter('ALL')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              relationFilter === 'ALL'
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${relationFilter === 'ALL'
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+              }`}
           >
             Tất cả ({profiles.length})
           </button>
           <button
             onClick={() => setRelationFilter('SELF')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              relationFilter === 'SELF'
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${relationFilter === 'SELF'
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+              }`}
           >
             Bản thân
           </button>
           <button
             onClick={() => setRelationFilter('RELATIVE')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              relationFilter === 'RELATIVE'
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${relationFilter === 'RELATIVE'
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+              }`}
           >
             Người thân
           </button>
@@ -253,11 +254,10 @@ export default function ProfilePage() {
           {filteredProfiles.map((profile) => (
             <Card
               key={profile.id}
-              className={`bg-white border transition-all duration-200 ${
-                profile.isDefault
+              className={`bg-white border transition-all duration-200 ${profile.isDefault
                   ? 'border-emerald-500 shadow-md ring-2 ring-emerald-500/10'
                   : 'border-slate-200 hover:border-slate-400 shadow-sm'
-              }`}
+                }`}
             >
               <CardContent className="p-6 space-y-5">
                 {/* Header Profile info */}
@@ -351,22 +351,34 @@ export default function ProfilePage() {
 
                 {/* Card Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
-                  {!profile.isDefault ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!profile.isDefault ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSetDefault(profile.id)}
+                        disabled={setDefaultMutation.isPending}
+                        className="text-xs text-slate-800 font-semibold border-slate-300 hover:bg-slate-50"
+                      >
+                        Đặt làm hồ sơ chính
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-slate-600 flex items-center gap-1.5 font-bold">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        Hồ sơ chính
+                      </span>
+                    )}
+
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleSetDefault(profile.id)}
-                      disabled={setDefaultMutation.isPending}
-                      className="text-xs text-slate-800 font-semibold border-slate-300 hover:bg-slate-50"
+                      onClick={() => setEditingProfile(profile)}
+                      className="text-xs font-bold text-slate-900 border-slate-300 hover:bg-slate-100 flex items-center gap-1.5"
                     >
-                      Đặt làm hồ sơ chính
+                      <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                      {profile.identityNumber ? 'Cập nhật CCCD' : 'Quét & Định danh CCCD'}
                     </Button>
-                  ) : (
-                    <span className="text-xs text-slate-600 flex items-center gap-1.5 font-bold">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      Tự động chọn khi đặt lịch
-                    </span>
-                  )}
+                  </div>
 
                   <Button asChild size="sm" className="bg-slate-900 hover:bg-slate-800 text-white text-xs gap-1 font-semibold">
                     <Link href="/bac-si">
@@ -380,6 +392,29 @@ export default function ProfilePage() {
           ))}
         </div>
       )}
+
+      {/* Edit Profile & CCCD Verification Dialog */}
+      <Dialog open={!!editingProfile} onOpenChange={(open) => !open && setEditingProfile(null)}>
+        <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Cập nhật & Xác thực CCCD ({editingProfile?.fullName})
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Quét mã QR thẻ CCCD gắn chip hoặc cập nhật thông tin định danh cho hồ sơ bệnh nhân này để phục vụ việc đặt lịch khám.
+            </DialogDescription>
+          </DialogHeader>
+          {editingProfile && (
+            <PatientProfileForm
+              initialData={editingProfile}
+              onSuccess={() => {
+                setEditingProfile(null);
+                queryClient.invalidateQueries({ queryKey: ['profiles'] });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

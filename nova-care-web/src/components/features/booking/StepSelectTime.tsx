@@ -126,12 +126,12 @@ export function StepSelectTime({ onNext, onBack }: StepSelectTimeProps) {
               >
                 <CardContent className="p-3.5 space-y-1">
                   <p className="font-bold text-secondary text-sm flex items-center justify-between">
-                    <span>{wp.hospital.name}</span>
+                    <span>{wp.hospital?.name}</span>
                     {selectedWorkplaceId === wp.id && (
                       <CheckCircle2 className="w-4 h-4 text-[#4caf50]" />
                     )}
                   </p>
-                  <p className="text-xs text-gray-500 line-clamp-1">{wp.hospital.address}</p>
+                  <p className="text-xs text-gray-500 line-clamp-1">{wp.hospital?.address}</p>
                   <p className="text-xs font-semibold text-[#4caf50]">
                     Phí khám: {wp.consultationFee.toLocaleString()}đ
                   </p>

@@ -27,19 +27,28 @@ export class AdminHospitalsController {
   constructor(private readonly service: AdminHospitalsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Danh sách bệnh viện (Phân trang, tìm kiếm)' })
+  @ApiOperation({ summary: 'Danh sách bệnh viện (Phân trang, bộ lọc)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'type', required: false, type: String })
+  @ApiQuery({ name: 'city', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Query('type') type?: string,
+    @Query('city') city?: string,
+    @Query('status') status?: string,
   ) {
     return this.service.findAll({
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 10,
       search,
+      type,
+      city,
+      status,
     });
   }
 

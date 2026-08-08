@@ -5,6 +5,8 @@ export interface PaginationParams {
   limit?: number;
   search?: string;
   role?: string;
+  type?: string;
+  city?: string;
   status?: string;
   hospitalId?: string;
   doctorId?: string;
@@ -91,14 +93,28 @@ export const adminService = {
   },
 
   // Appointments
-  async getAppointments(params?: PaginationParams): Promise<any> {
+  async getAppointmentStats(): Promise<any> {
+    const response = await apiClient.get<any>('/admin/appointments/stats');
+    return extractData(response);
+  },
+
+  async getAppointments(params?: PaginationParams & {
+    branchId?: string;
+    specialtyId?: string;
+    medicalServiceId?: string;
+    date?: string;
+  }): Promise<any> {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.search) query.append('search', params.search);
     if (params?.status) query.append('status', params.status);
     if (params?.hospitalId) query.append('hospitalId', params.hospitalId);
+    if (params?.branchId) query.append('branchId', params.branchId);
     if (params?.doctorId) query.append('doctorId', params.doctorId);
+    if (params?.specialtyId) query.append('specialtyId', params.specialtyId);
+    if (params?.medicalServiceId) query.append('medicalServiceId', params.medicalServiceId);
+    if (params?.date) query.append('date', params.date);
 
     const response = await apiClient.get<any>(`/admin/appointments?${query.toString()}`);
     return extractData(response);
@@ -116,6 +132,29 @@ export const adminService = {
 
   async cancelAppointment(id: string, reason: string): Promise<any> {
     const response = await apiClient.delete<any>(`/admin/appointments/${id}`, { data: { reason } });
+    return extractData(response);
+  },
+
+  // Doctor Schedules (Lịch làm việc bác sĩ)
+  async getDoctorSchedules(params?: {
+    search?: string;
+    hospitalId?: string;
+    branchId?: string;
+    specialtyId?: string;
+    doctorId?: string;
+    isActive?: string;
+    dayOfWeek?: number;
+  }): Promise<any> {
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.hospitalId) query.append('hospitalId', params.hospitalId);
+    if (params?.branchId) query.append('branchId', params.branchId);
+    if (params?.specialtyId) query.append('specialtyId', params.specialtyId);
+    if (params?.doctorId) query.append('doctorId', params.doctorId);
+    if (params?.isActive !== undefined && params?.isActive !== '') query.append('isActive', params.isActive);
+    if (params?.dayOfWeek !== undefined) query.append('dayOfWeek', params.dayOfWeek.toString());
+
+    const response = await apiClient.get<any>(`/doctor-schedules?${query.toString()}`);
     return extractData(response);
   },
 
@@ -137,11 +176,27 @@ export const adminService = {
   },
 
   // Doctors
-  async getDoctors(params?: PaginationParams): Promise<any> {
+  async getDoctors(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    externalId?: string;
+    hospitalId?: string;
+    specialtyId?: string;
+    isActive?: string;
+    gender?: string;
+    source?: string;
+  }): Promise<any> {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.search) query.append('search', params.search);
+    if (params?.externalId) query.append('externalId', params.externalId);
+    if (params?.hospitalId) query.append('hospitalId', params.hospitalId);
+    if (params?.specialtyId) query.append('specialtyId', params.specialtyId);
+    if (params?.isActive !== undefined && params?.isActive !== '') query.append('isActive', params.isActive);
+    if (params?.gender) query.append('gender', params.gender);
+    if (params?.source) query.append('source', params.source);
 
     const response = await apiClient.get<any>(`/admin/doctors?${query.toString()}`);
     return extractData(response);
@@ -162,12 +217,50 @@ export const adminService = {
     return extractData(response);
   },
 
+  async getDoctorDetail(id: string): Promise<any> {
+    const response = await apiClient.get<any>(`/admin/doctors/${id}`);
+    return extractData(response);
+  },
+
+  async createDoctorWorkplace(doctorId: string, data: any): Promise<any> {
+    const response = await apiClient.post<any>(`/admin/doctors/${doctorId}/workplaces`, data);
+    return extractData(response);
+  },
+
+  async updateDoctorWorkplace(workplaceId: string, data: any): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/doctors/workplaces/${workplaceId}`, data);
+    return extractData(response);
+  },
+
+  async deleteDoctorWorkplace(workplaceId: string): Promise<any> {
+    const response = await apiClient.delete<any>(`/admin/doctors/workplaces/${workplaceId}`);
+    return extractData(response);
+  },
+
+  async createDoctorSchedule(workplaceId: string, data: any): Promise<any> {
+    const response = await apiClient.post<any>(`/admin/doctors/workplaces/${workplaceId}/schedules`, data);
+    return extractData(response);
+  },
+
+  async updateDoctorSchedule(scheduleId: string, data: any): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/doctors/schedules/${scheduleId}`, data);
+    return extractData(response);
+  },
+
+  async deleteDoctorSchedule(scheduleId: string): Promise<any> {
+    const response = await apiClient.delete<any>(`/admin/doctors/schedules/${scheduleId}`);
+    return extractData(response);
+  },
+
   // Hospitals
   async getHospitals(params?: PaginationParams): Promise<any> {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.search) query.append('search', params.search);
+    if (params?.type) query.append('type', params.type);
+    if (params?.city) query.append('city', params.city);
+    if (params?.status) query.append('status', params.status);
 
     const response = await apiClient.get<any>(`/admin/hospitals?${query.toString()}`);
     return extractData(response);
@@ -189,13 +282,32 @@ export const adminService = {
   },
 
   // Health Packages
-  async getHealthPackages(params?: PaginationParams): Promise<any> {
+  async getHealthPackages(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    hospitalId?: string;
+    specialtyId?: string;
+    status?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<any> {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.search) query.append('search', params.search);
+    if (params?.hospitalId) query.append('hospitalId', params.hospitalId);
+    if (params?.specialtyId) query.append('specialtyId', params.specialtyId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
 
     const response = await apiClient.get<any>(`/admin/health-packages?${query.toString()}`);
+    return extractData(response);
+  },
+
+  async getHealthPackageDetail(id: string): Promise<any> {
+    const response = await apiClient.get<any>(`/admin/health-packages/${id}`);
     return extractData(response);
   },
 
@@ -209,8 +321,98 @@ export const adminService = {
     return extractData(response);
   },
 
+  async toggleHealthPackageStatus(id: string, isActive: boolean): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/health-packages/${id}/status`, { isActive });
+    return extractData(response);
+  },
+
   async deleteHealthPackage(id: string): Promise<any> {
     const response = await apiClient.delete<any>(`/admin/health-packages/${id}`);
+    return extractData(response);
+  },
+
+  // Medical Services (Dịch vụ Y tế lẻ)
+  async getMedicalServices(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    hospitalId?: string;
+    status?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<any> {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    if (params?.search) query.append('search', params.search);
+    if (params?.hospitalId) query.append('hospitalId', params.hospitalId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
+
+    const response = await apiClient.get<any>(`/admin/medical-services?${query.toString()}`);
+    return extractData(response);
+  },
+
+  async getMedicalServiceDetail(id: string): Promise<any> {
+    const response = await apiClient.get<any>(`/admin/medical-services/${id}`);
+    return extractData(response);
+  },
+
+  async createMedicalService(data: any): Promise<any> {
+    const response = await apiClient.post<any>('/admin/medical-services', data);
+    return extractData(response);
+  },
+
+  async updateMedicalService(id: string, data: any): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/medical-services/${id}`, data);
+    return extractData(response);
+  },
+
+  async toggleMedicalServiceStatus(id: string, isActive: boolean): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/medical-services/${id}/toggle-status`, { isActive });
+    return extractData(response);
+  },
+
+  async deleteMedicalService(id: string): Promise<any> {
+    const response = await apiClient.delete<any>(`/admin/medical-services/${id}`);
+    return extractData(response);
+  },
+
+  // Specialties
+  async getSpecialties(params?: PaginationParams): Promise<any> {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    if (params?.search) query.append('search', params.search);
+    if (params?.status) query.append('status', params.status);
+
+    const response = await apiClient.get<any>(`/admin/specialties?${query.toString()}`);
+    return extractData(response);
+  },
+
+  async getSpecialtyDetail(id: string): Promise<any> {
+    const response = await apiClient.get<any>(`/admin/specialties/${id}`);
+    return extractData(response);
+  },
+
+  async createSpecialty(data: any): Promise<any> {
+    const response = await apiClient.post<any>('/admin/specialties', data);
+    return extractData(response);
+  },
+
+  async updateSpecialty(id: string, data: any): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/specialties/${id}`, data);
+    return extractData(response);
+  },
+
+  async toggleSpecialtyStatus(id: string, isActive: boolean): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/specialties/${id}/status`, { isActive });
+    return extractData(response);
+  },
+
+  async deleteSpecialty(id: string): Promise<any> {
+    const response = await apiClient.delete<any>(`/admin/specialties/${id}`);
     return extractData(response);
   },
 };

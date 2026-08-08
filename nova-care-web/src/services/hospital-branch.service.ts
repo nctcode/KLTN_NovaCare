@@ -12,4 +12,9 @@ export const hospitalBranchService = {
     const response = await apiClient.get<any>(`/hospital-branches/${id}`);
     return response.data;
   },
+
+  async create(data: { hospitalId: string; name?: string; address: string; phone?: string; latitude?: number; longitude?: number }): Promise<HospitalBranch> {
+    const response = await apiClient.post<any>('/hospital-branches', data);
+    return response.data || response;
+  },
 };

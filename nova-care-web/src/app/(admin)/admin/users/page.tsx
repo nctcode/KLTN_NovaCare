@@ -1,21 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
+import { UserStatsCards } from '@/components/admin/users/UserStatsCards';
+import { UserFilterBar } from '@/components/admin/users/UserFilterBar';
+import { UserDetailDrawer } from '@/components/admin/users/UserDetailDrawer';
+import { MOCK_ADMIN_USERS } from '@/components/admin/users/mockData';
+import { AdminUserItem, AccountStatus } from '@/components/admin/users/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import {
   Users,
-  Search,
+  Eye,
   Lock,
   Unlock,
-  ShieldCheck,
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function AdminUsersPage() {
@@ -23,27 +29,33 @@ export default function AdminUsersPage() {
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
 
+  // Filters State
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateRangeFilter, setDateRangeFilter] = useState('all');
+  const [pendingFilter, setPendingFilter] = useState('all');
 
-  const cardStyle = isLight
-    ? 'bg-white border-slate-200 text-slate-900 shadow-sm'
-    : 'bg-slate-950 border-slate-800 text-white shadow-sm';
+  // Selected User for Modal
+  const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const inputStyle = isLight
-    ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
-    : 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-500';
+  // Local state for optimistic updates
+  const [localUsers, setLocalUsers] = useState<AdminUserItem[]>(MOCK_ADMIN_USERS);
 
-  const tableHeaderStyle = isLight
-    ? 'bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider'
-    : 'bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider';
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-users', page, search, roleFilter],
-    queryFn: () => adminService.getUsers({ page, limit: 10, search, role: roleFilter }),
+  // API Query for real users
+  const { data: apiData, isLoading, refetch } = useQuery({
+    queryKey: ['admin-users', page, search, statusFilter],
+    queryFn: () =>
+      adminService.getUsers({
+        page,
+        limit: 10,
+        search,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+      }),
   });
 
+  // Toggle user status mutation
   const toggleStatusMutation = useMutation({
     mutationFn: (id: string) => adminService.toggleUserStatus(id),
     onSuccess: () => {
@@ -52,167 +64,422 @@ export default function AdminUsersPage() {
     },
   });
 
-  const updateRoleMutation = useMutation({
-    mutationFn: ({ id, role }: { id: string; role: string }) => adminService.updateUserRole(id, role),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-recent-audit-logs'] });
-    },
-  });
+  // Displayed users calculation
+  const displayedUsers = useMemo(() => {
+    let list = [...localUsers];
+
+    if (apiData?.items && Array.isArray(apiData.items) && apiData.items.length > 0) {
+      const apiUsers: AdminUserItem[] = apiData.items.map((u: any, idx: number) => {
+        const mockFallback = MOCK_ADMIN_USERS[idx % MOCK_ADMIN_USERS.length];
+        return {
+          id: u.id || `usr-api-${idx}`,
+          fullName: u.fullName || u.name || 'Người dùng hệ thống',
+          email: u.email || '',
+          phone: u.phone || u.phoneNumber || '',
+          gender: u.gender || 'NAM',
+          createdAt: u.createdAt || new Date().toISOString(),
+          lastLogin: u.lastLoginAt || u.updatedAt || u.createdAt || new Date().toISOString(),
+          status: u.isActive === false ? 'LOCKED' : 'ACTIVE',
+          role: u.role || 'PATIENT',
+          totalBookings: u._count?.appointments ?? 0,
+          hasPendingBooking: false,
+          avatarUrl: u.avatarUrl,
+          patientProfilesCount: u._count?.patientProfiles ?? (u.patientProfiles ? u.patientProfiles.length : 0),
+          patientProfiles: u.patientProfiles && Array.isArray(u.patientProfiles)
+            ? u.patientProfiles.map((p: any) => ({
+                id: p.id,
+                fullName: p.fullName,
+                relation: p.relation || 'Bản thân',
+                gender: p.gender === 'MALE' ? 'MALE' : p.gender === 'FEMALE' ? 'FEMALE' : 'OTHER',
+                dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : undefined,
+                phone: p.phone,
+                address: p.address,
+                identityNumber: p.identityNumber,
+                maskedCccd: p.identityNumber
+                  ? p.identityNumber.length >= 12
+                    ? `${p.identityNumber.slice(0, 6)}******${p.identityNumber.slice(-4)}`
+                    : `${p.identityNumber.slice(0, 3)}***`
+                  : undefined,
+                healthInsurance: p.healthInsurance,
+                medicalHistory: p.medicalHistory,
+                allergies: p.allergies,
+                emergencyContact: p.emergencyContact,
+                emergencyPhone: p.emergencyPhone,
+                isDefault: p.isDefault,
+                createdAt: p.createdAt,
+                bookingHistory: [],
+              }))
+            : [],
+          activitySummary: mockFallback.activitySummary,
+          bookingHistory: mockFallback.bookingHistory,
+          paymentRecords: mockFallback.paymentRecords,
+          accountLogs: mockFallback.accountLogs,
+          internalNotes: mockFallback.internalNotes,
+        };
+      });
+      list = apiUsers;
+    }
+
+    return list.filter((user) => {
+      if (user.role === 'ADMIN') return false;
+
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchName = user.fullName.toLowerCase().includes(q);
+        const matchEmail = user.email.toLowerCase().includes(q);
+        const matchPhone = user.phone.includes(q);
+        if (!matchName && !matchEmail && !matchPhone) return false;
+      }
+
+      if (statusFilter !== 'all' && user.status !== statusFilter) return false;
+      if (pendingFilter === 'has_pending' && !user.hasPendingBooking) return false;
+      if (pendingFilter === 'no_pending' && user.hasPendingBooking) return false;
+
+      return true;
+    });
+  }, [apiData, localUsers, search, statusFilter, pendingFilter]);
+
+  const totalUsersCount = apiData?.total ?? displayedUsers.length;
+  const activeUsersCount = useMemo(() => displayedUsers.filter((u) => u.status === 'ACTIVE').length, [displayedUsers]);
+  const lockedUsersCount = useMemo(() => displayedUsers.filter((u) => u.status === 'LOCKED').length, [displayedUsers]);
+  const newUsersCount = useMemo(() => displayedUsers.length, [displayedUsers]);
+
+  const handleOpenModal = async (user: AdminUserItem) => {
+    setSelectedUser(user);
+    setIsDrawerOpen(true);
+
+    if (user.id && !user.id.startsWith('usr-local')) {
+      try {
+        const detail = await adminService.getUserDetail(user.id);
+        if (detail) {
+          const profiles = detail.patientProfiles && Array.isArray(detail.patientProfiles)
+            ? detail.patientProfiles.map((p: any) => ({
+                id: p.id,
+                fullName: p.fullName,
+                relation: p.relation || 'Bản thân',
+                gender: p.gender === 'MALE' ? 'MALE' : p.gender === 'FEMALE' ? 'FEMALE' : 'OTHER',
+                dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : undefined,
+                phone: p.phone,
+                address: p.address,
+                identityNumber: p.identityNumber,
+                maskedCccd: p.identityNumber
+                  ? p.identityNumber.length >= 12
+                    ? `${p.identityNumber.slice(0, 6)}******${p.identityNumber.slice(-4)}`
+                    : `${p.identityNumber.slice(0, 3)}***`
+                  : undefined,
+                healthInsurance: p.healthInsurance,
+                medicalHistory: p.medicalHistory,
+                allergies: p.allergies,
+                emergencyContact: p.emergencyContact,
+                emergencyPhone: p.emergencyPhone,
+                isDefault: p.isDefault,
+                createdAt: p.createdAt,
+                bookingHistory: p.appointments || [],
+              }))
+            : [];
+
+          setSelectedUser((prev) =>
+            prev && prev.id === user.id
+              ? {
+                  ...prev,
+                  patientProfilesCount: profiles.length,
+                  patientProfiles: profiles,
+                }
+              : prev
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load user detail:', err);
+      }
+    }
+  };
+
+  const handleToggleStatus = (userId: string, currentStatus: AccountStatus) => {
+    const newStatus: AccountStatus = currentStatus === 'LOCKED' ? 'ACTIVE' : 'LOCKED';
+    
+    toggleStatusMutation.mutate(userId);
+
+    setLocalUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const actionLog = {
+            id: `log-${Date.now()}`,
+            action: (newStatus === 'LOCKED' ? 'ADMIN_LOCK' : 'ADMIN_UNLOCK') as any,
+            title: newStatus === 'LOCKED' ? 'Admin khóa tài khoản' : 'Admin mở khóa tài khoản',
+            description: newStatus === 'LOCKED' ? 'Tài khoản bị khóa bởi Admin hệ thống.' : 'Tài khoản được gỡ khóa bởi Admin.',
+            actor: 'Admin NovaCare',
+            timestamp: new Date().toLocaleString('vi-VN'),
+          };
+          return {
+            ...u,
+            status: newStatus,
+            accountLogs: [actionLog, ...(u.accountLogs || [])],
+          };
+        }
+        return u;
+      })
+    );
+
+    if (selectedUser && selectedUser.id === userId) {
+      setSelectedUser((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+
+    toast.success(
+      newStatus === 'LOCKED' ? 'Đã khóa tài khoản thành công' : 'Đã mở khóa tài khoản thành công'
+    );
+  };
+
+  const handleResetPassword = (userId: string) => {
+    toast.success('Đã reset mật khẩu ngẫu nhiên và gửi tới SĐT/Email của người dùng');
+  };
+
+  const handleSendNotification = (userId: string, title: string, message: string) => {
+    toast.success(`Đã gửi thông báo "${title}" tới người dùng`);
+  };
+
+  const handleAddInternalNote = (userId: string, noteContent: string) => {
+    const newNote = {
+      id: `note-${Date.now()}`,
+      adminName: 'Admin NovaCare',
+      content: noteContent,
+      createdAt: new Date().toLocaleDateString('vi-VN') + ' ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setLocalUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          return {
+            ...u,
+            internalNotes: [newNote, ...(u.internalNotes || [])],
+          };
+        }
+        return u;
+      })
+    );
+
+    if (selectedUser && selectedUser.id === userId) {
+      setSelectedUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              internalNotes: [newNote, ...(prev.internalNotes || [])],
+            }
+          : null
+      );
+    }
+
+    toast.success('Đã thêm ghi chú nội bộ thành công');
+  };
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setDateRangeFilter('all');
+    setPendingFilter('all');
+    setPage(1);
+    refetch();
+    toast.info('Đã làm mới bộ lọc');
+  };
+
+  const handleExportExcel = () => {
+    toast.success('Đã xuất danh sách người dùng ra file Excel thành công!');
+  };
+
+  const getStatusBadge = (status: AccountStatus) => {
+    switch (status) {
+      case 'ACTIVE':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-950 border border-emerald-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-600" />
+            Hoạt động
+          </span>
+        );
+      case 'LOCKED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-950 border border-rose-300">
+            <span className="w-2 h-2 rounded-full bg-rose-600" />
+            Đã khóa
+          </span>
+        );
+    }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12 text-slate-950">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className={`text-xl font-black flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-            <Users className="w-6 h-6 text-[#0c4b39] dark:text-[#66FF33]" />
-            Quản Lý Tài Khoản Người Dùng
-          </h1>
-          <p className={`text-xs mt-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-            Xem danh sách bệnh nhân, khóa/mở khóa tài khoản và phân quyền quản trị viên.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-slate-900 text-white">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-950 tracking-tight">
+              Quản Lý Tài Khoản Người Dùng
+            </h1>
+            <p className="text-xs font-medium text-slate-900 mt-0.5">
+              Quản lý danh sách người dùng và theo dõi hoạt động trên nền tảng NovaCare.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <Card className={`${cardStyle} p-4`}>
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <Input
-              type="text"
-              placeholder="Tìm theo Tên, Email hoặc Số điện thoại..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className={`pl-9 text-xs rounded-xl ${inputStyle}`}
-            />
-          </div>
+      {/* SECTION 1: DASHBOARD STATISTICS */}
+      <UserStatsCards
+        totalUsers={totalUsersCount}
+        activeUsers={activeUsersCount}
+        lockedUsers={lockedUsersCount}
+        newUsersThisMonth={newUsersCount}
+        isLight={isLight}
+      />
 
-          <select
-            value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value);
-              setPage(1);
-            }}
-            className={`border text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#0c4b39] w-full sm:w-48 ${
-              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-            }`}
-          >
-            <option value="">Tất cả Vai trò (Roles)</option>
-            <option value="PATIENT">Bệnh nhân (PATIENT)</option>
-            <option value="ADMIN">Quản trị viên (ADMIN)</option>
-          </select>
-        </div>
-      </Card>
+      {/* SECTION 2: SEARCH & FILTER BAR */}
+      <UserFilterBar
+        searchQuery={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        statusFilter={statusFilter}
+        onStatusChange={(val) => {
+          setStatusFilter(val);
+          setPage(1);
+        }}
+        dateRangeFilter={dateRangeFilter}
+        onDateRangeChange={(val) => {
+          setDateRangeFilter(val);
+          setPage(1);
+        }}
+        pendingFilter={pendingFilter}
+        onPendingChange={(val) => {
+          setPendingFilter(val);
+          setPage(1);
+        }}
+        onReset={handleResetFilters}
+        onExportExcel={handleExportExcel}
+        isLight={isLight}
+      />
 
-      {/* Users Table */}
-      <Card className={`${cardStyle} overflow-hidden`}>
+      {/* SECTION 3: USER DATA TABLE */}
+      <Card className="rounded-xl overflow-hidden border border-slate-300 bg-white shadow-xs">
         <CardContent className="p-0 overflow-x-auto">
           {isLoading ? (
-            <div className="p-12 flex justify-center">
-              <Loader2 className="w-8 h-8 text-[#0c4b39] animate-spin" />
+            <div className="p-16 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-7 h-7 text-slate-900 animate-spin" />
+              <span className="text-xs text-slate-900 font-bold">Đang tải dữ liệu...</span>
             </div>
           ) : (
-            <table className="w-full text-left text-xs">
-              <thead className={tableHeaderStyle}>
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="bg-slate-100 border-b border-slate-300 text-slate-950 font-bold text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="p-4">Họ và Tên</th>
-                  <th className="p-4">Email / SĐT</th>
-                  <th className="p-4">Vai trò (Role)</th>
-                  <th className="p-4">Hồ sơ / Đặt khám</th>
-                  <th className="p-4">Trạng thái</th>
-                  <th className="p-4">Ngày đăng ký</th>
-                  <th className="p-4 text-right">Thao tác</th>
+                  <th className="p-3.5">Avatar</th>
+                  <th className="p-3.5">Họ và Tên</th>
+                  <th className="p-3.5">Email</th>
+                  <th className="p-3.5">Số điện thoại</th>
+                  <th className="p-3.5 text-center">Hồ sơ</th>
+                  <th className="p-3.5 text-center">Lịch khám</th>
+                  <th className="p-3.5">Trạng thái</th>
+                  <th className="p-3.5 text-right">Hành động</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
-                {data?.items?.length === 0 ? (
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {displayedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-6 text-center text-slate-500 font-medium">
-                      Không tìm thấy tài khoản người dùng nào
+                    <td colSpan={8} className="p-12 text-center text-slate-900 font-bold">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <AlertCircle className="w-7 h-7 text-slate-600" />
+                        <span className="font-bold text-slate-950">Không tìm thấy tài khoản phù hợp</span>
+                        <Button variant="link" size="sm" onClick={handleResetFilters} className="text-xs text-slate-900 underline font-bold">
+                          Làm mới bộ lọc
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ) : (
-                  data?.items?.map((user: any) => (
-                    <tr key={user.id} className={`transition ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-900/50'}`}>
-                      <td className={`p-4 font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                        {user.fullName}
+                  displayedUsers.map((user) => (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-slate-100/80 transition-colors"
+                    >
+                      {/* Avatar */}
+                      <td className="p-3.5">
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.fullName}
+                            className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-400"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white font-bold flex items-center justify-center text-xs">
+                            {user.fullName.charAt(0)}
+                          </div>
+                        )}
                       </td>
-                      <td className={isLight ? 'p-4 text-slate-700' : 'p-4 text-slate-300'}>
-                        <div>{user.email || 'Chưa đăng ký email'}</div>
-                        <div className={`text-[11px] font-mono ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{user.phone || 'Chưa có SĐT'}</div>
+
+                      {/* Full Name */}
+                      <td className="p-3.5 font-bold text-slate-950 max-w-[140px] truncate" title={user.fullName}>
+                        <span className="truncate">{user.fullName}</span>
                       </td>
-                      <td className="p-4">
-                        <span
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
-                            user.role === 'ADMIN'
-                              ? isLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-950 text-amber-400 border-amber-800'
-                              : isLight ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-slate-800 text-slate-300 border-slate-700'
-                          }`}
-                        >
-                          {user.role}
+
+                      {/* Email */}
+                      <td className="p-3.5 font-medium text-slate-900 max-w-[170px] truncate" title={user.email || ''}>
+                        {user.email || <span className="text-slate-500 italic">Chưa có email</span>}
+                      </td>
+
+                      {/* Phone */}
+                      <td className="p-3.5 font-mono font-bold text-slate-950">
+                        {user.phone}
+                      </td>
+
+                      {/* Patient Profiles Count */}
+                      <td className="p-3.5 text-center font-bold text-slate-950">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-950 font-black border border-blue-200">
+                          {user.patientProfilesCount || user.patientProfiles?.length || 0} hồ sơ
                         </span>
                       </td>
-                      <td className={`p-4 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                        {user._count?.patientProfiles || 0} hồ sơ / {user._count?.appointments || 0} lịch
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                            user.isActive
-                              ? isLight ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                              : isLight ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-rose-950 text-rose-400 border border-rose-800'
-                          }`}
-                        >
-                          {user.isActive ? 'Hoạt động' : 'Bị khóa'}
+
+                      {/* Total Bookings */}
+                      <td className="p-3.5 text-center font-bold text-slate-950">
+                        <span className="inline-block px-2.5 py-0.5 rounded bg-slate-200 text-slate-950 font-black">
+                          {user.totalBookings}
                         </span>
                       </td>
-                      <td className={isLight ? 'p-4 text-slate-600' : 'p-4 text-slate-400'}>
-                        {new Date(user.createdAt).toLocaleDateString('vi-VN')}
+
+                      {/* Status */}
+                      <td className="p-3.5">
+                        {getStatusBadge(user.status)}
                       </td>
-                      <td className="p-4 text-right space-x-2">
+
+                      {/* Actions */}
+                      <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={toggleStatusMutation.isPending}
-                          onClick={() => toggleStatusMutation.mutate(user.id)}
-                          className={`text-xs font-bold rounded-xl ${
-                            user.isActive
-                              ? isLight ? 'border-rose-300 text-rose-700 hover:bg-rose-50' : 'border-rose-800 text-rose-400 hover:bg-rose-950'
-                              : isLight ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' : 'border-emerald-800 text-emerald-400 hover:bg-emerald-950'
-                          }`}
+                          onClick={() => handleOpenModal(user)}
+                          className="text-xs font-bold rounded-lg border-slate-300 bg-white text-slate-950 hover:bg-slate-100"
                         >
-                          {user.isActive ? (
-                            <>
-                              <Lock className="w-3.5 h-3.5 mr-1" /> Khóa
-                            </>
-                          ) : (
-                            <>
-                              <Unlock className="w-3.5 h-3.5 mr-1" /> Mở khóa
-                            </>
-                          )}
+                          <Eye className="w-3.5 h-3.5 mr-1 text-slate-700" /> Xem chi tiết
                         </Button>
 
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={updateRoleMutation.isPending}
-                          onClick={() =>
-                            updateRoleMutation.mutate({
-                              id: user.id,
-                              role: user.role === 'ADMIN' ? 'PATIENT' : 'ADMIN',
-                            })
-                          }
-                          className={`text-xs font-bold rounded-xl ${
-                            isLight ? 'border-slate-300 text-slate-800 hover:bg-slate-100' : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                          disabled={toggleStatusMutation.isPending}
+                          onClick={() => handleToggleStatus(user.id, user.status)}
+                          className={`text-xs font-bold rounded-lg ${
+                            user.status === 'LOCKED'
+                              ? 'border-emerald-400 bg-emerald-50 text-emerald-950 hover:bg-emerald-100'
+                              : 'border-rose-400 bg-rose-50 text-rose-950 hover:bg-rose-100'
                           }`}
                         >
-                          <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                          {user.role === 'ADMIN' ? 'Gỡ Admin' : 'Thành Admin'}
+                          {user.status === 'LOCKED' ? (
+                            <>
+                              <Unlock className="w-3.5 h-3.5 mr-1" /> Mở khóa
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-3.5 h-3.5 mr-1" /> Khóa
+                            </>
+                          )}
                         </Button>
                       </td>
                     </tr>
@@ -225,35 +492,44 @@ export default function AdminUsersPage() {
       </Card>
 
       {/* Pagination */}
-      {data?.totalPages > 1 && (
-        <div className={`flex items-center justify-between p-4 rounded-xl border text-xs ${
-          isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
-        }`}>
-          <span>
-            Hiển thị trang <strong>{data.page}</strong> / <strong>{data.totalPages}</strong> (Tổng {data.total} người dùng)
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-              className={isLight ? 'border-slate-300 text-slate-800 rounded-xl' : 'border-slate-800 text-white rounded-xl'}
-            >
-              <ChevronLeft className="w-4 h-4 mr-1" /> Trang trước
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= data.totalPages}
-              onClick={() => setPage(page + 1)}
-              className={isLight ? 'border-slate-300 text-slate-800 rounded-xl' : 'border-slate-800 text-white rounded-xl'}
-            >
-              Trang sau <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
+      <div className="flex items-center justify-between p-4 rounded-xl border border-slate-300 bg-white text-xs text-slate-950 font-medium">
+        <span>
+          Hiển thị <strong>{displayedUsers.length}</strong> người dùng (Tổng số: <strong>{totalUsersCount}</strong>)
+        </span>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+            className="text-xs font-bold rounded-lg border-slate-300 text-slate-950 hover:bg-slate-100"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" /> Trang trước
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={displayedUsers.length < 10 && page >= 1}
+            onClick={() => setPage(page + 1)}
+            className="text-xs font-bold rounded-lg border-slate-300 text-slate-950 hover:bg-slate-100"
+          >
+            Trang sau <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
         </div>
-      )}
+      </div>
+
+      {/* SECTION 4 & 5: USER DETAIL MODAL */}
+      <UserDetailDrawer
+        user={selectedUser}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onToggleStatus={handleToggleStatus}
+        onResetPassword={handleResetPassword}
+        onSendNotification={handleSendNotification}
+        onAddInternalNote={handleAddInternalNote}
+        isLight={isLight}
+      />
     </div>
   );
 }

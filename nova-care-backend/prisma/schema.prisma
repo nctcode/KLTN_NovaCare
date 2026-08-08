@@ -62,6 +62,24 @@ enum NotificationType {
   SYSTEM
 }
 
+enum HospitalType {
+  PUBLIC
+  PRIVATE
+  INTERNATIONAL
+}
+
+enum PartnershipStatus {
+  ACTIVE
+  PAUSED
+  TERMINATED
+}
+
+enum DataSource {
+  MANUAL
+  EXCEL
+  API
+}
+
 // ============================================
 // Core Tables
 // ============================================
@@ -291,25 +309,39 @@ model AuditLog {
 // Medical / Catalog Tables
 // ============================================
 model Hospital {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  address     String?
-  phone       String?
-  description String?
-  logoUrl     String?
-  website     String?
-  email       String?
-  rating      Float    @default(0)
-  reviewCount Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  id               String            @id @default(uuid())
+  name             String            @unique
+  address          String?
+  city             String?
+  phone            String?
+  hotline          String?
+  emergencyHotline String?
+  description      String?
+  logoUrl          String?
+  coverImageUrl    String?
+  images           String[]          @default([])
+  website          String?
+  email            String?
+  operatingHours   String?
+  googleMapUrl     String?
+  latitude         Float?
+  longitude        Float?
+  establishedYear  Int?
+  bedCount         Int?
+  type             HospitalType      @default(PUBLIC)
+  status           PartnershipStatus @default(ACTIVE)
+  rating           Float             @default(0)
+  reviewCount      Int               @default(0)
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
 
-  branches   HospitalBranch[]
-  workPlaces DoctorWorkplace[]
-  services   MedicalService[]
-  packages   HealthPackage[]
+  branches            HospitalBranch[]
+  workPlaces          DoctorWorkplace[]
+  services            MedicalService[]
+  packages            HealthPackage[]
+  hospitalSpecialties HospitalSpecialty[]
 
   @@map("hospitals")
 }
@@ -327,58 +359,87 @@ model HospitalBranch {
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
 
-  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital   Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  workPlaces DoctorWorkplace[]
 
   @@map("hospital_branches")
 }
 
 model Specialty {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  icon        String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String   @unique
+  description   String?
+  icon          String?
+  coverImageUrl String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  workPlaces DoctorWorkplace[]
+  workPlaces          DoctorWorkplace[]
+  hospitalSpecialties HospitalSpecialty[]
+  packages            HealthPackage[]
 
   @@map("specialties")
 }
 
+model HospitalSpecialty {
+  id          String    @id @default(uuid())
+  hospitalId  String
+  specialtyId String
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  hospital  Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+
+  @@unique([hospitalId, specialtyId])
+  @@map("hospital_specialties")
+}
+
 model Doctor {
-  id            String   @id @default(uuid())
-  fullName      String
-  avatarUrl     String?
-  qualification String
-  experience    String?
-  bio           String?
-  rating        Float    @default(0)
-  reviewCount   Int      @default(0)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  deletedAt     DateTime?
+  id                String      @id @default(uuid())
+  fullName          String
+  title             String?
+  avatarUrl         String?
+  qualification     String
+  yearsOfExperience Int         @default(0)
+  gender            Gender?
+  bio               String?
+  externalId        String?     @unique
+  source            DataSource  @default(MANUAL)
+  rating            Float       @default(0)
+  reviewCount       Int         @default(0)
+  consultationCount Int         @default(0)
+  isActive          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  deletedAt         DateTime?
 
   workPlaces DoctorWorkplace[]
-  schedules  DoctorSchedule[]
 
   @@map("doctors")
 }
 
 model DoctorWorkplace {
-  id              String   @id @default(uuid())
+  id              String          @id @default(uuid())
   doctorId        String
   hospitalId      String
+  branchId        String?
   specialtyId     String
-  consultationFee Decimal  @default(0)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  consultationFee Decimal         @default(0)
+  position        String?
+  joinedAt        DateTime?
+  isPrimary       Boolean         @default(false)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  hospital  Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  doctor    Doctor          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital  Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  branch    HospitalBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  specialty Specialty       @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  schedules DoctorSchedule[]
   slots     AppointmentSlot[]
 
   @@unique([doctorId, hospitalId, specialtyId])
@@ -403,37 +464,43 @@ model MedicalService {
 }
 
 model HealthPackage {
-  id          String   @id @default(uuid())
-  hospitalId  String?
-  name        String
-  description String?
-  price       Decimal  @default(0)
-  duration    Int      @default(60)
-  services    Json?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String     @id @default(uuid())
+  hospitalId          String
+  specialtyId         String?
+  name                String
+  thumbnailUrl        String?
+  price               Decimal    @default(0)
+  originalPrice       Decimal?
+  description         String?
+  duration            Int        @default(60)
+  services            Json?
+  preparationNote     String?
+  estimatedResultTime String?
+  isActive            Boolean    @default(true)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
-  hospital Hospital? @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital  Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  specialty Specialty? @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
 
   @@map("health_packages")
 }
 
 model DoctorSchedule {
-  id         String   @id @default(uuid())
-  doctorId   String
-  dayOfWeek  Int
-  startTime  String
-  endTime    String
-  breakStart String?
-  breakEnd   String?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                String          @id @default(uuid())
+  doctorWorkplaceId String
+  dayOfWeek         Int
+  startTime         String
+  endTime           String
+  breakStart        String?
+  breakEnd          String?
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorWorkplace   DoctorWorkplace @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Cascade)
 
-  @@unique([doctorId, dayOfWeek])
+  @@unique([doctorWorkplaceId, dayOfWeek])
   @@map("doctor_schedules")
 }
 

@@ -30,4 +30,9 @@ export const doctorService = {
     const response = await apiClient.get<any>(`/doctor-workplaces/${id}`);
     return response.data;
   },
+
+  async createWorkplace(data: { doctorId: string; hospitalId: string; specialtyId: string; branchId?: string | null; consultationFee?: number; isPrimary?: boolean }) {
+    const response = await apiClient.post<any>('/doctor-workplaces', data);
+    return response.data || response;
+  },
 };

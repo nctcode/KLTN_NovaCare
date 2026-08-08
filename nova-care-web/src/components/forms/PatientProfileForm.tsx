@@ -27,26 +27,46 @@ import jsQR from 'jsqr';
 import { CreatePatientProfileDto } from '@/types/profile.types';
 
 interface PatientProfileFormProps {
+  initialData?: any;
   onSuccess: () => void;
 }
 
-export function PatientProfileForm({ onSuccess }: PatientProfileFormProps) {
+export function PatientProfileForm({ initialData, onSuccess }: PatientProfileFormProps) {
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
-    fullName: '',
-    phone: '',
-    gender: 'MALE' as 'MALE' | 'FEMALE' | 'OTHER',
-    dateOfBirth: '',
-    identityNumber: '',
-    address: '',
-    relation: 'Bản thân',
-    healthInsurance: '',
-    medicalHistory: '',
-    allergies: '',
-    emergencyContact: '',
-    emergencyPhone: '',
+    fullName: initialData?.fullName || '',
+    phone: initialData?.phone || '',
+    gender: (initialData?.gender || 'MALE') as 'MALE' | 'FEMALE' | 'OTHER',
+    dateOfBirth: initialData?.dateOfBirth ? initialData.dateOfBirth.split('T')[0] : '',
+    identityNumber: initialData?.identityNumber || '',
+    address: initialData?.address || '',
+    relation: initialData?.relation || 'Bản thân',
+    healthInsurance: initialData?.healthInsurance || '',
+    medicalHistory: initialData?.medicalHistory || '',
+    allergies: initialData?.allergies || '',
+    emergencyContact: initialData?.emergencyContact || '',
+    emergencyPhone: initialData?.emergencyPhone || '',
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        fullName: initialData.fullName || '',
+        phone: initialData.phone || '',
+        gender: (initialData.gender || 'MALE') as 'MALE' | 'FEMALE' | 'OTHER',
+        dateOfBirth: initialData.dateOfBirth ? initialData.dateOfBirth.split('T')[0] : '',
+        identityNumber: initialData.identityNumber || '',
+        address: initialData.address || '',
+        relation: initialData.relation || 'Bản thân',
+        healthInsurance: initialData.healthInsurance || '',
+        medicalHistory: initialData.medicalHistory || '',
+        allergies: initialData.allergies || '',
+        emergencyContact: initialData.emergencyContact || '',
+        emergencyPhone: initialData.emergencyPhone || '',
+      });
+    }
+  }, [initialData]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -98,8 +118,8 @@ export function PatientProfileForm({ onSuccess }: PatientProfileFormProps) {
             g.includes('NAM') || g === 'MALE'
               ? 'MALE'
               : g.includes('NỮ') || g.includes('NU') || g === 'FEMALE'
-              ? 'FEMALE'
-              : 'OTHER';
+                ? 'FEMALE'
+                : 'OTHER';
         }
         if (data.address) result.address = data.address;
         if (data.healthInsurance || data.bhyt) result.healthInsurance = data.healthInsurance || data.bhyt;
@@ -108,7 +128,7 @@ export function PatientProfileForm({ onSuccess }: PatientProfileFormProps) {
         if (data.emergencyContact) result.emergencyContact = data.emergencyContact;
         if (data.emergencyPhone) result.emergencyPhone = data.emergencyPhone;
         return Object.keys(result).length > 0 ? result : null;
-      } catch {}
+      } catch { }
     }
 
     // 2. CCCD Pipe Format: CCCD|CMND|HọTen|DDMMYYYY|GiớiTính|ĐịaChỉ|NgàyCấp
@@ -265,14 +285,17 @@ export function PatientProfileForm({ onSuccess }: PatientProfileFormProps) {
   };
 
   const mutation = useMutation({
-    mutationFn: profileService.create,
+    mutationFn: (data: CreatePatientProfileDto) =>
+      initialData?.id
+        ? profileService.update(initialData.id, data)
+        : profileService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
-      toast.success('Tạo hồ sơ bệnh nhân thành công!');
+      toast.success(initialData?.id ? 'Cập nhật hồ sơ bệnh nhân thành công!' : 'Tạo hồ sơ bệnh nhân thành công!');
       onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo hồ sơ');
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi lưu hồ sơ');
     },
   });
 
@@ -431,9 +454,8 @@ export function PatientProfileForm({ onSuccess }: PatientProfileFormProps) {
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
               placeholder="Ví dụ: NGUYỄN VĂN AN"
-              className={`bg-white border-slate-300 font-semibold text-slate-900 focus-visible:ring-slate-900 ${
-                errors.fullName ? 'border-red-500' : ''
-              }`}
+              className={`bg-white border-slate-300 font-semibold text-slate-900 focus-visible:ring-slate-900 ${errors.fullName ? 'border-red-500' : ''
+                }`}
             />
             {errors.fullName && <p className="text-xs text-red-500 font-medium">{errors.fullName}</p>}
           </div>
@@ -467,9 +489,8 @@ export function PatientProfileForm({ onSuccess }: PatientProfileFormProps) {
                 type="date"
                 value={formData.dateOfBirth}
                 onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                className={`bg-white border-slate-300 font-semibold text-slate-900 focus-visible:ring-slate-900 ${
-                  errors.dateOfBirth ? 'border-red-500' : ''
-                }`}
+                className={`bg-white border-slate-300 font-semibold text-slate-900 focus-visible:ring-slate-900 ${errors.dateOfBirth ? 'border-red-500' : ''
+                  }`}
               />
               {errors.dateOfBirth && <p className="text-xs text-red-500 font-medium">{errors.dateOfBirth}</p>}
             </div>

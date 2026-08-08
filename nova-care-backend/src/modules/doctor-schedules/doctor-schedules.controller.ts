@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpStatus,
 } from '@nestjs/common';
@@ -30,6 +31,46 @@ export class DoctorSchedulesController {
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Tạo lịch làm việc thành công',
+      data,
+    };
+  }
+
+  @Public()
+  @Get()
+  @ApiOperation({ summary: 'Lấy danh sách tất cả lịch làm việc cố định (Lọc theo bác sĩ, bệnh viện, cơ sở, chuyên khoa, v.v.)' })
+  async findAll(
+    @Query('search') search?: string,
+    @Query('hospitalId') hospitalId?: string,
+    @Query('branchId') branchId?: string,
+    @Query('specialtyId') specialtyId?: string,
+    @Query('doctorId') doctorId?: string,
+    @Query('isActive') isActive?: string,
+    @Query('dayOfWeek') dayOfWeek?: string,
+  ) {
+    const data = await this.service.findAll({
+      search,
+      hospitalId,
+      branchId,
+      specialtyId,
+      doctorId,
+      isActive,
+      dayOfWeek: dayOfWeek !== undefined && dayOfWeek !== '' ? parseInt(dayOfWeek, 10) : undefined,
+    });
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy danh sách lịch làm việc thành công',
+      data,
+    };
+  }
+
+  @Public()
+  @Get('workplace/:doctorWorkplaceId')
+  @ApiOperation({ summary: 'Lấy lịch làm việc cố định theo nơi làm việc của bác sĩ' })
+  async findByWorkplace(@Param('doctorWorkplaceId') doctorWorkplaceId: string) {
+    const data = await this.service.findByWorkplace(doctorWorkplaceId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy danh sách lịch làm việc thành công',
       data,
     };
   }

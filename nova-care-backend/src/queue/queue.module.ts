@@ -28,4 +28,4 @@ import { EmailProcessor, PushProcessor } from './email.processor';
   providers: [QueueService, ExpireAppointmentsProcessor, EmailProcessor, PushProcessor],
   exports: [BullModule, QueueService],
 })
-export class QueueModule {}
+export class QueueModule { }

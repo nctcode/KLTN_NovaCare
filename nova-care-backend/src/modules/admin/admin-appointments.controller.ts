@@ -26,6 +26,12 @@ import { AppointmentStatus } from '@prisma/client';
 export class AdminAppointmentsController {
   constructor(private readonly service: AdminAppointmentsService) {}
 
+  @Get('stats')
+  @ApiOperation({ summary: 'Thống kê tổng quan lịch khám hôm nay và trạng thái' })
+  getStats() {
+    return this.service.getStats();
+  }
+
   @Get()
   @ApiOperation({ summary: 'Danh sách tất cả lịch khám (Phân trang, tìm kiếm, lọc đa chiều)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -33,14 +39,22 @@ export class AdminAppointmentsController {
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, enum: AppointmentStatus })
   @ApiQuery({ name: 'hospitalId', required: false, type: String })
+  @ApiQuery({ name: 'branchId', required: false, type: String })
   @ApiQuery({ name: 'doctorId', required: false, type: String })
+  @ApiQuery({ name: 'specialtyId', required: false, type: String })
+  @ApiQuery({ name: 'medicalServiceId', required: false, type: String })
+  @ApiQuery({ name: 'date', required: false, type: String })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('status') status?: AppointmentStatus,
     @Query('hospitalId') hospitalId?: string,
+    @Query('branchId') branchId?: string,
     @Query('doctorId') doctorId?: string,
+    @Query('specialtyId') specialtyId?: string,
+    @Query('medicalServiceId') medicalServiceId?: string,
+    @Query('date') date?: string,
   ) {
     return this.service.findAll({
       page: page ? parseInt(page, 10) : 1,
@@ -48,7 +62,11 @@ export class AdminAppointmentsController {
       search,
       status,
       hospitalId,
+      branchId,
       doctorId,
+      specialtyId,
+      medicalServiceId,
+      date,
     });
   }
 

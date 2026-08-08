@@ -23,11 +23,8 @@ export class AdminUsersService {
 
     const where: any = {
       deletedAt: null,
+      role: params.role || Role.PATIENT,
     };
-
-    if (params.role) {
-      where.role = params.role;
-    }
 
     if (params.isActive !== undefined) {
       where.isActive = params.isActive;
@@ -56,6 +53,7 @@ export class AdminUsersService {
           isActive: true,
           lastLoginAt: true,
           createdAt: true,
+          patientProfiles: true,
           _count: {
             select: { patientProfiles: true, appointments: true },
           },

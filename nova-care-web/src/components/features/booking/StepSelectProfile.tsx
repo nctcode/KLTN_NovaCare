@@ -113,11 +113,10 @@ export function StepSelectProfile({ onNext, onBack }: StepSelectProfileProps) {
                 <Card
                   key={profile.id}
                   onClick={() => handleSelectProfile(profile.id)}
-                  className={`cursor-pointer transition-all duration-200 rounded-2xl relative overflow-hidden bg-white ${
-                    isSelected
+                  className={`cursor-pointer transition-all duration-200 rounded-2xl relative overflow-hidden bg-white ${isSelected
                       ? 'border-2 border-[#4caf50] bg-[#4caf50]/[0.02] shadow-sm ring-2 ring-[#4caf50]/20'
                       : 'border border-gray-200 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-2">

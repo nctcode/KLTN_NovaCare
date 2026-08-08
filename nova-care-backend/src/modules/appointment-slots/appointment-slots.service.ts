@@ -59,15 +59,15 @@ export class AppointmentSlotsService {
     slotDuration: number = 30, // phút
     capacity: number = 1
   ): Promise<{ created: number; failed: number }> {
-    // Lấy lịch làm việc của bác sĩ
+    // Lấy lịch làm việc của nơi làm việc
     const schedules = await this.prisma.doctorSchedule.findMany({
       where: {
-        doctorId,
+        doctorWorkplaceId: workplaceId,
         isActive: true,
       },
     });
     if (schedules.length === 0) {
-      throw new BadRequestException('Bác sĩ chưa có lịch làm việc cố định');
+      throw new BadRequestException('Nơi làm việc chưa có lịch làm việc cố định');
     }
 
     // Tạo map dayOfWeek -> schedule
