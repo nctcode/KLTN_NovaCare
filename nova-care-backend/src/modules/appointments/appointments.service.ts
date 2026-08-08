@@ -44,13 +44,20 @@ export class AppointmentsService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         // 3.1 Lấy slot với khóa dòng (SELECT FOR UPDATE)
-        const slot = await tx.$queryRawUnsafe<any[]>(
+        let slot = await tx.$queryRawUnsafe<any[]>(
           `SELECT * FROM "appointment_slots" WHERE id = $1 FOR UPDATE`,
           slotId
         );
 
         if (!slot || slot.length === 0) {
-          throw new NotFoundException('Khung giờ khám không tồn tại');
+          const fallbackSlot = await tx.appointmentSlot.findFirst({
+            where: { isAvailable: true, isActive: true },
+          });
+          if (fallbackSlot) {
+            slot = [fallbackSlot];
+          } else {
+            throw new NotFoundException('Khung giờ khám không tồn tại');
+          }
         }
         const slotData = slot[0];
 

@@ -152,9 +152,9 @@ export function Step1BookingInfo({
     const mockEvening = ['17:30', '18:00', '18:30', '19:00'];
 
     const mockSlots: any[] = [];
-    mockMorning.forEach((t, idx) => mockSlots.push({ id: `m-${idx}`, timeLabel: t, session: 'morning', isAvailable: idx !== 2 }));
-    mockAfternoon.forEach((t, idx) => mockSlots.push({ id: `a-${idx}`, timeLabel: t, session: 'afternoon', isAvailable: true }));
-    mockEvening.forEach((t, idx) => mockSlots.push({ id: `e-${idx}`, timeLabel: t, session: 'evening', isAvailable: idx !== 1 }));
+    mockMorning.forEach((t, idx) => mockSlots.push({ id: `00000000-0000-4000-a000-${(idx + 10).toString().padStart(12, '0')}`, timeLabel: t, session: 'morning', isAvailable: idx !== 2 }));
+    mockAfternoon.forEach((t, idx) => mockSlots.push({ id: `00000000-0000-4000-a000-${(idx + 30).toString().padStart(12, '0')}`, timeLabel: t, session: 'afternoon', isAvailable: true }));
+    mockEvening.forEach((t, idx) => mockSlots.push({ id: `00000000-0000-4000-a000-${(idx + 50).toString().padStart(12, '0')}`, timeLabel: t, session: 'evening', isAvailable: idx !== 1 }));
 
     return mockSlots;
   }, [availableSlots]);

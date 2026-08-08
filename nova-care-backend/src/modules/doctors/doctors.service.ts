@@ -172,7 +172,7 @@ export class DoctorsService {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return this.prisma.appointmentSlot.findMany({
+    let slots = await this.prisma.appointmentSlot.findMany({
       where: {
         doctorWorkplaceId,
         doctorWorkplace: {
@@ -193,5 +193,73 @@ export class DoctorsService {
         },
       },
     });
+
+    // If no slots exist for this workplace on this date, generate them on-the-fly
+    if (slots.length === 0) {
+      const times = [
+        { start: '07:30', end: '08:00' },
+        { start: '08:00', end: '08:30' },
+        { start: '08:30', end: '09:00' },
+        { start: '09:00', end: '09:30' },
+        { start: '09:30', end: '10:00' },
+        { start: '10:00', end: '10:30' },
+        { start: '10:30', end: '11:00' },
+        { start: '13:30', end: '14:00' },
+        { start: '14:00', end: '14:30' },
+        { start: '14:30', end: '15:00' },
+        { start: '15:00', end: '15:30' },
+        { start: '15:30', end: '16:00' },
+        { start: '16:00', end: '16:30' },
+        { start: '17:30', end: '18:00' },
+        { start: '18:00', end: '18:30' },
+        { start: '18:30', end: '19:00' },
+      ];
+
+      const newSlotsData: any[] = [];
+      const baseDate = new Date(date);
+
+      for (const t of times) {
+        const [sH, sM] = t.start.split(':').map(Number);
+        const [eH, eM] = t.end.split(':').map(Number);
+
+        const startTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), sH, sM);
+        const endTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), eH, eM);
+
+        newSlotsData.push({
+          doctorWorkplaceId,
+          startTime,
+          endTime,
+          capacity: 1,
+          bookedCount: 0,
+          isAvailable: true,
+          isActive: true,
+        });
+      }
+
+      await this.prisma.appointmentSlot.createMany({
+        data: newSlotsData,
+      });
+
+      // Query generated slots
+      slots = await this.prisma.appointmentSlot.findMany({
+        where: {
+          doctorWorkplaceId,
+          startTime: { gte: startOfDay, lte: endOfDay },
+          isAvailable: true,
+          isActive: true,
+        },
+        orderBy: { startTime: 'asc' },
+        include: {
+          doctorWorkplace: {
+            include: {
+              doctor: true,
+              specialty: true,
+            },
+          },
+        },
+      });
+    }
+
+    return slots;
   }
 }

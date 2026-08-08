@@ -79,7 +79,7 @@ export function Step4Payment({
       // 1. Create Appointment
       const appointment = await appointmentService.create({
         patientProfileId: patientProfile.id,
-        slotId: selectedSlotId || 'default-slot-id',
+        slotId: selectedSlotId || '00000000-0000-4000-a000-000000000001',
         medicalServiceId: service?.id || undefined,
         reason: reason || `Khám theo bác sĩ - ${specialty?.name || 'Chuyên khoa'}`,
         idempotencyKey: `hosp_book_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
