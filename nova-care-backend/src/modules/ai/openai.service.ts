@@ -47,18 +47,24 @@ export class OpenAIService {
   private readonly temperature: number;
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('app.openai.apiKey');
+    const apiKey = this.configService.get<string>('app.openai.apiKey') || process.env.OPENAI_API_KEY;
+    const baseUrl = this.configService.get<string>('app.openai.baseUrl') || process.env.OPENAI_BASE_URL || 'https://platform.beeknoee.com/api/v1';
+
     if (!apiKey) {
       this.logger.warn('OPENAI_API_KEY chưa được cấu hình. AI sẽ chạy ở chế độ fallback.');
+    } else {
+      this.logger.log(`Khởi tạo OpenAI Client với Beeknoee API BaseURL: ${baseUrl}`);
     }
+
     this.client = new OpenAI({
       apiKey: apiKey || 'dummy-key',
+      baseURL: baseUrl,
       timeout: 30000,
       maxRetries: 2,
     });
-    this.modelVision = this.configService.get<string>('app.openai.modelVision') || 'gpt-4o';
-    this.modelChat = this.configService.get<string>('app.openai.modelChat') || 'gpt-4o';
-    this.modelWhisper = this.configService.get<string>('app.openai.modelWhisper') || 'whisper-1';
+    this.modelVision = this.configService.get<string>('app.openai.modelVision') || process.env.OPENAI_MODEL_VISION || 'gpt-5.4';
+    this.modelChat = this.configService.get<string>('app.openai.modelChat') || process.env.OPENAI_MODEL_CHAT || 'gpt-5.4';
+    this.modelWhisper = this.configService.get<string>('app.openai.modelWhisper') || process.env.OPENAI_MODEL_WHISPER || 'whisper-1';
     this.maxTokens = this.configService.get<number>('app.openai.maxTokens') || 2000;
     this.temperature = this.configService.get<number>('app.openai.temperature') || 0.3;
   }
