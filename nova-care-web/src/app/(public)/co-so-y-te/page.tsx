@@ -227,7 +227,7 @@ function HospitalsPageContent() {
                         Chi tiết
                       </Link>
                       <Link
-                        href={`/bac-si?hospitalId=${hospital.id}`}
+                        href={`/dat-kham-co-so?hospitalId=${hospital.id}`}
                         className="flex-1 text-center py-2.5 px-3 bg-[#0c4b39] hover:bg-[#083327] active:bg-[#06241c] text-white font-bold rounded-xl text-xs transition shadow-xs cursor-pointer"
                       >
                         Đặt lịch ngay

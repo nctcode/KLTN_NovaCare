@@ -301,7 +301,7 @@ export default function HospitalDetailPage({ params }: PageProps) {
                   asChild
                   className="w-full md:w-auto bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs sm:text-sm h-12 px-6 rounded-2xl shadow-md flex items-center justify-center gap-2 transition-transform active:scale-95"
                 >
-                  <Link href={`/dat-lich?hospitalId=${hospital.id}`}>
+                  <Link href={`/dat-kham-co-so?hospitalId=${hospital.id}`}>
                     <Calendar className="w-4 h-4" />
                     Đặt lịch khám ngay
                   </Link>
