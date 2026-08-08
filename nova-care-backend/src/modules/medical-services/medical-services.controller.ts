@@ -38,10 +38,13 @@ export class MedicalServicesController {
   @Public()
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách dịch vụ khám' })
-  async findAll(@Query('hospitalId') hospitalId?: string) {
+  async findAll(
+    @Query('hospitalId') hospitalId?: string,
+    @Query('specialtyId') specialtyId?: string,
+  ) {
     let data;
     if (hospitalId) {
-      data = await this.service.findByHospital(hospitalId);
+      data = await this.service.findByHospital(hospitalId, specialtyId);
     } else {
       data = await this.service.findAll();
     }

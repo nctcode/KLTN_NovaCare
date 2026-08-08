@@ -164,29 +164,8 @@ function HospitalBookingPageContent() {
               onSelectMode={(mode) => setBookingMode(mode)}
             />
 
-            {/* IF MODE IS 'doctor' -> RENDER 4-STEP WIZARD */}
-            {bookingMode === 'doctor' && (
-              <DoctorBookingWizard hospital={selectedHospital} />
-            )}
-
-            {/* IF MODE IS 'service' or 'standard' -> INFORMATIONAL MESSAGE & DIRECT WIZARD ACCESS */}
-            {bookingMode !== 'doctor' && (
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-8 text-center space-y-4 shadow-sm">
-                <Sparkles className="w-10 h-10 text-[#0c4b39] mx-auto" />
-                <h3 className="text-lg font-black text-slate-900">
-                  {bookingMode === 'service' ? 'Đã Chọn Khám Dịch Vụ / Xét Nghiệm' : 'Đã Chọn Khám Thường Phân Luồng'}
-                </h3>
-                <p className="text-xs text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
-                  Để chọn bác sĩ khám trực tiếp và đặt khung giờ ưu tiên, vui lòng chuyển sang hình thức <strong>"Khám theo Bác sĩ"</strong>.
-                </p>
-                <Button
-                  onClick={() => setBookingMode('doctor')}
-                  className="bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs h-11 px-6 rounded-2xl"
-                >
-                  Chuyển sang Khám theo Bác sĩ (Khuyên dùng)
-                </Button>
-              </div>
-            )}
+            {/* RENDER 4-STEP WIZARD FOR ALL BOOKING MODES */}
+            <DoctorBookingWizard hospital={selectedHospital} bookingMode={bookingMode} />
           </div>
         )}
 

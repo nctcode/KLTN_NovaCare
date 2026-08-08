@@ -105,6 +105,7 @@ export interface DoctorSearchParams {
 export interface MedicalService {
   id: string;
   hospitalId: string;
+  specialtyId?: string;
   name: string;
   description?: string;
   price: number;

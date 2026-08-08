@@ -9,16 +9,21 @@ import { Hospital, Specialty, Doctor, MedicalService } from '@/types';
 import { PatientProfile } from '@/types/profile.types';
 import { Stethoscope, Users, CheckCircle2, CreditCard, ChevronRight } from 'lucide-react';
 
+import { ClinicRoom } from './RoomSelectModal';
+import { HospitalBookingMode } from './BookingTypeStep';
+
 interface DoctorBookingWizardProps {
   hospital: Hospital;
+  bookingMode?: HospitalBookingMode;
 }
 
-export function DoctorBookingWizard({ hospital }: DoctorBookingWizardProps) {
+export function DoctorBookingWizard({ hospital, bookingMode = 'doctor' }: DoctorBookingWizardProps) {
   // Wizard current step: 1 | 2 | 3 | 4
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Form selections state
   const [selectedSpecialty, setSelectedSpecialty] = useState<Specialty | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<ClinicRoom | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedService, setSelectedService] = useState<MedicalService | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -88,8 +93,11 @@ export function DoctorBookingWizard({ hospital }: DoctorBookingWizardProps) {
         {step === 1 && (
           <Step1BookingInfo
             hospital={hospital}
+            bookingMode={bookingMode}
             selectedSpecialty={selectedSpecialty}
             setSelectedSpecialty={setSelectedSpecialty}
+            selectedRoom={selectedRoom}
+            setSelectedRoom={setSelectedRoom}
             selectedDoctor={selectedDoctor}
             setSelectedDoctor={setSelectedDoctor}
             selectedService={selectedService}
@@ -117,8 +125,10 @@ export function DoctorBookingWizard({ hospital }: DoctorBookingWizardProps) {
           <Step3ConfirmInfo
             hospital={hospital}
             specialty={selectedSpecialty}
+            room={selectedRoom}
             doctor={selectedDoctor}
             service={selectedService}
+            bookingMode={bookingMode}
             selectedDate={selectedDate}
             selectedSlotTime={selectedSlotTime}
             patientProfile={selectedProfile}

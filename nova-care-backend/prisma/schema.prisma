@@ -378,6 +378,7 @@ model Specialty {
   workPlaces          DoctorWorkplace[]
   hospitalSpecialties HospitalSpecialty[]
   packages            HealthPackage[]
+  services            MedicalService[]
 
   @@map("specialties")
 }
@@ -449,6 +450,7 @@ model DoctorWorkplace {
 model MedicalService {
   id          String   @id @default(uuid())
   hospitalId  String
+  specialtyId String?
   name        String
   description String?
   price       Decimal  @default(0)
@@ -457,7 +459,8 @@ model MedicalService {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  hospital     Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital     Hospital   @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  specialty    Specialty? @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
   appointments Appointment[]
 
   @@map("medical_services")

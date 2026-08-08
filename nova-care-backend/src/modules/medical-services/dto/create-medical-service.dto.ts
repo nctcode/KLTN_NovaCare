@@ -10,6 +10,15 @@ export class CreateMedicalServiceDto {
   hospitalId: string;
 
   @ApiProperty({
+    example: 'uuid-of-specialty',
+    description: 'ID chuyên khoa (tùy chọn)',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  specialtyId?: string;
+
+  @ApiProperty({
     example: 'Khám tổng quát',
     description: 'Tên dịch vụ y tế',
   })

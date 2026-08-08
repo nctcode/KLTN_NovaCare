@@ -8,39 +8,44 @@ export class MedicalServicesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createDto: CreateMedicalServiceDto) {
-    const { hospitalId, name, description, price, duration, isActive } = createDto;
+    const { hospitalId, specialtyId, name, description, price, duration, isActive } = createDto;
     return this.prisma.medicalService.create({
       data: {
         hospitalId,
+        specialtyId,
         name,
         description,
         price: price !== undefined ? price : undefined,
         duration: duration !== undefined ? duration : undefined,
         isActive,
       },
-      include: { hospital: true },
+      include: { hospital: true, specialty: true },
     });
   }
 
   async findAll() {
     return this.prisma.medicalService.findMany({
       where: { isActive: true },
-      include: { hospital: true },
+      include: { hospital: true, specialty: true },
       orderBy: { name: 'asc' },
     });
   }
 
-  async findByHospital(hospitalId: string) {
+  async findByHospital(hospitalId: string, specialtyId?: string) {
+    const where: any = { hospitalId, isActive: true };
+    if (specialtyId) {
+      where.specialtyId = specialtyId;
+    }
     return this.prisma.medicalService.findMany({
-      where: { hospitalId, isActive: true },
-      include: { hospital: true },
+      where,
+      include: { hospital: true, specialty: true },
     });
   }
 
   async findOne(id: string) {
     const service = await this.prisma.medicalService.findUnique({
       where: { id },
-      include: { hospital: true },
+      include: { hospital: true, specialty: true },
     });
     if (!service) {
       throw new NotFoundException('Dịch vụ khám không tồn tại');
@@ -50,18 +55,19 @@ export class MedicalServicesService {
 
   async update(id: string, updateDto: UpdateMedicalServiceDto) {
     await this.findOne(id);
-    const { hospitalId, name, description, price, duration, isActive } = updateDto;
+    const { hospitalId, specialtyId, name, description, price, duration, isActive } = updateDto;
     return this.prisma.medicalService.update({
       where: { id },
       data: {
         hospitalId,
+        specialtyId,
         name,
         description,
         price: price !== undefined ? price : undefined,
         duration: duration !== undefined ? duration : undefined,
         isActive,
       },
-      include: { hospital: true },
+      include: { hospital: true, specialty: true },
     });
   }
 

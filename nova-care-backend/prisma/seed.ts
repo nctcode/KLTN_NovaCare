@@ -548,30 +548,72 @@ async function main() {
   console.log(`✅ Successfully created ${createdDoctors.length} Doctors and ${createdWorkplaces.length} Doctor Workplaces (3 per Specialty/Hospital)!`);
 
   // ==========================================
-  // 8. Medical Services & Health Packages
+  // 8. Medical Services & Health Packages (Specialty-mapped)
   // ==========================================
-  const servicesData = [
-    { name: 'Khám Nội tổng quát', description: 'Tư vấn và khám lâm sàng hệ thống cơ quan nội tạng', price: 300000, duration: 30 },
-    { name: 'Khám chuyên khoa sâu', description: 'Khám và lập phác đồ điều trị chuyên sâu cùng Bác sĩ chuyên khoa II', price: 500000, duration: 45 },
-    { name: 'Siêu âm tim Doppler màu', description: 'Đánh giá cấu trúc tim, van tim và dòng máu chuyển động', price: 450000, duration: 30 },
-    { name: 'Đo điện tâm đồ 12 chuyển đạo', description: 'Ghi lại hoạt động điện thế của tim để phát hiện rối loạn nhịp', price: 200000, duration: 15 },
-    { name: 'Nội soi dạ dày không đau', description: 'Nội soi đường tiêu hóa trên dưới sự hỗ trợ của gây mê ngắn', price: 1200000, duration: 45 },
-    { name: 'Xét nghiệm máu tổng quát (24 chỉ số)', description: 'Phân tích chức năng gan, thận, mỡ máu, đường huyết và công thức máu', price: 650000, duration: 20 },
-  ];
+  const SPECIALTY_SERVICES_MAP: Record<string, Array<{ name: string; description: string; price: number; duration: number }>> = {
+    'Tim mạch': [
+      { name: 'Siêu âm tim Doppler màu', description: 'Đánh giá cấu trúc tim, van tim và dòng máu chuyển động', price: 450000, duration: 30 },
+      { name: 'Đo điện tâm đồ 12 chuyển đạo', description: 'Ghi lại hoạt động điện thế của tim để phát hiện rối loạn nhịp', price: 200000, duration: 15 },
+      { name: 'Đặt Holter điện tâm đồ 24h', description: 'Theo dõi nhịp tim liên tục trong 24 giờ để tầm soát ẩn bệnh', price: 650000, duration: 30 },
+    ],
+    'Thần kinh': [
+      { name: 'Đo điện não EEG chuẩn hóa', description: 'Tầm soát động kinh, rối loạn giấc ngủ và rối loạn sóng điện não', price: 350000, duration: 30 },
+      { name: 'Chụp cộng hưởng từ MRI Sọ não', description: 'Chẩn đoán u mở, phình mạch và đột quỵ sớm', price: 2200000, duration: 45 },
+    ],
+    'Nội tiết': [
+      { name: 'Xét nghiệm đường huyết & HbA1c', description: 'Tầm soát đái tháo đường và theo dõi chỉ số đường huyết 3 tháng', price: 250000, duration: 15 },
+      { name: 'Siêu âm tuyến giáp Doppler', description: 'Phát hiện nhân giáp, bướu cổ và viêm tuyến giáp', price: 300000, duration: 20 },
+    ],
+    'Nhi khoa': [
+      { name: 'Khám & tư vấn dinh dưỡng Nhi khoa toàn diện', description: 'Theo dõi biểu đồ tăng trưởng và vi chất cho trẻ', price: 250000, duration: 30 },
+    ],
+    'Sản phụ khoa': [
+      { name: 'Siêu âm thai 4D HD-Live công nghệ cao', description: 'Dựng hình ảnh thai nhi sống động và tầm soát dị tật hình thái', price: 400000, duration: 30 },
+      { name: 'Tầm soát ung thư cổ tử cung Pap Smear', description: 'Xét nghiệm phát hiện tế bào bất thường tiền ung thư', price: 350000, duration: 20 },
+    ],
+    'Cơ xương khớp': [
+      { name: 'Siêu âm khớp gối & khớp vai chuyên sâu', description: 'Đánh giá tổn thương gân, dây chằng và sụn khớp', price: 350000, duration: 20 },
+    ],
+    'Tai Mũi Họng': [
+      { name: 'Nội soi Tai Mũi Họng ống mềm không đau', description: 'Quan sát chi tiết niêm mạc vòm họng, dây thanh âm và tai', price: 300000, duration: 20 },
+    ],
+    'Mắt': [
+      { name: 'Đo khúc xạ & soi đáy mắt tự động', description: 'Kiểm tra thị lực, nhãn áp và tật khúc xạ học đường', price: 180000, duration: 15 },
+    ],
+    'Răng Hàm Mặt': [
+      { name: 'Cạo vôi răng & đánh bóng siêu âm', description: 'Làm sạch mảng bám, ngừa viêm nha chu và hôi miệng', price: 200000, duration: 30 },
+    ],
+    'Da liễu': [
+      { name: 'Soi da vi phẫu & tư vấn điều trị mụn/nám', description: 'Phân tích sắc tố da, độ ẩm và tầng collagen dưới da', price: 250000, duration: 20 },
+    ],
+    'Tiêu hóa': [
+      { name: 'Nội soi dạ dày NBI công nghệ Nhật Bản', description: 'Phát hiện sớm vi khuẩn HP và tổn thương dạ dày nhỏ nhất', price: 1200000, duration: 35 },
+    ],
+    'Hô hấp': [
+      { name: 'Đo chức năng hô hấp (Phế định đồ)', description: 'Chẩn đoán hen suyễn, bệnh phổi tắc nghẽn mãn tính COPD', price: 300000, duration: 20 },
+    ],
+  };
 
   const medicalServices = [];
   for (const hosp of hospitals) {
-    for (const s of servicesData) {
-      const created = await prisma.medicalService.create({
-        data: {
-          ...s,
-          hospitalId: hosp.id,
-        },
-      });
-      medicalServices.push(created);
+    for (const spec of specialties) {
+      const servicesList = SPECIALTY_SERVICES_MAP[spec.name] || [
+        { name: `Khám chuyên khoa ${spec.name}`, description: `Tư vấn và khám y tế chuyên sâu ${spec.name}`, price: 300000, duration: 30 }
+      ];
+
+      for (const s of servicesList) {
+        const created = await prisma.medicalService.create({
+          data: {
+            ...s,
+            hospitalId: hosp.id,
+            specialtyId: spec.id,
+          },
+        });
+        medicalServices.push(created);
+      }
     }
   }
-  console.log(`✅ Created ${medicalServices.length} Medical Services`);
+  console.log(`✅ Created ${medicalServices.length} Specialty-mapped Medical Services`);
 
   const packagesData = [
     {

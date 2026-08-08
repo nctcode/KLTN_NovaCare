@@ -27,11 +27,16 @@ import { Hospital, Specialty, Doctor, MedicalService } from '@/types';
 import { PatientProfile } from '@/types/profile.types';
 import { formatPrice } from '@/lib/utils';
 
+import { ClinicRoom } from './RoomSelectModal';
+import { HospitalBookingMode } from './BookingTypeStep';
+
 interface Step3ConfirmInfoProps {
   hospital: Hospital;
   specialty: Specialty | null;
+  room?: ClinicRoom | null;
   doctor: Doctor | null;
   service: MedicalService | null;
+  bookingMode?: HospitalBookingMode;
   selectedDate: string;
   selectedSlotTime: string;
   patientProfile: PatientProfile | null;
@@ -44,8 +49,10 @@ interface Step3ConfirmInfoProps {
 export function Step3ConfirmInfo({
   hospital,
   specialty,
+  room,
   doctor,
   service,
+  bookingMode = 'doctor',
   selectedDate,
   selectedSlotTime,
   patientProfile,
@@ -185,23 +192,39 @@ export function Step3ConfirmInfo({
                 <div className="flex items-start justify-between p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/60">
                   <span className="font-bold text-slate-600">Chuyên khoa khám:</span>
                   <span className="font-black text-[#0c4b39] text-sm text-right">
-                    {specialty?.name || 'Nội khoa'}
+                    {specialty?.name || 'Chuyên khoa tổng hợp'}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60">
-                  <span className="font-bold text-slate-600">Bác sĩ thăm khám:</span>
-                  <span className="font-black text-slate-950 text-sm text-right">
-                    {doctor ? `${doctor.title || 'BS.'} ${doctor.fullName}` : 'Bác sĩ chuyên khoa'}
-                  </span>
-                </div>
+                {/* Show Doctor for Doctor Mode */}
+                {bookingMode === 'doctor' && (
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60">
+                    <span className="font-bold text-slate-600">Bác sĩ thăm khám:</span>
+                    <span className="font-black text-slate-950 text-sm text-right">
+                      {doctor ? `${doctor.title || 'BS.'} ${doctor.fullName}` : 'Bác sĩ chuyên khoa'}
+                    </span>
+                  </div>
+                )}
 
-                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60">
-                  <span className="font-bold text-slate-600">Dịch vụ đăng ký:</span>
-                  <span className="font-black text-slate-950 text-sm text-right">
-                    {service?.name || 'Khám chuyên khoa theo hẹn'}
-                  </span>
-                </div>
+                {/* Show Room for Service / Standard Mode */}
+                {(bookingMode === 'service' || bookingMode === 'standard') && room && (
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60">
+                    <span className="font-bold text-slate-600">Phòng khám chỉ định:</span>
+                    <span className="font-black text-[#0c4b39] text-sm text-right">
+                      {room.roomNumber} - {room.name} ({room.floor})
+                    </span>
+                  </div>
+                )}
+
+                {/* Show Service for Doctor / Service Mode */}
+                {(bookingMode === 'doctor' || bookingMode === 'service') && (
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60">
+                    <span className="font-bold text-slate-600">Dịch vụ đăng ký:</span>
+                    <span className="font-black text-slate-950 text-sm text-right">
+                      {service?.name || 'Khám y tế theo chỉ định'}
+                    </span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60 space-y-1">
