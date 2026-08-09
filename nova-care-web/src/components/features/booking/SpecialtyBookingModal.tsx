@@ -36,7 +36,7 @@ import { hospitalService } from '@/services/hospital.service';
 import { doctorService } from '@/services/doctor.service';
 import { profileService } from '@/services/profile.service';
 import { appointmentService } from '@/services/appointment.service';
-import { PatientProfile } from '@/types';
+import { PatientProfile } from '@/types/profile.types';
 import { format, addDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -144,15 +144,17 @@ export function SpecialtyBookingModal({
         patientProfileId: selectedProfile.id,
         reason: reason || `Khám chuyên khoa ${specialty?.name}`,
         symptoms: symptoms || undefined,
+        idempotencyKey: typeof window !== 'undefined' && window.crypto?.randomUUID ? window.crypto.randomUUID() : `key-${Date.now()}`,
       });
     },
-    onSuccess: (data) => {
-      setCreatedAppointment(data.data || data);
+    onSuccess: (data: any) => {
+      setCreatedAppointment(data?.data || data);
       setConflictError(null);
       setAlternativeSlots([]);
       setStep(4);
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
     },
+
     onError: (err: any) => {
       const errResponse = err?.response?.data || err?.data;
       if (errResponse?.statusCode === 409 || err?.response?.status === 409) {
@@ -643,7 +645,7 @@ export function SpecialtyBookingModal({
                                 {prof.fullName}
                               </h5>
                               <p className="text-[11px] text-slate-500 font-medium">
-                                SĐT: {prof.phoneNumber || 'N/A'} • Ngày sinh:{' '}
+                                SĐT: {prof.phone || 'N/A'} • Ngày sinh:{' '}
                                 {prof.dateOfBirth
                                   ? format(new Date(prof.dateOfBirth), 'dd/MM/yyyy')
                                   : 'N/A'}
