@@ -309,7 +309,7 @@ export function AIAssistedBookingModal({
           <div className="flex items-center justify-between">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#0c4b39] text-xs font-black">
               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              <span>100% Smartphone-Only • Key OpenAI Beeknoee</span>
+              <span>100% Smartphone-Only • AI Assistant</span>
             </div>
             <Badge variant="outline" className="border-slate-200 text-slate-600 text-[10px] font-bold">
               <Building2 className="w-3 h-3 mr-1" />
@@ -317,7 +317,7 @@ export function AIAssistedBookingModal({
             </Badge>
           </div>
           <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Trợ Lý AI Sàng Lọc 多 Dữ Liệu & Gợi Ý Chuyên Khoa
+            Trợ Lý AI Sàng Lọc Đa Dữ Liệu & Gợi Ý Chuyên Khoa
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500 font-medium">
             Phân tích 5 nguồn thông tin từ Smartphone: Sơ đồ vùng đau trên cơ thể + Khảo sát trắc nghiệm + Ghi âm giọng nói/tiếng ho + Ảnh soi camera + Nhịp tim PPG.
@@ -518,7 +518,7 @@ export function AIAssistedBookingModal({
             {/* Voice Recording */}
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
               <div className="space-y-0.5">
-                <h5 className="font-extrabold text-xs text-slate-900">Ghi âm Giọng nói / Tiếng ho (Whisper-1)</h5>
+                <h5 className="font-extrabold text-xs text-slate-900">Ghi âm Giọng nói / Tiếng ho</h5>
                 <p className="text-[10px] text-slate-500">Bấm micro để ghi âm lời khai hoặc tiếng ho</p>
               </div>
 
@@ -549,7 +549,7 @@ export function AIAssistedBookingModal({
           <TabsContent value="camera" className="space-y-4 text-left">
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-900">
-                3. Chụp/Tải ảnh tổn thương hoặc Kết quả xét nghiệm (GPT-4o Vision):
+                3. Chụp/Tải ảnh tổn thương hoặc Kết quả xét nghiệm:
               </label>
               <p className="text-[11px] text-slate-500">
                 Chụp vùng da phát ban, tổn thương mắt, họng hoặc phiếu kết quả xét nghiệm máu/ECG.
@@ -615,7 +615,7 @@ export function AIAssistedBookingModal({
               className="w-full bg-gradient-to-r from-emerald-600 to-[#0c4b39] hover:from-emerald-500 hover:to-[#083629] text-white font-black text-sm h-12 rounded-2xl shadow-md flex items-center justify-center gap-2"
             >
               <Sparkles className="w-5 h-5 text-amber-300" />
-              <span>Chạy AI OpenAI Beeknoee Phân Tích & Triage</span>
+              <span>Chạy AI Phân Tích & Triage</span>
             </Button>
           </TabsContent>
 
@@ -626,7 +626,7 @@ export function AIAssistedBookingModal({
                 <Loader2 className="w-10 h-10 text-[#0c4b39] animate-spin mx-auto" />
                 <div className="space-y-1">
                   <h4 className="text-base font-extrabold text-slate-900">
-                    Mô hình AI GPT-4o (Beeknoee API) đang phân tích 5 nguồn dữ liệu...
+                    Trợ lý AI đang phân tích 5 nguồn dữ liệu...
                   </h4>
                   <p className="text-xs text-slate-500 font-medium">
                     Tổng hợp Vùng đau ({selectedBodyAreas.length} vùng), Mức đau {painLevel}/10, Nhịp tim PPG {measuredHeartRate || 75} BPM, BMI {bmiValue}...
