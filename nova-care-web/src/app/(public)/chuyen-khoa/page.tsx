@@ -98,7 +98,7 @@ export default function SpecialtiesPage() {
               return (
                 <Link
                   key={specialty.id}
-                  href={`/bac-si?specialtyId=${specialty.id}`}
+                  href={`/dat-kham-chuyen-khoa/${specialty.id}`}
                   className="group bg-white border border-slate-200/80 hover:border-[#0c4b39]/40 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-5 flex flex-col items-center justify-between h-[175px] text-center cursor-pointer no-underline relative overflow-hidden shadow-xs"
                 >
                   <div className="w-14 h-14 rounded-2xl bg-[#0c4b39]/8 group-hover:bg-[#0c4b39] flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-xs mb-1">

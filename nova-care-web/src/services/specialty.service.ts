@@ -11,4 +11,9 @@ export const specialtyService = {
     const response = await apiClient.get<any>(`/specialties/${id}`);
     return response.data;
   },
+
+  async getHospitalsBySpecialty(id: string, params?: Record<string, any>): Promise<any> {
+    const response = await apiClient.get<any>(`/specialties/${id}/hospitals`, { params });
+    return response?.data ?? response;
+  },
 };

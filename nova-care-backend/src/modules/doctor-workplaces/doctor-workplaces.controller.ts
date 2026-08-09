@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpStatus,
 } from '@nestjs/common';
@@ -66,6 +67,18 @@ export class DoctorWorkplacesController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Lấy danh sách nơi làm việc thành công',
+      data,
+    };
+  }
+
+  @Public()
+  @Get(':id/slots')
+  @ApiOperation({ summary: 'Lấy danh sách khung giờ khám theo nơi làm việc' })
+  async getSlots(@Param('id') id: string, @Query('date') date?: string) {
+    const data = await this.service.getWorkplaceSlots(id, date);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy khung giờ khám thành công',
       data,
     };
   }

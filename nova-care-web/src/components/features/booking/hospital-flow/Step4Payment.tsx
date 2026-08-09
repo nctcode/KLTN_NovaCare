@@ -76,10 +76,16 @@ export function Step4Payment({
 
     setIsSubmitting(true);
     try {
-      // 1. Create Appointment
+      if (!selectedSlotId) {
+        toast.error('Khung giờ khám không hợp lệ. Vui lòng chọn lại khung giờ!');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 1. Create Appointment with real database slotId
       const appointment = await appointmentService.create({
         patientProfileId: patientProfile.id,
-        slotId: selectedSlotId || '00000000-0000-4000-a000-000000000001',
+        slotId: selectedSlotId,
         medicalServiceId: service?.id || undefined,
         reason: reason || `Khám theo bác sĩ - ${specialty?.name || 'Chuyên khoa'}`,
         idempotencyKey: `hosp_book_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,

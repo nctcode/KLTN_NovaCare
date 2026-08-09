@@ -124,4 +124,103 @@ export class DoctorWorkplacesService {
       data: { isActive: false },
     });
   }
+
+  // Lấy danh sách khung giờ khám theo nơi làm việc và ngày
+  async getWorkplaceSlots(workplaceId: string, dateStr?: string) {
+    const workplace = await this.prisma.doctorWorkplace.findUnique({
+      where: { id: workplaceId },
+      include: {
+        doctor: true,
+        hospital: true,
+        specialty: true,
+      },
+    });
+
+    if (!workplace) {
+      throw new NotFoundException('Nơi làm việc không tồn tại');
+    }
+
+    const now = new Date();
+    let dateStart = new Date(now);
+    dateStart.setHours(0, 0, 0, 0);
+    let dateEnd: Date | null = null;
+
+    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      dateStart = new Date(dateStr);
+      dateStart.setHours(0, 0, 0, 0);
+      dateEnd = new Date(dateStr);
+      dateEnd.setHours(23, 59, 59, 999);
+    }
+
+    let slotWhere: any = {
+      doctorWorkplaceId: workplaceId,
+      isActive: true,
+      startTime: { gte: dateStart },
+    };
+
+    if (dateEnd) {
+      slotWhere.startTime = { gte: dateStart, lte: dateEnd };
+    }
+
+    let slots = await this.prisma.appointmentSlot.findMany({
+      where: slotWhere,
+      orderBy: { startTime: 'asc' },
+    });
+
+    // If no slots exist for this date or range, generate slots on the fly for seamless testing
+    if (slots.length === 0 && dateStr) {
+      const times = [
+        { start: '08:00', end: '08:30' },
+        { start: '08:30', end: '09:00' },
+        { start: '09:00', end: '09:30' },
+        { start: '09:30', end: '10:00' },
+        { start: '10:00', end: '10:30' },
+        { start: '10:30', end: '11:00' },
+        { start: '14:00', end: '14:30' },
+        { start: '14:30', end: '15:00' },
+        { start: '15:00', end: '15:30' },
+        { start: '15:30', end: '16:00' },
+      ];
+
+      const baseDate = new Date(dateStr);
+      const newSlotsData: any[] = [];
+
+      for (const t of times) {
+        const [sH, sM] = t.start.split(':').map(Number);
+        const [eH, eM] = t.end.split(':').map(Number);
+
+        const startTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), sH, sM);
+        const endTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), eH, eM);
+
+        newSlotsData.push({
+          doctorWorkplaceId: workplaceId,
+          startTime,
+          endTime,
+          capacity: 1,
+          bookedCount: 0,
+          isAvailable: true,
+          isActive: true,
+        });
+      }
+
+      if (newSlotsData.length > 0) {
+        await this.prisma.appointmentSlot.createMany({
+          data: newSlotsData,
+        });
+
+        slots = await this.prisma.appointmentSlot.findMany({
+          where: slotWhere,
+          orderBy: { startTime: 'asc' },
+        });
+      }
+    }
+
+    return {
+      workplace,
+      slots: slots.map((s) => ({
+        ...s,
+        isSlotAvailable: s.isAvailable && s.bookedCount < s.capacity,
+      })),
+    };
+  }
 }

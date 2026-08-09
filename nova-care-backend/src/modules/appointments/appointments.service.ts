@@ -72,7 +72,12 @@ export class AppointmentsService {
 
         // 3.2 Kiểm tra slot còn trống
         if (!isAvailable || bookedCount >= capacity) {
-          throw new ConflictException('Khung giờ này đã hết chỗ');
+          const alternativeSlots = await this.findAlternativeSlots(tx, slotData);
+          throw new ConflictException({
+            statusCode: 409,
+            message: 'Khung giờ này vừa được đặt bởi bệnh nhân khác. Vui lòng chọn khung giờ khác.',
+            alternativeSlots,
+          });
         }
         if (!isActive) {
           throw new BadRequestException('Khung giờ này đã bị vô hiệu hóa');
@@ -663,5 +668,156 @@ export class AppointmentsService {
     });
 
     return updated;
+  }
+
+  // ==================================================
+  // THUẬT TOÁN ĐỀ XUẤT SLOT THAY THẾ KHI BỊ XUNG ĐỘT (DOUBLE BOOKING)
+  // Priority 1: Cùng bác sĩ + gần thời gian yêu cầu nhất
+  // Priority 2: Cùng chuyên khoa + cùng bệnh viện (bác sĩ khác)
+  // Priority 3: Bác sĩ khác + cùng chuyên khoa (bệnh viện khác)
+  // ==================================================
+  async findAlternativeSlots(prismaOrTx: any, slotData: any) {
+    try {
+      const doctorWorkplaceId = slotData.doctorWorkplaceId ?? slotData.doctor_workplace_id;
+      const requestedStartTime = new Date(slotData.startTime ?? slotData.start_time);
+      const now = new Date();
+
+      const workplace = await prismaOrTx.doctorWorkplace.findUnique({
+        where: { id: doctorWorkplaceId },
+        include: { doctor: true, hospital: true, specialty: true },
+      });
+      if (!workplace) return [];
+
+      const { hospitalId, specialtyId } = workplace;
+      const alternatives: any[] = [];
+      const addedSlotIds = new Set<string>();
+      const targetSlotId = slotData.id;
+      addedSlotIds.add(targetSlotId);
+
+      // Priority 1: Cùng bác sĩ (cùng workplace) + khung giờ gần nhất
+      const sameWorkplaceSlots = await prismaOrTx.appointmentSlot.findMany({
+        where: {
+          doctorWorkplaceId,
+          id: { not: targetSlotId },
+          isActive: true,
+          isAvailable: true,
+          startTime: { gte: now },
+        },
+        take: 10,
+        orderBy: { startTime: 'asc' },
+      });
+
+      const validSameWp = sameWorkplaceSlots.filter((s: any) => s.bookedCount < s.capacity);
+      validSameWp.sort((a: any, b: any) => {
+        const diffA = Math.abs(new Date(a.startTime).getTime() - requestedStartTime.getTime());
+        const diffB = Math.abs(new Date(b.startTime).getTime() - requestedStartTime.getTime());
+        return diffA - diffB;
+      });
+
+      for (const s of validSameWp) {
+        if (alternatives.length >= 2) break;
+        addedSlotIds.add(s.id);
+        alternatives.push({
+          priority: 1,
+          reason: 'Cùng bác sĩ, khung giờ gần nhất',
+          slot: s,
+          doctor: workplace.doctor,
+          hospital: workplace.hospital,
+          specialty: workplace.specialty,
+          workplaceId: workplace.id,
+        });
+      }
+
+      // Priority 2: Cùng chuyên khoa & bệnh viện (bác sĩ khác)
+      if (alternatives.length < 4) {
+        const otherWpsSameHospital = await prismaOrTx.doctorWorkplace.findMany({
+          where: {
+            hospitalId,
+            specialtyId,
+            id: { not: doctorWorkplaceId },
+            isActive: true,
+            doctor: { isActive: true, deletedAt: null },
+          },
+          include: { doctor: true, hospital: true, specialty: true },
+        });
+
+        for (const owp of otherWpsSameHospital) {
+          if (alternatives.length >= 4) break;
+          const slots = await prismaOrTx.appointmentSlot.findMany({
+            where: {
+              doctorWorkplaceId: owp.id,
+              id: { notIn: Array.from(addedSlotIds) },
+              isActive: true,
+              isAvailable: true,
+              startTime: { gte: now },
+            },
+            take: 3,
+            orderBy: { startTime: 'asc' },
+          });
+          const validSlots = slots.filter((s: any) => s.bookedCount < s.capacity);
+          for (const s of validSlots) {
+            if (alternatives.length >= 4) break;
+            addedSlotIds.add(s.id);
+            alternatives.push({
+              priority: 2,
+              reason: `Cùng chuyên khoa (${owp.doctor.title ? owp.doctor.title + ' ' : ''}${owp.doctor.fullName})`,
+              slot: s,
+              doctor: owp.doctor,
+              hospital: owp.hospital,
+              specialty: owp.specialty,
+              workplaceId: owp.id,
+            });
+          }
+        }
+      }
+
+      // Priority 3: Cùng chuyên khoa tại cơ sở khác
+      if (alternatives.length < 4) {
+        const otherHospitalWps = await prismaOrTx.doctorWorkplace.findMany({
+          where: {
+            specialtyId,
+            hospitalId: { not: hospitalId },
+            isActive: true,
+            doctor: { isActive: true, deletedAt: null },
+            hospital: { isActive: true, deletedAt: null },
+          },
+          include: { doctor: true, hospital: true, specialty: true },
+          take: 5,
+        });
+
+        for (const owp of otherHospitalWps) {
+          if (alternatives.length >= 4) break;
+          const slots = await prismaOrTx.appointmentSlot.findMany({
+            where: {
+              doctorWorkplaceId: owp.id,
+              id: { notIn: Array.from(addedSlotIds) },
+              isActive: true,
+              isAvailable: true,
+              startTime: { gte: now },
+            },
+            take: 2,
+            orderBy: { startTime: 'asc' },
+          });
+          const validSlots = slots.filter((s: any) => s.bookedCount < s.capacity);
+          for (const s of validSlots) {
+            if (alternatives.length >= 4) break;
+            addedSlotIds.add(s.id);
+            alternatives.push({
+              priority: 3,
+              reason: `Tại ${owp.hospital.name}`,
+              slot: s,
+              doctor: owp.doctor,
+              hospital: owp.hospital,
+              specialty: owp.specialty,
+              workplaceId: owp.id,
+            });
+          }
+        }
+      }
+
+      return alternatives;
+    } catch (e) {
+      return [];
+    }
   }
 }

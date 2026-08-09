@@ -35,4 +35,10 @@ export const doctorService = {
     const response = await apiClient.post<any>('/doctor-workplaces', data);
     return response.data || response;
   },
+
+  async getWorkplaceSlots(workplaceId: string, date?: string) {
+    const query = date ? `?date=${date}` : '';
+    const response = await apiClient.get<any>(`/doctor-workplaces/${workplaceId}/slots${query}`);
+    return response.data;
+  },
 };

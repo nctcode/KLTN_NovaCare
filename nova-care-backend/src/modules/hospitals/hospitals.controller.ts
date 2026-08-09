@@ -114,4 +114,19 @@ export class HospitalsController {
       data,
     };
   }
+
+  @Get(':id/specialties/:specialtyId/doctors')
+  @Public()
+  @ApiOperation({ summary: 'Lấy danh sách bác sĩ thuộc chuyên khoa tại cơ sở y tế' })
+  async getDoctorsBySpecialty(
+    @Param('id') hospitalId: string,
+    @Param('specialtyId') specialtyId: string,
+  ) {
+    const data = await this.service.getDoctorsBySpecialty(hospitalId, specialtyId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy danh sách bác sĩ theo chuyên khoa thành công',
+      data,
+    };
+  }
 }
