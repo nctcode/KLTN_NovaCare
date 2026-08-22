@@ -224,12 +224,12 @@ export class AuthService {
 
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('app.jwt.accessSecret') as string,
-      expiresIn: (this.configService.get<string>('app.jwt.accessExpiresIn') || '15m') as any,
+      expiresIn: (this.configService.get<string>('app.jwt.accessExpiresIn') || '7d') as any,
     });
 
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('app.jwt.refreshSecret') as string,
-      expiresIn: (this.configService.get<string>('app.jwt.refreshExpiresIn') || '7d') as any,
+      expiresIn: (this.configService.get<string>('app.jwt.refreshExpiresIn') || '30d') as any,
     });
 
     // Lưu refresh token vào database
@@ -238,14 +238,14 @@ export class AuthService {
       data: {
         userId: user.id,
         tokenHash,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 ngày
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 ngày
       },
     });
 
     return {
       accessToken,
       refreshToken,
-      expiresIn: 15 * 60, // 15 phút tính bằng giây
+      expiresIn: 7 * 24 * 60 * 60, // 7 ngày tính bằng giây
     };
   }
 

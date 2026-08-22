@@ -80,6 +80,33 @@ enum DataSource {
   API
 }
 
+enum EncounterStatus {
+  IN_PROGRESS
+  COMPLETED
+  PUBLISHED
+  CANCELLED
+}
+
+enum ObservationCategory {
+  VITAL_SIGNS
+  LAB_RESULT
+  IMAGING
+}
+
+enum MatchingStatus {
+  MATCHED
+  PENDING
+  UNMATCHED
+}
+
+enum ConsentStatus {
+  PENDING
+  GRANTED
+  REVOKED
+  EXPIRED
+}
+
+
 // ============================================
 // Core Tables
 // ============================================
@@ -152,8 +179,11 @@ model PatientProfile {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments      Appointment[]
+  medicalEncounters MedicalEncounter[]
+  hospitalLinks     PatientHospitalLink[]
+  consents          PatientConsent[]
 
   @@map("patient_profiles")
 }
@@ -180,12 +210,13 @@ model Appointment {
   reminderSentAt   DateTime?
   reminderCount    Int               @default(0)
 
-  patientProfile PatientProfile           @relation(fields: [patientProfileId], references: [id])
-  user           User                     @relation(fields: [userId], references: [id])
-  slot           AppointmentSlot          @relation(fields: [slotId], references: [id])
-  medicalService MedicalService?          @relation(fields: [medicalServiceId], references: [id])
-  statusHistory  AppointmentStatusHistory[]
-  payment        PaymentTransaction?
+  patientProfile   PatientProfile           @relation(fields: [patientProfileId], references: [id])
+  user             User                     @relation(fields: [userId], references: [id])
+  slot             AppointmentSlot          @relation(fields: [slotId], references: [id])
+  medicalService   MedicalService?          @relation(fields: [medicalServiceId], references: [id])
+  statusHistory    AppointmentStatusHistory[]
+  payment          PaymentTransaction?
+  medicalEncounter MedicalEncounter?
 
   @@map("appointments")
 }
@@ -342,6 +373,10 @@ model Hospital {
   services            MedicalService[]
   packages            HealthPackage[]
   hospitalSpecialties HospitalSpecialty[]
+  medicalEncounters   MedicalEncounter[]
+  patientLinks        PatientHospitalLink[]
+  sourceConsents      PatientConsent[]        @relation("SourceHospitalConsents")
+  targetConsents      PatientConsent[]        @relation("TargetHospitalConsents")
 
   @@map("hospitals")
 }
@@ -591,3 +626,140 @@ model MedicalPassportAccessLog {
 
   @@map("medical_passport_access_logs")
 }
+
+// ============================================
+// Phase 1 – Interoperability Clinical History Models
+// ============================================
+
+model MedicalEncounter {
+  id                  String          @id @default(uuid())
+  patientProfileId    String
+  hospitalId          String
+  appointmentId      String?         @unique
+  externalEncounterId String?
+  encounterCode       String          @unique
+  encounterDate       DateTime        @default(now())
+  doctorName          String
+  doctorTitle         String?
+  specialtyName       String
+  chiefComplaint      String?
+  clinicalSummary     String?
+  status              EncounterStatus @default(PUBLISHED)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  patientProfile PatientProfile @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
+  hospital       Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  appointment    Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  diagnoses    Diagnosis[]
+  observations Observation[]
+  prescription Prescription?
+
+  @@map("medical_encounters")
+}
+
+model Diagnosis {
+  id          String   @id @default(uuid())
+  encounterId String
+  icdCode     String
+  diseaseName String
+  isPrimary   Boolean  @default(true)
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  encounter MedicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@map("diagnoses")
+}
+
+model Observation {
+  id             String              @id @default(uuid())
+  encounterId    String
+  category       ObservationCategory @default(VITAL_SIGNS)
+  code           String?
+  name           String
+  value          String
+  unit           String?
+  referenceRange String?
+  interpretation String?
+  observedAt     DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  encounter MedicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@map("observations")
+}
+
+model Prescription {
+  id               String   @id @default(uuid())
+  encounterId      String   @unique
+  prescriptionCode String   @unique
+  prescribedAt     DateTime @default(now())
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  encounter MedicalEncounter   @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  items     PrescriptionItem[]
+
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  id               String   @id @default(uuid())
+  prescriptionId   String
+  drugName         String
+  dosage           String
+  usageInstruction String
+  quantity         Int
+  unit             String?
+  duration         String?
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@map("prescription_items")
+}
+
+model PatientHospitalLink {
+  id                String         @id @default(uuid())
+  patientProfileId  String
+  hospitalId        String
+  externalPatientId String
+  matchingStatus    MatchingStatus @default(MATCHED)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  patientProfile PatientProfile @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
+  hospital       Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([patientProfileId, hospitalId])
+  @@unique([hospitalId, externalPatientId])
+  @@map("patient_hospital_links")
+}
+
+model PatientConsent {
+  id               String        @id @default(uuid())
+  patientProfileId String
+  sourceHospitalId String
+  targetHospitalId String
+  status           ConsentStatus @default(GRANTED)
+  grantedAt        DateTime?
+  expiresAt        DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  patientProfile PatientProfile @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
+  sourceHospital Hospital       @relation("SourceHospitalConsents", fields: [sourceHospitalId], references: [id], onDelete: Cascade)
+  targetHospital Hospital       @relation("TargetHospitalConsents", fields: [targetHospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([patientProfileId, sourceHospitalId, targetHospitalId])
+  @@map("patient_consents")
+}
+

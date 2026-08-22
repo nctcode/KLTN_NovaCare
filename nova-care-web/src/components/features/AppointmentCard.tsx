@@ -65,12 +65,21 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
               {appointment.totalPrice?.toLocaleString() || 0}đ
             </p>
           </div>
-          <Button asChild size="sm" className="bg-slate-900 hover:bg-slate-800 text-white text-xs gap-1">
-            <Link href={`/lich-kham/${appointment.id}`}>
-              Chi tiết
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {(appointment.status === 'AWAITING_PAYMENT' || appointment.status === 'PENDING') && (
+              <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
+                <Link href={`/thanh-toan?appointmentId=${appointment.id}`}>
+                  Thanh toán
+                </Link>
+              </Button>
+            )}
+            <Button asChild size="sm" className="bg-slate-900 hover:bg-slate-800 text-white text-xs gap-1">
+              <Link href={`/lich-kham/${appointment.id}`}>
+                Chi tiết
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

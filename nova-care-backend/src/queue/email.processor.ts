@@ -1,37 +1,27 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
 import { QueueService } from './queue.service';
 
-@Processor('email')
 @Injectable()
-export class EmailProcessor extends WorkerHost {
+export class EmailProcessor {
   private logger = new Logger(EmailProcessor.name);
+  constructor(private queueService: QueueService) {}
 
-  constructor(private queueService: QueueService) {
-    super();
-  }
-
-  async process(job: Job<any, any, string>): Promise<any> {
-    const { appointmentId, type } = job.data;
-    this.logger.log(`Processing email job ${job.id} for appointment ${appointmentId} (${type})`);
+  async process(jobData: any): Promise<any> {
+    const { appointmentId, type } = jobData;
+    this.logger.log(`Processing email job for appointment ${appointmentId} (${type})`);
     await this.queueService.processEmailDirect(appointmentId, type);
     return { success: true };
   }
 }
 
-@Processor('push')
 @Injectable()
-export class PushProcessor extends WorkerHost {
+export class PushProcessor {
   private logger = new Logger(PushProcessor.name);
+  constructor(private queueService: QueueService) {}
 
-  constructor(private queueService: QueueService) {
-    super();
-  }
-
-  async process(job: Job<any, any, string>): Promise<any> {
-    const { appointmentId, type } = job.data;
-    this.logger.log(`Processing push job ${job.id} for appointment ${appointmentId}`);
+  async process(jobData: any): Promise<any> {
+    const { appointmentId, type } = jobData;
+    this.logger.log(`Processing push job for appointment ${appointmentId}`);
     await this.queueService.processPushDirect(appointmentId, type);
     return { success: true };
   }

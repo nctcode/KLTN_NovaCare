@@ -1,19 +1,14 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
 import { PrismaService } from '@/database/prisma.service';
 
-@Processor('expire-appointments')
 @Injectable()
-export class ExpireAppointmentsProcessor extends WorkerHost {
+export class ExpireAppointmentsProcessor {
   private logger = new Logger(ExpireAppointmentsProcessor.name);
 
-  constructor(private prisma: PrismaService) {
-    super();
-  }
+  constructor(private prisma: PrismaService) {}
 
-  async process(job: Job<any, any, string>): Promise<any> {
-    this.logger.log(`Processing expiration check job ${job.id}`);
+  async process(jobData?: any): Promise<any> {
+    this.logger.log(`Processing expiration check job`);
     const now = new Date();
 
     const expiredAppointments = await this.prisma.appointment.findMany({

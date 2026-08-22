@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { PatientProfileForm } from '@/components/forms/PatientProfileForm';
-import { ArrowLeft, ChevronRight, Loader2, Plus, UserCheck, FileText, Activity, Phone, CreditCard, CheckCircle2, User } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Loader2, Plus, UserCheck, FileText, Activity, Phone, CreditCard, CheckCircle2, User, ShieldCheck } from 'lucide-react';
 
 interface StepSelectProfileProps {
   onNext: () => void;
@@ -83,6 +83,19 @@ export function StepSelectProfile({ onNext, onBack }: StepSelectProfileProps) {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* BHYT Notification Alert Banner */}
+      {bookingData.examinationType === 'BHYT' && (
+        <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-blue-900 shadow-2xs">
+          <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-extrabold text-blue-950 text-sm">Lưu ý khi Khám Bảo hiểm y tế (BHYT)</p>
+            <p className="text-blue-800 leading-relaxed">
+              Bạn đang thực hiện <strong>Khám BHYT</strong>. Vui lòng chuẩn bị sẵn <strong>Thẻ BHYT bản cứng hoặc ứng dụng VssID</strong> cùng <strong>Giấy tờ tùy thân (CCCD/CMND)</strong> để xuất trình khi làm thủ tục khám bệnh.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Profiles list */}
       <div className="space-y-3">

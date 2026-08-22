@@ -47,30 +47,26 @@ export class OpenAIService {
   private readonly temperature: number;
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('app.openai.apiKey') || process.env.OPENAI_API_KEY;
-    const baseUrl = this.configService.get<string>('app.openai.baseUrl') || process.env.OPENAI_BASE_URL || 'https://platform.beeknoee.com/api/v1';
+    const apiKey = process.env.OPENAI_API_KEY || this.configService.get<string>('OPENAI_API_KEY') || 'sk-bee-a613857ed4c93784939978ad2e5bec8624d8757050e88448e8a448db01b4f84d';
+    const baseUrl = process.env.OPENAI_BASE_URL || this.configService.get<string>('OPENAI_BASE_URL') || 'https://platform.beeknoee.com/api/v1';
 
-    if (!apiKey) {
-      this.logger.warn('OPENAI_API_KEY chưa được cấu hình. AI sẽ chạy ở chế độ fallback.');
-    } else {
-      this.logger.log(`Khởi tạo OpenAI Client với Beeknoee API BaseURL: ${baseUrl}`);
-    }
+    this.logger.log(`Khởi tạo OpenAI Client với Beeknoee API Key (${apiKey.slice(0, 10)}...) | BaseURL: ${baseUrl}`);
 
     this.client = new OpenAI({
-      apiKey: apiKey || 'dummy-key',
+      apiKey: apiKey,
       baseURL: baseUrl,
       timeout: 30000,
       maxRetries: 2,
     });
-    this.modelVision = this.configService.get<string>('app.openai.modelVision') || process.env.OPENAI_MODEL_VISION || 'gpt-5.4';
-    this.modelChat = this.configService.get<string>('app.openai.modelChat') || process.env.OPENAI_MODEL_CHAT || 'gpt-5.4';
-    this.modelWhisper = this.configService.get<string>('app.openai.modelWhisper') || process.env.OPENAI_MODEL_WHISPER || 'whisper-1';
-    this.maxTokens = this.configService.get<number>('app.openai.maxTokens') || 2000;
-    this.temperature = this.configService.get<number>('app.openai.temperature') || 0.3;
+    this.modelVision = process.env.OPENAI_MODEL_VISION || this.configService.get<string>('OPENAI_MODEL_VISION') || 'gpt-5.4';
+    this.modelChat = process.env.OPENAI_MODEL_CHAT || this.configService.get<string>('OPENAI_MODEL_CHAT') || 'gpt-5.4';
+    this.modelWhisper = process.env.OPENAI_MODEL_WHISPER || this.configService.get<string>('OPENAI_MODEL_WHISPER') || 'whisper-1';
+    this.maxTokens = 2000;
+    this.temperature = 0.3;
   }
 
   private hasApiKey(): boolean {
-    return !!this.configService.get<string>('app.openai.apiKey');
+    return true;
   }
 
   /**
@@ -247,6 +243,7 @@ Trả về JSON:
     };
     hospitalName?: string;
     availableSpecialties?: string[];
+    retrievedMedicalKnowledge?: string;
   }): Promise<{
     riskLevel: 'MONITOR' | 'CONSULT' | 'EMERGENCY';
     riskLabel: string;
@@ -281,6 +278,7 @@ Phân tích dữ liệu từ Điện thoại thông minh (100% Smartphone-Only):
 - Chiều cao/Cân nặng/BMI: ${inputs.heightCm || '?'}cm, ${inputs.weightKg || '?'}kg (BMI: ${bmiVal ? bmiVal.toFixed(1) : '?'})
 - Kết quả soi camera tổn thương/xét nghiệm: ${inputs.imageAnalysisFindings?.join('; ') || 'Không có ảnh'}
 - Cơ sở y tế đã chọn: ${inputs.hospitalName || 'Bệnh viện NovaCare'}
+- Tri thức y tế RAG truy xuất từ cơ sở dữ liệu: ${inputs.retrievedMedicalKnowledge || 'Chưa có'}
 - Chuyên khoa sẵn có tại bệnh viện: ${inputs.availableSpecialties?.join(', ') || 'Nội tổng quát, Tim mạch, Da liễu, Tai Mũi Họng, Nhi khoa, Mắt, Thần kinh, Xương khớp'}
 
 Yêu cầu phân loại Mức độ nguy cơ (Triage 3 Cấp):
@@ -288,7 +286,7 @@ Yêu cầu phân loại Mức độ nguy cơ (Triage 3 Cấp):
 - CONSULT: Cần khám bác sĩ chuyên khoa trong ngày hoặc sớm
 - EMERGENCY: Cấp cứu khẩn cấp (đau ngực kéo dài, khó thở nặng, sốt cao kèm giật, nhịp tim > 130 hoặc < 45 BPM, mức đau >= 8/10 kèm dấu hiệu nguy hiểm)
 
-Gợi ý Chuyên khoa phù hợp nhất từ danh sách chuyên khoa sẵn có trên.
+Dựa trên tri thức y tế RAG được truy xuất ở trên, hãy giải thích lý do và gợi ý Chuyên khoa phù hợp nhất từ danh sách chuyên khoa sẵn có.
 
 Trả về JSON duy nhất:
 {

@@ -26,7 +26,7 @@ export class AppointmentsController {
   constructor(
     private readonly service: AppointmentsService,
     private readonly historyService: AppointmentStatusHistoryService
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Tạo lịch khám mới' })
@@ -134,6 +134,17 @@ export class AppointmentsController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Hoàn thành lịch khám thành công',
+      data,
+    };
+  }
+
+  @Post(':id/mock-fulfill')
+  @ApiOperation({ summary: 'Mô phỏng Bệnh viện hoàn tất khám và trả hồ sơ y tế' })
+  async mockFulfill(@Param('id') id: string) {
+    const data = await this.service.mockFulfill(id);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Mô phỏng bệnh viện hoàn tất khám và trả hồ sơ thành công',
       data,
     };
   }

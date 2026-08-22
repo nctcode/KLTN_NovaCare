@@ -1,9 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { initializeApp, cert } from 'firebase-admin/app';
-import { getMessaging, MulticastMessage } from 'firebase-admin/messaging';
 import { DeviceTokenService } from './device-token.service';
 import * as fs from 'fs';
+
+let initializeApp: any = null;
+let cert: any = null;
+let getMessaging: any = null;
+try {
+  const admin = require('firebase-admin');
+  initializeApp = admin.initializeApp;
+  cert = admin.credential?.cert;
+  getMessaging = admin.messaging;
+} catch {
+  // firebase-admin fallback
+}
 
 @Injectable()
 export class FcmService {
@@ -20,7 +30,7 @@ export class FcmService {
   private initFirebase() {
     try {
       const credPath = this.configService.get<string>('FCM_CREDENTIALS_PATH');
-      if (credPath && fs.existsSync(credPath)) {
+      if (credPath && fs.existsSync(credPath) && initializeApp && cert) {
         initializeApp({
           credential: cert(credPath),
         });
@@ -37,13 +47,13 @@ export class FcmService {
   async sendPushNotification(tokens: string[], title: string, body: string, data?: Record<string, string>): Promise<boolean> {
     if (!tokens || tokens.length === 0) return false;
 
-    if (!this.isInitialized) {
+    if (!this.isInitialized || !getMessaging) {
       this.logger.log(`[FCM Push Simulated] Title: "${title}" | Body: "${body}" | Tokens: ${tokens.length}`);
       return true;
     }
 
     try {
-      const message: MulticastMessage = {
+      const message: any = {
         tokens,
         notification: { title, body },
         data: data || {},

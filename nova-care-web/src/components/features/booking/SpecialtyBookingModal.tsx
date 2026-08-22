@@ -144,7 +144,7 @@ export function SpecialtyBookingModal({
         patientProfileId: selectedProfile.id,
         reason: reason || `Khám chuyên khoa ${specialty?.name}`,
         symptoms: symptoms || undefined,
-        idempotencyKey: typeof window !== 'undefined' && window.crypto?.randomUUID ? window.crypto.randomUUID() : `key-${Date.now()}`,
+        idempotencyKey: typeof window !== 'undefined' && window.crypto?.randomUUID ? window.crypto.randomUUID() : `spc-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       });
     },
     onSuccess: (data: any) => {
@@ -770,13 +770,34 @@ export function SpecialtyBookingModal({
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
                 <Button
                   type="button"
-                  onClick={onClose}
-                  className="bg-[#0c4b39] hover:bg-[#09382b] text-white font-bold text-xs h-11 px-8 rounded-xl"
+                  onClick={async () => {
+                    if (createdAppointment?.id) {
+                      await paymentService.simulateSuccess(createdAppointment.id, 'MOMO');
+                      toast.success('Thanh toán thành công (Demo Instant)!');
+                      onClose();
+                      window.location.href = `/lich-kham/${createdAppointment.id}`;
+                    }
+                  }}
+                  className="bg-[#0c4b39] hover:bg-[#09382b] text-white font-extrabold text-xs h-11 px-6 rounded-xl w-full sm:w-auto shadow-md"
                 >
-                  Hoàn tất & Đóng window
+                  💳 Thanh toán ngay (Demo Instant) ➔
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    onClose();
+                    if (createdAppointment?.id) {
+                      window.location.href = `/lich-kham/${createdAppointment.id}`;
+                    }
+                  }}
+                  className="border-slate-300 font-bold text-slate-700 text-xs h-11 px-6 rounded-xl w-full sm:w-auto"
+                >
+                  Xem Chi Tiết Lịch Khám
                 </Button>
               </div>
             </div>

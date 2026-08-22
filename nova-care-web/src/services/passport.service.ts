@@ -1,7 +1,7 @@
 import { apiClient } from '@/lib/api-client';
 
 export interface CreateShareDto {
-  allowedSections: string[];
+  allowedSections?: string[];
   validDays?: number;
   sharedWith?: string;
 }

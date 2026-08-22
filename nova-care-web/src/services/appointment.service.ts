@@ -41,4 +41,9 @@ export const appointmentService = {
     const response = await apiClient.patch<any>(`/appointments/${id}/complete`);
     return response.data;
   },
+
+  async mockFulfill(id: string): Promise<any> {
+    const response = await apiClient.post<any>(`/appointments/${id}/mock-fulfill`);
+    return response.data;
+  },
 };

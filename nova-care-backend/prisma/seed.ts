@@ -1,4 +1,4 @@
-import { PrismaClient, Gender, Role, AppointmentStatus, PaymentStatus, PaymentMethod, HospitalType, PartnershipStatus, DataSource } from '@prisma/client';
+import { PrismaClient, Gender, Role, AppointmentStatus, PaymentStatus, PaymentMethod, HospitalType, PartnershipStatus, DataSource, EncounterStatus, ObservationCategory, MatchingStatus, ConsentStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
@@ -109,6 +109,13 @@ async function main() {
   // 0. Clean Old Data (Reverse FK Order)
   // ==========================================
   console.log('🧹 Cleaning all existing test data...');
+  await prisma.prescriptionItem.deleteMany({});
+  await prisma.prescription.deleteMany({});
+  await prisma.observation.deleteMany({});
+  await prisma.diagnosis.deleteMany({});
+  await prisma.medicalEncounter.deleteMany({});
+  await prisma.patientConsent.deleteMany({});
+  await prisma.patientHospitalLink.deleteMany({});
   await prisma.medicalPassportAccessLog.deleteMany({});
   await prisma.medicalPassportShare.deleteMany({});
   await prisma.medicalPassport.deleteMany({});
@@ -863,6 +870,184 @@ async function main() {
     });
   }
   console.log('✅ Created initial System Audit Logs');
+
+  // ==========================================
+  // 12. Phase 1 Clinical Encounters & Interoperability Data
+  // ==========================================
+  console.log('🏥 Seeding Clinical Encounters and Interoperability Data...');
+
+  const mainPatientProfile = profiles[0]; // Nguyễn Văn An (CCCD: 079088012345)
+  const hospitalA = hospitals[0]; // Bệnh viện Đa khoa NovaCare Sài Gòn (BV175)
+  const hospitalB = hospitals[1]; // Bệnh viện Quốc tế Nova Central (BV199)
+
+  // 12.1 Patient Hospital Identity Links
+  const linkA = await prisma.patientHospitalLink.create({
+    data: {
+      patientProfileId: mainPatientProfile.id,
+      hospitalId: hospitalA.id,
+      externalPatientId: 'PAT-175-001',
+      matchingStatus: MatchingStatus.MATCHED,
+    },
+  });
+
+  const linkB = await prisma.patientHospitalLink.create({
+    data: {
+      patientProfileId: mainPatientProfile.id,
+      hospitalId: hospitalB.id,
+      externalPatientId: 'PAT-199-928',
+      matchingStatus: MatchingStatus.MATCHED,
+    },
+  });
+
+  console.log(`✅ Created PatientHospitalLink: ${linkA.externalPatientId} (BV175) & ${linkB.externalPatientId} (BV199)`);
+
+  // 12.2 Find or link COMPLETED appointment
+  const completedAppt = await prisma.appointment.findFirst({
+    where: { patientProfileId: mainPatientProfile.id, status: AppointmentStatus.COMPLETED },
+  });
+
+  // 12.3 Create MedicalEncounter for BV175
+  const encounter = await prisma.medicalEncounter.create({
+    data: {
+      patientProfileId: mainPatientProfile.id,
+      hospitalId: hospitalA.id,
+      appointmentId: completedAppt?.id || null,
+      externalEncounterId: 'EXT-ENC-175-8899',
+      encounterCode: 'ENC-175-20260810-001',
+      encounterDate: new Date('2026-08-10T09:00:00Z'),
+      doctorName: 'PGS.TS Nguyễn Văn Minh',
+      doctorTitle: 'Phó Giáo sư, Tiến sĩ Y khoa',
+      specialtyName: 'Tim mạch',
+      chiefComplaint: 'Đau thắt ngực trái nhẹ khi gắng sức, ho khan kéo dài 3 ngày',
+      clinicalSummary: 'Bệnh nhân có tiền sử tăng huyết áp. Khám phát hiện Tim T1, T2 rõ, nhịp đều 82 ck/phút. Huyết áp 135/85 mmHg. Điện tâm đồ ghi nhận nhịp xoang đều, chưa thấy dấu hiệu thiếu máu cơ tim cấp.',
+      status: EncounterStatus.PUBLISHED,
+    },
+  });
+
+  // 12.4 Create Diagnoses (ICD-10)
+  await prisma.diagnosis.createMany({
+    data: [
+      {
+        encounterId: encounter.id,
+        icdCode: 'I10',
+        diseaseName: 'Tăng huyết áp vô căn (nguyên phát)',
+        isPrimary: true,
+        note: 'Kiểm soát huyết áp chưa tối ưu, điều chỉnh đơn thuốc',
+      },
+      {
+        encounterId: encounter.id,
+        icdCode: 'E78.5',
+        diseaseName: 'Rối loạn lipit máu, không đặc hiệu',
+        isPrimary: false,
+        note: 'Tăng nhẹ cholesterol và triglyceride, kết hợp tư vấn chế độ ăn',
+      },
+    ],
+  });
+
+  // 12.5 Create Observations (Vital Signs & Lab Results)
+  await prisma.observation.createMany({
+    data: [
+      {
+        encounterId: encounter.id,
+        category: ObservationCategory.VITAL_SIGNS,
+        code: 'BP',
+        name: 'Huyết áp tâm thu / tâm trương',
+        value: '135/85',
+        unit: 'mmHg',
+        referenceRange: '< 120/80 mmHg',
+        interpretation: 'Bình thường cao',
+      },
+      {
+        encounterId: encounter.id,
+        category: ObservationCategory.VITAL_SIGNS,
+        code: 'HR',
+        name: 'Nhịp tim',
+        value: '82',
+        unit: 'BPM',
+        referenceRange: '60-100 BPM',
+        interpretation: 'Bình thường',
+      },
+      {
+        encounterId: encounter.id,
+        category: ObservationCategory.VITAL_SIGNS,
+        code: 'SPO2',
+        name: 'Chỉ số SpO2',
+        value: '98',
+        unit: '%',
+        referenceRange: '95-100%',
+        interpretation: 'Bình thường',
+      },
+      {
+        encounterId: encounter.id,
+        category: ObservationCategory.LAB_RESULT,
+        code: 'CHOLESTEROL',
+        name: 'Cholesterol toàn phần',
+        value: '5.8',
+        unit: 'mmol/L',
+        referenceRange: '< 5.2 mmol/L',
+        interpretation: 'Tăng nhẹ',
+      },
+      {
+        encounterId: encounter.id,
+        category: ObservationCategory.LAB_RESULT,
+        code: 'TRIGLYCERIDE',
+        name: 'Triglyceride',
+        value: '2.1',
+        unit: 'mmol/L',
+        referenceRange: '< 1.7 mmol/L',
+        interpretation: 'Tăng nhẹ',
+      },
+    ],
+  });
+
+  // 12.6 Create Prescription & PrescriptionItems
+  const prescription = await prisma.prescription.create({
+    data: {
+      encounterId: encounter.id,
+      prescriptionCode: 'RX-175-20260810-09',
+      prescribedAt: new Date('2026-08-10T09:30:00Z'),
+      note: 'Uống thuốc đúng giờ sau ăn sáng. Tái khám sau 14 ngày hoặc khi có bất thường.',
+    },
+  });
+
+  await prisma.prescriptionItem.createMany({
+    data: [
+      {
+        prescriptionId: prescription.id,
+        drugName: 'Amlodipine 5mg',
+        dosage: '5mg',
+        usageInstruction: 'Uống 1 viên vào buổi sáng sau khi ăn',
+        quantity: 14,
+        unit: 'Viên',
+        duration: '14 ngày',
+        note: 'Thuốc điều trị tăng huyết áp',
+      },
+      {
+        prescriptionId: prescription.id,
+        drugName: 'Atorvastatin 10mg',
+        dosage: '10mg',
+        usageInstruction: 'Uống 1 viên vào buổi tối trước khi đi ngủ',
+        quantity: 14,
+        unit: 'Viên',
+        duration: '14 ngày',
+        note: 'Thuốc hạ mỡ máu',
+      },
+    ],
+  });
+
+  // 12.7 Create PatientConsent (GRANTED from BV175 to BV199)
+  const consent = await prisma.patientConsent.create({
+    data: {
+      patientProfileId: mainPatientProfile.id,
+      sourceHospitalId: hospitalA.id,
+      targetHospitalId: hospitalB.id,
+      status: ConsentStatus.GRANTED,
+      grantedAt: new Date('2026-08-15T10:00:00Z'),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days valid
+    },
+  });
+
+  console.log(`✅ Created Clinical Encounter (${encounter.encounterCode}), Diagnoses, Observations, Prescription & PatientConsent (${consent.id})`);
 
   console.log('\n🎉 ====================================================');
   console.log('🎉 DATABASE SEEDING COMPLETED SUCCESSFULLY!');

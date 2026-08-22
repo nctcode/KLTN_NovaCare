@@ -1,6 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
 import { EmailService } from '@/modules/email/email.service';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { PrismaService } from '@/database/prisma.service';
@@ -10,10 +8,10 @@ export class QueueService {
   private logger = new Logger(QueueService.name);
 
   constructor(
-    @InjectQueue('email') private emailQueue: Queue,
-    @InjectQueue('push') private pushQueue: Queue,
-    @InjectQueue('reminder') private reminderQueue: Queue,
-    @InjectQueue('expire-appointments') private expireQueue: Queue,
+    @Optional() @Inject('BULL_EMAIL_QUEUE') private emailQueue: any,
+    @Optional() @Inject('BULL_PUSH_QUEUE') private pushQueue: any,
+    @Optional() @Inject('BULL_REMINDER_QUEUE') private reminderQueue: any,
+    @Optional() @Inject('BULL_EXPIRE_QUEUE') private expireQueue: any,
     private emailService: EmailService,
     private notificationsService: NotificationsService,
     private prisma: PrismaService,

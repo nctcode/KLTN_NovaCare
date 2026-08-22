@@ -8,11 +8,11 @@ import {
 import { PrismaService } from '@/database/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CancelAppointmentDto } from './dto/cancel-appointment.dto';
-import { Appointment, AppointmentStatus } from '@prisma/client';
+import { Appointment, AppointmentStatus, EncounterStatus, ObservationCategory, MatchingStatus } from '@prisma/client';
 
 @Injectable()
 export class AppointmentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // ============================================
   // 1. TẠO LỊCH KHÁM (VỚI TRANSACTION + LOCK)
@@ -270,7 +270,12 @@ export class AppointmentsService {
       where: {
         userId,
         status: {
-          in: [AppointmentStatus.CONFIRMED, AppointmentStatus.PAID],
+          in: [
+            AppointmentStatus.PENDING,
+            AppointmentStatus.AWAITING_PAYMENT,
+            AppointmentStatus.CONFIRMED,
+            AppointmentStatus.PAID,
+          ],
         },
         slot: {
           startTime: { gte: now },
@@ -366,6 +371,15 @@ export class AppointmentsService {
         },
         medicalService: true,
         payment: true,
+        medicalEncounter: {
+          include: {
+            diagnoses: true,
+            observations: true,
+            prescription: {
+              include: { items: true },
+            },
+          },
+        },
         statusHistory: {
           orderBy: { createdAt: 'desc' },
         },
@@ -643,31 +657,97 @@ export class AppointmentsService {
   async complete(id: string): Promise<Appointment> {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
+      include: {
+        patientProfile: true,
+        medicalEncounter: true,
+        slot: {
+          include: {
+            doctorWorkplace: {
+              include: {
+                doctor: true,
+                hospital: true,
+                specialty: true,
+              },
+            },
+          },
+        },
+      },
     });
+
     if (!appointment) {
       throw new NotFoundException('Lịch khám không tồn tại');
     }
-    if (appointment.status !== AppointmentStatus.CONFIRMED && appointment.status !== AppointmentStatus.PAID) {
-      throw new BadRequestException(`Không thể hoàn thành lịch ở trạng thái ${appointment.status}`);
+
+    if (appointment.status === AppointmentStatus.COMPLETED) {
+      throw new BadRequestException('Lịch khám đã ở trạng thái hoàn thành (COMPLETED)');
     }
 
-    const updated = await this.prisma.appointment.update({
-      where: { id },
-      data: {
-        status: AppointmentStatus.COMPLETED,
-        completedAt: new Date(),
-      },
-    });
+    const encounterDate = new Date();
+    const encounterCode = this.generateEncounterCode();
 
-    await this.prisma.appointmentStatusHistory.create({
-      data: {
-        appointmentId: updated.id,
-        status: AppointmentStatus.COMPLETED,
-        note: 'Bệnh nhân đã hoàn thành buổi khám',
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Cập nhật Appointment sang COMPLETED
+      const updated = await tx.appointment.update({
+        where: { id },
+        data: {
+          status: AppointmentStatus.COMPLETED,
+          completedAt: encounterDate,
+        },
+        include: {
+          medicalEncounter: true,
+        },
+      });
 
-    return updated;
+      // 2. Ghi lịch sử trạng thái
+      await tx.appointmentStatusHistory.create({
+        data: {
+          appointmentId: updated.id,
+          status: AppointmentStatus.COMPLETED,
+          note: 'Bệnh nhân đã hoàn thành buổi khám',
+        },
+      });
+
+      // 3. Khởi tạo MedicalEncounter (IN_PROGRESS) nếu chưa tồn tại
+      if (!appointment.medicalEncounter) {
+        const workplace = appointment.slot?.doctorWorkplace;
+        const hospitalId = workplace?.hospitalId || workplace?.hospital?.id;
+        const doctorName = workplace?.doctor?.fullName || 'Bác sĩ NovaCare';
+        const doctorTitle = workplace?.doctor?.title || null;
+        const specialtyName = workplace?.specialty?.name || 'Khám tổng quát';
+
+        const createdEncounter = await tx.medicalEncounter.create({
+          data: {
+            patientProfileId: appointment.patientProfileId,
+            hospitalId: hospitalId!,
+            appointmentId: appointment.id,
+            encounterCode,
+            encounterDate,
+            doctorName,
+            doctorTitle,
+            specialtyName,
+            chiefComplaint: appointment.reason || appointment.symptoms || 'Khám bệnh theo hẹn',
+            status: EncounterStatus.IN_PROGRESS,
+          },
+        });
+
+        return {
+          ...updated,
+          medicalEncounter: createdEncounter,
+        } as unknown as Appointment;
+      }
+
+      return updated;
+    });
+  }
+
+  private generateEncounterCode(): string {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}${mm}${dd}`;
+    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `ENC-${dateStr}-${randomHex}`;
   }
 
   // ==================================================
@@ -819,5 +899,301 @@ export class AppointmentsService {
     } catch (e) {
       return [];
     }
+  }
+
+  // ============================================
+  // MOCK MEDICAL RECORD GENERATOR (SPECIALTY-BASED)
+  // ============================================
+  private generateMockMedicalRecord(specialtyName: string) {
+    const norm = (specialtyName || '').toLowerCase().trim();
+
+    if (norm.includes('tim') || norm.includes('cardio')) {
+      return {
+        chiefComplaint: 'Khám và theo dõi chỉ số tim mạch, hồi hộp đánh trống ngực khi vận động',
+        clinicalSummary: 'Bệnh nhân có tiền sử tăng huyết áp. Thể trạng trung bình, nhịp tim đều, không có tiếng thổi bệnh lý. Huyết áp kiểm soát ổn định.',
+        diagnoses: [
+          { icdCode: 'I10', diseaseName: 'Tăng huyết áp vô căn (nguyên phát)', isPrimary: true, note: 'Chẩn đoán chính' },
+          { icdCode: 'E78.5', diseaseName: 'Tăng lipid máu không đặc hiệu', isPrimary: false, note: 'Bệnh kèm theo' },
+        ],
+        observations: [
+          { category: ObservationCategory.VITAL_SIGNS, code: 'BP', name: 'Huyết áp', value: '135/85', unit: 'mmHg', interpretation: 'Tăng nhẹ' },
+          { category: ObservationCategory.VITAL_SIGNS, code: 'HR', name: 'Nhịp tim', value: '82', unit: 'lần/phút', interpretation: 'Bình thường' },
+          { category: ObservationCategory.VITAL_SIGNS, code: 'SPO2', name: 'SpO2', value: '98', unit: '%', interpretation: 'Bình thường' },
+          { category: ObservationCategory.LAB_RESULT, code: 'CHOL', name: 'Cholesterol toàn phần', value: '5.8', unit: 'mmol/L', interpretation: 'Tăng nhẹ' },
+        ],
+        prescriptionItems: [
+          { drugName: 'Amlodipine', dosage: '5mg', usageInstruction: 'Uống 1 viên vào buổi sáng sau ăn', quantity: 30, unit: 'Viên', duration: '30 ngày', note: 'Theo dõi huyết áp hàng ngày' },
+          { drugName: 'Atorvastatin', dosage: '20mg', usageInstruction: 'Uống 1 viên vào buổi tối trước khi đi ngủ', quantity: 30, unit: 'Viên', duration: '30 ngày', note: 'Tái khám sau 1 tháng' },
+        ],
+      };
+    }
+
+    if (norm.includes('da') || norm.includes('derma')) {
+      return {
+        chiefComplaint: 'Mẩn đỏ ngứa vùng lồng ngực và cẳng tay kéo dài 3 ngày',
+        clinicalSummary: 'Tổn thương dạng mảng đỏ nhẹ, tróc vảy mỏng, ngứa ngáy nhiều về đêm, không rỉ dịch mủ.',
+        diagnoses: [
+          { icdCode: 'L20.9', diseaseName: 'Viêm da cơ địa không đặc hiệu', isPrimary: true, note: 'Chẩn đoán chính' },
+        ],
+        observations: [
+          { category: ObservationCategory.VITAL_SIGNS, code: 'TEMP', name: 'Thân nhiệt', value: '36.6', unit: '°C', interpretation: 'Bình thường' },
+        ],
+        prescriptionItems: [
+          { drugName: 'Cetirizine Hydrochloride', dosage: '10mg', usageInstruction: 'Uống 1 viên vào buổi tối', quantity: 10, unit: 'Viên', duration: '10 ngày', note: 'Tránh gãi trầy xước' },
+          { drugName: 'Hydrocortisone Cream 1%', dosage: '15g', usageInstruction: 'Thoa mỏng lên vùng da tổn thương 2 lần/ngày', quantity: 1, unit: 'Tuýp', duration: '7 ngày', note: 'Không thoa lên mắt' },
+        ],
+      };
+    }
+
+    if (norm.includes('tai') || norm.includes('mũi') || norm.includes('họng') || norm.includes('ent')) {
+      return {
+        chiefComplaint: 'Đau rát họng, sốt nhẹ, nuốt vướng và ho khô',
+        clinicalSummary: 'Niêm mạc họng xung huyết đỏ nhẹ, hai amydal sưng độ I không mủ. Màng nhĩ hai bên nguyên vẹn.',
+        diagnoses: [
+          { icdCode: 'J02.9', diseaseName: 'Viêm họng cấp tính không đặc hiệu', isPrimary: true, note: 'Chẩn đoán chính' },
+        ],
+        observations: [
+          { category: ObservationCategory.VITAL_SIGNS, code: 'TEMP', name: 'Thân nhiệt', value: '37.8', unit: '°C', interpretation: 'Sốt nhẹ' },
+          { category: ObservationCategory.VITAL_SIGNS, code: 'SPO2', name: 'SpO2', value: '99', unit: '%', interpretation: 'Bình thường' },
+        ],
+        prescriptionItems: [
+          { drugName: 'Amoxicillin', dosage: '500mg', usageInstruction: 'Uống 1 viên x 2 lần/ngày sau khi ăn', quantity: 14, unit: 'Viên', duration: '7 ngày', note: 'Uống đủ liều kháng sinh' },
+          { drugName: 'Paracetamol', dosage: '500mg', usageInstruction: 'Uống 1 viên khi sốt > 38.5°C', quantity: 10, unit: 'Viên', duration: '5 ngày', note: 'Cách nhau tối thiểu 4-6h' },
+        ],
+      };
+    }
+
+    // Default: Nội tổng quát
+    return {
+      chiefComplaint: 'Đau tức nhẹ vùng thượng vị, ợ hơi, đầy bụng sau bữa ăn',
+      clinicalSummary: 'Bụng mềm, ấn đau nhẹ vùng thượng vị. Không phản ứng thành bụng, gan lách không to.',
+      diagnoses: [
+        { icdCode: 'K29.7', diseaseName: 'Viêm dạ dày không đặc hiệu', isPrimary: true, note: 'Chẩn đoán chính' },
+      ],
+      observations: [
+        { category: ObservationCategory.VITAL_SIGNS, code: 'BP', name: 'Huyết áp', value: '120/80', unit: 'mmHg', interpretation: 'Bình thường' },
+        { category: ObservationCategory.VITAL_SIGNS, code: 'HR', name: 'Nhịp tim', value: '76', unit: 'lần/phút', interpretation: 'Bình thường' },
+      ],
+      prescriptionItems: [
+        { drugName: 'Omeprazole', dosage: '20mg', usageInstruction: 'Uống 1 viên trước bữa ăn sáng 30 phút', quantity: 14, unit: 'Viên', duration: '14 ngày', note: 'Tránh ăn đồ chua cay, nhiều dầu mỡ' },
+      ],
+    };
+  }
+
+  // ============================================
+  // MOCK FULFILLMENT SERVICE (HIS SIMULATION)
+  // ============================================
+  async mockFulfill(id: string) {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        patientProfile: true,
+        medicalEncounter: {
+          include: {
+            diagnoses: true,
+            observations: true,
+            prescription: {
+              include: { items: true },
+            },
+          },
+        },
+        slot: {
+          include: {
+            doctorWorkplace: {
+              include: {
+                doctor: true,
+                hospital: true,
+                specialty: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('Lịch khám không tồn tại');
+    }
+
+    // Payment condition check (PAID or CONFIRMED or COMPLETED)
+    const validStatuses: AppointmentStatus[] = [
+      AppointmentStatus.PAID,
+      AppointmentStatus.CONFIRMED,
+      AppointmentStatus.COMPLETED,
+    ];
+    if (!validStatuses.includes(appointment.status)) {
+      throw new BadRequestException('Lịch khám chưa được thanh toán');
+    }
+
+    const workplace = appointment.slot?.doctorWorkplace;
+    const hospitalId = workplace?.hospitalId || workplace?.hospital?.id;
+    const specialtyName = workplace?.specialty?.name || 'Nội tổng quát';
+    const doctorName = workplace?.doctor
+      ? `${workplace.doctor.title ? workplace.doctor.title + ' ' : ''}${workplace.doctor.fullName}`
+      : 'Bác sĩ NovaCare';
+    const doctorTitle = workplace?.doctor?.title || null;
+
+    if (!hospitalId) {
+      throw new BadRequestException('Lịch khám không có thông tin bệnh viện hợp lệ');
+    }
+
+    // IDEMPOTENCY CHECK: If published encounter already exists, return without creating duplicate
+    if (appointment.medicalEncounter && appointment.medicalEncounter.status === EncounterStatus.PUBLISHED) {
+      return {
+        appointmentId: appointment.id,
+        encounterId: appointment.medicalEncounter.id,
+        encounterCode: appointment.medicalEncounter.encounterCode,
+        hospital: workplace?.hospital?.name || 'Cơ sở y tế NovaCare',
+        specialty: specialtyName,
+        status: EncounterStatus.PUBLISHED,
+      };
+    }
+
+    const mockData = this.generateMockMedicalRecord(specialtyName);
+    const encounterCode = this.generateEncounterCode();
+    const now = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. PatientHospitalLink Check / Creation
+      const existingLink = await tx.patientHospitalLink.findFirst({
+        where: {
+          patientProfileId: appointment.patientProfileId,
+          hospitalId: hospitalId,
+        },
+      });
+
+      if (!existingLink) {
+        const hospitalPrefix = workplace?.hospital?.name?.substring(0, 4).toUpperCase() || 'HOSP';
+        const rawExtId = `PAT-${hospitalPrefix}-${appointment.patientProfile.identityNumber || Date.now()}`;
+
+        const extConflict = await tx.patientHospitalLink.findFirst({
+          where: {
+            hospitalId,
+            externalPatientId: rawExtId,
+          },
+        });
+
+        const finalExtId = extConflict
+          ? `${rawExtId}-${Math.floor(1000 + Math.random() * 9000)}`
+          : rawExtId;
+
+        await tx.patientHospitalLink.create({
+          data: {
+            patientProfileId: appointment.patientProfileId,
+            hospitalId: hospitalId,
+            externalPatientId: finalExtId,
+            matchingStatus: MatchingStatus.MATCHED,
+          },
+        });
+      }
+
+      // 2. Update Appointment to COMPLETED
+      await tx.appointment.update({
+        where: { id: appointment.id },
+        data: {
+          status: AppointmentStatus.COMPLETED,
+          completedAt: now,
+        },
+      });
+
+      // 3. Record Status History
+      await tx.appointmentStatusHistory.create({
+        data: {
+          appointmentId: appointment.id,
+          status: AppointmentStatus.COMPLETED,
+          note: '[MOCK HIS] Bệnh viện đã hoàn tất khám và trả hồ sơ y tế',
+        },
+      });
+
+      // 4. Create MedicalEncounter (PUBLISHED)
+      const encounter = await tx.medicalEncounter.upsert({
+        where: { appointmentId: appointment.id },
+        create: {
+          patientProfileId: appointment.patientProfileId,
+          hospitalId,
+          appointmentId: appointment.id,
+          encounterCode,
+          encounterDate: now,
+          doctorName,
+          doctorTitle,
+          specialtyName,
+          chiefComplaint: mockData.chiefComplaint,
+          clinicalSummary: mockData.clinicalSummary,
+          status: EncounterStatus.PUBLISHED,
+        },
+        update: {
+          status: EncounterStatus.PUBLISHED,
+          doctorName,
+          doctorTitle,
+          specialtyName,
+          chiefComplaint: mockData.chiefComplaint,
+          clinicalSummary: mockData.clinicalSummary,
+        },
+      });
+
+      // 5. Diagnoses
+      for (const diag of mockData.diagnoses) {
+        await tx.diagnosis.create({
+          data: {
+            encounterId: encounter.id,
+            icdCode: diag.icdCode,
+            diseaseName: diag.diseaseName,
+            isPrimary: diag.isPrimary,
+            note: diag.note,
+          },
+        });
+      }
+
+      // 6. Observations
+      for (const obs of mockData.observations) {
+        await tx.observation.create({
+          data: {
+            encounterId: encounter.id,
+            category: obs.category,
+            code: obs.code,
+            name: obs.name,
+            value: obs.value,
+            unit: obs.unit,
+            interpretation: obs.interpretation,
+          },
+        });
+      }
+
+      // 7. Prescription & Items
+      const rxCode = `RX-${encounter.encounterCode.replace('ENC-', '')}`;
+      const prescription = await tx.prescription.upsert({
+        where: { encounterId: encounter.id },
+        create: {
+          encounterId: encounter.id,
+          prescriptionCode: rxCode,
+          note: '[MOCK HIS] Đơn thuốc điện tử phát hành từ bệnh viện',
+        },
+        update: {},
+      });
+
+      for (const item of mockData.prescriptionItems) {
+        await tx.prescriptionItem.create({
+          data: {
+            prescriptionId: prescription.id,
+            drugName: item.drugName,
+            dosage: item.dosage,
+            usageInstruction: item.usageInstruction,
+            quantity: item.quantity,
+            unit: item.unit,
+            duration: item.duration,
+            note: item.note,
+          },
+        });
+      }
+
+      return {
+        appointmentId: appointment.id,
+        encounterId: encounter.id,
+        encounterCode: encounter.encounterCode,
+        hospital: workplace?.hospital?.name || 'Cơ sở y tế NovaCare',
+        specialty: specialtyName,
+        status: EncounterStatus.PUBLISHED,
+      };
+    });
   }
 }

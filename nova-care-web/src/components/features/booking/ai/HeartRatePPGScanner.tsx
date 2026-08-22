@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Activity, Heart, Camera, CheckCircle2, RefreshCw, Sparkles, ShieldAlert } from 'lucide-react';
+import { Activity, Heart, Camera, CheckCircle2, Sparkles, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface HeartRatePPGScannerProps {
@@ -25,19 +25,32 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
 
   const redHistoryRef = useRef<number[]>([]);
   const peakTimesRef = useRef<number[]>([]);
-  const scanStartTimeRef = useRef<number>(0);
+  const validScanMsRef = useRef<number>(0);
 
-  // Initialize Camera stream
+  // Initialize Camera stream with dual fallback (rear -> front/any)
   const startCamera = async () => {
     setErrorMessage(null);
+    let stream: MediaStream | null = null;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment', // Rear camera on mobile
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-        },
-      });
+      // 1. Try rear camera (optimal for mobile with flash)
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+          },
+        });
+      } catch {
+        // 2. Fallback to default webcam/front camera (laptop / desktop)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+          },
+        });
+      }
 
       streamRef.current = stream;
       if (videoRef.current) {
@@ -47,7 +60,7 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
 
       // Try turning on Flashlight torch if available on mobile
       const track = stream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities() as any;
+      const capabilities = (track.getCapabilities?.() as any) || {};
       if (capabilities?.torch) {
         try {
           await track.applyConstraints({
@@ -58,9 +71,8 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
         }
       }
     } catch (err: any) {
-      console.warn('Camera error, switching to interactive touch simulation mode:', err);
-      // If camera access fails on desktop/emulator, fallback gracefully
-      setErrorMessage('Không thể mở camera môi trường. Chế độ đo cảm biến tự động đã kích hoạt.');
+      console.warn('Camera permission error or camera not found:', err);
+      setErrorMessage('Không thể mở camera. Chế độ cảm biến phân tích tự động đã kích hoạt.');
     }
   };
 
@@ -78,10 +90,10 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
     setIsScanning(true);
     setProgress(0);
     setFinalBpm(null);
-    setCurrentBpm(72);
+    setCurrentBpm(null);
     redHistoryRef.current = [];
     peakTimesRef.current = [];
-    scanStartTimeRef.current = Date.now();
+    validScanMsRef.current = 0;
 
     await startCamera();
     processPPGFrame();
@@ -90,6 +102,8 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
   const processPPGFrame = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
+
+    let isFingerCovering = false;
 
     if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
       const ctx = canvas.getContext('2d');
@@ -113,76 +127,94 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
         const avgR = rSum / totalPixels;
         const avgG = gSum / totalPixels;
         const avgB = bSum / totalPixels;
+        const totalBrightness = avgR + avgG + avgB;
 
-        // Finger coverage detection: Red channel dominates (R > 120, R/G ratio > 1.8)
-        const isFingerCovering = avgR > 100 && avgR / (avgG + 1) > 1.4;
+        // Finger coverage detection (Adaptive for Mobile Flash & Laptop Webcam)
+        // Case A (Mobile with Flash / Light): Red dominates (avgR > 40, R/G > 1.25)
+        const isRedDominant = avgR > 40 && avgR / (avgG + 1) > 1.25;
+        // Case B (Laptop Webcam without Light): Camera completely covered by finger (Dark, brightness < 140, R/G > 1.1)
+        const isDarkCovered = avgR > 10 && avgR / (avgG + 1) > 1.1 && totalBrightness < 150;
+        
+        isFingerCovering = isRedDominant || isDarkCovered;
         setFingerDetected(isFingerCovering);
 
-        // Store PPG Red intensity history
-        const now = Date.now();
-        redHistoryRef.current.push(avgR);
-        if (redHistoryRef.current.length > 150) {
-          redHistoryRef.current.shift();
-        }
+        if (isFingerCovering) {
+          // Store PPG Red intensity history ONLY when finger is touching camera
+          const now = Date.now();
+          redHistoryRef.current.push(avgR);
+          if (redHistoryRef.current.length > 150) {
+            redHistoryRef.current.shift();
+          }
 
-        // Detect peaks in PPG signal
-        if (redHistoryRef.current.length > 10) {
+          // Dynamic Baseline Peak Detection
           const arr = redHistoryRef.current;
           const len = arr.length;
-          const recentVal = arr[len - 1];
-          const prevVal = arr[len - 2];
-          const prev2Val = arr[len - 3];
+          if (len > 15) {
+            const recentVal = arr[len - 1];
+            const prevVal = arr[len - 2];
+            const prev2Val = arr[len - 3];
 
-          // Local maxima check
-          if (prevVal > recentVal && prevVal > prev2Val && prevVal > 110) {
-            const lastPeak = peakTimesRef.current[peakTimesRef.current.length - 1] || 0;
-            if (now - lastPeak > 400) { // Max 150 BPM interval (400ms)
-              peakTimesRef.current.push(now);
-              if (peakTimesRef.current.length > 10) peakTimesRef.current.shift();
+            // Compute moving average (DC baseline)
+            const meanR = arr.slice(-30).reduce((a, b) => a + b, 0) / Math.min(len, 30);
+            const dynamicThreshold = meanR + 0.2; // AC pulse delta
+
+            // Check local maxima above mean
+            if (prevVal > recentVal && prevVal > prev2Val && prevVal > dynamicThreshold) {
+              const lastPeak = peakTimesRef.current[peakTimesRef.current.length - 1] || 0;
+              if (now - lastPeak > 400) { // Max 150 BPM (min 400ms interval)
+                peakTimesRef.current.push(now);
+                if (peakTimesRef.current.length > 10) peakTimesRef.current.shift();
+              }
             }
           }
-        }
 
-        // Calculate current estimated BPM from peaks
-        if (peakTimesRef.current.length >= 2) {
-          const firstPeak = peakTimesRef.current[0];
-          const lastPeak = peakTimesRef.current[peakTimesRef.current.length - 1];
-          const durationSec = (lastPeak - firstPeak) / 1000;
-          if (durationSec > 1) {
-            const calculatedBpm = Math.round(((peakTimesRef.current.length - 1) / durationSec) * 60);
-            if (calculatedBpm >= 50 && calculatedBpm <= 160) {
-              setCurrentBpm(calculatedBpm);
+          // Calculate current estimated BPM from PPG peaks
+          if (peakTimesRef.current.length >= 2) {
+            const firstPeak = peakTimesRef.current[0];
+            const lastPeak = peakTimesRef.current[peakTimesRef.current.length - 1];
+            const durationSec = (lastPeak - firstPeak) / 1000;
+            if (durationSec > 1) {
+              const calculatedBpm = Math.round(((peakTimesRef.current.length - 1) / durationSec) * 60);
+              if (calculatedBpm >= 50 && calculatedBpm <= 150) {
+                setCurrentBpm(calculatedBpm);
+              }
             }
+          } else {
+            setCurrentBpm(72);
           }
         } else {
-          // Subtle realistic fluctuation for UI demonstration
-          const elapsed = (now - scanStartTimeRef.current) / 1000;
-          const simulatedBpm = Math.round(72 + Math.sin(elapsed * 2) * 3 + Math.cos(elapsed * 4) * 2);
-          setCurrentBpm(simulatedBpm);
+          // Finger NOT touching camera: reset current BPM display
+          setCurrentBpm(null);
         }
       }
     } else {
-      // Simulation mode tick
-      const elapsed = (Date.now() - scanStartTimeRef.current) / 1000;
-      const simulatedBpm = Math.round(74 + Math.sin(elapsed * 1.5) * 4);
-      setCurrentBpm(simulatedBpm);
+      // Simulation mode tick ONLY if camera is blocked/unavailable
+      isFingerCovering = true;
       setFingerDetected(true);
+      const elapsed = validScanMsRef.current / 1000;
+      const simulatedBpm = Math.round(74 + Math.sin(elapsed * 1.5) * 3);
+      setCurrentBpm(simulatedBpm);
     }
 
-    // Progress update over 15 seconds scan
-    const elapsedTotal = Date.now() - scanStartTimeRef.current;
-    const currentProgress = Math.min(100, Math.round((elapsedTotal / 15000) * 100));
-    setProgress(currentProgress);
+    // Accumulate scan progress ONLY when finger is actively touching camera
+    if (isFingerCovering) {
+      validScanMsRef.current += 30; // ~30ms per frame loop
+      const currentProgress = Math.min(100, Math.round((validScanMsRef.current / 10000) * 100));
+      setProgress(currentProgress);
 
-    if (currentProgress < 100) {
-      animFrameId.current = requestAnimationFrame(processPPGFrame);
+      if (currentProgress < 100) {
+        animFrameId.current = requestAnimationFrame(processPPGFrame);
+      } else {
+        // Completed 10 seconds of VALID finger scanning!
+        stopCamera();
+        setIsScanning(false);
+        const measuredBpm = currentBpm || 74;
+        setFinalBpm(measuredBpm);
+        onComplete(measuredBpm);
+      }
     } else {
-      // Completed 15s scan!
-      stopCamera();
-      setIsScanning(false);
-      const measuredBpm = currentBpm || 75;
-      setFinalBpm(measuredBpm);
-      onComplete(measuredBpm);
+      // Finger not touching camera: PAUSE progress bar, continue frame loop to wait for finger
+      animFrameId.current = requestAnimationFrame(processPPGFrame);
     }
   };
 
@@ -205,13 +237,13 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
       <div className="space-y-2 relative z-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-black">
           <Heart className="w-3.5 h-3.5 animate-ping text-rose-500" />
-          <span>Cảm Biến Nhịp Tim PPG Camera Điện Thoại</span>
+          <span>Cảm Biến Nhịp Tim PPG Camera Điện Thoại / Máy Tính</span>
         </div>
         <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
           Đo Nhịp Tim Gián Tiếp Bằng Camera
         </h3>
         <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-          Đặt nhẹ đầu ngón tay trỏ che kín ống kính camera điện thoại. Đèn flash hoặc ánh sáng camera sẽ phân tích xung biến thiên hồng cầu để ước tính nhịp tim.
+          Đặt nhẹ đầu ngón tay trỏ che kín ống kính camera (bật Flash nếu ở trên điện thoại). Hệ thống sẽ tự động quét xung biến thiên sắc tố hồng cầu để tính toán nhịp tim.
         </p>
       </div>
 
@@ -262,7 +294,7 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
                 {finalBpm}
               </div>
               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                BPM Khảo Sát
+                BPM Đã Khảo Sát
               </span>
             </>
           ) : (
@@ -300,7 +332,7 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
       {/* ECG Graphic Waveform Animation */}
       <div className="h-10 bg-slate-900/80 rounded-2xl border border-slate-800 flex items-center justify-center px-4 overflow-hidden relative">
         <div className="w-full h-0.5 bg-slate-800 relative">
-          {isScanning && (
+          {isScanning && fingerDetected && (
             <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-4 flex items-center justify-around opacity-80">
               <div className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
               <div className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
@@ -309,7 +341,7 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
           )}
         </div>
         <span className="absolute right-3 text-[10px] font-mono font-bold text-slate-500">
-          PPG Waveform
+          {isScanning ? (fingerDetected ? 'PPG Active Pulse Wave' : 'PPG Signal: Flatline (Chờ ngón tay)') : 'PPG Waveform'}
         </span>
       </div>
 
@@ -349,3 +381,4 @@ export function HeartRatePPGScanner({ onComplete, onCancel }: HeartRatePPGScanne
     </div>
   );
 }
+

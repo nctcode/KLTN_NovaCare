@@ -11,7 +11,7 @@ export const doctorService = {
     if (params.limit) queryParams.append('limit', String(params.limit));
 
     const response = await apiClient.get<any>(`/doctors?${queryParams}`);
-    return response.data;
+    return Array.isArray(response) ? response : (response?.data ?? []);
   },
 
   async getById(id: string): Promise<Doctor> {

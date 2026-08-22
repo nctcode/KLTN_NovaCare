@@ -4,7 +4,7 @@ import { Hospital } from '@/types';
 export const hospitalService = {
   async getAll(): Promise<Hospital[]> {
     const response = await apiClient.get<any>('/hospitals');
-    return response.data;
+    return Array.isArray(response) ? response : (response?.data ?? []);
   },
 
   async getById(id: string): Promise<Hospital> {

@@ -2,16 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Calendar, Bell, UserCheck, LogOut, X } from 'lucide-react';
+import { User, Calendar, Bell, UserCheck, LogOut, X, Activity, PanelLeftClose } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+  collapsed?: boolean;
+  setCollapsed?: (collapsed: boolean) => void;
 }
 
-export function Sidebar({ open, setOpen }: SidebarProps) {
+export function Sidebar({ open, setOpen, collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
 
@@ -30,6 +32,11 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
       label: 'Lịch khám của tôi',
       href: '/lich-kham',
       icon: Calendar,
+    },
+    {
+      label: 'Lịch sử khám liên thông',
+      href: '/lich-su-kham',
+      icon: Activity,
     },
     {
       label: 'Thông báo',
@@ -51,25 +58,37 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
       {/* Sidebar Drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-200 lg:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out shadow-xs",
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          collapsed && "lg:-translate-x-full lg:opacity-0 pointer-events-none"
         )}
       >
-        <div className="flex h-16 items-center justify-between px-6 border-b">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-secondary font-bold text-sm">N</span>
+        <div className="flex h-16 items-center justify-between px-5 border-b border-slate-100">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-[#0c4b39] rounded-xl flex items-center justify-center shadow-xs">
+              <span className="text-[#66FF33] font-black text-sm">N</span>
             </div>
-            <span className="text-xl font-bold text-secondary">
-              Nova<span className="text-primary-dark">Care</span>
+            <span className="text-xl font-black text-[#1A2B3C] tracking-tight">
+              Nova<span className="text-[#0c4b39]">Care</span>
             </span>
           </Link>
-          <button
-            onClick={() => setOpen(false)}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-md"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {setCollapsed && (
+              <button
+                onClick={() => setCollapsed(true)}
+                className="hidden lg:flex p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                title="Đóng menu (Xem toàn màn hình)"
+              >
+                <PanelLeftClose className="h-5 w-5" />
+              </button>
+            )}
+            <button
+              onClick={() => setOpen(false)}
+              className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1 px-4 py-6">

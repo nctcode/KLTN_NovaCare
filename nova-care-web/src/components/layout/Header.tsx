@@ -34,7 +34,11 @@ import {
   UserPlus,
   Info,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Maximize2,
+  Minimize2,
+  PanelLeftClose,
+  PanelLeft
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -81,9 +85,19 @@ const renderIcon = (name?: string) => {
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  onToggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({
+  onMenuClick,
+  onToggleSidebar,
+  isSidebarCollapsed,
+  isFullscreen,
+  onToggleFullscreen,
+}: HeaderProps) {
   const pathname = usePathname();
   const { user, logout, isAuthenticated } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -117,8 +131,9 @@ export function Header({ onMenuClick }: HeaderProps) {
     return (
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs h-16 flex items-center px-4 sm:px-6">
         <div className="w-full flex items-center justify-between gap-4">
-          {/* Left: Mobile Drawer Trigger & Return to Public Portal */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Left: Mobile Drawer Trigger, Desktop Sidebar Toggle & Fullscreen Toggle */}
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            {/* Mobile Drawer Trigger */}
             <button
               onClick={onMenuClick}
               className="lg:hidden p-2 text-slate-700 hover:bg-slate-100 rounded-xl transition"
@@ -126,6 +141,48 @@ export function Header({ onMenuClick }: HeaderProps) {
             >
               <Menu className="h-6 w-6" />
             </button>
+
+            {/* Desktop Sidebar Collapse Toggle Button */}
+            {onToggleSidebar && (
+              <button
+                onClick={onToggleSidebar}
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-200 shadow-2xs cursor-pointer"
+                title={isSidebarCollapsed ? "Mở menu bên trái" : "Đóng menu (Mở rộng toàn màn hình)"}
+              >
+                {isSidebarCollapsed ? (
+                  <>
+                    <PanelLeft className="h-4 w-4 text-[#0c4b39]" />
+                    <span className="text-xs font-extrabold text-[#0c4b39]">Hiện Menu</span>
+                  </>
+                ) : (
+                  <>
+                    <PanelLeftClose className="h-4 w-4 text-slate-600" />
+                    <span className="text-xs font-bold text-slate-600">Đóng Menu</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Browser Fullscreen Toggle Button */}
+            {onToggleFullscreen && (
+              <button
+                onClick={onToggleFullscreen}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs transition border border-indigo-200 shadow-2xs cursor-pointer"
+                title={isFullscreen ? "Thoát toàn màn hình" : "Chế độ Toàn Màn Hình (Fullscreen)"}
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize2 className="h-4 w-4 text-indigo-600" />
+                    <span className="hidden sm:inline font-extrabold">Thu nhỏ</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="h-4 w-4 text-indigo-600" />
+                    <span className="hidden sm:inline font-extrabold">Toàn màn hình</span>
+                  </>
+                )}
+              </button>
+            )}
 
             <Link
               href="/"

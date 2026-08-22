@@ -42,12 +42,7 @@ export class MedicalServicesController {
     @Query('hospitalId') hospitalId?: string,
     @Query('specialtyId') specialtyId?: string,
   ) {
-    let data;
-    if (hospitalId) {
-      data = await this.service.findByHospital(hospitalId, specialtyId);
-    } else {
-      data = await this.service.findAll();
-    }
+    const data = await this.service.findAll(hospitalId, specialtyId);
     return {
       statusCode: HttpStatus.OK,
       message: 'Lấy danh sách dịch vụ khám thành công',

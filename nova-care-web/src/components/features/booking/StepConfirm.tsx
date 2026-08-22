@@ -8,8 +8,9 @@ import { doctorService } from '@/services/doctor.service';
 import { useBookingStore } from '@/stores/booking.store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, ChevronRight, Loader2, Calendar, Clock, MapPin, User, FileText, FileCheck2, ShieldCheck, Stethoscope, Building2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Loader2, Calendar, Clock, MapPin, User, FileText, FileCheck2, ShieldCheck, Stethoscope, Building2, CheckCircle2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StepConfirmProps {
@@ -19,7 +20,7 @@ interface StepConfirmProps {
 
 export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
   const { bookingData, setBookingData } = useBookingStore();
-  const { slot, patientProfileId, workplaceId, reason, symptoms, doctorId } = bookingData;
+  const { slot, patientProfileId, workplaceId, reason, symptoms, doctorId, examinationType } = bookingData;
   const [agreedTerms, setAgreedTerms] = useState(true);
 
   // Get selected profile details
@@ -66,10 +67,18 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
       return;
     }
 
+    const examTypeLabel =
+      examinationType === 'BHYT'
+        ? '[Khám BHYT]'
+        : examinationType === 'SERVICE'
+        ? '[Khám dịch vụ]'
+        : '[Khám thường]';
+    const finalReason = reason ? `${examTypeLabel} ${reason}` : examTypeLabel;
+
     const payload = {
       patientProfileId: patientProfileId,
       slotId: slot.id,
-      reason: reason || undefined,
+      reason: finalReason,
       symptoms: symptoms || undefined,
       idempotencyKey: `idempotency-${patientProfileId}-${slot.id}-${Date.now()}`,
     };
@@ -101,6 +110,60 @@ export function StepConfirm({ onNext, onBack }: StepConfirmProps) {
       </div>
 
       <div className="space-y-4">
+        {/* Examination Type Card */}
+        {(() => {
+          const type = examinationType || 'REGULAR';
+          if (type === 'BHYT') {
+            return (
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between text-xs shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-600 text-white shrink-0 shadow-xs">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-blue-600 tracking-wider">Hình thức khám</span>
+                    <h4 className="font-extrabold text-blue-950 text-sm">Khám Bảo hiểm y tế (BHYT)</h4>
+                    <p className="text-blue-700 text-[11px]">Vui lòng xuất trình thẻ BHYT và CCCD khi đến khám.</p>
+                  </div>
+                </div>
+                <Badge className="bg-blue-600 text-white font-extrabold text-xs px-3 py-1 border-none rounded-xl">BHYT</Badge>
+              </div>
+            );
+          }
+          if (type === 'SERVICE') {
+            return (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between text-xs shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-600 text-white shrink-0 shadow-xs">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-amber-600 tracking-wider">Hình thức khám</span>
+                    <h4 className="font-extrabold text-amber-950 text-sm">Khám dịch vụ (Khám ưu tiên)</h4>
+                    <p className="text-amber-700 text-[11px]">Khám nhanh không chờ đợi, ưu tiên tiếp đón.</p>
+                  </div>
+                </div>
+                <Badge className="bg-amber-600 text-white font-extrabold text-xs px-3 py-1 border-none rounded-xl">Ưu tiên</Badge>
+              </div>
+            );
+          }
+          return (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between text-xs shadow-2xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#0c4b39] text-white shrink-0 shadow-xs">
+                  <Stethoscope className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-emerald-700 tracking-wider">Hình thức khám</span>
+                  <h4 className="font-extrabold text-emerald-950 text-sm">Khám thường (Tiêu chuẩn)</h4>
+                  <p className="text-emerald-800 text-[11px]">Quy trình xếp số thứ tự tiêu chuẩn bệnh viện.</p>
+                </div>
+              </div>
+              <Badge className="bg-[#0c4b39] text-white font-extrabold text-xs px-3 py-1 border-none rounded-xl">Tiêu chuẩn</Badge>
+            </div>
+          );
+        })()}
+
         {/* Doctor & Location Info Card */}
         <Card className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
           <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">

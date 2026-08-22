@@ -21,4 +21,9 @@ export class CreateShareDto {
   @IsOptional()
   @IsString()
   sharedWith?: string;
+
+  @ApiPropertyOptional({ description: 'Mã token tùy chỉnh (Ví dụ: NC-8F3K-29QX)' })
+  @IsOptional()
+  @IsString()
+  customToken?: string;
 }

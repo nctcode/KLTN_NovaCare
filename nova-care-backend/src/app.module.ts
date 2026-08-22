@@ -24,6 +24,8 @@ import { AIModule } from '@/modules/ai/ai.module';
 import { MedicalPassportModule } from '@/modules/medical-passport/medical-passport.module';
 import { HealthPackagesModule } from '@/modules/health-packages/health-packages.module';
 import { AdminModule } from '@/modules/admin/admin.module';
+import { ClinicalModule } from '@/modules/clinical/clinical.module';
+import { IntegrationModule } from '@/modules/integration/integration.module';
 
 @Module({
   imports: [
@@ -57,6 +59,8 @@ import { AdminModule } from '@/modules/admin/admin.module';
     PreExamV2Module,
     MedicalPassportModule,
     AdminModule,
+    ClinicalModule,
+    IntegrationModule,
   ],
 })
 export class AppModule {}

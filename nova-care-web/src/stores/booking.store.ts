@@ -24,6 +24,7 @@ const initialState: BookingState = {
   medicalServiceId: null,
   healthPackageId: null,
   bookingType: 'doctor',
+  examinationType: 'REGULAR',
   reason: '',
   symptoms: '',
   appointmentId: null,
@@ -51,10 +52,10 @@ export const useBookingStore = create<BookingStore>((set) => ({
     set((state) => ({
       bookingData: {
         ...state.bookingData,
-        doctorId: selection.doctorId || state.bookingData.doctorId,
-        hospitalId: selection.hospitalId || state.bookingData.hospitalId,
-        specialtyId: selection.specialtyId || state.bookingData.specialtyId,
-        reason: selection.reason || state.bookingData.reason,
+        doctorId: selection.doctorId !== undefined ? selection.doctorId : state.bookingData.doctorId,
+        hospitalId: selection.hospitalId !== undefined ? selection.hospitalId : state.bookingData.hospitalId,
+        specialtyId: selection.specialtyId !== undefined ? selection.specialtyId : state.bookingData.specialtyId,
+        reason: selection.reason !== undefined ? selection.reason : state.bookingData.reason,
       },
     })),
   resetBooking: () =>

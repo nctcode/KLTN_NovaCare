@@ -23,9 +23,13 @@ export class MedicalServicesService {
     });
   }
 
-  async findAll() {
+  async findAll(hospitalId?: string, specialtyId?: string) {
+    const where: any = { isActive: true };
+    if (hospitalId) where.hospitalId = hospitalId;
+    if (specialtyId) where.specialtyId = specialtyId;
+
     return this.prisma.medicalService.findMany({
-      where: { isActive: true },
+      where,
       include: { hospital: true, specialty: true },
       orderBy: { name: 'asc' },
     });

@@ -57,7 +57,9 @@ class ApiClient {
             return this.client(originalRequest);
           } catch (refreshError) {
             useAuthStore.getState().clearAuth();
-            window.location.href = '/dang-nhap';
+            if (typeof window !== 'undefined' && window.location.pathname !== '/dang-nhap') {
+              window.location.href = '/dang-nhap';
+            }
             return Promise.reject(refreshError);
           }
         }
