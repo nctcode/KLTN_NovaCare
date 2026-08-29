@@ -105,10 +105,23 @@ export function Step4Payment({
         }
       }
 
-      // 3. Show Success Ticket Modal
+      // 3. If QR_CODE (Momo / ZaloPay / VietQR) selected, instantly simulate payment success
+      if (paymentMethod === 'QR_CODE' && appointment.id) {
+        try {
+          await paymentService.simulateSuccess(appointment.id, 'MOMO');
+          appointment.status = 'PAID';
+          toast.success('🎉 Đã xác nhận & Thanh toán QR Momo thành công!');
+        } catch (err) {
+          console.warn('Error simulating QR payment:', err);
+        }
+      }
+
+      // 4. Show Success Ticket Modal
       setCreatedAppointment(appointment);
       setIsTicketModalOpen(true);
-      toast.success('Đặt lịch khám thành công!');
+      if (paymentMethod !== 'QR_CODE') {
+        toast.success('Đặt lịch khám thành công!');
+      }
     } catch (error: any) {
       console.error('Error creating appointment:', error);
       toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi tạo lịch hẹn. Vui lòng thử lại!');
@@ -335,12 +348,18 @@ export function Step4Payment({
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-left space-y-3 text-xs">
             <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <span className="text-slate-500 font-bold">Mã số phiếu:</span>
-              <span className="font-mono font-black text-[#0c4b39] text-sm">
-                #{createdAppointment?.id?.slice(0, 8).toUpperCase() || 'NC-889922'}
+              <span className="font-mono font-black text-[#0c4b39] text-sm bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-300">
+                {createdAppointment?.bookingCode || (createdAppointment?.id ? `#${createdAppointment.id.slice(0, 8).toUpperCase()}` : 'NC-BOOKING')}
               </span>
             </div>
 
             <div className="space-y-1.5">
+              <p className="flex justify-between">
+                <span className="text-slate-500">Trạng thái:</span>
+                <strong className="text-emerald-800 font-extrabold">
+                  {paymentMethod === 'QR_CODE' ? '✅ ĐÃ THANH TOÁN (PAID)' : '⏳ CHỜ TIẾP ĐÓN TẠI VIỆN'}
+                </strong>
+              </p>
               <p className="flex justify-between">
                 <span className="text-slate-500">Cơ sở khám:</span>
                 <strong className="text-slate-900">{hospital.name}</strong>
@@ -364,20 +383,30 @@ export function Step4Payment({
           <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
             <Button
               type="button"
-              onClick={() => router.push('/ho-so')}
-              className="w-full bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs h-11 rounded-2xl flex items-center justify-center gap-2"
+              onClick={() => {
+                setIsTicketModalOpen(false);
+                if (createdAppointment?.id) {
+                  router.push(`/lich-kham/${createdAppointment.id}`);
+                } else {
+                  router.push('/lich-kham');
+                }
+              }}
+              className="w-full bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs h-11 rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-sm"
             >
               <Calendar className="w-4 h-4" />
-              Xem Quản Lý Lịch Hẹn
+              Xem Chi Tiết Lịch Hẹn ➔
             </Button>
             <Button
               type="button"
-              onClick={() => router.push('/')}
+              onClick={() => {
+                setIsTicketModalOpen(false);
+                router.push('/lich-kham');
+              }}
               variant="outline"
-              className="w-full border-slate-300 text-slate-800 hover:bg-slate-100 font-bold text-xs h-11 rounded-2xl flex items-center justify-center gap-2"
+              className="w-full border-slate-300 text-slate-800 hover:bg-slate-100 font-bold text-xs h-11 rounded-2xl flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Home className="w-4 h-4" />
-              Về Trang Chủ
+              <CheckCircle2 className="w-4 h-4" />
+              Danh Sách Lịch Khám
             </Button>
           </div>
         </DialogContent>

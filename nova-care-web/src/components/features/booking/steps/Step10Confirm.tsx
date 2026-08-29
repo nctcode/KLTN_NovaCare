@@ -48,7 +48,7 @@ export function Step10Confirm() {
 
   const isPaid = appointment?.status === 'PAID' || appointment?.status === 'CONFIRMED' || appointment?.status === 'COMPLETED';
   const bookingCode = appointment?.bookingCode || `NOVA-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
-  const totalPrice = appointment?.totalPrice || bookingData.totalPrice || 200000;
+  const totalPrice = appointment?.totalPrice || (bookingData as any)?.totalPrice || 200000;
 
   return (
     <div className="space-y-6 text-center animate-in zoom-in-95 duration-300 py-4">

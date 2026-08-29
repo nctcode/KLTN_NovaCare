@@ -115,7 +115,7 @@ function PaymentPageContent() {
                 onClick={() => router.push(`/lich-kham/${appointment.id}`)}
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl shadow-xs"
               >
-                Xem chi tiết lịch khám & Mô phỏng Bác sĩ khám ➔
+                Xem chi tiết phiếu khám ➔
               </Button>
               <Button
                 variant="outline"

@@ -25,6 +25,7 @@ export interface Appointment {
   };
   medicalService?: any;
   payment?: any;
+  medicalEncounter?: any;
   statusHistory?: any[];
 }
 

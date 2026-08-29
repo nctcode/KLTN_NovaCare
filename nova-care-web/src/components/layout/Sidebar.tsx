@@ -34,7 +34,7 @@ export function Sidebar({ open, setOpen, collapsed, setCollapsed }: SidebarProps
       icon: Calendar,
     },
     {
-      label: 'Lịch sử khám liên thông',
+      label: 'Sổ sức khỏe điện tử',
       href: '/lich-su-kham',
       icon: Activity,
     },
@@ -113,6 +113,26 @@ export function Sidebar({ open, setOpen, collapsed, setCollapsed }: SidebarProps
             );
           })}
         </nav>
+
+        {/* Specialized Demo Link: Cổng Bác Sĩ Tra Cứu Liên Thông Đa Viện */}
+        <div className="px-4 py-3 border-t border-slate-100">
+          <Link
+            href="/tra-cuu-benh-an"
+            onClick={() => setOpen(false)}
+            className={cn(
+              "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-bold transition border",
+              pathname === '/tra-cuu-benh-an'
+                ? "bg-emerald-700 text-white border-emerald-800 shadow-xs"
+                : "bg-emerald-50/80 text-emerald-900 border-emerald-200 hover:bg-emerald-100/80"
+            )}
+          >
+            <Activity className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="flex-1 text-left">
+              <span className="block font-black text-slate-900">Cổng Bác Sĩ Tra Cứu</span>
+              <span className="text-[10px] font-semibold text-emerald-700 block">Liên thông y tế đa viện (KLTN)</span>
+            </div>
+          </Link>
+        </div>
 
         <div className="border-t p-4">
           <button

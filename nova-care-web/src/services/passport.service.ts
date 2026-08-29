@@ -4,6 +4,7 @@ export interface CreateShareDto {
   allowedSections?: string[];
   validDays?: number;
   sharedWith?: string;
+  customToken?: string;
 }
 
 export const passportService = {

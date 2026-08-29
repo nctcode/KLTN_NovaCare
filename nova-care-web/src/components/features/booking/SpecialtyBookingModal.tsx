@@ -36,9 +36,11 @@ import { hospitalService } from '@/services/hospital.service';
 import { doctorService } from '@/services/doctor.service';
 import { profileService } from '@/services/profile.service';
 import { appointmentService } from '@/services/appointment.service';
+import { paymentService } from '@/services/payment.service';
 import { PatientProfile } from '@/types/profile.types';
 import { format, addDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 interface SpecialtyBookingModalProps {
   isOpen: boolean;

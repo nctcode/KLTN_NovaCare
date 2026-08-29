@@ -11,7 +11,7 @@ import { PatientProfile } from '@prisma/client';
 
 @Injectable()
 export class PatientProfilesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(userId: string, createDto: CreatePatientProfileDto): Promise<PatientProfile> {
     // Nếu đặt isDefault = true, cập nhật các hồ sơ khác thành false

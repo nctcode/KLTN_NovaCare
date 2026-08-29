@@ -140,14 +140,42 @@ export const interoperabilityService = {
     return res.data;
   },
 
-  async getSharedMedicalHistory(
-    identityNumber: string,
-    sourceHospitalId: string,
-    targetHospitalId: string
-  ): Promise<UnifiedMedicalRecordResponse> {
-    const res = await apiClient.get<any>(
-      `/integration/medical-history/shared?identityNumber=${encodeURIComponent(identityNumber)}&sourceHospitalId=${sourceHospitalId}&targetHospitalId=${targetHospitalId}`
-    );
+  async portalLookup(params: {
+    query: string;
+    doctorName?: string;
+    hospitalName?: string;
+    purpose?: string;
+    pin?: string;
+  }) {
+    const res = await apiClient.post<any>('/interoperability/portal/lookup', params);
+    return res.data;
+  },
+
+  async getPortalAuditLogs(userId?: string, patientProfileId?: string) {
+    const query = new URLSearchParams();
+    if (userId) query.append('userId', userId);
+    if (patientProfileId) query.append('patientProfileId', patientProfileId);
+    const res = await apiClient.get<any>(`/interoperability/portal/audit-logs?${query.toString()}`);
+    return res.data;
+  },
+
+  async createShareCode(dto: {
+    validDays?: number;
+    allowedSections?: string[];
+    sharedWith?: string;
+    pinCode?: string;
+  }) {
+    const res = await apiClient.post<any>('/interoperability/portal/share-codes', dto);
+    return res.data;
+  },
+
+  async getMyShareCodes() {
+    const res = await apiClient.get<any>('/interoperability/portal/share-codes');
+    return res.data;
+  },
+
+  async revokeShareCode(shareId: string) {
+    const res = await apiClient.patch<any>(`/interoperability/portal/share-codes/${shareId}/revoke`);
     return res.data;
   },
 };
