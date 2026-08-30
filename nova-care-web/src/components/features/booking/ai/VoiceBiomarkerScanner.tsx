@@ -91,9 +91,8 @@ export function VoiceBiomarkerScanner({ onComplete, onReset }: VoiceBiomarkerSca
   useEffect(() => {
     return () => {
       stopRecordingCleanup();
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
     };
-  }, [audioUrl]);
+  }, []);
 
   const stopRecordingCleanup = () => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);

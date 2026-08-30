@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,23 +34,31 @@ import {
   Volume2,
   Layers,
   Waves,
+  Play,
+  Pause,
 } from 'lucide-react';
-import { Hospital, Specialty } from '@/types';
+import { Hospital, Specialty, Doctor } from '@/types';
 import { HeartRatePPGScanner, getHeartRateEvaluation } from './HeartRatePPGScanner';
 import { VoiceBiomarkerScanner, VoiceAcousticMetrics } from './VoiceBiomarkerScanner';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
+
+export interface AIRecommendationResult {
+  specialtyId: string;
+  specialtyName: string;
+  reason: string;
+  doctor?: Doctor | null;
+  doctorId?: string;
+  doctorName?: string;
+}
 
 interface AIAssistedBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   hospital: Hospital;
   specialties: Specialty[];
-  onApplyAIRecommendation: (recommendation: {
-    specialtyId: string;
-    specialtyName: string;
-    reason: string;
-  }) => void;
+  doctors?: Doctor[];
+  onApplyAIRecommendation: (recommendation: AIRecommendationResult) => void;
 }
 
 export interface BodyAreaConfig {
@@ -341,6 +349,7 @@ export function AIAssistedBookingModal({
   onClose,
   hospital,
   specialties,
+  doctors = [],
   onApplyAIRecommendation,
 }: AIAssistedBookingModalProps) {
   const [activeTab, setActiveTab] = useState<'bodymap' | 'survey' | 'camera' | 'vitals' | 'review' | 'result'>('bodymap');
@@ -356,9 +365,39 @@ export function AIAssistedBookingModal({
 
   // Voice & Vision states
   const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null);
+  const [voiceAudioUrl, setVoiceAudioUrl] = useState<string | null>(null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const [voiceAcousticMetrics, setVoiceAcousticMetrics] = useState<VoiceAcousticMetrics | null>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // Quản lý Blob URL âm thanh bền vững không bị revoke khi đổi tab
+  useEffect(() => {
+    if (voiceBlob) {
+      const url = URL.createObjectURL(voiceBlob);
+      setVoiceAudioUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setVoiceAudioUrl(null);
+    }
+  }, [voiceBlob]);
+
+  const togglePlayAudio = () => {
+    if (!audioPlayerRef.current || !voiceAudioUrl) return;
+    if (isPlayingAudio) {
+      audioPlayerRef.current.pause();
+      setIsPlayingAudio(false);
+    } else {
+      audioPlayerRef.current.play().then(() => {
+        setIsPlayingAudio(true);
+      }).catch(() => {
+        setIsPlayingAudio(false);
+      });
+    }
+  };
 
   // Vitals states
   const [measuredHeartRate, setMeasuredHeartRate] = useState<number | null>(null);
@@ -495,11 +534,11 @@ export function AIAssistedBookingModal({
       });
 
       const resData = response?.data?.data ? response.data.data : (response?.data ? response.data : response);
-      
+
       setTriageResult({
         ...resData,
-        imageAnalysisFindings: resData?.imageAnalysisFindings && resData.imageAnalysisFindings.length > 0 
-          ? resData.imageAnalysisFindings 
+        imageAnalysisFindings: resData?.imageAnalysisFindings && resData.imageAnalysisFindings.length > 0
+          ? resData.imageAnalysisFindings
           : (selectedImages.length > 0 ? ['Phân tích ảnh soi camera (GPT-5 Vision): Đã ghi nhận hình ảnh tổn thương da/lâm sàng. Kết quả phát hiện tổn thương phù hợp để đối chiếu trực tiếp với bác sĩ.'] : []),
         voiceAcousticFindings: resData?.voiceAcousticFindings || (voiceAcousticMetrics ? {
           ...voiceAcousticMetrics,
@@ -511,9 +550,9 @@ export function AIAssistedBookingModal({
     } catch {
       console.warn('Backend call failed, using client smart fallback triage');
       const textConcat = (
-        selectedBodyAreas.join(' ') + ' ' + 
-        selectedSpecificSymptoms.join(' ') + ' ' + 
-        symptomsText + ' ' + 
+        selectedBodyAreas.join(' ') + ' ' +
+        selectedSpecificSymptoms.join(' ') + ' ' +
+        symptomsText + ' ' +
         selectedWarnings.join(' ')
       ).toLowerCase();
 
@@ -559,21 +598,54 @@ export function AIAssistedBookingModal({
     }
   };
 
+  const matchedSpecialty = useMemo(() => {
+    if (!triageResult) return null;
+    const recName = (triageResult.recommendedSpecialtyName || '').toLowerCase();
+    return (
+      specialties.find(
+        (s) => s.name.toLowerCase().includes(recName) || recName.includes(s.name.toLowerCase())
+      ) || specialties[0]
+    );
+  }, [triageResult, specialties]);
+
+  const matchedDoctor = useMemo(() => {
+    if (!triageResult || !doctors || doctors.length === 0) return null;
+    const specId = matchedSpecialty?.id;
+    const specName = (matchedSpecialty?.name || triageResult.recommendedSpecialtyName || '').toLowerCase();
+
+    // 1. Tìm bác sĩ theo specialtyId tại bệnh viện
+    let doc = specId ? doctors.find((d) => d.workPlaces?.some((wp) => wp.specialtyId === specId)) : null;
+
+    // 2. Tìm bác sĩ theo tên chuyên khoa trong workplace
+    if (!doc) {
+      doc = doctors.find((d) =>
+        d.workPlaces?.some((wp) => (wp.specialty?.name || '').toLowerCase().includes(specName))
+      );
+    }
+
+    // 3. Tìm bác sĩ theo thông tin bio / chuyên môn
+    if (!doc) {
+      doc = doctors.find((d) => (d.bio || '').toLowerCase().includes(specName));
+    }
+
+    // 4. Fallback bác sĩ đầu tiên của viện
+    return doc || doctors[0] || null;
+  }, [triageResult, doctors, matchedSpecialty]);
+
   const handleApplyToBooking = () => {
     if (!triageResult) return;
-    const recommendedName = triageResult.recommendedSpecialtyName || '';
-    const matched = specialties.find(
-      (s) => s.name.toLowerCase().includes(recommendedName.toLowerCase()) || recommendedName.toLowerCase().includes(s.name.toLowerCase())
-    ) || specialties[0];
+    const targetSpec = matchedSpecialty || specialties[0];
 
-    if (matched) {
+    if (targetSpec) {
       onApplyAIRecommendation({
-        specialtyId: matched.id,
-        specialtyName: matched.name,
+        specialtyId: targetSpec.id,
+        specialtyName: targetSpec.name,
         reason: `AI Sàng lọc (${triageResult.riskLabel}): ${triageResult.summary}`,
+        doctor: matchedDoctor,
+        doctorId: matchedDoctor?.id,
+        doctorName: matchedDoctor?.fullName,
       });
       onClose();
-      toast.success(`Đã tự động chọn Chuyên khoa ${matched.name} cho lịch khám của bạn!`);
     }
   };
 
@@ -648,11 +720,10 @@ export function AIAssistedBookingModal({
                     key={area.id}
                     type="button"
                     onClick={() => toggleBodyArea(area.name)}
-                    className={`p-3.5 rounded-2xl border text-xs font-extrabold transition-all flex items-center justify-between gap-2 text-left cursor-pointer ${
-                      isSelected
+                    className={`p-3.5 rounded-2xl border text-xs font-extrabold transition-all flex items-center justify-between gap-2 text-left cursor-pointer ${isSelected
                         ? 'bg-[#0c4b39] text-white border-[#0c4b39] shadow-md ring-2 ring-[#0c4b39]/20'
                         : 'bg-white border-slate-200 text-slate-800 hover:border-emerald-500 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     <span>{area.name}</span>
                     {isSelected && <Check className="w-4 h-4 text-emerald-300 shrink-0" />}
@@ -734,11 +805,10 @@ export function AIAssistedBookingModal({
                             key={symptom}
                             type="button"
                             onClick={() => toggleSpecificSymptom(symptom)}
-                            className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left flex items-center justify-between gap-2 cursor-pointer ${
-                              isChecked
+                            className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left flex items-center justify-between gap-2 cursor-pointer ${isChecked
                                 ? 'bg-purple-700 text-white border-purple-700 shadow-xs'
                                 : 'bg-white border-purple-200/80 text-slate-800 hover:border-purple-400 hover:bg-purple-50/50'
-                            }`}
+                              }`}
                           >
                             <span className="leading-snug">{symptom}</span>
                             <span className="shrink-0 text-xs">{isChecked ? '✓' : '+'}</span>
@@ -763,11 +833,10 @@ export function AIAssistedBookingModal({
                         key={symptom}
                         type="button"
                         onClick={() => toggleSpecificSymptom(symptom)}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left flex items-center justify-between gap-2 cursor-pointer ${
-                          isChecked
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left flex items-center justify-between gap-2 cursor-pointer ${isChecked
                             ? 'bg-purple-700 text-white border-purple-700 shadow-xs'
                             : 'bg-white border-slate-200 text-slate-800 hover:border-purple-400'
-                        }`}
+                          }`}
                       >
                         <span className="leading-snug">{symptom}</span>
                         <span className="shrink-0 text-xs">{isChecked ? '✓' : '+'}</span>
@@ -796,11 +865,10 @@ export function AIAssistedBookingModal({
                       key={item}
                       type="button"
                       onClick={() => toggleWarning(item)}
-                      className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                        isChecked
+                      className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isChecked
                           ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
                           : 'bg-white border-rose-200 text-slate-800 hover:border-rose-400 hover:bg-rose-50/50'
-                      }`}
+                        }`}
                     >
                       {isChecked ? '✓ ' : '+ '} {item}
                     </button>
@@ -821,11 +889,10 @@ export function AIAssistedBookingModal({
                     key={opt}
                     type="button"
                     onClick={() => setDuration(opt)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      duration === opt
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${duration === opt
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : 'bg-white border-slate-200 text-slate-700 hover:border-blue-400'
-                    }`}
+                      }`}
                   >
                     {opt}
                   </button>
@@ -872,11 +939,10 @@ export function AIAssistedBookingModal({
                       key={item}
                       type="button"
                       onClick={() => toggleHistory(item)}
-                      className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                        isChecked
+                      className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isChecked
                           ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
                           : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                      }`}
+                        }`}
                     >
                       {isChecked ? '✓ ' : '+ '} {item}
                     </button>
@@ -1259,10 +1325,37 @@ export function AIAssistedBookingModal({
                       </p>
                     </div>
 
-                    {voiceAcousticMetrics.recordedAudioUrl && (
-                      <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200">
-                        <span className="text-[11px] font-bold text-slate-700">Bản thu âm đã lưu:</span>
-                        <audio controls src={voiceAcousticMetrics.recordedAudioUrl} className="h-6 w-48" />
+                    {voiceAudioUrl && (
+                      <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={togglePlayAudio}
+                            className={`h-8 w-8 rounded-full p-0 flex items-center justify-center cursor-pointer shadow-xs text-white shrink-0 ${isPlayingAudio ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-700 hover:bg-emerald-800'
+                              }`}
+                          >
+                            {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white translate-x-0.5" />}
+                          </Button>
+                          <div>
+                            <span className="text-xs font-black text-emerald-950 block">Bản ghi âm giọng nói đã lưu:</span>
+                            <span className="text-[10px] text-emerald-800 font-medium">
+                              Thời lượng: ~{voiceAcousticMetrics?.durationSec || 5}s • {voiceAcousticMetrics?.samplePromptTitle?.slice(0, 30)}...
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="w-full sm:w-auto flex items-center gap-2">
+                          <audio
+                            ref={audioPlayerRef}
+                            src={voiceAudioUrl}
+                            onPlay={() => setIsPlayingAudio(true)}
+                            onPause={() => setIsPlayingAudio(false)}
+                            onEnded={() => setIsPlayingAudio(false)}
+                            controls
+                            className="h-8 w-full sm:w-56"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1475,22 +1568,20 @@ export function AIAssistedBookingModal({
               <div className="space-y-5 text-left">
                 {/* Triage Urgency Level Banner */}
                 <div
-                  className={`p-5 rounded-3xl border-2 flex items-start gap-4 ${
-                    triageResult.riskLevel === 'EMERGENCY'
+                  className={`p-5 rounded-3xl border-2 flex items-start gap-4 ${triageResult.riskLevel === 'EMERGENCY'
                       ? 'bg-rose-50 border-rose-500 text-rose-950'
                       : triageResult.riskLevel === 'CONSULT'
-                      ? 'bg-amber-50 border-amber-500 text-amber-950'
-                      : 'bg-emerald-50 border-emerald-500 text-emerald-950'
-                  }`}
+                        ? 'bg-amber-50 border-amber-500 text-amber-950'
+                        : 'bg-emerald-50 border-emerald-500 text-emerald-950'
+                    }`}
                 >
                   <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-white font-black ${
-                      triageResult.riskLevel === 'EMERGENCY'
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-white font-black ${triageResult.riskLevel === 'EMERGENCY'
                         ? 'bg-rose-600'
                         : triageResult.riskLevel === 'CONSULT'
-                        ? 'bg-amber-600'
-                        : 'bg-emerald-600'
-                    }`}
+                          ? 'bg-amber-600'
+                          : 'bg-emerald-600'
+                      }`}
                   >
                     {triageResult.riskLevel === 'EMERGENCY' ? (
                       <ShieldAlert className="w-7 h-7" />
@@ -1513,48 +1604,130 @@ export function AIAssistedBookingModal({
                   </div>
                 </div>
 
-                {/* Recommended Specialty Card */}
-                <Card className="border-2 border-emerald-500/80 bg-emerald-50/40 rounded-3xl p-5 space-y-3">
-                  <div className="flex items-center justify-between border-b border-emerald-200/80 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Stethoscope className="w-5 h-5 text-[#0c4b39]" />
-                      <span className="text-xs font-black text-slate-700">Chuyên Khoa AI Đề Xuất Phù Hợp Nhất</span>
+                {/* Recommended Specialty & Doctor Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* 1. Recommended Specialty Card */}
+                  <Card className="border-2 border-emerald-500/80 bg-emerald-50/40 rounded-3xl p-4 sm:p-5 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Stethoscope className="w-4 h-4 text-[#0c4b39]" />
+                        <span className="text-xs font-black text-slate-700">Chuyên Khoa Đề Xuất</span>
+                      </div>
+                      <Badge className="bg-[#0c4b39] text-white font-black text-[9px]">
+                        Phù Hợp Nhất
+                      </Badge>
                     </div>
-                    <Badge className="bg-[#0c4b39] text-white font-black text-[10px]">
-                      Khuyên Dùng
-                    </Badge>
-                  </div>
 
-                  <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-xl font-black text-[#0c4b39]">
+                      <h4 className="text-lg font-black text-[#0c4b39]">
                         {triageResult.recommendedSpecialtyName}
                       </h4>
                       <p className="text-xs text-slate-600 font-medium">
                         Tại cơ sở y tế: <strong>{hospital.name}</strong>
                       </p>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+
+                  {/* 2. Recommended Doctor Card */}
+                  {matchedDoctor && (
+                    <Card className="border-2 border-teal-500/80 bg-teal-50/40 rounded-3xl p-4 sm:p-5 space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-teal-200/80 pb-2">
+                        <div className="flex items-center gap-1.5">
+                          <UserCheck className="w-4 h-4 text-teal-800" />
+                          <span className="text-xs font-black text-slate-700">Bác Sĩ Chuyên Khoa Phù Hợp</span>
+                        </div>
+                        <Badge className="bg-teal-700 text-white font-black text-[9px]">
+                          AI Khuyên Khám
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-teal-800 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                          {matchedDoctor.avatarUrl ? (
+                            <img src={matchedDoctor.avatarUrl} alt={matchedDoctor.fullName} className="w-full h-full rounded-2xl object-cover" />
+                          ) : (
+                            matchedDoctor.fullName.split(' ').pop()?.charAt(0) || 'BS'
+                          )}
+                        </div>
+                        <div className="space-y-0.5 text-left min-w-0">
+                          <h4 className="text-sm font-black text-slate-900 leading-snug truncate">
+                            {matchedDoctor.title ? `${matchedDoctor.title} ` : 'BS. '}{matchedDoctor.fullName}
+                          </h4>
+                          <p className="text-[11px] text-teal-900 font-bold truncate">
+                            {matchedDoctor.yearsOfExperience ? `${matchedDoctor.yearsOfExperience}+ năm KN` : 'Chuyên gia giàu KN'} • 4.9/5 ⭐
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </div>
 
                 {/* Observations */}
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
                   <h4 className="font-extrabold text-slate-900 flex items-center gap-2">
                     <Activity className="w-4 h-4 text-emerald-600" />
-                    <span>Chi Tiết Phân Tích Đa Phương Thức:</span>
+                    <span>Chi Tiết Phân Tích Đa Phương Thức (Sinh hiệu & Thể trạng):</span>
                   </h4>
-                  <p className="text-slate-600 font-medium">{triageResult.vitalSignsAssessment}</p>
+                  <p className="text-slate-700 font-medium leading-relaxed">{triageResult.vitalSignsAssessment}</p>
 
                   {triageResult.triageDetails?.keyObservations && (
                     <div className="pt-2 border-t border-slate-200 flex flex-wrap gap-2">
                       {triageResult.triageDetails.keyObservations.map((obs: string, idx: number) => (
-                        <Badge key={idx} variant="outline" className="bg-white text-slate-700 border-slate-300 text-[10px]">
+                        <Badge key={idx} variant="outline" className="bg-white text-slate-800 border-slate-300 text-[10px] font-semibold">
                           • {obs}
                         </Badge>
                       ))}
                     </div>
                   )}
                 </div>
+
+                {/* Clinical History Correlation Card */}
+                {triageResult.historyCorrelation && (
+                  <div className="p-4 rounded-2xl bg-purple-50/80 border border-purple-200/90 space-y-1.5 text-xs text-left">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4 text-purple-700" />
+                      <span className="font-extrabold text-purple-950">
+                        Liên Hệ Tiền Sử Bệnh & Yếu Tố Nguy Cơ (Clinical History Correlation):
+                      </span>
+                    </div>
+                    <p className="text-purple-900 font-medium leading-relaxed">
+                      {triageResult.historyCorrelation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Differential Diagnosis Card */}
+                {triageResult.differentialDiagnoses && triageResult.differentialDiagnoses.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs text-left">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-extrabold text-slate-900 flex items-center gap-2">
+                        <Stethoscope className="w-4 h-4 text-[#0c4b39]" />
+                        <span>Chẩn Đoán Sơ Bộ Phân Biệt Đề Xuất (Differential Diagnosis):</span>
+                      </h4>
+                      <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-300">
+                        Chuẩn ICD-10
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {triageResult.differentialDiagnoses.map((diag: any, idx: number) => (
+                        <div key={idx} className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-2 shadow-2xs">
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-slate-950 block">{diag.diseaseName}</span>
+                            <span className="font-mono font-bold text-emerald-800 text-[10px]">Mã ICD-10: {diag.icdCode}</span>
+                          </div>
+                          <Badge className={`text-[9px] font-black shrink-0 ${diag.probability === 'Cao' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-800 border-amber-200'
+                            }`}>
+                            Khả năng: {diag.probability}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-500 italic">
+                      * Đây là định hướng sàng lọc sơ bộ của AI hỗ trợ đối chiếu với bác sĩ chuyên khoa khi khám thực thể.
+                    </p>
+                  </div>
+                )}
 
                 {/* Vision Image Analysis Card */}
                 {(selectedImages.length > 0 || (triageResult.imageAnalysisFindings && triageResult.imageAnalysisFindings.length > 0)) && (

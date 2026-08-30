@@ -159,25 +159,32 @@ model RefreshToken {
 }
 
 model PatientProfile {
-  id               String    @id @default(uuid())
-  userId           String
-  fullName         String
-  gender           Gender?
-  dateOfBirth      DateTime?
-  phone            String?
-  address          String?
-  relation         String?
-  identityNumber   String?   @unique
-  healthInsurance  String?
-  medicalHistory   String?
-  allergies        String?
-  emergencyContact String?
-  emergencyPhone   String?
-  isDefault        Boolean   @default(false)
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  deletedAt        DateTime?
+  id                   String    @id @default(uuid())
+  userId               String
+  fullName             String
+  gender               Gender?
+  dateOfBirth          DateTime?
+  phone                String?
+  address              String?
+  relation             String?
+  identityNumber       String?   @unique
+  healthInsurance      String?
+  ethnicity            String?   @default("Kinh")
+  nationality          String?   @default("Việt Nam")
+  occupation           String?
+  guardianName         String?
+  familyMedicalHistory String?
+  lifestyleRiskFactors String?
+  currentMedications   String?
+  medicalHistory       String?
+  allergies            String?
+  emergencyContact     String?
+  emergencyPhone       String?
+  isDefault            Boolean   @default(false)
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
 
   user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments      Appointment[]
@@ -632,21 +639,42 @@ model MedicalPassportAccessLog {
 // ============================================
 
 model MedicalEncounter {
-  id                  String          @id @default(uuid())
-  patientProfileId    String
-  hospitalId          String
-  appointmentId      String?         @unique
-  externalEncounterId String?
-  encounterCode       String          @unique
-  encounterDate       DateTime        @default(now())
-  doctorName          String
-  doctorTitle         String?
-  specialtyName       String
-  chiefComplaint      String?
-  clinicalSummary     String?
-  status              EncounterStatus @default(PUBLISHED)
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  id                    String          @id @default(uuid())
+  patientProfileId      String
+  hospitalId            String
+  appointmentId         String?         @unique
+  externalEncounterId   String?
+  encounterCode         String          @unique
+  encounterDate         DateTime        @default(now())
+  doctorName            String
+  doctorTitle           String?
+  specialtyName         String
+  chiefComplaint        String?
+  clinicalSummary       String?
+  physicalExamination   String?
+  organSystemsExam      Json?
+  specialtyExam         Json?
+  admissionSource       String?
+  admissionAt           DateTime?
+  dischargeType         String?
+  treatmentDays         Int?            @default(1)
+  initialDiagnosis      String?
+  differentialDiagnosis String?
+  treatmentPlan         String?
+  doctorNotes           String?
+  conclusion            String?
+  treatmentResult       String?
+  revisitDate           DateTime?
+  prognosisNear         String?
+  prognosisFar          String?
+  careLevel             String?
+  dietaryRegimen        String?
+  departmentHeadName    String?
+  hospitalDirectorName  String?
+  digitalSignature      Json?
+  status                EncounterStatus @default(PUBLISHED)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
   patientProfile PatientProfile @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
   hospital       Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
@@ -660,14 +688,16 @@ model MedicalEncounter {
 }
 
 model Diagnosis {
-  id          String   @id @default(uuid())
-  encounterId String
-  icdCode     String
-  diseaseName String
-  isPrimary   Boolean  @default(true)
-  note        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  encounterId    String
+  icdCode        String
+  diseaseName    String
+  isPrimary      Boolean  @default(true)
+  isComplication Boolean  @default(false)
+  diagnosisType  String?
+  note           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   encounter MedicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
 

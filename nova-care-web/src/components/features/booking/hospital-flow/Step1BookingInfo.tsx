@@ -83,11 +83,48 @@ export function Step1BookingInfo({
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [timeSession, setTimeSession] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
 
-  const handleApplyAIRecommendation = (rec: { specialtyId: string; specialtyName: string; reason: string }) => {
-    const targetSpec = specialties.find((s: any) => s.id === rec.specialtyId || s.name?.toLowerCase().includes(rec.specialtyName?.toLowerCase()));
+  // Fetch all Doctors at this hospital for AI matching
+  const { data: allHospitalDoctors = [] } = useQuery({
+    queryKey: ['all-doctors-by-hospital', hospital.id],
+    queryFn: () => doctorService.search({ hospitalId: hospital.id }),
+    enabled: !!hospital.id,
+  });
+
+  const handleApplyAIRecommendation = (rec: {
+    specialtyId?: string;
+    specialtyName: string;
+    reason?: string;
+    doctor?: Doctor | null;
+    doctorId?: string;
+    doctorName?: string;
+  }) => {
+    const targetSpec = specialties.find(
+      (s: any) => s.id === rec.specialtyId || s.name?.toLowerCase().includes(rec.specialtyName?.toLowerCase())
+    );
     if (targetSpec) {
       setSelectedSpecialty(targetSpec);
     }
+
+    // Tự động áp dụng Bác sĩ được AI đề xuất
+    if (rec.doctor) {
+      setSelectedDoctor(rec.doctor);
+    } else if (rec.doctorId || rec.doctorName) {
+      const targetDoc = (allHospitalDoctors.length > 0 ? allHospitalDoctors : doctors).find(
+        (d: any) => d.id === rec.doctorId || d.fullName?.toLowerCase().includes(rec.doctorName?.toLowerCase())
+      );
+      if (targetDoc) {
+        setSelectedDoctor(targetDoc);
+      }
+    }
+
+    // Tự động chọn dịch vụ đầu tiên nếu có
+    if (medicalServices.length > 0 && !selectedService) {
+      setSelectedService(medicalServices[0]);
+    }
+
+    toast.success(
+      `Đã tự động áp dụng Chuyên khoa ${rec.specialtyName}${rec.doctorName ? ` và Bác sĩ ${rec.doctorName}` : ''} vào lịch đặt khám!`
+    );
   };
 
   // Fetch Specialties available at this hospital
@@ -366,6 +403,7 @@ export function Step1BookingInfo({
         onClose={() => setIsAIModalOpen(false)}
         hospital={hospital}
         specialties={specialties}
+        doctors={allHospitalDoctors.length > 0 ? allHospitalDoctors : doctors}
         onApplyAIRecommendation={handleApplyAIRecommendation}
       />
 
