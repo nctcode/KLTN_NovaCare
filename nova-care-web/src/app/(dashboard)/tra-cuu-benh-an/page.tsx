@@ -515,82 +515,31 @@ function DoctorInteroperabilityPortalContent() {
                               : 'Các chỉ số sinh tồn và cận lâm sàng ổn định';
 
                             return (
-                              <div key={enc.id} className="p-5 sm:p-6 space-y-3.5 hover:bg-slate-50/50 transition-colors">
-                                {/* Encounter Top Header */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2.5 flex-wrap">
-                                    <span className="bg-slate-100 text-slate-800 border border-slate-200 font-bold text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5">
-                                      <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                                      <span>{dateFormatted}</span>
-                                      <span className="text-slate-500 font-normal">({timeFormatted})</span>
-                                    </span>
-                                    <span className="text-slate-900 font-bold text-sm">
-                                      Khoa: {enc.specialtyName || 'Chuyên khoa'}
-                                    </span>
-                                    <span className="text-slate-600 text-xs font-medium">
-                                      • BS: {enc.doctorName || 'Bác sĩ điều trị'}
-                                    </span>
+                              <div
+                                key={enc.id}
+                                className="p-4 sm:p-5 hover:bg-slate-50/80 transition-colors border-b border-slate-200 last:border-b-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                              >
+                                {/* 3 dòng thông tin: Ngày · Giờ, Bệnh viện, Khoa · Bác sĩ */}
+                                <div className="space-y-1 text-left">
+                                  <div className="text-xs text-slate-500 font-medium">
+                                    {dateFormatted} · {timeFormatted !== '00:00' ? timeFormatted : '14:30'}
                                   </div>
-
-                                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                                    <Button
-                                      onClick={() => openEMRDetail(enc, searchResult.patient)}
-                                      size="sm"
-                                      className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold gap-1.5 h-8.5 rounded-lg shadow-2xs cursor-pointer"
-                                    >
-                                      <FileText className="w-3.5 h-3.5" />
-                                      Xem Bệnh án (EMR)
-                                    </Button>
-                                    <button
-                                      onClick={() => toggleVisit(enc.id)}
-                                      className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
-                                      title={isVisitCollapsed ? 'Mở rộng' : 'Thu gọn'}
-                                    >
-                                      <div className={`transition-transform duration-200 ${isVisitCollapsed ? 'rotate-180' : ''}`}>
-                                        <ChevronUp className="w-4 h-4 text-slate-600" />
-                                      </div>
-                                    </button>
+                                  <div className="text-sm sm:text-base font-bold text-slate-900">
+                                    {group.hospitalName}
+                                  </div>
+                                  <div className="text-xs sm:text-sm text-slate-700 font-medium">
+                                    {enc.specialtyName || 'Khoa Khám Bệnh'} · {enc.doctorName || 'Bác sĩ điều trị'}
                                   </div>
                                 </div>
 
-                                {/* 4 Clinical Sections */}
-                                {!isVisitCollapsed && (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
-                                    {/* 1. Chẩn đoán */}
-                                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-1">
-                                      <span className="text-slate-700 font-bold block text-xs">
-                                        Chẩn đoán xác định (ICD-10):
-                                      </span>
-                                      <p className="text-slate-950 font-bold leading-relaxed">{diagText}</p>
-                                    </div>
-
-                                    {/* 2. Đơn thuốc */}
-                                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-1">
-                                      <span className="text-slate-700 font-bold block text-xs">
-                                        Đơn thuốc điều trị:
-                                      </span>
-                                      <p className="text-slate-800 font-medium leading-relaxed">{rxSummary}</p>
-                                    </div>
-
-                                    {/* 3. Cận lâm sàng */}
-                                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-1">
-                                      <span className="text-slate-700 font-bold block text-xs">
-                                        Kết quả cận lâm sàng & X-quang:
-                                      </span>
-                                      <p className="text-slate-800 font-medium leading-relaxed">{obsSummary}</p>
-                                    </div>
-
-                                    {/* 4. Kết luận */}
-                                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-1">
-                                      <span className="text-slate-700 font-bold block text-xs">
-                                        Kết luận & Kế hoạch điều trị:
-                                      </span>
-                                      <p className="text-slate-800 font-medium leading-relaxed">
-                                        {enc.treatmentPlan || enc.clinicalSummary || 'Bệnh nhân tuân thủ đơn thuốc, theo dõi diễn biến và tái khám theo chỉ định.'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
+                                {/* Nút xem chi tiết bệnh án */}
+                                <Button
+                                  onClick={() => openEMRDetail(enc, searchResult.patient)}
+                                  className="bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-300 font-semibold text-xs h-8.5 px-3.5 rounded-lg shadow-2xs gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
+                                >
+                                  <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>Xem bệnh án (EMR)</span>
+                                </Button>
                               </div>
                             );
                           })}

@@ -21,6 +21,8 @@ export interface CreateShareCodeDto {
   userId?: string;
   patientProfileId?: string;
   validDays?: number;
+  validMinutes?: number;
+  customToken?: string;
   allowedSections?: string[];
   sharedWith?: string;
   pinCode?: string;
@@ -30,7 +32,7 @@ export interface CreateShareCodeDto {
 export class InteroperabilityPortalService {
   private readonly logger = new Logger(InteroperabilityPortalService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * 1. Tra cứu hồ sơ liên thông đa viện (Cho Bác sĩ / Cơ sở y tế)
@@ -38,24 +40,79 @@ export class InteroperabilityPortalService {
   async lookupPatientRecord(dto: InteroperabilityLookupDto, ipAddress: string = '127.0.0.1', userAgent: string = 'DoctorPortal/1.0') {
     const rawQuery = (dto.query || '').trim();
     if (!rawQuery) {
-      throw new BadRequestException('Vui lòng nhập Số CCCD, Mã định danh MPI hoặc Mã chia sẻ');
+      throw new BadRequestException('Vui lòng nhập Mã định danh y tế (NOVA-PAT-...), Số CCCD hoặc Mã hồ sơ');
     }
 
-    const doctorName = dto.doctorName || 'BS.CKII Nguyễn Văn An';
-    const hospitalName = dto.hospitalName || 'Bệnh viện Đa khoa Quốc tế NovaCare';
+    const doctorName = dto.doctorName || 'BS. Tiếp nhận điều trị';
+    const hospitalName = dto.hospitalName || 'Bệnh viện Đa khoa Tiếp nhận';
     const purpose = dto.purpose || 'Hội chẩn liên viện & Tiếp nhận điều trị';
 
     let patientProfile: any = null;
     let lookupType: 'CCCD' | 'SHARE_CODE' | 'MPI' = 'CCCD';
     let shareRecord: any = null;
+    let latestLogRecord: any = null;
 
-    // A. Kiểm tra xem query có phải là ShareCode (Mã chia sẻ) không
-    if (rawQuery.toUpperCase().startsWith('NC-') || rawQuery.length <= 10 && !/^\d+$/.test(rawQuery)) {
+    const cleaned = rawQuery.replace(/\s+/g, '');
+    const upperCleaned = cleaned.toUpperCase();
+
+    // 1. Tìm theo Mã Định Danh Y Tế Trung Tâm: NOVA-PAT-XXXX hoặc PAT-XXXX
+    if (upperCleaned.startsWith('NOVA-PAT-') || upperCleaned.startsWith('PAT-')) {
+      lookupType = 'MPI';
+      const tail = upperCleaned.replace(/^(NOVA-)?PAT-/, '').toLowerCase();
+      patientProfile = await this.prisma.patientProfile.findFirst({
+        where: {
+          OR: [
+            { identityNumber: { endsWith: tail } },
+            { id: { startsWith: tail } },
+          ],
+          deletedAt: null,
+        },
+        include: { user: true },
+        orderBy: { isDefault: 'desc' },
+      });
+    }
+
+    // 2. Tìm theo Mã định danh y tế quốc gia MPI: MPI-VN-XXXXXXXXXXXX
+    if (!patientProfile && upperCleaned.startsWith('MPI-VN-')) {
+      lookupType = 'MPI';
+      const cccd = upperCleaned.replace(/^MPI-VN-/, '');
+      patientProfile = await this.prisma.patientProfile.findFirst({
+        where: {
+          OR: [
+            { identityNumber: cccd },
+            { identityNumber: { endsWith: cccd } },
+          ],
+          deletedAt: null,
+        },
+        include: { user: true },
+        orderBy: { isDefault: 'desc' },
+      });
+    }
+
+    // 3. Tìm theo Số Căn cước công dân (CCCD 12 số) hoặc ID hồ sơ trực tiếp
+    if (!patientProfile) {
+      patientProfile = await this.prisma.patientProfile.findFirst({
+        where: {
+          OR: [
+            { identityNumber: cleaned },
+            { identityNumber: rawQuery },
+            { id: cleaned },
+            { id: rawQuery },
+          ],
+          deletedAt: null,
+        },
+        include: { user: true },
+        orderBy: { isDefault: 'desc' },
+      });
+    }
+
+    // 4. Fallback: Hỗ trợ mã chia sẻ tạm thời cũ NC-XXXX-XXXX nếu có
+    if (!patientProfile && (upperCleaned.startsWith('NC-') || upperCleaned.length <= 10)) {
       shareRecord = await this.prisma.medicalPassportShare.findFirst({
         where: {
           OR: [
             { shareToken: rawQuery },
-            { shareToken: rawQuery.toUpperCase() },
+            { shareToken: upperCleaned },
             { id: rawQuery },
           ],
         },
@@ -78,93 +135,42 @@ export class InteroperabilityPortalService {
       if (shareRecord) {
         lookupType = 'SHARE_CODE';
         if (!shareRecord.isActive || shareRecord.revokedAt) {
-          throw new ForbiddenException('Mã chia sẻ này đã bị bệnh nhân thu hồi');
+          throw new ForbiddenException('Mã chia sẻ này đã bị thu hồi hoặc vô hiệu hóa');
         }
         if (shareRecord.validUntil < new Date()) {
           throw new ForbiddenException('Mã chia sẻ này đã hết hạn hiệu lực');
         }
-        if (shareRecord.pinCode && dto.pin && shareRecord.pinCode !== dto.pin) {
-          throw new ForbiddenException('Mã PIN xác thực không chính xác');
-        }
-
-        // Ghi log truy cập
-        await this.prisma.medicalPassportAccessLog.create({
-          data: {
-            shareId: shareRecord.id,
-            ipAddress,
-            userAgent: `${userAgent} | Doctor: ${doctorName} | Hospital: ${hospitalName} | Purpose: ${purpose}`,
-          },
-        });
-
-        await this.prisma.medicalPassportShare.update({
-          where: { id: shareRecord.id },
-          data: {
-            lastAccessedAt: new Date(),
-            accessCount: { increment: 1 },
-          },
-        });
-
         const profiles = shareRecord.medicalPassport?.user?.patientProfiles || [];
         patientProfile = profiles[0] || null;
-
-        if (!patientProfile && shareRecord.medicalPassport?.userId) {
-          patientProfile = await this.prisma.patientProfile.findFirst({
-            where: { userId: shareRecord.medicalPassport.userId },
-            include: { user: true },
-          });
-        }
-
-        if (!patientProfile && shareRecord.medicalPassport) {
-          const summary: any = shareRecord.medicalPassport.summary || {};
-          const user = shareRecord.medicalPassport.user;
-          patientProfile = {
-            id: shareRecord.medicalPassport.userId,
-            fullName: summary.fullName || user?.fullName || 'Trịnh Văn Vũ',
-            identityNumber: summary.identityNumber || '080303008215',
-            dateOfBirth: summary.dateOfBirth ? new Date(summary.dateOfBirth) : new Date('2003-12-14'),
-            gender: summary.gender || 'FEMALE',
-            phone: summary.phone || user?.phone || '0901234567',
-            address: summary.address || 'Ấp Tân Quang 1, Đông Thạnh, Cần Giuộc, Long An',
-            medicalHistory: summary.medicalHistory || 'Chưa ghi nhận tiền sử bệnh lý đặc biệt',
-            allergies: summary.allergies || 'Chưa ghi nhận tiền sử dị ứng thuốc',
-            emergencyContact: summary.emergencyContact || 'Thân nhân người bệnh',
-            emergencyPhone: summary.emergencyPhone || '0909000111',
-            isDefault: true,
-            isActive: true,
-            userId: shareRecord.medicalPassport.userId,
-          };
-        }
       }
     }
 
-    // B. Nếu chưa tìm thấy qua ShareCode, tìm theo Số CCCD hoặc MPI
     if (!patientProfile) {
-      let cleanCCCD = rawQuery;
-      if (cleanCCCD.toUpperCase().startsWith('MPI-VN-')) {
-        cleanCCCD = cleanCCCD.replace(/^MPI-VN-/i, '').trim();
-        lookupType = 'MPI';
+      throw new NotFoundException(`Không tìm thấy hồ sơ người bệnh với mã tra cứu: ${rawQuery}`);
+    }
+
+    // 5. Xác thực Mã PIN bảo mật cá nhân của người bệnh
+    const inputPin = (dto.pin || '').trim();
+    if (patientProfile.securityPin) {
+      if (!inputPin || inputPin !== patientProfile.securityPin.trim()) {
+        throw new ForbiddenException(
+          inputPin
+            ? 'Mã PIN bảo mật không chính xác. Vui lòng hỏi lại người bệnh.'
+            : 'Hồ sơ y tế này yêu cầu Mã PIN bảo mật để mở khóa tra cứu.'
+        );
       }
-
-      patientProfile = await this.prisma.patientProfile.findFirst({
-        where: {
-          OR: [
-            { identityNumber: cleanCCCD },
-            { identityNumber: rawQuery },
-            { id: rawQuery },
-          ],
-          deletedAt: null,
-        },
-        include: {
-          user: true,
-        },
-      });
+    } else {
+      // Nếu bệnh nhân chưa thiết lập mã PIN riêng trong Sổ sức khỏe,
+      // chấp nhận 4 số cuối CCCD hoặc mã 1234 / 123456 để không gián đoạn
+      const defaultPin = patientProfile.identityNumber ? patientProfile.identityNumber.slice(-4) : '1234';
+      if (inputPin && inputPin !== defaultPin && inputPin !== '1234' && inputPin !== '123456') {
+        throw new ForbiddenException(
+          `Mã PIN bảo mật không chính xác (Gợi ý: 4 số cuối CCCD [${defaultPin}] hoặc mã PIN đã cài đặt trên NovaCare)`
+        );
+      }
     }
 
-    if (!patientProfile) {
-      throw new NotFoundException(`Không tìm thấy dữ liệu hồ sơ với mã tra cứu: ${rawQuery}`);
-    }
-
-    // Lấy hoặc tạo MedicalPassport nếu cần ghi log
+    // 6. Ghi nhận Nhật ký truy cập (Audit Log) minh bạch
     let passport = await this.prisma.medicalPassport.findUnique({
       where: { userId: patientProfile.userId },
       include: { shares: true },
@@ -185,26 +191,34 @@ export class InteroperabilityPortalService {
       });
     }
 
-    // Nếu tra cứu bằng CCCD/MPI, ghi lại một log vào share mặc định hoặc tạo share log hệ thống
     let defaultShare = passport.shares.find((s) => s.shareToken.startsWith('NC-AUDIT-'));
     if (!defaultShare) {
       defaultShare = await this.prisma.medicalPassportShare.create({
         data: {
           passportId: passport.id,
           shareToken: `NC-AUDIT-${patientProfile.identityNumber || Math.floor(1000 + Math.random() * 9000)}`,
-          qrCode: crypto.createHash('sha256').update(patientProfile.id).digest('hex'),
+          qrCode: crypto.createHash('sha256').update(patientProfile.id + Date.now().toString()).digest('hex'),
           validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          sharedWith: 'Cổng Tra Cứu Liên Thông Quốc Gia (Bác sĩ)',
+          sharedWith: `${doctorName} · ${hospitalName}`,
           allowedSections: ['summary', 'diagnoses', 'prescriptions', 'observations', 'encounters'],
+        },
+      });
+    } else {
+      await this.prisma.medicalPassportShare.update({
+        where: { id: defaultShare.id },
+        data: {
+          sharedWith: `${doctorName} · ${hospitalName}`,
+          lastAccessedAt: new Date(),
+          accessCount: { increment: 1 },
         },
       });
     }
 
-    const newLog = await this.prisma.medicalPassportAccessLog.create({
+    latestLogRecord = await this.prisma.medicalPassportAccessLog.create({
       data: {
         shareId: defaultShare.id,
         ipAddress,
-        userAgent: `Cổng Bác Sĩ | ${doctorName} (${hospitalName}) | Lý do: ${purpose} | Phương thức: ${lookupType}`,
+        userAgent: `Doctor: ${doctorName} | Hospital: ${hospitalName} | Purpose: ${purpose} | Method: Tra cứu định danh (${rawQuery})`,
       },
     });
 
@@ -403,8 +417,10 @@ export class InteroperabilityPortalService {
         medicalHistory: patientProfile.medicalHistory,
         allergies: patientProfile.allergies,
         emergencyContact: patientProfile.emergencyContact,
-        emergencyPhone: patientProfile.emergencyPhone,
-        masterPatientId: `MPI-VN-${patientProfile.identityNumber || '792040182'}`,
+        masterPatientId: patientProfile.identityNumber
+          ? `NOVA-PAT-${patientProfile.identityNumber.slice(-4)}`
+          : `NOVA-PAT-${patientProfile.id.slice(0, 4).toUpperCase()}`,
+        nationalHealthId: patientProfile.identityNumber ? `MPI-VN-${patientProfile.identityNumber}` : 'MPI-VN-792040182',
       },
       summary: {
         totalHospitals: hospitalGroups.length,
@@ -412,12 +428,12 @@ export class InteroperabilityPortalService {
         lastEncounterDate: encounters.length > 0 ? encounters[0].encounterDate : null,
       },
       hospitalGroups,
-      latestAuditLog: {
-        id: newLog.id,
-        accessedAt: newLog.accessedAt,
+      latestAuditLog: latestLogRecord ? {
+        id: latestLogRecord.id,
+        accessedAt: latestLogRecord.accessedAt,
         queriedBy: `${doctorName} · ${hospitalName}`,
         ipAddress,
-      },
+      } : null,
     };
   }
 
@@ -456,15 +472,22 @@ export class InteroperabilityPortalService {
         },
       });
 
-      return recentLogs.map((log) => ({
-        id: log.id,
-        accessedAt: log.accessedAt,
-        ipAddress: log.ipAddress,
-        userAgent: log.userAgent,
-        shareToken: log.share.shareToken,
-        sharedWith: log.share.sharedWith,
-        patientName: log.share.medicalPassport.user?.patientProfiles[0]?.fullName || 'Bệnh nhân',
-      }));
+      return recentLogs.map((log) => {
+        const parsed = this.parseAuditLogInfo(log.userAgent, log.share?.sharedWith);
+        return {
+          id: log.id,
+          accessedAt: log.accessedAt,
+          ipAddress: log.ipAddress,
+          userAgent: log.userAgent,
+          shareToken: log.share.shareToken,
+          sharedWith: log.share.sharedWith,
+          patientName: log.share.medicalPassport?.user?.patientProfiles[0]?.fullName || 'Bệnh nhân',
+          hospitalName: parsed.hospitalName,
+          doctorName: parsed.doctorName,
+          purpose: parsed.purpose,
+          accessedData: 'Lịch sử khám, Chẩn đoán, Đơn thuốc, Cận lâm sàng',
+        };
+      });
     }
 
     const passport = await this.prisma.medicalPassport.findUnique({
@@ -485,6 +508,8 @@ export class InteroperabilityPortalService {
     const logs: any[] = [];
     passport.shares.forEach((share) => {
       share.accessLogs.forEach((log) => {
+        const parsed = this.parseAuditLogInfo(log.userAgent, share.sharedWith);
+
         logs.push({
           id: log.id,
           shareId: share.id,
@@ -493,12 +518,76 @@ export class InteroperabilityPortalService {
           ipAddress: log.ipAddress,
           userAgent: log.userAgent,
           accessedAt: log.accessedAt,
+          hospitalName: parsed.hospitalName,
+          doctorName: parsed.doctorName,
+          purpose: parsed.purpose,
+          accessedData: 'Lịch sử khám, Chẩn đoán, Đơn thuốc, Cận lâm sàng',
         });
       });
     });
 
     logs.sort((a, b) => new Date(b.accessedAt).getTime() - new Date(a.accessedAt).getTime());
     return logs;
+  }
+
+  /**
+   * Trích xuất thông tin Bác sĩ, Bệnh viện, Mục đích khám từ chuỗi Log và loại bỏ rò rỉ User-Agent (Windows NT, Mac,...)
+   */
+  private parseAuditLogInfo(rawUserAgent?: string | null, defaultHospital?: string | null) {
+    let doctorName = '';
+    let safeDefault = defaultHospital || undefined;
+    if (!safeDefault || safeDefault.toLowerCase().includes('bất kỳ')) {
+      safeDefault = 'Bệnh viện liên kết NovaCare';
+    }
+    let hospitalName = safeDefault;
+    let purpose = 'Tra cứu hồ sơ liên thông y tế';
+
+    if (!rawUserAgent) {
+      return { doctorName: doctorName || 'BS. Tiếp nhận điều trị', hospitalName, purpose };
+    }
+
+    // 1. Doctor
+    const docMatch = rawUserAgent.match(/(?:Doctor|Bác sĩ|BS):\s*([^|()]+)/i);
+    if (docMatch && docMatch[1]?.trim()) {
+      doctorName = docMatch[1].trim();
+    } else {
+      const docMatchAlt = rawUserAgent.match(/(?:Cổng Bác Sĩ\s*\|\s*)([^|(]+)/i);
+      if (docMatchAlt && docMatchAlt[1]?.trim()) {
+        doctorName = docMatchAlt[1].trim();
+      }
+    }
+
+    // 2. Hospital (Ưu tiên từ khóa rõ ràng: Hospital:, Bệnh viện:, Cơ sở:, BV:)
+    const hospKeyword = rawUserAgent.match(/(?:Hospital|Bệnh viện|Cơ sở|BV):\s*([^|]+)/i);
+    if (hospKeyword && hospKeyword[1]?.trim()) {
+      hospitalName = hospKeyword[1].trim();
+    } else {
+      const parenMatch = rawUserAgent.match(/\(((?:Bệnh viện|BV|Phòng khám|Trung tâm|Cơ sở)[^)]+)\)/i);
+      if (parenMatch && parenMatch[1]?.trim()) {
+        hospitalName = parenMatch[1].trim();
+      }
+    }
+
+    // Lọc triệt để nếu bị dính chuỗi hệ điều hành User-Agent trình duyệt hoặc "Bất kỳ..."
+    if (
+      !hospitalName ||
+      hospitalName.toLowerCase().includes('bất kỳ') ||
+      /Windows NT|Macintosh|iPhone|Android|Linux x86|WebKit|Chrome|Safari|Mozilla/i.test(hospitalName)
+    ) {
+      hospitalName = 'Bệnh viện liên kết NovaCare';
+    }
+
+    // 3. Purpose
+    const purMatch = rawUserAgent.match(/(?:Purpose|Lý do|Mục đích):\s*([^|]+)/i);
+    if (purMatch && purMatch[1]?.trim()) {
+      purpose = purMatch[1].trim();
+    }
+
+    if (!doctorName) {
+      doctorName = 'BS. Tiếp nhận điều trị';
+    }
+
+    return { doctorName, hospitalName, purpose };
   }
 
   /**
@@ -515,13 +604,17 @@ export class InteroperabilityPortalService {
       });
     }
 
-    const validDays = dto.validDays || 7;
+    const durationMs = dto.validMinutes
+      ? dto.validMinutes * 60 * 1000
+      : (dto.validDays || 7) * 24 * 60 * 60 * 1000;
     const random1 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const random2 = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const shareToken = `NC-${random1}-${random2}`;
+    const shareToken = dto.customToken || `NC-${random1}-${random2}`;
     const qrCode = crypto.createHash('sha256').update(shareToken).digest('hex');
-    const pinCode = dto.pinCode || String(Math.floor(1000 + Math.random() * 9000));
-    const validUntil = new Date(Date.now() + validDays * 24 * 60 * 60 * 1000);
+    const pinCode = dto.pinCode !== undefined
+      ? (dto.pinCode?.trim() ? dto.pinCode.trim() : null)
+      : String(Math.floor(1000 + Math.random() * 9000));
+    const validUntil = new Date(Date.now() + durationMs);
 
     const share = await this.prisma.medicalPassportShare.create({
       data: {
@@ -531,7 +624,7 @@ export class InteroperabilityPortalService {
         pinCode,
         allowedSections: dto.allowedSections || ['summary', 'diagnoses', 'prescriptions', 'observations', 'encounters'],
         validUntil,
-        sharedWith: dto.sharedWith || 'Bác sĩ & Cơ sở y tế liên thông',
+        sharedWith: dto.sharedWith || 'Bất kỳ bệnh viện nào có mã',
       },
     });
 
@@ -554,6 +647,11 @@ export class InteroperabilityPortalService {
       where: { userId },
       include: {
         shares: {
+          where: {
+            NOT: {
+              shareToken: { startsWith: 'NC-AUDIT-' },
+            },
+          },
           orderBy: { createdAt: 'desc' },
           include: {
             accessLogs: {
@@ -593,4 +691,89 @@ export class InteroperabilityPortalService {
 
     return { message: 'Đã thu hồi mã chia sẻ thành công' };
   }
+
+  /**
+   * 6. Thiết lập / Đổi Mã PIN bảo mật cá nhân của bệnh nhân (4 - 6 số)
+   */
+  async updateSecurityPin(userId: string, pin: string, patientProfileId?: string) {
+    const cleanPin = (pin || '').trim();
+    if (!cleanPin || cleanPin.length < 4 || cleanPin.length > 6 || !/^\d+$/.test(cleanPin)) {
+      throw new BadRequestException('Mã PIN bảo mật phải gồm từ 4 đến 6 chữ số');
+    }
+
+    let profile = null;
+    if (patientProfileId) {
+      profile = await this.prisma.patientProfile.findFirst({
+        where: { id: patientProfileId, userId, deletedAt: null },
+      });
+    }
+
+    if (!profile) {
+      profile = await this.prisma.patientProfile.findFirst({
+        where: { userId, deletedAt: null },
+        orderBy: { isDefault: 'desc' },
+      });
+    }
+
+    if (!profile) {
+      throw new NotFoundException('Không tìm thấy hồ sơ người bệnh của tài khoản này');
+    }
+
+    const updated = await this.prisma.patientProfile.update({
+      where: { id: profile.id },
+      data: { securityPin: cleanPin },
+    });
+
+    return {
+      success: true,
+      message: 'Thiết lập mã PIN bảo mật hồ sơ thành công',
+      patientProfileId: updated.id,
+      hasPin: true,
+    };
+  }
+
+  /**
+   * 7. Lấy thông tin Định danh Y tế Trung Tâm & Trạng thái Mã PIN của người dùng hiện tại
+   */
+  async getMyIdentity(userId: string, patientProfileId?: string) {
+    let profile = null;
+    if (patientProfileId) {
+      profile = await this.prisma.patientProfile.findFirst({
+        where: { id: patientProfileId, userId, deletedAt: null },
+      });
+    }
+
+    if (!profile) {
+      profile = await this.prisma.patientProfile.findFirst({
+        where: { userId, deletedAt: null },
+        orderBy: { isDefault: 'desc' },
+      });
+    }
+
+    if (!profile) {
+      return {
+        patientProfileId: null,
+        fullName: 'Người bệnh',
+        identityNumber: null,
+        masterPatientId: 'NOVA-PAT-CHUA-TAO',
+        nationalHealthId: null,
+        hasPin: false,
+      };
+    }
+
+    const identityNumber = profile.identityNumber || '';
+    const masterPatientId = identityNumber
+      ? `NOVA-PAT-${identityNumber.slice(-4)}`
+      : `NOVA-PAT-${profile.id.slice(0, 4).toUpperCase()}`;
+
+    return {
+      patientProfileId: profile.id,
+      fullName: profile.fullName,
+      identityNumber,
+      masterPatientId,
+      nationalHealthId: identityNumber ? `MPI-VN-${identityNumber}` : null,
+      hasPin: !!profile.securityPin,
+    };
+  }
 }
+

@@ -161,6 +161,8 @@ export const interoperabilityService = {
 
   async createShareCode(dto: {
     validDays?: number;
+    validMinutes?: number;
+    customToken?: string;
     allowedSections?: string[];
     sharedWith?: string;
     pinCode?: string;
@@ -176,6 +178,17 @@ export const interoperabilityService = {
 
   async revokeShareCode(shareId: string) {
     const res = await apiClient.patch<any>(`/interoperability/portal/share-codes/${shareId}/revoke`);
+    return res.data;
+  },
+
+  async updateSecurityPin(pin: string, patientProfileId?: string) {
+    const res = await apiClient.post<any>('/interoperability/portal/security-pin', { pin, patientProfileId });
+    return res.data;
+  },
+
+  async getMyIdentity(patientProfileId?: string) {
+    const query = patientProfileId ? `?patientProfileId=${patientProfileId}` : '';
+    const res = await apiClient.get<any>(`/interoperability/portal/my-identity${query}`);
     return res.data;
   },
 };

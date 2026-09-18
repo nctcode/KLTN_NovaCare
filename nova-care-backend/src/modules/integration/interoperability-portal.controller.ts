@@ -121,4 +121,42 @@ export class InteroperabilityPortalController {
       data,
     };
   }
+
+  /**
+   * 6. Thiết lập / Đổi Mã PIN bảo mật hồ sơ của người dùng (4 - 6 số)
+   */
+  @Post('security-pin')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Thiết lập hoặc đổi mã PIN bảo mật cá nhân của bệnh nhân' })
+  async updateSecurityPin(
+    @Request() req: any,
+    @Body() body: { pin: string; patientProfileId?: string },
+  ) {
+    const data = await this.portalService.updateSecurityPin(req.user.id, body.pin, body.patientProfileId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Thiết lập mã PIN bảo mật thành công',
+      data,
+    };
+  }
+
+  /**
+   * 7. Lấy thông tin Định danh Y tế Trung Tâm & Trạng thái Mã PIN của người dùng hiện tại
+   */
+  @Get('my-identity')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Lấy mã định danh y tế trung tâm và trạng thái mã PIN' })
+  async getMyIdentity(
+    @Request() req: any,
+    @Query('patientProfileId') patientProfileId?: string,
+  ) {
+    const data = await this.portalService.getMyIdentity(req.user.id, patientProfileId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy thông tin định danh y tế thành công',
+      data,
+    };
+  }
 }
