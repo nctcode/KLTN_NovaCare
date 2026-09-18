@@ -17,6 +17,7 @@ import {
   FileText,
   Calendar,
   Building,
+  Building2,
   Tag,
   HeartPulse,
   Brain,
@@ -29,13 +30,24 @@ import {
   Smile,
   Microscope,
   Stethoscope,
-  Users
+  Users,
+  Video,
+  FlaskConical,
+  ShieldCheck,
+  FileCheck,
+  UserCheck,
+  CheckCircle2,
+  Zap,
+  ArrowRight,
+  Bot
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { formatPrice, getDoctorSpecialtyName } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AIHealthAssessmentWizard } from '@/components/features/booking/AIHealthAssessmentWizard';
 
 // Render Lucide icons matching specialty names with NovaCare green palette
 const renderSpecialtyIcon = (name: string, className = "h-7 w-7 text-[#0c4b39] group-hover:text-white transition-colors duration-300") => {
@@ -129,10 +141,96 @@ const MOCK_PACKAGES = [
   },
 ];
 
+// Medpro-style supported services in NovaCare system
+const QUICK_BOOKING_SERVICES = [
+  {
+    id: 'facility',
+    title: 'Đặt khám tại cơ sở',
+    subtitle: 'Lấy số thứ tự trực tuyến tại BV & PK',
+    icon: Building2,
+    href: '/co-so-y-te',
+    badge: 'Cơ sở uy tín',
+    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    iconBg: 'bg-emerald-50 text-[#0c4b39] group-hover:bg-[#0c4b39] group-hover:text-white',
+  },
+  {
+    id: 'specialty',
+    title: 'Đặt khám chuyên khoa',
+    subtitle: 'Hơn 30+ chuyên khoa chuyên sâu',
+    icon: Stethoscope,
+    href: '/chuyen-khoa',
+    badge: 'Đa dạng',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    iconBg: 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white',
+  },
+  {
+    id: 'doctor',
+    title: 'Đặt khám theo bác sĩ',
+    subtitle: 'Chọn bác sĩ giỏi & chủ động giờ khám',
+    icon: UserCheck,
+    href: '/bac-si',
+    badge: 'Bác sĩ giỏi',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+    iconBg: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white',
+  },
+  {
+    id: 'ai-screening',
+    title: 'AI Sàng lọc tiền khám',
+    subtitle: 'Trợ lý AI phân tích triệu chứng & tư vấn',
+    icon: Sparkles,
+    href: '#ai-screening',
+    isAI: true,
+    badge: 'HOT AI TECH',
+    badgeColor: 'bg-purple-100 text-purple-800 border-purple-200 animate-pulse',
+    iconBg: 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white',
+  },
+  {
+    id: 'telehealth',
+    title: 'Tư vấn video bác sĩ',
+    subtitle: 'Khám trực tuyến 1-1 không di chuyển',
+    icon: Video,
+    href: '/dich-vu/tu-van-tu-xa',
+    badge: 'Khám online',
+    badgeColor: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    iconBg: 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white',
+  },
+  {
+    id: 'testing',
+    title: 'Xét nghiệm & CĐHA',
+    subtitle: 'Xét nghiệm máu, Siêu âm, X-quang, MRI',
+    icon: FlaskConical,
+    href: '/dich-vu/chan-doan-hinh-anh',
+    badge: 'Trả kết quả nhanh',
+    badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
+    iconBg: 'bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white',
+  },
+  {
+    id: 'health-package',
+    title: 'Gói khám sức khỏe',
+    subtitle: 'Tầm soát & Khám sức khỏe tổng quát',
+    icon: ShieldCheck,
+    href: '/dich-vu/goi-kham-suc-khoe',
+    badge: 'Ưu đãi 20%',
+    badgeColor: 'bg-teal-100 text-teal-800 border-teal-200',
+    iconBg: 'bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white',
+  },
+  {
+    id: 'circular-exam',
+    title: 'Khám SK thông tư',
+    subtitle: 'Giấy khám sức khỏe xin việc, lái xe',
+    icon: FileCheck,
+    href: '/dich-vu/kham-thong-tu',
+    badge: 'Chuẩn Bộ Y Tế',
+    badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    iconBg: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white',
+  },
+];
+
 export default function HomePage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const packagesScrollRef = useRef<HTMLDivElement>(null);
 
@@ -179,9 +277,9 @@ export default function HomePage() {
   };
 
   return (
-    <div className="bg-[#F8F9FA]">
+    <div className="bg-[#F8F9FA] min-h-screen">
       {/* Hero Section */}
-      <section className="relative bg-[#0c4b39] pt-16 md:pt-24 pb-0 text-white overflow-hidden">
+      <section className="relative bg-[#0c4b39] pt-14 md:pt-20 pb-20 md:pb-28 text-white overflow-hidden">
         {/* Glow effects */}
         <div className="absolute top-1/4 left-1/10 w-96 h-96 bg-[#66FF33]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/10 w-96 h-96 bg-[#4CAF50]/15 rounded-full blur-3xl pointer-events-none" />
@@ -272,136 +370,192 @@ export default function HomePage() {
                 repeatCount="indefinite"
               />
             </path>
-
-            {/* High-visibility horizontal traveling pulse light dot 1 */}
-            <g>
-              <animateTransform
-                attributeName="transform"
-                type="translate"
-                from="-100 0"
-                to="1500 0"
-                dur="3.5s"
-                repeatCount="indefinite"
-              />
-              <circle cx="0" cy="200" r="9" fill="#66FF33" filter="url(#glow-light)" />
-              <circle cx="0" cy="200" r="4" fill="#FFFFFF" />
-            </g>
-
-            {/* High-visibility horizontal traveling pulse light dot 2 */}
-            <g>
-              <animateTransform
-                attributeName="transform"
-                type="translate"
-                from="-800 0"
-                to="800 0"
-                dur="3.5s"
-                repeatCount="indefinite"
-              />
-              <circle cx="0" cy="200" r="9" fill="#00C9A7" filter="url(#glow-light)" />
-              <circle cx="0" cy="200" r="4" fill="#FFFFFF" />
-            </g>
-
-            {/* Floating Medical Cross Icons */}
-            <g fill="none" stroke="#66FF33" strokeWidth="2.5" strokeLinecap="round" className="opacity-50">
-              <path d="M 120 100 L 120 120 M 110 110 L 130 110" />
-              <path d="M 850 80 L 850 100 M 840 90 L 860 90" />
-              <path d="M 780 320 L 780 340 M 770 330 L 790 330" />
-              <path d="M 280 340 L 280 360 M 270 350 L 290 350" />
-            </g>
           </svg>
         </div>
+
         <div className="container-custom relative z-10">
           <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-[#66FF33] text-xs font-bold mb-6 backdrop-blur-md">
+              <Sparkles className="w-4 h-4 text-[#66FF33]" />
+              <span>Hệ thống Y tế & Đặt khám Trực tuyến Hàng đầu NovaCare</span>
+            </div>
+
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
               Đặt lịch khám dễ dàng, <br className="hidden sm:inline" />
-              <span className="text-[#66FF33] inline-block mt-1">nhanh chóng</span>
+              <span className="text-[#66FF33] inline-block mt-1">nhanh chóng & chính xác</span>
             </h1>
-            <p className="text-base md:text-lg text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-              Kết nối với hàng ngàn bác sĩ và cơ sở y tế uy tín trên toàn quốc.
-              Đặt lịch khám chỉ với vài cú nhấp chuột.
+            <p className="text-base md:text-lg text-white/80 mb-8 max-w-2xl mx-auto leading-relaxed">
+              Kết nối trực tiếp với hơn 500+ bác sĩ chuyên khoa & cơ sở y tế uy tín.
+              Lấy số thứ tự trực tuyến không chờ đợi.
             </p>
 
             {/* Search Box */}
-            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto bg-white/10 p-2 rounded-xl backdrop-blur-sm border border-white/10 shadow-2xl">
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto bg-white/10 p-2 rounded-2xl backdrop-blur-md border border-white/20 shadow-2xl">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/60" />
                 <Input
                   type="text"
                   placeholder="Tìm bác sĩ, chuyên khoa, bệnh viện..."
-                  className="pl-12 h-12 w-full bg-white text-gray-900 placeholder:text-gray-400 border-none rounded-lg focus-visible:ring-[#66FF33] text-base"
+                  className="pl-12 h-12 w-full bg-white text-gray-900 placeholder:text-gray-400 border-none rounded-xl focus-visible:ring-[#66FF33] text-base shadow-inner"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Button
                 type="submit"
-                className="h-12 px-8 bg-[#66FF33] hover:bg-[#5ae62e] text-[#1A2B3C] font-bold text-base rounded-lg transition shadow-md shrink-0 cursor-pointer"
+                className="h-12 px-8 bg-[#66FF33] hover:bg-[#5ae62e] text-[#0c4b39] font-extrabold text-base rounded-xl transition-all duration-200 shadow-lg hover:shadow-emerald-900/30 shrink-0 cursor-pointer flex items-center justify-center gap-2"
               >
-                Tìm kiếm
+                <span>Tìm kiếm</span>
+                <Search className="w-4 h-4" />
               </Button>
             </form>
 
-            {/* Quick stats */}
-            <div className="grid grid-cols-3 gap-6 mt-14 max-w-xl mx-auto border-t border-white/10 pt-10 pb-4">
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold text-white">500+</div>
-                <div className="text-sm text-white/70 mt-1">Bác sĩ</div>
+            {/* Medpro-style Key Service Highlights Bullets Banner */}
+            <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center justify-center gap-4 md:gap-8 text-xs md:text-sm font-medium text-white/90">
+              <div className="flex items-center gap-2 bg-black/15 px-3 py-1.5 rounded-full border border-white/10">
+                <CheckCircle2 className="w-4 h-4 text-[#66FF33] shrink-0" />
+                <span>Đặt khám nhanh - Lấy số thứ tự trực tuyến</span>
               </div>
-              <div className="text-center border-x border-white/10 px-4">
-                <div className="text-3xl md:text-4xl font-extrabold text-white">100+</div>
-                <div className="text-sm text-white/70 mt-1">Cơ sở y tế</div>
+              <div className="flex items-center gap-2 bg-black/15 px-3 py-1.5 rounded-full border border-white/10">
+                <CheckCircle2 className="w-4 h-4 text-[#66FF33] shrink-0" />
+                <span>Đặt khám theo giờ - Giảm bớt thời gian chờ</span>
               </div>
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold text-white">10K+</div>
-                <div className="text-sm text-white/70 mt-1">Lịch hẹn</div>
+              <div className="flex items-center gap-2 bg-black/15 px-3 py-1.5 rounded-full border border-white/10">
+                <CheckCircle2 className="w-4 h-4 text-[#66FF33] shrink-0" />
+                <span>Trợ lý AI sàng lọc triệu chứng tiền khám</span>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* How it works banner */}
-        <div className="container-custom mt-8">
-          <div className="bg-[#083327] rounded-t-3xl pt-6 pb-6 px-8 max-w-5xl mx-auto border-t border-x border-white/10 shadow-2xl relative z-10">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              {/* Left steps */}
-              <div className="flex items-center gap-12 flex-1 justify-end w-full md:w-auto">
-                <Link href={isAuthenticated ? "/tai-khoan" : "/dang-nhap"} className="flex flex-col items-center group cursor-pointer text-center no-underline">
-                  <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
-                    <User className="h-5 w-5" />
-                  </div>
-                  <span className="text-white/80 text-xs mt-2 font-medium">Bệnh nhân</span>
-                </Link>
-                <Link href={isAuthenticated ? "/ho-so" : "/dang-nhap"} className="flex flex-col items-center group cursor-pointer text-center no-underline">
-                  <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <span className="text-white/80 text-xs mt-2 font-medium">Thông tin</span>
-                </Link>
+      {/* Medpro-style Floating Quick Booking Feature Cards Grid */}
+      <section className="relative z-30 -mt-16 md:-mt-20 container-custom mb-12">
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-200/70">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
+            <div>
+              <div className="flex items-center gap-2 text-[#0c4b39] font-bold text-xs uppercase tracking-wider mb-1">
+                <Zap className="w-4 h-4 text-[#4CAF50]" />
+                <span>Dịch vụ tiện ích NovaCare</span>
               </div>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-secondary tracking-tight">
+                Đặt khám y tế trực tuyến
+              </h2>
+            </div>
+            <p className="text-xs md:text-sm text-gray-500 max-w-md sm:text-right">
+              Chọn hình thức đặt khám nhanh phù hợp nhất dành cho bạn và gia đình
+            </p>
+          </div>
 
-              {/* Center Title */}
-              <div className="text-center px-4 shrink-0">
-                <h3 className="text-white font-bold text-lg md:text-xl uppercase tracking-wider relative inline-block py-1">
-                  Cách thức hoạt động
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#66FF33]"></span>
-                </h3>
-              </div>
+          {/* 8 Feature Cards Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+            {QUICK_BOOKING_SERVICES.map((service) => {
+              const IconComponent = service.icon;
+              
+              const CardContentInner = (
+                <div className="h-full flex flex-col justify-between p-4 md:p-5 bg-white border border-gray-100 hover:border-[#0c4b39]/40 rounded-2xl group transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 relative overflow-hidden">
+                  {/* Top Badge */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-xs ${service.iconBg}`}>
+                      <IconComponent className="w-6 h-6" />
+                    </div>
+                    <span className={`text-[10px] md:text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${service.badgeColor} shrink-0`}>
+                      {service.badge}
+                    </span>
+                  </div>
 
-              {/* Right steps */}
-              <div className="flex items-center gap-12 flex-1 justify-start w-full md:w-auto">
-                <Link href="/bac-si" className="flex flex-col items-center group cursor-pointer text-center no-underline">
-                  <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
-                    <Search className="h-5 w-5" />
+                  {/* Title & Subtitle */}
+                  <div>
+                    <h3 className="font-bold text-[#1A2B3C] group-hover:text-[#0c4b39] text-base md:text-lg leading-snug transition-colors mb-1 line-clamp-1">
+                      {service.title}
+                    </h3>
+                    <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">
+                      {service.subtitle}
+                    </p>
                   </div>
-                  <span className="text-white/80 text-xs mt-2 font-medium">Tìm bác sĩ</span>
-                </Link>
-                <Link href="/dat-lich" className="flex flex-col items-center group cursor-pointer text-center no-underline">
-                  <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
-                    <Calendar className="h-5 w-5" />
+
+                  {/* Bottom Arrow Indicator */}
+                  <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between text-xs font-bold text-[#0c4b39] group-hover:text-[#4CAF50]">
+                    <span>Đặt ngay</span>
+                    <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <span className="text-white/80 text-xs mt-2 font-medium">Đặt lịch</span>
+                </div>
+              );
+
+              if (service.isAI) {
+                return (
+                  <button
+                    key={service.id}
+                    onClick={() => setIsAIModalOpen(true)}
+                    className="text-left w-full cursor-pointer border-none bg-transparent p-0 focus:outline-none"
+                  >
+                    {CardContentInner}
+                  </button>
+                );
+              }
+
+              return (
+                <Link key={service.id} href={service.href} className="no-underline">
+                  {CardContentInner}
                 </Link>
-              </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* AI Modal Assessment */}
+      <Dialog open={isAIModalOpen} onOpenChange={setIsAIModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto p-2 sm:p-6 bg-white rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>AI Sàng lọc tiền khám NovaCare</DialogTitle>
+          </DialogHeader>
+          <AIHealthAssessmentWizard onCancel={() => setIsAIModalOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* How it works banner */}
+      <section className="container-custom mb-16">
+        <div className="bg-[#083327] rounded-3xl pt-6 pb-6 px-8 max-w-5xl mx-auto border border-white/10 shadow-xl relative z-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            {/* Left steps */}
+            <div className="flex items-center gap-12 flex-1 justify-end w-full md:w-auto">
+              <Link href={isAuthenticated ? "/tai-khoan" : "/dang-nhap"} className="flex flex-col items-center group cursor-pointer text-center no-underline">
+                <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
+                  <User className="h-5 w-5" />
+                </div>
+                <span className="text-white/80 text-xs mt-2 font-medium">Bệnh nhân</span>
+              </Link>
+              <Link href={isAuthenticated ? "/ho-so" : "/dang-nhap"} className="flex flex-col items-center group cursor-pointer text-center no-underline">
+                <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <span className="text-white/80 text-xs mt-2 font-medium">Thông tin</span>
+              </Link>
+            </div>
+
+            {/* Center Title */}
+            <div className="text-center px-4 shrink-0">
+              <h3 className="text-white font-bold text-lg md:text-xl uppercase tracking-wider relative inline-block py-1">
+                Cách thức hoạt động
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#66FF33]"></span>
+              </h3>
+            </div>
+
+            {/* Right steps */}
+            <div className="flex items-center gap-12 flex-1 justify-start w-full md:w-auto">
+              <Link href="/bac-si" className="flex flex-col items-center group cursor-pointer text-center no-underline">
+                <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
+                  <Search className="h-5 w-5" />
+                </div>
+                <span className="text-white/80 text-xs mt-2 font-medium">Tìm bác sĩ</span>
+              </Link>
+              <Link href="/dat-lich" className="flex flex-col items-center group cursor-pointer text-center no-underline">
+                <div className="w-11 h-11 bg-[#66FF33]/15 text-[#66FF33] rounded-full flex items-center justify-center border border-[#66FF33]/30 group-hover:scale-105 transition">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <span className="text-white/80 text-xs mt-2 font-medium">Đặt lịch</span>
+              </Link>
             </div>
           </div>
         </div>

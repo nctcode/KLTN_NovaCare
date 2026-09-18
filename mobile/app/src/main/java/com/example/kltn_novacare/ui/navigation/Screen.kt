@@ -26,4 +26,10 @@ sealed class Screen(val route: String) {
     object Payment : Screen("payment/{url}") {
         fun createRoute(url: String) = "payment/${java.net.URLEncoder.encode(url, "UTF-8")}"
     }
+
+    object HospitalBooking : Screen("hospital_booking?hospitalId={hospitalId}") {
+        fun createRoute(hospitalId: String? = null) = if (hospitalId != null) "hospital_booking?hospitalId=$hospitalId" else "hospital_booking"
+    }
+
+    object PreExamScreening : Screen("pre_exam_screening")
 }

@@ -117,11 +117,36 @@ export class DoctorsController {
     const data = await this.service.getAvailableSlots(
       id,
       workplaceId,
-      new Date(date)
+      date
     );
     return {
       statusCode: HttpStatus.OK,
       message: 'Lấy khung giờ trống thành công',
+      data,
+    };
+  }
+
+  @Get(':id/available-dates')
+  @Public()
+  @ApiOperation({ summary: 'Lấy danh sách các ngày khả dụng của bác sĩ' })
+  @ApiQuery({ name: 'workplaceId', required: true, description: 'ID nơi làm việc' })
+  @ApiQuery({ name: 'startDate', required: true, description: 'Ngày bắt đầu (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'endDate', required: true, description: 'Ngày kết thúc (YYYY-MM-DD)' })
+  async getAvailableDates(
+    @Param('id') id: string,
+    @Query('workplaceId') workplaceId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string
+  ) {
+    const data = await this.service.getAvailableDates(
+      id,
+      workplaceId,
+      startDate,
+      endDate
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy danh sách ngày khả dụng thành công',
       data,
     };
   }

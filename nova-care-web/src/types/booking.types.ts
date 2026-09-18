@@ -1,3 +1,6 @@
+import { BookingType } from '@/config/bookingTypes';
+
+export type { BookingType };
 export type BookingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 export type ExaminationType = 'REGULAR' | 'BHYT' | 'SERVICE';
@@ -46,9 +49,11 @@ export interface BookingState {
   medicalServiceName?: string | null;
   healthPackageId?: string | null;
   healthPackageName?: string | null;
-  bookingType?: 'doctor' | 'specialty' | 'hospital' | 'clinic' | 'service' | 'package';
+  bookingType?: BookingType | null;
+  inpatientEncounterId?: string | null;
   examinationType?: ExaminationType;
   reason?: string;
   symptoms?: string;
   appointmentId: string | null;
 }
+

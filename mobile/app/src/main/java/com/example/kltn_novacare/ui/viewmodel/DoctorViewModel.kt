@@ -2,10 +2,7 @@ package com.example.kltn_novacare.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.kltn_novacare.data.model.Specialty
-import com.example.kltn_novacare.data.model.Hospital
-import com.example.kltn_novacare.data.model.Doctor
-import com.example.kltn_novacare.data.model.AppointmentSlot
+import com.example.kltn_novacare.data.model.*
 import com.example.kltn_novacare.data.repository.DoctorRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +32,9 @@ class DoctorViewModel(private val doctorRepository: DoctorRepository = DoctorRep
 
     private val _availableSlots = MutableStateFlow<NetworkState<List<AppointmentSlot>>>(NetworkState.Idle)
     val availableSlots: StateFlow<NetworkState<List<AppointmentSlot>>> = _availableSlots.asStateFlow()
+
+    private val _medicalServices = MutableStateFlow<NetworkState<List<MedicalService>>>(NetworkState.Idle)
+    val medicalServices: StateFlow<NetworkState<List<MedicalService>>> = _medicalServices.asStateFlow()
 
     init {
         loadHomeData()
@@ -98,6 +98,16 @@ class DoctorViewModel(private val doctorRepository: DoctorRepository = DoctorRep
             doctorRepository.getAvailableSlots(doctorId, workplaceId, date).fold(
                 onSuccess = { _availableSlots.value = NetworkState.Success(it) },
                 onFailure = { _availableSlots.value = NetworkState.Error(it.message ?: "Lỗi tải khung giờ") }
+            )
+        }
+    }
+
+    fun loadMedicalServices(hospitalId: String? = null, specialtyId: String? = null, category: String? = null) {
+        viewModelScope.launch {
+            _medicalServices.value = NetworkState.Loading
+            doctorRepository.getMedicalServices(hospitalId, specialtyId, category).fold(
+                onSuccess = { _medicalServices.value = NetworkState.Success(it) },
+                onFailure = { _medicalServices.value = NetworkState.Error(it.message ?: "Lỗi tải dịch vụ y tế") }
             )
         }
     }

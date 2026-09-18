@@ -41,4 +41,11 @@ export const doctorService = {
     const response = await apiClient.get<any>(`/doctor-workplaces/${workplaceId}/slots${query}`);
     return response.data;
   },
+
+  async getAvailableDates(doctorId: string, workplaceId: string, startDate: string, endDate: string) {
+    const response = await apiClient.get<any>(
+      `/doctors/${doctorId}/available-dates?workplaceId=${workplaceId}&startDate=${startDate}&endDate=${endDate}`
+    );
+    return response.data || response;
+  },
 };

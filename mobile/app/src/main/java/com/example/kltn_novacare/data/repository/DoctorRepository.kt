@@ -4,6 +4,7 @@ import com.example.kltn_novacare.data.model.Specialty
 import com.example.kltn_novacare.data.model.Hospital
 import com.example.kltn_novacare.data.model.Doctor
 import com.example.kltn_novacare.data.model.AppointmentSlot
+import com.example.kltn_novacare.data.model.MedicalService
 import com.example.kltn_novacare.data.remote.ApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -85,6 +86,24 @@ class DoctorRepository {
                 Result.success(body.data ?: emptyList())
             } else {
                 Result.failure(Exception(body?.error ?: body?.message ?: "Không thể lấy khung giờ khám"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getMedicalServices(
+        hospitalId: String? = null,
+        specialtyId: String? = null,
+        category: String? = null
+    ): Result<List<MedicalService>> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getMedicalServices(hospitalId, specialtyId, category).execute()
+            val body = response.body()
+            if (response.isSuccessful && body != null && body.success) {
+                Result.success(body.data ?: emptyList())
+            } else {
+                Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tải dịch vụ y tế"))
             }
         } catch (e: Exception) {
             Result.failure(e)

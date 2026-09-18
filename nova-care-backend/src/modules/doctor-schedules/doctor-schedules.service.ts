@@ -202,7 +202,7 @@ export class DoctorSchedulesService {
       }
     }
 
-    return this.prisma.doctorSchedule.update({
+    const updated = await this.prisma.doctorSchedule.update({
       where: { id },
       data: updateDto,
       include: {
@@ -216,13 +216,55 @@ export class DoctorSchedulesService {
         },
       },
     });
+
+    // Đồng bộ: Vô hiệu hóa các slot chưa đặt trong tương lai khi Admin thay đổi lịch
+    await this.purgeFutureUnbookedSlots(schedule.doctorWorkplaceId, schedule.dayOfWeek);
+
+    return updated;
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const schedule = await this.findOne(id);
     await this.prisma.doctorSchedule.update({
       where: { id },
       data: { isActive: false },
     });
+
+    // Đồng bộ: Vô hiệu hóa các slot chưa đặt trong tương lai khi Admin xóa/tắt ca
+    await this.purgeFutureUnbookedSlots(schedule.doctorWorkplaceId, schedule.dayOfWeek);
+  }
+
+  private async purgeFutureUnbookedSlots(doctorWorkplaceId: string, dayOfWeek: number) {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const futureSlots = await this.prisma.appointmentSlot.findMany({
+        where: {
+          doctorWorkplaceId,
+          startTime: { gte: today },
+          bookedCount: 0,
+        },
+      });
+
+      const slotIdsToDeactivate = futureSlots
+        .filter((slot) => {
+          const slotDate = new Date(slot.startTime);
+          return slotDate.getDay() === dayOfWeek;
+        })
+        .map((s) => s.id);
+
+      if (slotIdsToDeactivate.length > 0) {
+        await this.prisma.appointmentSlot.updateMany({
+          where: { id: { in: slotIdsToDeactivate } },
+          data: {
+            isActive: false,
+            isAvailable: false,
+          },
+        });
+      }
+    } catch (e) {
+      console.error('Error purging future unbooked slots:', e);
+    }
   }
 }

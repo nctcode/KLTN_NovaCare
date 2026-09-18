@@ -240,6 +240,8 @@ Trả về JSON:
       painLevel?: number;
       warningSigns?: string[];
       medicalHistory?: string[];
+      specificSymptoms?: string[];
+      voiceBiomarkers?: { clinicalEvaluation?: string };
     };
     hospitalName?: string;
     availableSpecialties?: string[];

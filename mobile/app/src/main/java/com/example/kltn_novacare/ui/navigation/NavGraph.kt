@@ -154,5 +154,36 @@ fun NavGraph(
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController, authViewModel = authViewModel)
         }
+
+        composable(
+            route = Screen.HospitalBooking.route,
+            arguments = listOf(
+                navArgument("hospitalId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val hospitalId = backStackEntry.arguments?.getString("hospitalId")
+            com.example.kltn_novacare.ui.screens.booking.HospitalFacilityBookingScreen(
+                initialHospitalId = hospitalId,
+                navController = navController,
+                bookingViewModel = bookingViewModel,
+                doctorViewModel = doctorViewModel,
+                patientViewModel = patientViewModel
+            )
+        }
+
+        composable(Screen.PreExamScreening.route) {
+            com.example.kltn_novacare.ui.screens.PreExamScreeningScreen(
+                onSkipScreening = {
+                    navController.navigate(Screen.HospitalBooking.createRoute(null))
+                },
+                onCompletedToBooking = { doctorId, specialtyId, hospitalId, reason ->
+                    navController.navigate(Screen.HospitalBooking.createRoute(hospitalId))
+                }
+            )
+        }
     }
 }

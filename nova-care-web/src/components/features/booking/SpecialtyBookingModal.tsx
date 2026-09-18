@@ -141,13 +141,22 @@ export function SpecialtyBookingModal({
       if (!selectedSlot?.id || !selectedProfile?.id) {
         throw new Error('Vui lòng chọn đầy đủ thông tin khung giờ và hồ sơ bệnh nhân');
       }
-      return appointmentService.create({
+      const appt = await appointmentService.create({
         slotId: selectedSlot.id,
         patientProfileId: selectedProfile.id,
         reason: reason || `Khám chuyên khoa ${specialty?.name}`,
         symptoms: symptoms || undefined,
         idempotencyKey: typeof window !== 'undefined' && window.crypto?.randomUUID ? window.crypto.randomUUID() : `spc-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       });
+      const apptId = (appt as any)?.id || (appt as any)?.data?.id;
+      if (apptId) {
+        try {
+          await appointmentService.confirm(apptId);
+        } catch (e) {
+          console.warn('Confirm call fallback', e);
+        }
+      }
+      return appt;
     },
     onSuccess: (data: any) => {
       setCreatedAppointment(data?.data || data);

@@ -23,7 +23,7 @@ const initialState: BookingState = {
   patientProfileId: null,
   medicalServiceId: null,
   healthPackageId: null,
-  bookingType: 'doctor',
+  bookingType: 'DOCTOR',
   examinationType: 'REGULAR',
   reason: '',
   symptoms: '',

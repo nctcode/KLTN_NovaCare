@@ -45,7 +45,7 @@ import { useRouter } from 'next/navigation';
 import { formatPrice, getDoctorSpecialtyName } from '@/lib/utils';
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string | string[] }>;
 }
 
 // Format Type Enum to Friendly Vietnamese
@@ -68,7 +68,8 @@ const formatHospitalStatus = (status?: string) => {
 
 export default function HospitalDetailPage({ params }: PageProps) {
   const router = useRouter();
-  const { id } = React.use(params);
+  const rawParams = React.use(params);
+  const id = Array.isArray(rawParams.id) ? rawParams.id.join('-') : rawParams.id;
 
   const [activeTab, setActiveTab] = useState('overview');
   const [lightboxOpen, setLightboxOpen] = useState(false);

@@ -30,6 +30,25 @@ interface ApiService {
     @GET("hospitals")
     fun getHospitals(): Call<ApiResponse<List<Hospital>>>
 
+    @GET("hospitals/{hospitalId}/specialties")
+    fun getHospitalSpecialties(@Path("hospitalId") hospitalId: String): Call<ApiResponse<List<Specialty>>>
+
+    @GET("hospitals/{hospitalId}/doctors")
+    fun getHospitalDoctors(
+        @Path("hospitalId") hospitalId: String,
+        @Query("specialtyId") specialtyId: String? = null
+    ): Call<ApiResponse<List<Doctor>>>
+
+    @GET("medical-services")
+    fun getMedicalServices(
+        @Query("hospitalId") hospitalId: String? = null,
+        @Query("specialtyId") specialtyId: String? = null,
+        @Query("category") category: String? = null
+    ): Call<ApiResponse<List<MedicalService>>>
+
+    @GET("medical-services/{id}")
+    fun getMedicalServiceById(@Path("id") id: String): Call<ApiResponse<MedicalService>>
+
     // ==========================================
     // DOCTORS & WORKPLACES
     // ==========================================
@@ -151,13 +170,13 @@ data class RefreshTokenRequest(
 data class CreatePatientProfileRequest(
     val fullName: String,
     val phone: String,
-    val email: String?,
+    val email: String? = null,
     val dateOfBirth: String,
     val gender: String,
-    val identityCard: String?,
-    val healthInsurance: String?,
-    val address: String?,
-    val relationship: String
+    val identityCard: String? = null,
+    val healthInsurance: String? = null,
+    val address: String? = null,
+    val relationship: String = "BAN_THAN"
 )
 
 data class CreateAppointmentRequest(

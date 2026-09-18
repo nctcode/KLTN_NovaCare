@@ -35,7 +35,7 @@ import { format } from 'date-fns';
 
 interface PageProps {
   params: Promise<{
-    specialtyId: string;
+    specialtyId: string | string[];
   }>;
 }
 
@@ -569,7 +569,8 @@ function SpecialtyHospitalsContent({ specialtyId }: { specialtyId: string }) {
 }
 
 export default function SpecialtyHospitalsPage({ params }: PageProps) {
-  const { specialtyId } = use(params);
+  const resolved = use(params);
+  const specialtyId = Array.isArray(resolved.specialtyId) ? resolved.specialtyId.join('-') : resolved.specialtyId;
 
   return (
     <Suspense

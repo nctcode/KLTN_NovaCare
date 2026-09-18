@@ -127,6 +127,18 @@ export class AppointmentsController {
   }
 
   @Public()
+  @Patch(':id/confirm')
+  @ApiOperation({ summary: 'Xác nhận lịch khám' })
+  async confirm(@Param('id') id: string) {
+    const data = await this.service.confirm(id);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Xác nhận lịch khám thành công',
+      data,
+    };
+  }
+
+  @Public()
   @Patch(':id/complete')
   @ApiOperation({ summary: 'Hoàn thành lịch khám' })
   async complete(@Param('id') id: string) {

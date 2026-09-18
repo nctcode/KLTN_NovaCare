@@ -89,4 +89,13 @@ interface PreExamApiService {
         @Header("Authorization") token: String,
         @Path("id") sessionId: String
     ): Response<CompleteSessionResponse>
+
+    @Multipart
+    @POST("pre-exam-v2/analyze-smartphone")
+    suspend fun analyzeSmartphoneInputs(
+        @Part("bodyAreas") bodyAreas: RequestBody?,
+        @Part("questionnaire") questionnaire: RequestBody?,
+        @Part voice: MultipartBody.Part?,
+        @Part images: List<MultipartBody.Part>?
+    ): Response<com.example.kltn_novacare.data.model.ApiResponse<com.example.kltn_novacare.data.model.TriageResult>>
 }

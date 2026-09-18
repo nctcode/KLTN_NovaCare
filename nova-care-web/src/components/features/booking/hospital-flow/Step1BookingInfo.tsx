@@ -34,11 +34,11 @@ import { formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 
 import { AIAssistedBookingModal } from '../ai/AIAssistedBookingModal';
-import { HospitalBookingMode } from './BookingTypeStep';
+import { BookingType } from '@/config/bookingTypes';
 
 interface Step1BookingInfoProps {
   hospital: Hospital;
-  bookingMode?: HospitalBookingMode;
+  bookingMode?: BookingType | null;
   selectedSpecialty: Specialty | null;
   setSelectedSpecialty: (specialty: Specialty | null) => void;
   selectedRoom: ClinicRoom | null;
@@ -58,7 +58,7 @@ interface Step1BookingInfoProps {
 
 export function Step1BookingInfo({
   hospital,
-  bookingMode = 'doctor',
+  bookingMode = 'DOCTOR',
   selectedSpecialty,
   setSelectedSpecialty,
   selectedRoom,
@@ -214,48 +214,161 @@ export function Step1BookingInfo({
     }
   }, [selectedSpecialty, specialtyServices, selectedService, setSelectedService]);
 
-  // AUTO-ASSIGNMENT LOGIC FOR SERVICE / STANDARD BOOKING MODE
+  // AUTO-ASSIGNMENT LOGIC FOR SERVICE / GENERAL BOOKING MODE
   useEffect(() => {
-    if (bookingMode === 'service' || bookingMode === 'standard') {
+    if (bookingMode === 'SERVICE' || bookingMode === 'GENERAL') {
       if (doctors && doctors.length > 0 && !selectedDoctor) {
         setSelectedDoctor(doctors[0]);
       }
     }
   }, [bookingMode, doctors, selectedDoctor, setSelectedDoctor]);
 
-  // Generate upcoming 14 dates for date picker
-  const dateOptions = useMemo(() => {
-    const dates = [];
-    const today = new Date();
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-      const dayOfWeekStr = i === 0 ? 'Hôm nay' : i === 1 ? 'Ngày mai' : d.toLocaleDateString('vi-VN', { weekday: 'short' });
-      const displayDate = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-      dates.push({ dateStr, dayOfWeekStr, displayDate, fullDate: d });
-    }
-    return dates;
-  }, []);
-
-  // Fetch available slots from backend for selected doctor + date
   const doctorWorkplaceId = useMemo(() => {
     if (!selectedDoctor || !selectedDoctor.workPlaces) return null;
     const wp = selectedDoctor.workPlaces.find((w) => w.hospitalId === hospital.id);
     return wp?.id || selectedDoctor.workPlaces[0]?.id || null;
   }, [selectedDoctor, hospital.id]);
 
+  const dateRangeParams = useMemo(() => {
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 13);
+    return {
+      startDate: today.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+    };
+  }, []);
+
+  const { data: availableDatesData = [] } = useQuery({
+    queryKey: ['available-dates', selectedDoctor?.id, doctorWorkplaceId, dateRangeParams.startDate, dateRangeParams.endDate],
+    queryFn: () => doctorService.getAvailableDates(selectedDoctor!.id, doctorWorkplaceId!, dateRangeParams.startDate, dateRangeParams.endDate),
+    enabled: !!selectedDoctor && !!doctorWorkplaceId,
+  });
+
+  // Generate ONLY valid upcoming dates configured in Admin schedule (Medpro style)
+  const availableDateOptions = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (Array.isArray(availableDatesData) && availableDatesData.length > 0) {
+      const validDates = availableDatesData
+        .filter((item: any) => item.hasAvailableSlots === true || item.availableSlotCount > 0)
+        .map((item: any) => {
+          const [yyyy, mm, dd] = item.date.split('-').map(Number);
+          const d = new Date(yyyy, mm - 1, dd);
+
+          const diffDays = Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+          let dayOfWeekStr = '';
+          if (diffDays === 0) dayOfWeekStr = 'Hôm nay';
+          else if (diffDays === 1) dayOfWeekStr = 'Ngày mai';
+          else {
+            const dayNum = d.getDay();
+            dayOfWeekStr = dayNum === 0 ? 'Chủ nhật' : `Thứ ${dayNum + 1}`;
+          }
+
+          const displayDateFormatted = `(${String(dd).padStart(2, '0')}/${String(mm).padStart(2, '0')})`;
+
+          return {
+            dateStr: item.date,
+            dayOfWeekStr,
+            displayDateFormatted,
+            fullDate: d,
+            isAvailable: true,
+          };
+        });
+
+      return validDates;
+    }
+
+    // Fallback if API hasn't loaded: calculate default dates
+    const dates = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayNum = d.getDay();
+      const dayOfWeekStr = i === 0 ? 'Hôm nay' : i === 1 ? 'Ngày mai' : dayNum === 0 ? 'Chủ nhật' : `Thứ ${dayNum + 1}`;
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const displayDateFormatted = `(${dd}/${mm})`;
+
+      dates.push({
+        dateStr,
+        dayOfWeekStr,
+        displayDateFormatted,
+        fullDate: d,
+        isAvailable: true,
+      });
+    }
+    return dates;
+  }, [availableDatesData]);
+
+  // Progressive Disclosure Conditions: Date & Time reveal dependencies
+  const canShowDate = useMemo(() => {
+    if (bookingMode === 'SERVICE') {
+      const requiresDoctor = (selectedService as any)?.requiresDoctor === true;
+      if (requiresDoctor) {
+        return !!selectedSpecialty && !!selectedService && !!selectedDoctor;
+      }
+      return !!selectedSpecialty && !!selectedService && !!selectedRoom;
+    }
+
+    if (bookingMode === 'DOCTOR') {
+      return !!selectedDoctor && !!selectedSpecialty;
+    }
+
+    if (bookingMode === 'GENERAL') {
+      return !!selectedSpecialty && !!selectedRoom;
+    }
+
+    if (bookingMode === 'VIP') {
+      return !!selectedSpecialty && (!!selectedDoctor || !!selectedRoom);
+    }
+
+    if (bookingMode === 'OUT_OF_HOURS') {
+      return !!selectedSpecialty && (!!selectedDoctor || !!selectedRoom || !!selectedService);
+    }
+
+    if (bookingMode === 'INPATIENT_FOLLOWUP') {
+      return !!selectedSpecialty;
+    }
+
+    return !!selectedSpecialty && !!selectedService;
+  }, [bookingMode, selectedSpecialty, selectedService, selectedRoom, selectedDoctor]);
+
+  const canShowTime = useMemo(() => {
+    return canShowDate && !!selectedDate;
+  }, [canShowDate, selectedDate]);
+
+  // Auto-select first available date if selectedDate is not in availableDateOptions
+  useEffect(() => {
+    if (!canShowDate || availableDateOptions.length === 0) return;
+
+    const currentSelectedOption = availableDateOptions.find((d) => d.dateStr === selectedDate);
+    if (!selectedDate || !currentSelectedOption) {
+      const firstValid = availableDateOptions[0];
+      if (firstValid && firstValid.dateStr !== selectedDate) {
+        setSelectedDate(firstValid.dateStr);
+        setSelectedSlotTime('');
+        setSelectedSlotId(null);
+      }
+    }
+  }, [canShowDate, availableDateOptions, selectedDate, setSelectedDate, setSelectedSlotTime, setSelectedSlotId]);
+
   const { data: availableSlots = [], isLoading: loadingSlots } = useQuery({
     queryKey: ['available-slots', selectedDoctor?.id, doctorWorkplaceId, selectedDate],
     queryFn: () => doctorService.getAvailableSlots(selectedDoctor!.id, doctorWorkplaceId!, selectedDate),
-    enabled: !!selectedDoctor && !!doctorWorkplaceId && !!selectedDate,
+    enabled: canShowTime && !!selectedDoctor && !!doctorWorkplaceId && !!selectedDate,
   });
 
-  // Generate time slots strictly from backend database query (no fake/mock fallbacks)
+  // Generate time slots strictly from backend database query (with backend metadata filtering for OUT_OF_HOURS)
   const timeSlots = useMemo(() => {
     if (!availableSlots || availableSlots.length === 0) {
       return [];
     }
+
+    const now = new Date();
 
     return availableSlots.map((slot: any) => {
       const start = new Date(slot.startTime);
@@ -263,78 +376,91 @@ export function Step1BookingInfo({
       const mins = String(start.getMinutes()).padStart(2, '0');
       const timeLabel = `${hours}:${mins}`;
       const hourNum = start.getHours();
+
       let session: 'morning' | 'afternoon' | 'evening' = 'morning';
       if (hourNum >= 12 && hourNum < 17) session = 'afternoon';
       else if (hourNum >= 17) session = 'evening';
+
+      // Backend out-of-hours flag check with fallback to evening/weekend check if field not present
+      const isOutsideOfficeHour =
+        slot.isOutsideOfficeHour === true ||
+        slot.slotType === 'OUT_OF_HOURS' ||
+        session === 'evening' ||
+        [0, 6].includes(start.getDay());
+
+      // Check if slot has already passed for today
+      const isPastTime = start.getTime() <= now.getTime();
+      const isAvailable = slot.isAvailable && slot.bookedCount < slot.capacity && !isPastTime;
 
       return {
         id: slot.id,
         timeLabel,
         session,
-        isAvailable: slot.isAvailable && slot.bookedCount < slot.capacity,
+        isAvailable,
+        isPastTime,
+        isOutsideOfficeHour,
       };
     });
   }, [availableSlots]);
 
-  // Filter slots by session tab
+  // Filter slots by session tab & booking mode (e.g. OUT_OF_HOURS mode)
   const filteredTimeSlots = useMemo(() => {
-    if (timeSession === 'all') return timeSlots;
-    return timeSlots.filter((slot: any) => slot.session === timeSession);
-  }, [timeSlots, timeSession]);
+    let result = timeSlots;
+
+    if (bookingMode === 'OUT_OF_HOURS') {
+      result = result.filter((slot: any) => slot.isOutsideOfficeHour);
+    }
+
+    if (timeSession === 'all') return result;
+    return result.filter((slot: any) => slot.session === timeSession);
+  }, [timeSlots, timeSession, bookingMode]);
 
   const handleValidateAndNext = () => {
-    // All modes require specialty selection
-    if (!selectedSpecialty) {
+    // 1. All modes except SERVICE with direct service choice require specialty selection
+    if (!selectedSpecialty && bookingMode !== 'SERVICE') {
       toast.error('Vui lòng chọn Chuyên khoa khám!');
       setIsSpecialtyModalOpen(true);
       return;
     }
 
-    // Doctor Mode Validation (Original doctor flow)
-    if (bookingMode === 'doctor') {
+    // 2. DOCTOR mode validation
+    if (bookingMode === 'DOCTOR') {
       if (!selectedDoctor) {
         toast.error('Vui lòng chọn Bác sĩ thăm khám!');
         setIsDoctorModalOpen(true);
         return;
       }
-      if (!selectedService) {
-        toast.error('Vui lòng chọn Dịch vụ khám!');
-        setIsServiceModalOpen(true);
-        return;
-      }
     }
 
-    // Service Mode Validation (Phòng khám + Dịch vụ, NO Doctor)
-    if (bookingMode === 'service') {
-      if (!selectedRoom) {
-        toast.error('Vui lòng chọn Phòng Khám Chuyên Khoa!');
-        setIsRoomModalOpen(true);
-        return;
-      }
+    // 3. SERVICE mode validation (Dynamic Service Metadata!)
+    if (bookingMode === 'SERVICE') {
       if (!selectedService) {
         toast.error('Vui lòng chọn Dịch vụ khám / xét nghiệm!');
         setIsServiceModalOpen(true);
         return;
       }
-    }
-
-    // Standard Mode Validation (Phòng khám)
-    if (bookingMode === 'standard') {
-      if (!selectedRoom) {
-        toast.error('Vui lòng chọn Phòng Khám Phân Luồng!');
-        setIsRoomModalOpen(true);
+      // ONLY require doctor if the selected service explicitly metadata demands it
+      const requiresDoctor = (selectedService as any).requiresDoctor === true;
+      if (requiresDoctor && !selectedDoctor) {
+        toast.error('Dịch vụ này yêu cầu chọn Bác sĩ phụ trách!');
+        setIsDoctorModalOpen(true);
         return;
       }
     }
 
-    if (!selectedDate) {
-      toast.error('Vui lòng chọn Ngày khám!');
-      return;
+    // 4. Date and Slot validation (if required by service/mode)
+    const requiresSchedule = (selectedService as any)?.requiresSchedule !== false;
+    if (requiresSchedule) {
+      if (!selectedDate) {
+        toast.error('Vui lòng chọn Ngày khám!');
+        return;
+      }
+      if (!selectedSlotTime) {
+        toast.error('Vui lòng chọn Giờ khám!');
+        return;
+      }
     }
-    if (!selectedSlotTime) {
-      toast.error('Vui lòng chọn Giờ khám!');
-      return;
-    }
+
     onNext();
   };
 
@@ -346,18 +472,18 @@ export function Step1BookingInfo({
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-emerald-300 text-xs font-bold border border-white/10">
             <Sparkles className="w-3.5 h-3.5" />
             <span>
-              Bước 1 / 4 • {bookingMode === 'service' ? 'Hình thức Khám Dịch Vụ' : bookingMode === 'standard' ? 'Khám Tiêu Chuẩn Phân Luồng' : 'Thông tin khám bệnh'}
+              Bước 1 / 4 • {bookingMode === 'SERVICE' ? 'Hình thức Khám Dịch Vụ' : bookingMode === 'GENERAL' ? 'Khám Tiêu Chuẩn Phân Luồng' : 'Thông tin khám bệnh'}
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-            {bookingMode === 'service'
+            {bookingMode === 'SERVICE'
               ? 'Chọn Dịch Vụ Y Tế & Khung Giờ Khám'
-              : bookingMode === 'standard'
-              ? 'Đăng Ký Khám Thường / Phân Luồng'
-              : 'Chọn Thông Tin Đặt Khám Bác Sĩ'}
+              : bookingMode === 'GENERAL'
+                ? 'Đăng Ký Khám Thường / Phân Luồng'
+                : 'Chọn Thông Tin Đặt Khám Bác Sĩ'}
           </h2>
           <p className="text-xs text-emerald-100/80 font-medium">
-            {bookingMode === 'service'
+            {bookingMode === 'SERVICE'
               ? `Lựa chọn gói xét nghiệm, dịch vụ kỹ thuật cao & lịch hẹn phù hợp tại ${hospital.name}`
               : `Điền đầy đủ chuyên khoa, bác sĩ, dịch vụ và thời gian khám mong muốn tại ${hospital.name}`}
           </p>
@@ -412,11 +538,10 @@ export function Step1BookingInfo({
         {/* 1. CHỌN CHUYÊN KHOA (ALL MODES REQUIRE SPECIALTY) */}
         <Card
           onClick={() => setIsSpecialtyModalOpen(true)}
-          className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${
-            selectedSpecialty
+          className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${selectedSpecialty
               ? 'bg-emerald-50/70 border-[#0c4b39]'
               : 'bg-white border-dashed border-slate-300 hover:border-[#0c4b39]'
-          }`}
+            }`}
         >
           <CardContent className="p-0 space-y-3">
             <div className="flex items-center justify-between">
@@ -456,7 +581,7 @@ export function Step1BookingInfo({
         </Card>
 
         {/* 2A. CHỌN BÁC SĨ (CHỈ HIỂN THỊ TRONG CHẾ ĐỘ: KHÁM THEO BÁC SĨ) */}
-        {bookingMode === 'doctor' && (
+        {bookingMode === 'DOCTOR' && (
           <Card
             onClick={() => {
               if (!selectedSpecialty) {
@@ -466,11 +591,10 @@ export function Step1BookingInfo({
                 setIsDoctorModalOpen(true);
               }
             }}
-            className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${
-              selectedDoctor
+            className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${selectedDoctor
                 ? 'bg-emerald-50/70 border-[#0c4b39]'
                 : 'bg-white border-dashed border-slate-300 hover:border-[#0c4b39]'
-            }`}
+              }`}
           >
             <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between">
@@ -518,7 +642,7 @@ export function Step1BookingInfo({
         )}
 
         {/* 2B/3A. CHỌN DỊCH VỤ (HIỂN THỊ LÀ BƯỚC 2 Ở KHÁM DỊCH VỤ, BƯỚC 3 Ở KHÁM BÁC SĨ) */}
-        {(bookingMode === 'doctor' || bookingMode === 'service') && (
+        {(bookingMode === 'DOCTOR' || bookingMode === 'SERVICE') && (
           <Card
             onClick={() => {
               if (!selectedSpecialty) {
@@ -528,16 +652,15 @@ export function Step1BookingInfo({
                 setIsServiceModalOpen(true);
               }
             }}
-            className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${
-              selectedService
+            className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${selectedService
                 ? 'bg-emerald-50/70 border-[#0c4b39]'
                 : 'bg-white border-dashed border-slate-300 hover:border-[#0c4b39]'
-            }`}
+              }`}
           >
             <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0c4b39] bg-emerald-100/70 px-2.5 py-1 rounded-md">
-                  {bookingMode === 'service' ? '2. Dịch vụ' : '3. Dịch vụ'}
+                  {bookingMode === 'SERVICE' ? '2. Dịch vụ' : '3. Dịch vụ'}
                 </span>
                 {selectedService && <CheckCircle2 className="w-5 h-5 text-[#0c4b39]" />}
               </div>
@@ -564,7 +687,7 @@ export function Step1BookingInfo({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="w-full text-xs font-bold rounded-xl border-slate-300 text-slate-800 hover:bg-[#0c4b39] hover:text-white"
+                className="w-full text-xs font-bold rounded-xl border-slate-300 text-slate-800 hover:bg-[#0c4b39] hover:text-[#0c4b39]"
               >
                 {selectedService ? 'Thay đổi dịch vụ' : 'Chọn dịch vụ ngay'}
               </Button>
@@ -573,7 +696,7 @@ export function Step1BookingInfo({
         )}
 
         {/* 2C/3B. CHỌN PHÒNG KHÁM (QUY TRÌNH CUỐI Ở KHÁM DỊCH VỤ - BƯỚC 2 Ở KHÁM THƯỜNG) */}
-        {(bookingMode === 'service' || bookingMode === 'standard') && (
+        {(bookingMode === 'SERVICE' || bookingMode === 'GENERAL') && (
           <Card
             onClick={() => {
               if (!selectedSpecialty) {
@@ -583,16 +706,15 @@ export function Step1BookingInfo({
                 setIsRoomModalOpen(true);
               }
             }}
-            className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${
-              selectedRoom
+            className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${selectedRoom
                 ? 'bg-emerald-50/70 border-[#0c4b39]'
                 : 'bg-white border-dashed border-slate-300 hover:border-[#0c4b39]'
-            }`}
+              }`}
           >
             <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0c4b39] bg-emerald-100/70 px-2.5 py-1 rounded-md">
-                  {bookingMode === 'service' ? '3. Phòng Khám' : '2. Phòng Khám'}
+                  {bookingMode === 'SERVICE' ? '3. Phòng Khám' : '2. Phòng Khám'}
                 </span>
                 {selectedRoom && <CheckCircle2 className="w-5 h-5 text-[#0c4b39]" />}
               </div>
@@ -630,165 +752,214 @@ export function Step1BookingInfo({
         )}
       </div>
 
-      {/* 5. CHỌN NGÀY KHÁM (DATE PICKER PILLS) */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 space-y-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-black text-slate-950 flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-[#0c4b39]" />
-            4. Chọn Ngày Khám Bệnh
-          </h3>
-          <span className="text-xs text-slate-500 font-semibold">14 ngày tiếp theo</span>
-        </div>
+      {/* 4. CHỌN NGÀY KHÁM (MEDPRO STYLE: CHỈ HIỂN THỊ CÁC NGÀY CÓ LỊCH KHẢ DỤNG TỪ ADMIN) */}
+      {canShowDate && (
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 space-y-4 shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-black text-slate-950 flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-[#0c4b39]" />
+              4. Ngày khám <span className="text-red-500">*</span>
+            </h3>
+            {availableDateOptions.length > 0 && (
+              <span className="text-xs text-slate-500 font-semibold">
+                Hiển thị {availableDateOptions.length} ngày khả dụng
+              </span>
+            )}
+          </div>
 
-        <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
-          {dateOptions.map((item) => {
-            const isSelected = selectedDate === item.dateStr;
-            return (
+          {availableDateOptions.length === 0 ? (
+            <div className="py-8 text-center space-y-2 bg-slate-50/70 border border-dashed border-slate-200 rounded-2xl p-6">
+              <CalendarIcon className="w-10 h-10 text-slate-300 mx-auto" />
+              <h4 className="text-sm font-extrabold text-slate-700">Chưa có lịch khám khả dụng</h4>
+              <p className="text-xs text-slate-500 font-medium max-w-md mx-auto">
+                Bác sĩ / Dịch vụ này hiện chưa có lịch khám được quản trị viên thêm vào trong hệ thống. Vui lòng chọn Bác sĩ/Chuyên khoa khác.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
+              {availableDateOptions.map((item) => {
+                const isSelected = selectedDate === item.dateStr;
+                return (
+                  <button
+                    key={item.dateStr}
+                    type="button"
+                    onClick={() => {
+                      if (selectedDate !== item.dateStr) {
+                        setSelectedDate(item.dateStr);
+                        setSelectedSlotTime('');
+                        setSelectedSlotId(null);
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center py-3 px-5 rounded-2xl min-w-[115px] border-2 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-sky-50/90 border-sky-400 text-sky-700 font-extrabold shadow-sm ring-2 ring-sky-100 scale-102'
+                        : 'bg-white border-slate-200 text-slate-700 hover:border-sky-300 hover:bg-slate-50 font-bold'
+                    }`}
+                  >
+                    <span className={`text-sm font-black tracking-tight ${isSelected ? 'text-sky-600' : 'text-slate-900'}`}>
+                      {item.displayDateFormatted}
+                    </span>
+                    <span className={`text-xs font-semibold mt-0.5 ${isSelected ? 'text-sky-600' : 'text-slate-500'}`}>
+                      {item.dayOfWeekStr}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Nút "Ngày khác" Medpro style */}
+              <label className="flex flex-col items-center justify-center py-3 px-4 rounded-2xl min-w-[115px] border-2 border-slate-200 bg-white hover:border-sky-300 hover:bg-slate-50 text-slate-700 font-bold transition-all cursor-pointer shrink-0">
+                <CalendarIcon className="w-5 h-5 text-sky-500 mb-0.5" />
+                <span className="text-xs font-black text-slate-800">Ngày khác</span>
+                <input
+                  type="date"
+                  className="sr-only"
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    const chosenDate = e.target.value;
+                    if (chosenDate) {
+                      setSelectedDate(chosenDate);
+                      setSelectedSlotTime('');
+                      setSelectedSlotId(null);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. CHỌN GIỜ KHÁM THEO BUỔI (CHỈ RENDER KHI ĐÃ CHỌN NGÀY HỢP LỆ) */}
+      {canShowTime && (
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 space-y-5 shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 className="text-base font-black text-slate-950 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-[#0c4b39]" />
+              5. Chọn Giờ Khám Theo Buổi
+            </h3>
+
+            {/* Session Filters Pills */}
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl w-fit">
               <button
-                key={item.dateStr}
                 type="button"
-                onClick={() => {
-                  setSelectedDate(item.dateStr);
-                  setSelectedSlotTime('');
-                  setSelectedSlotId(null);
-                }}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl min-w-[95px] border transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#0c4b39] text-white border-[#0c4b39] shadow-md scale-105 font-bold'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                onClick={() => setTimeSession('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  timeSession === 'all' ? 'bg-[#0c4b39] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span className={`text-[11px] font-extrabold ${isSelected ? 'text-emerald-300' : 'text-slate-500'}`}>
-                  {item.dayOfWeekStr}
-                </span>
-                <span className="text-sm font-black mt-0.5">{item.displayDate}</span>
+                Tất cả
               </button>
-            );
-          })}
+              <button
+                type="button"
+                onClick={() => setTimeSession('morning')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  timeSession === 'morning' ? 'bg-[#0c4b39] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                Sáng (7h-12h)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeSession('afternoon')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  timeSession === 'afternoon' ? 'bg-[#0c4b39] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Sunset className="w-3.5 h-3.5 text-orange-400" />
+                Chiều (13h-17h)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeSession('evening')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  timeSession === 'evening' ? 'bg-[#0c4b39] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                Tối (17h-20h)
+              </button>
+            </div>
+          </div>
+
+          {/* Time Slots Grid */}
+          {loadingSlots ? (
+            <div className="flex items-center justify-center py-8 gap-2 text-slate-500 text-xs font-bold">
+              <Loader2 className="animate-spin w-5 h-5 text-[#0c4b39]" />
+              Đang tải lịch khám từ hệ thống...
+            </div>
+          ) : filteredTimeSlots.length === 0 ? (
+            <div className="text-center py-8 space-y-1">
+              <Clock className="w-8 h-8 text-slate-300 mx-auto" />
+              <p className="text-xs font-bold text-slate-600">Hiện chưa có lịch khám phù hợp cho buổi này</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
+              {filteredTimeSlots.map((slot: any) => {
+                const isSelected = selectedSlotTime === slot.timeLabel;
+                const isAvailable = slot.isAvailable;
+
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    disabled={!isAvailable}
+                    onClick={() => {
+                      setSelectedSlotTime(slot.timeLabel);
+                      setSelectedSlotId(slot.id);
+                    }}
+                    className={`py-2.5 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                      !isAvailable
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed line-through'
+                        : isSelected
+                        ? 'bg-[#0c4b39] text-white border-[#0c4b39] shadow-md scale-105 ring-2 ring-emerald-300'
+                        : 'bg-white text-slate-800 border-slate-200 hover:border-[#0c4b39] hover:bg-emerald-50/50'
+                    }`}
+                  >
+                    <span>{slot.timeLabel}</span>
+                    <span className={`text-[9px] font-normal ${isSelected ? 'text-emerald-200' : 'text-slate-400'}`}>
+                      {!isAvailable ? (slot.isPastTime ? 'Đã qua' : 'Hết chỗ') : 'Còn trống'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* 5. CHỌN GIỜ KHÁM THEO BUỔI (SESSION-BASED TIME SLOTS) */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 space-y-5 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="text-base font-black text-slate-950 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-[#0c4b39]" />
-            5. Chọn Giờ Khám Theo Buổi
-          </h3>
-
-          {/* Session Filters Pills: Tất cả / Buổi sáng / Buổi chiều / Buổi tối */}
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl w-fit">
-            <button
-              type="button"
-              onClick={() => setTimeSession('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                timeSession === 'all' ? 'bg-[#0c4b39] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Tất cả
-            </button>
-            <button
-              type="button"
-              onClick={() => setTimeSession('morning')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                timeSession === 'morning' ? 'bg-[#0c4b39] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Sun className="w-3.5 h-3.5 text-amber-400" />
-              Sáng (7h-12h)
-            </button>
-            <button
-              type="button"
-              onClick={() => setTimeSession('afternoon')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                timeSession === 'afternoon' ? 'bg-[#0c4b39] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Sunset className="w-3.5 h-3.5 text-orange-400" />
-              Chiều (13h-17h)
-            </button>
-            <button
-              type="button"
-              onClick={() => setTimeSession('evening')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                timeSession === 'evening' ? 'bg-[#0c4b39] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Moon className="w-3.5 h-3.5 text-indigo-400" />
-              Tối (17h-20h)
-            </button>
-          </div>
-        </div>
-
-        {/* Time Slots Grid */}
-        {loadingSlots ? (
-          <div className="flex items-center justify-center py-8 gap-2 text-slate-500 text-xs font-bold">
-            <Loader2 className="animate-spin w-5 h-5 text-[#0c4b39]" />
-            Đang tải khung giờ trống từ hệ thống...
-          </div>
-        ) : filteredTimeSlots.length === 0 ? (
-          <div className="text-center py-8 space-y-1">
-            <Clock className="w-8 h-8 text-slate-300 mx-auto" />
-            <p className="text-xs font-bold text-slate-600">Không có khung giờ khả dụng cho buổi này</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
-            {filteredTimeSlots.map((slot: any) => {
-              const isSelected = selectedSlotTime === slot.timeLabel;
-              const isAvailable = slot.isAvailable;
-
-              return (
-                <button
-                  key={slot.id}
-                  type="button"
-                  disabled={!isAvailable}
-                  onClick={() => {
-                    setSelectedSlotTime(slot.timeLabel);
-                    setSelectedSlotId(slot.id);
-                  }}
-                  className={`py-2.5 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                    !isAvailable
-                      ? 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed line-through'
-                      : isSelected
-                      ? 'bg-[#0c4b39] text-white border-[#0c4b39] shadow-md scale-105 ring-2 ring-emerald-300'
-                      : 'bg-white text-slate-800 border-slate-200 hover:border-[#0c4b39] hover:bg-emerald-50/50'
-                  }`}
-                >
-                  <span>{slot.timeLabel}</span>
-                  <span className={`text-[9px] font-normal ${isSelected ? 'text-emerald-200' : 'text-slate-400'}`}>
-                    {!isAvailable ? 'Hết chỗ' : 'Còn trống'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Next Button */}
       <div className="flex justify-end pt-4">
         <Button
           type="button"
+          disabled={!canShowTime || !selectedSlotTime || !selectedSlotId}
           onClick={handleValidateAndNext}
-          className="bg-[#0c4b39] hover:bg-[#083629] text-white font-black text-sm h-12 px-8 rounded-2xl shadow-md flex items-center gap-2 transition-transform active:scale-95"
+          className={`font-black text-sm h-12 px-8 rounded-2xl shadow-md flex items-center gap-2 transition-all ${
+            !canShowTime || !selectedSlotTime || !selectedSlotId
+              ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+              : 'bg-[#0c4b39] hover:bg-[#083629] text-white active:scale-95'
+          }`}
         >
           <span>Tiếp tục: Chọn Hồ Sơ Người Bệnh</span>
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
 
-      {/* POPUP MODALS */}
+      {/* POPUP MODALS WITH DEPENDENT STATE RESETS */}
       <SpecialtySelectModal
         isOpen={isSpecialtyModalOpen}
         onClose={() => setIsSpecialtyModalOpen(false)}
         specialties={specialties}
         selectedSpecialtyId={selectedSpecialty?.id || null}
         onSelect={(spec) => {
-          setSelectedSpecialty(spec);
-          // If selected doctor's specialty differs, reset doctor
-          if (selectedDoctor && selectedDoctor.workPlaces) {
-            const hasSpec = selectedDoctor.workPlaces.some((wp) => wp.specialtyId === spec.id);
-            if (!hasSpec) setSelectedDoctor(null);
+          if (spec.id !== selectedSpecialty?.id) {
+            setSelectedSpecialty(spec);
+            setSelectedService(null);
+            setSelectedRoom(null);
+            setSelectedDoctor(null);
+            setSelectedDate('');
+            setSelectedSlotTime('');
+            setSelectedSlotId(null);
           }
         }}
         hospitalName={hospital.name}
@@ -799,7 +970,14 @@ export function Step1BookingInfo({
         onClose={() => setIsRoomModalOpen(false)}
         selectedSpecialty={selectedSpecialty}
         selectedRoomId={selectedRoom?.id || null}
-        onSelect={(room) => setSelectedRoom(room)}
+        onSelect={(room) => {
+          if (room.id !== selectedRoom?.id) {
+            setSelectedRoom(room);
+            setSelectedDate('');
+            setSelectedSlotTime('');
+            setSelectedSlotId(null);
+          }
+        }}
         hospitalName={hospital.name}
       />
 
@@ -809,10 +987,14 @@ export function Step1BookingInfo({
         doctors={doctors}
         selectedDoctorId={selectedDoctor?.id || null}
         onSelect={(doc) => {
-          setSelectedDoctor(doc);
-          // Auto set default service if available
-          if (medicalServices.length > 0 && !selectedService) {
-            setSelectedService(medicalServices[0]);
+          if (doc.id !== selectedDoctor?.id) {
+            setSelectedDoctor(doc);
+            setSelectedDate('');
+            setSelectedSlotTime('');
+            setSelectedSlotId(null);
+            if (medicalServices.length > 0 && !selectedService) {
+              setSelectedService(medicalServices[0]);
+            }
           }
         }}
         specialtyName={selectedSpecialty?.name}
@@ -824,7 +1006,15 @@ export function Step1BookingInfo({
         onClose={() => setIsServiceModalOpen(false)}
         services={specialtyServices}
         selectedServiceId={selectedService?.id || null}
-        onSelect={(srv) => setSelectedService(srv)}
+        onSelect={(srv) => {
+          if (srv.id !== selectedService?.id) {
+            setSelectedService(srv);
+            setSelectedRoom(null);
+            setSelectedDate('');
+            setSelectedSlotTime('');
+            setSelectedSlotId(null);
+          }
+        }}
         hospitalName={hospital.name}
       />
     </div>

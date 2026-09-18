@@ -84,17 +84,20 @@ fun BookingScreen(
     LaunchedEffect(doctorDetailsState) {
         if (doctorDetailsState is NetworkState.Success) {
             val doctor = (doctorDetailsState as NetworkState.Success).data
-            val workplace = doctor.hospital?.let {
-                com.example.kltn_novacare.data.model.DoctorWorkplace(
-                    id = workplaceId,
-                    doctorId = doctorId,
-                    hospitalId = it.id,
-                    specialtyId = doctor.specialties?.firstOrNull()?.id ?: "",
-                    price = 150000.0,
-                    hospital = it,
-                    specialty = doctor.specialties?.firstOrNull()
-                )
-            }
+            val workplace = doctor.workPlaces?.firstOrNull { it.id == workplaceId }
+                ?: doctor.workPlaces?.firstOrNull()
+                ?: doctor.hospital?.let {
+                    com.example.kltn_novacare.data.model.DoctorWorkplace(
+                        id = workplaceId,
+                        doctorId = doctorId,
+                        hospitalId = it.id,
+                        specialtyId = doctor.specialties?.firstOrNull()?.id ?: "",
+                        consultationFee = 200000.0,
+                        price = 200000.0,
+                        hospital = it,
+                        specialty = doctor.specialties?.firstOrNull()
+                    )
+                }
             if (workplace != null) {
                 bookingViewModel.selectDoctor(doctor, workplace)
             }
@@ -462,14 +465,14 @@ fun StepConfirmSummary(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Bác sĩ khám", fontWeight = FontWeight.Bold, color = Primary, fontSize = 13.sp)
                 Text(
-                    text = (uiState.doctor?.title ?: "") + " " + (uiState.doctor?.fullName ?: ""),
+                    text = uiState.doctor?.displayFullNameWithTitle ?: "",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = Secondary,
                     modifier = Modifier.padding(top = 4.dp)
                 )
                 Text(
-                    text = uiState.workplace?.hospital?.name ?: "Bệnh viện Đa khoa NovaCare",
+                    text = uiState.workplace?.hospital?.name ?: uiState.doctor?.displayHospital ?: "Bệnh viện Đa khoa NovaCare",
                     fontSize = 12.sp,
                     color = TextSecondary,
                     modifier = Modifier.padding(top = 2.dp)

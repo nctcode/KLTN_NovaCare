@@ -13,8 +13,12 @@ import java.util.UUID
 
 data class BookingUiState(
     val currentStep: Int = 1,
+    val hospital: Hospital? = null,
+    val bookingType: String = "DOCTOR", // DOCTOR, SERVICE, SPECIALTY
     val doctor: Doctor? = null,
     val workplace: DoctorWorkplace? = null,
+    val selectedService: MedicalService? = null,
+    val selectedSpecialty: Specialty? = null,
     val selectedDate: String? = null,
     val selectedSlot: AppointmentSlot? = null,
     val selectedProfile: PatientProfile? = null,
@@ -43,11 +47,32 @@ class BookingViewModel(
         _uiState.value = _uiState.value.copy(currentStep = step)
     }
 
+    fun selectHospital(hospital: Hospital) {
+        _uiState.value = _uiState.value.copy(hospital = hospital)
+    }
+
+    fun setBookingType(type: String) {
+        _uiState.value = _uiState.value.copy(bookingType = type)
+    }
+
     fun selectDoctor(doctor: Doctor, workplace: DoctorWorkplace) {
         _uiState.value = _uiState.value.copy(
             doctor = doctor,
-            workplace = workplace,
-            currentStep = 2
+            workplace = workplace
+        )
+    }
+
+    fun selectService(service: MedicalService) {
+        _uiState.value = _uiState.value.copy(
+            selectedService = service,
+            reason = _uiState.value.reason.ifBlank { "Đăng ký dịch vụ: ${service.name}" }
+        )
+    }
+
+    fun selectSpecialty(specialty: Specialty) {
+        _uiState.value = _uiState.value.copy(
+            selectedSpecialty = specialty,
+            reason = _uiState.value.reason.ifBlank { "Khám chuyên khoa: ${specialty.name}" }
         )
     }
 

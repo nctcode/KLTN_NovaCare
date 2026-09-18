@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.kltn_novacare.data.model.Doctor
+import com.example.kltn_novacare.data.model.*
 import com.example.kltn_novacare.ui.navigation.Screen
 import com.example.kltn_novacare.ui.theme.Primary
 import com.example.kltn_novacare.ui.theme.Secondary
@@ -89,11 +89,7 @@ fun DoctorDetailScreen(
 @Composable
 fun DoctorDetailContent(doctor: Doctor, navController: NavController) {
     val scrollState = rememberScrollState()
-    
-    // We mock the doctor's workplaces. If backend provides it in model, we use it, otherwise mock price.
-    // In our database design, doctors have workspaces.
-    val price = 150000.0
-    val formattedPrice = NumberFormat.getCurrencyInstance(Locale("vi", "VN")).format(price)
+    val formattedPrice = NumberFormat.getCurrencyInstance(Locale("vi", "VN")).format(doctor.displayPrice)
 
     Column(
         modifier = Modifier
@@ -113,8 +109,8 @@ fun DoctorDetailContent(doctor: Doctor, navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
-                    model = doctor.avatar ?: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150",
-                    contentDescription = doctor.fullName,
+                    model = doctor.displayAvatarUrl,
+                    contentDescription = doctor.displayFullNameWithTitle,
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape),
@@ -123,13 +119,13 @@ fun DoctorDetailContent(doctor: Doctor, navController: NavController) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = doctor.title + " " + doctor.fullName,
+                        text = doctor.displayFullNameWithTitle,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Secondary
                     )
                     Text(
-                        text = doctor.specialties?.joinToString { it.name } ?: "Chuyên khoa Ngoại",
+                        text = doctor.displaySpecialty,
                         fontSize = 13.sp,
                         color = Primary,
                         fontWeight = FontWeight.SemiBold,
@@ -141,9 +137,9 @@ fun DoctorDetailContent(doctor: Doctor, navController: NavController) {
                     ) {
                         Icon(Icons.Default.Star, contentDescription = "Star", tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = doctor.rating.toString(), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Secondary)
+                        Text(text = doctor.displayRating.toString(), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Secondary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "(${doctor.reviewCount} lượt khám)", fontSize = 12.sp, color = TextSecondary)
+                        Text(text = "(${doctor.displayReviewCount} lượt khám)", fontSize = 12.sp, color = TextSecondary)
                     }
                 }
             }
@@ -163,8 +159,8 @@ fun DoctorDetailContent(doctor: Doctor, navController: NavController) {
                     Icon(Icons.Default.Home, contentDescription = "Location", tint = Primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(text = doctor.hospital?.name ?: "Bệnh viện Đa khoa NovaCare", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Secondary)
-                        Text(text = doctor.hospital?.address ?: "Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội", fontSize = 12.sp, color = TextSecondary, modifier = Modifier.padding(top = 2.dp))
+                        Text(text = doctor.displayHospital, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Secondary)
+                        Text(text = doctor.displayHospitalAddress, fontSize = 12.sp, color = TextSecondary, modifier = Modifier.padding(top = 2.dp))
                     }
                 }
 
@@ -196,7 +192,7 @@ fun DoctorDetailContent(doctor: Doctor, navController: NavController) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = "Giới thiệu", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Secondary)
                 Text(
-                    text = doctor.bio ?: "Bác sĩ có nhiều năm kinh nghiệm khám và điều trị các bệnh chuyên khoa. Chu đáo, tận tâm với người bệnh.",
+                    text = doctor.bio?.takeIf { it.isNotBlank() } ?: doctor.description?.takeIf { it.isNotBlank() } ?: "Bác sĩ có nhiều năm kinh nghiệm khám và điều trị các bệnh chuyên khoa. Chu đáo, tận tâm với người bệnh.",
                     fontSize = 13.sp,
                     color = TextSecondary,
                     lineHeight = 20.sp,
@@ -207,7 +203,7 @@ fun DoctorDetailContent(doctor: Doctor, navController: NavController) {
 
                 Text(text = "Kinh nghiệm chuyên môn", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Secondary)
                 Text(
-                    text = doctor.experience ?: "15 năm kinh nghiệm trong ngành y tế.",
+                    text = doctor.experience?.takeIf { it.isNotBlank() } ?: (if (doctor.yearsOfExperience != null && doctor.yearsOfExperience!! > 0) "${doctor.yearsOfExperience} năm kinh nghiệm trong ngành y tế." else "Nhiều năm kinh nghiệm trong ngành y tế."),
                     fontSize = 13.sp,
                     color = TextSecondary,
                     lineHeight = 20.sp,
@@ -228,10 +224,10 @@ fun DoctorDetailContent(doctor: Doctor, navController: NavController) {
     ) {
         Button(
             onClick = {
-                // Navigate to Stepper Booking Flow
-                // We pass doctor id and workplace id. If doctor has hospital/workplaces, we use it.
-                val hospitalId = doctor.hospital?.id ?: "hosp-1"
-                navController.navigate(Screen.Booking.createRoute(doctor.id, hospitalId))
+                val workplace = doctor.workPlaces?.firstOrNull()
+                val hospitalId = workplace?.hospitalId ?: doctor.hospital?.id ?: "hosp-1"
+                val wpId = workplace?.id ?: hospitalId
+                navController.navigate(Screen.Booking.createRoute(doctor.id, wpId))
             },
             modifier = Modifier
                 .fillMaxWidth()

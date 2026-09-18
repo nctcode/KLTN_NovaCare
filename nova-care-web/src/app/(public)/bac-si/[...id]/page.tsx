@@ -13,7 +13,8 @@ import { formatPrice } from '@/lib/utils';
 export default function DoctorDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const doctorId = params.id as string;
+  const rawId = params.id;
+  const doctorId = Array.isArray(rawId) ? rawId.join('-') : (rawId as string);
 
   const { data: doctor, isLoading } = useQuery({
     queryKey: ['doctor', doctorId],

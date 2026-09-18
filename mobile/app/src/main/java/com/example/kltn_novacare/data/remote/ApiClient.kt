@@ -13,11 +13,13 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    // Standard android emulator loopback IP pointing to localhost
-    private const val BASE_URL = "http://10.0.2.2:3000/api/v1/"
+    // ADB Reverse Port Forwarding (adb reverse tcp:3000 tcp:3000):
+    // Phone connects to localhost:3000, forwarded directly to PC localhost:3000 over ADB
+    private const val BASE_URL = "http://localhost:3000/api/v1/"
     
     private var retrofit: Retrofit? = null
     private var apiService: ApiService? = null
+    private var preExamApiService: com.example.kltn_novacare.data.api.PreExamApiService? = null
     private lateinit var tokenManager: TokenManager
 
     fun init(context: Context) {
@@ -110,10 +112,16 @@ object ApiClient {
             .build()
 
         apiService = retrofit?.create(ApiService::class.java)
+        preExamApiService = retrofit?.create(com.example.kltn_novacare.data.api.PreExamApiService::class.java)
     }
 
     fun getService(): ApiService {
         return apiService ?: throw IllegalStateException("ApiClient not initialized. Call init(context) first.")
+    }
+
+    fun getPreExamApiService(): com.example.kltn_novacare.data.api.PreExamApiService {
+        return preExamApiService ?: retrofit?.create(com.example.kltn_novacare.data.api.PreExamApiService::class.java)
+            ?: throw IllegalStateException("ApiClient not initialized. Call init(context) first.")
     }
 
     fun getTokenManager(): TokenManager {

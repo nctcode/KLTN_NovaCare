@@ -24,8 +24,8 @@ export interface Appointment {
     doctorWorkplace?: DoctorWorkplace;
   };
   medicalService?: any;
-  payment?: any;
   medicalEncounter?: any;
+  payment?: any;
   statusHistory?: any[];
 }
 

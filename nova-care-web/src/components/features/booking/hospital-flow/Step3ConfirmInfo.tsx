@@ -28,7 +28,7 @@ import { PatientProfile } from '@/types/profile.types';
 import { formatPrice } from '@/lib/utils';
 
 import { ClinicRoom } from './RoomSelectModal';
-import { HospitalBookingMode } from './BookingTypeStep';
+import { BookingType } from '@/config/bookingTypes';
 
 interface Step3ConfirmInfoProps {
   hospital: Hospital;
@@ -36,7 +36,7 @@ interface Step3ConfirmInfoProps {
   room?: ClinicRoom | null;
   doctor: Doctor | null;
   service: MedicalService | null;
-  bookingMode?: HospitalBookingMode;
+  bookingMode?: BookingType | null;
   selectedDate: string;
   selectedSlotTime: string;
   patientProfile: PatientProfile | null;
@@ -52,7 +52,7 @@ export function Step3ConfirmInfo({
   room,
   doctor,
   service,
-  bookingMode = 'doctor',
+  bookingMode = 'DOCTOR',
   selectedDate,
   selectedSlotTime,
   patientProfile,
@@ -197,7 +197,7 @@ export function Step3ConfirmInfo({
                 </div>
 
                 {/* Show Doctor for Doctor Mode */}
-                {bookingMode === 'doctor' && (
+                {bookingMode === 'DOCTOR' && (
                   <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60">
                     <span className="font-bold text-slate-600">Bác sĩ thăm khám:</span>
                     <span className="font-black text-slate-950 text-sm text-right">
@@ -206,8 +206,8 @@ export function Step3ConfirmInfo({
                   </div>
                 )}
 
-                {/* Show Room for Service / Standard Mode */}
-                {(bookingMode === 'service' || bookingMode === 'standard') && room && (
+                {/* Show Room for Service / General Mode */}
+                {(bookingMode === 'SERVICE' || bookingMode === 'GENERAL') && room && (
                   <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60">
                     <span className="font-bold text-slate-600">Phòng khám chỉ định:</span>
                     <span className="font-black text-[#0c4b39] text-sm text-right">
@@ -217,7 +217,7 @@ export function Step3ConfirmInfo({
                 )}
 
                 {/* Show Service for Doctor / Service Mode */}
-                {(bookingMode === 'doctor' || bookingMode === 'service') && (
+                {(bookingMode === 'DOCTOR' || bookingMode === 'SERVICE') && (
                   <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60">
                     <span className="font-bold text-slate-600">Dịch vụ đăng ký:</span>
                     <span className="font-black text-slate-950 text-sm text-right">

@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BodyDiagram } from './BodyDiagram';
+import { ScreeningStep2 } from '@/components/features/screening/ScreeningStep2';
 import { VoiceRecorder } from './VoiceRecorder';
 import { ImageUploader } from './ImageUploader';
 import { RiskBadge } from './RiskBadge';
@@ -52,6 +53,7 @@ export function PreExamScreening({ onSkip, onCompleted }: PreExamScreeningProps)
   const [selectedBodyAreas, setSelectedBodyAreas] = useState<string[]>([]);
   const [voiceFile, setVoiceFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [vitals, setVitals] = useState({ heartRate: 75, height: 170, weight: 65 });
 
   // Step 3 State
   const [questions, setQuestions] = useState<any[]>([]);
@@ -93,6 +95,7 @@ export function PreExamScreening({ onSkip, onCompleted }: PreExamScreeningProps)
         bodyDiagram: selectedBodyAreas.map((area) => ({ area })),
         voiceFile,
         imageFiles,
+        vitals,
       });
       if (res?.questions) {
         setQuestions(res.questions);
@@ -307,6 +310,42 @@ export function PreExamScreening({ onSkip, onCompleted }: PreExamScreeningProps)
                 <ImageUploader onImagesChanged={setImageFiles} />
               </div>
 
+              {/* Vitals & BMI Section */}
+              <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 space-y-3">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  💓 Sinh hiệu & Chỉ số thể trạng (Vitals & BMI)
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[11px] text-slate-500 font-semibold block mb-1">Nhịp tim (BPM)</label>
+                    <Input
+                      type="number"
+                      value={vitals.heartRate}
+                      onChange={(e) => setVitals({ ...vitals, heartRate: parseInt(e.target.value, 10) || 75 })}
+                      className="rounded-xl text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-slate-500 font-semibold block mb-1">Chiều cao (cm)</label>
+                    <Input
+                      type="number"
+                      value={vitals.height}
+                      onChange={(e) => setVitals({ ...vitals, height: parseInt(e.target.value, 10) || 170 })}
+                      className="rounded-xl text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-slate-500 font-semibold block mb-1">Cân nặng (kg)</label>
+                    <Input
+                      type="number"
+                      value={vitals.weight}
+                      onChange={(e) => setVitals({ ...vitals, weight: parseInt(e.target.value, 10) || 65 })}
+                      className="rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
@@ -329,77 +368,43 @@ export function PreExamScreening({ onSkip, onCompleted }: PreExamScreeningProps)
         </Card>
       )}
 
-      {/* STEP 2: AI hỏi đáp thích ứng */}
+      {/* STEP 2: AI trắc nghiệm sàng lọc thích ứng theo vùng */}
       {step === 2 && (
         <Card className="rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <CardContent className="p-6 space-y-5">
-            <h3 className="text-base font-extrabold text-slate-900 dark:text-white border-b pb-3 border-slate-200 dark:border-slate-800 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#0c4b39] dark:text-[#66FF33]" />
-              3. AI Đặt Câu Hỏi Thích Ứng Bổ Sung
-            </h3>
-
-            <div className="space-y-4">
-              {questions.map((q) => {
-                const options: string[] = q.options || q.context?.options || [];
-                const currentAns = answers[q.id] || '';
-
-                return (
-                  <div key={q.id} className="p-4 rounded-2xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 space-y-2">
-                    <p className="text-xs font-extrabold text-slate-900 dark:text-white">
-                      Câu {q.order}: {q.question}
-                    </p>
-
-                    {options.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                        {options.map((opt, optIdx) => {
-                          const isSelected = currentAns === opt;
-                          return (
-                            <button
-                              key={optIdx}
-                              type="button"
-                              onClick={() => handleAnswerQuestion(q.id, opt)}
-                              className={`p-2.5 rounded-xl border text-xs font-bold transition text-left flex items-center justify-between ${
-                                isSelected
-                                  ? 'bg-[#0c4b39] text-[#66FF33] border-[#0c4b39]'
-                                  : 'bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-emerald-500'
-                              }`}
-                            >
-                              <span>{opt}</span>
-                              {isSelected && <Check className="w-4 h-4 text-[#66FF33]" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <Input
-                        type="text"
-                        placeholder="Nhập câu trả lời..."
-                        value={currentAns}
-                        onChange={(e) => handleAnswerQuestion(q.id, e.target.value)}
-                        className="rounded-xl text-xs"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <ScreeningStep2
+              selectedRegions={selectedBodyAreas}
+              patientContext={{
+                age: basicInfo.age,
+                sex: basicInfo.gender as any,
+                medicalHistory: basicInfo.medicalHistory ? [basicInfo.medicalHistory] : [],
+                medications: basicInfo.medications,
+                allergies: basicInfo.allergies,
+              }}
+              onCompleted={(res) => {
+                setFinalResult({
+                  riskAssessment: {
+                    level: res.triage.riskLevel,
+                    label: res.triage.riskLevel === 'URGENT' ? 'CẦN ĐÁNH GIÁ Y TẾ SỚM' : 'Nên khám Bác sĩ chuyên khoa',
+                    reason: res.triage.urgentAdvice || 'Triệu chứng ghi nhận từ khảo sát sàng lọc y tế.',
+                  },
+                  recommendations: {
+                    suggestedSpecialty: res.triage.specialtyCandidates[0]?.specialtyName || 'Nội tổng quát',
+                    specialtyId: res.triage.specialtyCandidates[0]?.specialtyId || 'general_medicine',
+                  },
+                });
+              }}
+              onBack={() => setStep(1)}
+            />
 
             <div className="flex gap-3 pt-2">
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => setStep(1)}
-                className="rounded-2xl text-xs font-bold border-slate-300"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-              </Button>
-              <Button
-                type="button"
                 disabled={loading}
                 onClick={handleCompleteScreening}
-                className="flex-1 bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs py-3 rounded-2xl flex items-center justify-center gap-2 shadow-md"
+                className="w-full bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-md"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Hoàn thành & Xem kết quả đánh giá <Sparkles className="w-4 h-4" /></>}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Tiếp tục sang bước tiếp theo <Sparkles className="w-4 h-4" /></>}
               </Button>
             </div>
           </CardContent>
@@ -471,6 +476,10 @@ export function PreExamScreening({ onSkip, onCompleted }: PreExamScreeningProps)
                     </div>
                   ))}
                 </div>
+
+                <p className="text-[11px] text-slate-400 text-center italic">
+                  ⚠️ Disclaimer: Kết quả này đóng vai trò hỗ trợ sàng lọc ban đầu và không thay thế cho chẩn đoán y tế xác định từ Bác sĩ.
+                </p>
 
                 <Button
                   onClick={() => handleProceedToBooking()}

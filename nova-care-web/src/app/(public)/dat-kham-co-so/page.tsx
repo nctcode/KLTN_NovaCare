@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { hospitalService } from '@/services/hospital.service';
 import { HospitalSelectModal } from '@/components/features/booking/hospital-flow/HospitalSelectModal';
-import { BookingTypeStep, HospitalBookingMode } from '@/components/features/booking/hospital-flow/BookingTypeStep';
+import { BookingTypeStep } from '@/components/features/booking/hospital-flow/BookingTypeStep';
 import { DoctorBookingWizard } from '@/components/features/booking/hospital-flow/DoctorBookingWizard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,31 +13,46 @@ import { Badge } from '@/components/ui/badge';
 import {
   Building2,
   MapPin,
-  Phone,
   Star,
   ChevronLeft,
   Loader2,
   HeartHandshake,
-  ShieldCheck,
   RefreshCw,
-  Sparkles,
+  ArrowLeft,
+  LayoutGrid
 } from 'lucide-react';
 import { Hospital } from '@/types';
-import Link from 'next/link';
+import { BookingType, BOOKING_TYPES_CONFIG } from '@/config/bookingTypes';
 
 function HospitalBookingPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const hospitalIdParam = searchParams.get('hospitalId');
-  const modeParam = searchParams.get('mode') as HospitalBookingMode | null;
+  const modeParam = searchParams.get('mode');
+
+  // Helper to parse valid BookingType from query parameter
+  const parseBookingType = (modeStr: string | null): BookingType | null => {
+    if (!modeStr) return null;
+    const normalized = modeStr.toUpperCase();
+    if (normalized in BOOKING_TYPES_CONFIG) {
+      return normalized as BookingType;
+    }
+    // Backward compatibility mappings
+    if (normalized === 'SPECIALTY' || normalized === 'STANDARD') return 'GENERAL';
+    return null;
+  };
 
   // Selected hospital state
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
   const [isHospitalModalOpen, setIsHospitalModalOpen] = useState(false);
 
-  // Flow step mode: 'select-type' | 'wizard-doctor' | 'wizard-service' | 'wizard-standard'
-  const [bookingMode, setBookingMode] = useState<HospitalBookingMode>(modeParam || 'doctor');
+  // Booking mode state: null (selection screen) or 1 of 6 BookingType values
+  const [bookingMode, setBookingMode] = useState<BookingType | null>(parseBookingType(modeParam));
+
+  useEffect(() => {
+    setBookingMode(parseBookingType(modeParam));
+  }, [modeParam]);
 
   // Query all hospitals for hospital selector modal
   const { data: hospitals = [], isLoading: loadingHospitals } = useQuery({
@@ -56,10 +71,23 @@ function HospitalBookingPageContent() {
     if (fetchedHospital) {
       setSelectedHospital(fetchedHospital);
     } else if (hospitals.length > 0 && !selectedHospital && !hospitalIdParam) {
-      // Preselect first hospital if none provided
       setSelectedHospital(hospitals[0]);
     }
   }, [fetchedHospital, hospitals, selectedHospital, hospitalIdParam]);
+
+  const handleSelectBookingMode = (mode: BookingType) => {
+    setBookingMode(mode);
+    if (selectedHospital) {
+      router.push(`/dat-kham-co-so?hospitalId=${selectedHospital.id}&mode=${mode.toLowerCase()}`);
+    }
+  };
+
+  const handleResetMode = () => {
+    setBookingMode(null);
+    if (selectedHospital) {
+      router.push(`/dat-kham-co-so?hospitalId=${selectedHospital.id}`);
+    }
+  };
 
   if (loadingHospitals || (hospitalIdParam && loadingFetchedHospital)) {
     return (
@@ -69,6 +97,8 @@ function HospitalBookingPageContent() {
       </div>
     );
   }
+
+  const currentConfig = bookingMode ? BOOKING_TYPES_CONFIG[bookingMode] : null;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] py-8 md:py-12 text-slate-900">
@@ -84,7 +114,7 @@ function HospitalBookingPageContent() {
               Đăng Ký Đặt Khám Tại Bệnh Viện
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Chọn cơ sở y tế • Chọn hình thức đặt khám • Đặt hẹn với bác sĩ ưu tiên
+              Lựa chọn cơ sở y tế • Chọn 1 trong 6 hình thức đăng ký • Giữ chỗ khám ưu tiên
             </p>
           </div>
 
@@ -92,7 +122,7 @@ function HospitalBookingPageContent() {
             onClick={() => router.back()}
             variant="outline"
             size="sm"
-            className="border-slate-300 text-slate-800 hover:bg-slate-100 font-bold text-xs rounded-2xl h-10 px-4"
+            className="border-slate-300 text-slate-800 hover:bg-slate-100 font-bold text-xs rounded-2xl h-10 px-4 shrink-0"
           >
             <ChevronLeft className="w-4 h-4 mr-1 text-[#0c4b39]" />
             Quay lại
@@ -119,7 +149,7 @@ function HospitalBookingPageContent() {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge className="bg-emerald-100/90 text-[#0c4b39] border border-emerald-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                      Bước 1 • Cơ sở y tế đã chọn
+                      Cơ sở y tế được chọn
                     </Badge>
                     {selectedHospital?.rating && (
                       <span className="flex items-center gap-1 text-amber-500 font-black text-xs">
@@ -149,23 +179,51 @@ function HospitalBookingPageContent() {
                 className="border-[#0c4b39] text-[#0c4b39] hover:bg-emerald-50 font-bold text-xs h-11 px-5 rounded-2xl w-full md:w-auto shrink-0 flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>Thay đổi cơ sở y tế khác</span>
+                <span>Đổi cơ sở y tế khác</span>
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* STEP 2: CHỌN HÌNH THỨC ĐẶT KHÁM */}
+        {/* STEP 2: CHỌN HÌNH THỨC ĐẶT KHÁM (KHỚP BOOKINGTYPE NULL) HOẶC THỰC HIỆN WIZARD */}
         {selectedHospital && (
           <div className="space-y-8">
-            <BookingTypeStep
-              hospitalName={selectedHospital.name}
-              selectedMode={bookingMode}
-              onSelectMode={(mode) => setBookingMode(mode)}
-            />
+            {bookingMode === null ? (
+              <BookingTypeStep
+                hospitalName={selectedHospital.name}
+                selectedMode={bookingMode}
+                onSelectMode={handleSelectBookingMode}
+              />
+            ) : (
+              <div className="space-y-6">
+                {/* Back button to re-select booking mode */}
+                <div className="flex items-center justify-between bg-emerald-50/90 border border-emerald-200/80 p-4 rounded-2xl">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#0c4b39]">
+                    <LayoutGrid className="w-4 h-4 text-[#0c4b39]" />
+                    <span>
+                      Đang trong quy trình:{' '}
+                      <strong className="uppercase">
+                        {currentConfig ? currentConfig.title : bookingMode}
+                      </strong>
+                    </span>
+                  </div>
 
-            {/* RENDER 4-STEP WIZARD FOR ALL BOOKING MODES */}
-            <DoctorBookingWizard hospital={selectedHospital} bookingMode={bookingMode} />
+                  <Button
+                    type="button"
+                    onClick={handleResetMode}
+                    variant="outline"
+                    size="sm"
+                    className="border-[#0c4b39] text-[#0c4b39] hover:bg-white text-xs font-bold rounded-xl h-9 px-3.5"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                    Đổi hình thức đặt khám khác
+                  </Button>
+                </div>
+
+                {/* Multi-step Wizard */}
+                <DoctorBookingWizard hospital={selectedHospital} bookingMode={bookingMode} />
+              </div>
+            )}
           </div>
         )}
 
@@ -177,7 +235,7 @@ function HospitalBookingPageContent() {
           selectedHospitalId={selectedHospital?.id || null}
           onSelect={(hosp) => {
             setSelectedHospital(hosp);
-            router.push(`/dat-kham-co-so?hospitalId=${hosp.id}`);
+            router.push(`/dat-kham-co-so?hospitalId=${hosp.id}${bookingMode ? `&mode=${bookingMode.toLowerCase()}` : ''}`);
           }}
         />
       </div>

@@ -9,7 +9,12 @@ export const appointmentService = {
 
   async getAll(): Promise<Appointment[]> {
     const response = await apiClient.get<any>('/appointments/me');
-    return response.data;
+    return response.data !== undefined ? response.data : response;
+  },
+
+  async confirm(id: string): Promise<Appointment> {
+    const response = await apiClient.patch<any>(`/appointments/${id}/confirm`);
+    return response.data !== undefined ? response.data : response;
   },
 
   async getUpcoming(): Promise<Appointment[]> {
