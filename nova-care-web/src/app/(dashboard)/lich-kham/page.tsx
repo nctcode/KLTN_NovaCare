@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppointmentCard } from '@/components/features/AppointmentCard';
-import { Calendar, Clock, Loader2, CalendarCheck, CheckCircle2, ArrowRight, Filter } from 'lucide-react';
+import { Calendar, Clock, Loader2, CalendarCheck, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AppointmentPage() {
@@ -24,7 +24,11 @@ export default function AppointmentPage() {
   });
 
   const isLoading = loadingUpcoming || loadingHistory;
-  const completedCount = history.filter((a) => a.status === 'COMPLETED').length;
+
+  const completedList = history.filter((a) => a.status === 'COMPLETED');
+  const cancelledList = history.filter(
+    (a) => a.status === 'CANCELLED' || a.status === 'EXPIRED' || a.status === 'NO_SHOW'
+  );
 
   return (
     <div className="w-full space-y-6">
@@ -33,7 +37,7 @@ export default function AppointmentPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Lịch khám của tôi</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Theo dõi danh sách lịch hẹn khám bệnh sắp tới và xem lại lịch sử khám
+            Theo dõi danh sách lịch hẹn khám bệnh sắp tới, đã hoàn thành và xem các lịch hẹn đã hủy
           </p>
         </div>
 
@@ -45,8 +49,8 @@ export default function AppointmentPage() {
         </Button>
       </div>
 
-      {/* Quick Stats Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Quick Stats Strip (4 columns) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lịch hẹn sắp tới</p>
@@ -60,10 +64,20 @@ export default function AppointmentPage() {
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Đã hoàn thành</p>
-            <p className="text-2xl font-bold text-emerald-700 mt-1">{completedCount}</p>
+            <p className="text-2xl font-bold text-emerald-700 mt-1">{completedList.length}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
             <CheckCircle2 className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Đã hủy</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{cancelledList.length}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600">
+            <XCircle className="w-5 h-5" />
           </div>
         </div>
 
@@ -84,15 +98,21 @@ export default function AppointmentPage() {
           <TabsList className="bg-transparent space-x-6 p-0 h-auto">
             <TabsTrigger
               value="upcoming"
-              className="px-0 py-3 rounded-none border-b-2 font-semibold text-sm transition data-[state=active]:border-slate-900 data-[state=active]:text-slate-900 text-slate-500 bg-transparent shadow-none"
+              className="px-0 py-3 rounded-none border-b-2 font-semibold text-sm transition data-[state=active]:border-slate-900 data-[state=active]:text-slate-900 text-slate-500 bg-transparent shadow-none cursor-pointer"
             >
               Sắp tới ({upcoming.length})
             </TabsTrigger>
             <TabsTrigger
-              value="history"
-              className="px-0 py-3 rounded-none border-b-2 font-semibold text-sm transition data-[state=active]:border-slate-900 data-[state=active]:text-slate-900 text-slate-500 bg-transparent shadow-none"
+              value="completed"
+              className="px-0 py-3 rounded-none border-b-2 font-semibold text-sm transition data-[state=active]:border-slate-900 data-[state=active]:text-slate-900 text-slate-500 bg-transparent shadow-none cursor-pointer"
             >
-              Lịch sử khám ({history.length})
+              Đã hoàn thành ({completedList.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="cancelled"
+              className="px-0 py-3 rounded-none border-b-2 font-semibold text-sm transition data-[state=active]:border-slate-900 data-[state=active]:text-slate-900 text-slate-500 bg-transparent shadow-none cursor-pointer"
+            >
+              Đã hủy ({cancelledList.length})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -129,17 +149,33 @@ export default function AppointmentPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="history" className="space-y-4 mt-6">
-              {history.length === 0 ? (
+            <TabsContent value="completed" className="space-y-4 mt-6">
+              {completedList.length === 0 ? (
                 <Card className="border-dashed border-slate-300 bg-white">
                   <CardContent className="py-16 text-center text-slate-500 space-y-2">
-                    <Clock className="h-10 w-10 text-slate-300 mx-auto" />
-                    <p className="font-semibold text-slate-900">Chưa có dữ liệu lịch sử khám</p>
-                    <p className="text-xs text-slate-400">Các lịch khám đã hoàn tất hoặc hủy sẽ được lưu giữ tại đây.</p>
+                    <CheckCircle2 className="h-10 w-10 text-slate-300 mx-auto" />
+                    <p className="font-semibold text-slate-900">Chưa có lịch khám nào đã hoàn thành</p>
+                    <p className="text-xs text-slate-400">Các lịch khám bạn đã đi khám xong sẽ xuất hiện tại đây.</p>
                   </CardContent>
                 </Card>
               ) : (
-                history.map((appointment) => (
+                completedList.map((appointment) => (
+                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="cancelled" className="space-y-4 mt-6">
+              {cancelledList.length === 0 ? (
+                <Card className="border-dashed border-slate-300 bg-white">
+                  <CardContent className="py-16 text-center text-slate-500 space-y-2">
+                    <XCircle className="h-10 w-10 text-slate-300 mx-auto" />
+                    <p className="font-semibold text-slate-900">Không có lịch hẹn nào bị hủy</p>
+                    <p className="text-xs text-slate-400">Các lịch khám bạn đã hủy hoặc hết hạn thanh toán sẽ được lưu giữ tại đây.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                cancelledList.map((appointment) => (
                   <AppointmentCard key={appointment.id} appointment={appointment} />
                 ))
               )}
@@ -150,4 +186,3 @@ export default function AppointmentPage() {
     </div>
   );
 }
-

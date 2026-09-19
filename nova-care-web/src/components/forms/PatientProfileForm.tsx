@@ -98,12 +98,33 @@ export function PatientProfileForm({ initialData, onSuccess }: PatientProfileFor
     setIsCameraActive(false);
   };
 
-  // Helper parser for Vietnamese CCCD chip card QR & JSON format
+// Utility function to decode Hex-encoded UTF-8 strings (standard in Vietnam Social Security BHYT QR codes)
+function decodeHexUtf8(rawStr: string): string {
+  if (!rawStr) return '';
+  const text = rawStr.trim();
+  // Check if string consists of valid hex characters with even length and at least 4 chars
+  if (/^[0-9a-fA-F]+$/.test(text) && text.length % 2 === 0 && text.length >= 4) {
+    try {
+      const bytes = new Uint8Array(text.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)));
+      const decoded = new TextDecoder('utf-8').decode(bytes);
+      // Ensure decoded text contains valid printable characters
+      if (decoded && !/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(decoded)) {
+        return decoded;
+      }
+    } catch {
+      // Fall back to original text if decoding fails
+    }
+  }
+  return text;
+}
+
+  // Helper parser for Vietnamese CCCD chip card QR, BHYT QR & JSON format
   const parseQRCodeData = (rawText: string): Partial<CreatePatientProfileDto> | null => {
+    if (!rawText) return null;
     const text = rawText.trim();
     const result: Partial<CreatePatientProfileDto> = {};
 
-    // 1. JSON Format
+    // 1. JSON Format ({...})
     if (text.startsWith('{') && text.endsWith('}')) {
       try {
         const data = JSON.parse(text);
@@ -131,21 +152,28 @@ export function PatientProfileForm({ initialData, onSuccess }: PatientProfileFor
       } catch { }
     }
 
-    // 2. CCCD Pipe Format: CCCD|CMND|HọTen|DDMMYYYY|GiớiTính|ĐịaChỉ|NgàyCấp
-    // Ví dụ: 001201012345|123456789|Nguyễn Văn A|15081995|Nam|123 Đường ABC, Phường X, Quận Y, TP.HCM|20102021
-    const parts = text.split('|');
-    if (parts.length >= 5) {
-      const idNum = parts[0].trim();
-      if (/^\d{12}$/.test(idNum) || /^\d{9}$/.test(idNum)) {
-        result.identityNumber = idNum;
+    // 2. Pipe-separated Format (|)
+    const parts = text.split('|').map((p) => p.trim());
+    if (parts.length < 3) return null;
+
+    const part0 = parts[0];
+
+    // ----------------------------------------------------------------------
+    // TYPE A: CCCD CHIP QR CODE (Cục C06 - Bộ Công An)
+    // Format: CCCD(12 chữ số)|CMND_Cũ|Họ_Tên|DDMMYYYY|Giới_Tính|Địa_Chỉ|Ngày_Cấp
+    // Standard check: part0 MUST BE 12 digits or 9 digits (e.g. 001201012345)
+    // ----------------------------------------------------------------------
+    if (/^\d{9,12}$/.test(part0)) {
+      result.identityNumber = part0;
+
+      // Field 2: Họ và tên
+      if (parts[2]) {
+        result.fullName = decodeHexUtf8(parts[2]);
       }
 
-      if (parts[2] && parts[2].trim()) {
-        result.fullName = parts[2].trim();
-      }
-
-      if (parts[3] && parts[3].trim()) {
-        const dobStr = parts[3].trim();
+      // Field 3: Ngày sinh (DDMMYYYY hoặc DD/MM/YYYY)
+      if (parts[3]) {
+        const dobStr = parts[3];
         if (/^\d{8}$/.test(dobStr)) {
           const day = dobStr.substring(0, 2);
           const month = dobStr.substring(2, 4);
@@ -159,30 +187,87 @@ export function PatientProfileForm({ initialData, onSuccess }: PatientProfileFor
         }
       }
 
+      // Field 4: Giới tính (Nam / Nữ)
       if (parts[4]) {
-        const genderStr = parts[4].trim().toLowerCase();
-        if (genderStr.startsWith('nam') || genderStr === 'male' || genderStr === '1') {
+        const g = parts[4].toLowerCase();
+        if (g.startsWith('nam') || g === 'male' || g === '1') {
           result.gender = 'MALE';
-        } else if (
-          genderStr.startsWith('nữ') ||
-          genderStr.startsWith('nu') ||
-          genderStr === 'female' ||
-          genderStr === '2'
-        ) {
+        } else if (g.startsWith('nữ') || g.startsWith('nu') || g === 'female' || g === '2') {
           result.gender = 'FEMALE';
         } else {
           result.gender = 'OTHER';
         }
       }
 
-      if (parts[5] && parts[5].trim()) {
-        result.address = parts[5].trim();
+      // Field 5: Địa chỉ cư trú
+      if (parts[5]) {
+        result.address = decodeHexUtf8(parts[5]);
       }
 
       return Object.keys(result).length > 0 ? result : null;
     }
 
-    return null;
+    // ----------------------------------------------------------------------
+    // TYPE B: BHYT QR CODE (Bảo hiểm xã hội Việt Nam)
+    // Format: Mã_BHYT | Họ_Tên_Hex | Ngày_Sinh | Giới_Tính | Địa_Chỉ_Hex | Mã_KCB | Hạn_Từ | - | Hạn_Đến | Mã_BHXH/CCCD | ... | $
+    // Example: SV4797935735205|4e677579e1bb856e...|17/01/2005|2|333132204b696e68...|79 - 012|01/01/2026|-|31/12/2025|7909079305002433|-|4|01/01/2022|c364876f4351903-1202|$
+    // ----------------------------------------------------------------------
+    // Field 0: Mã thẻ BHYT
+    result.healthInsurance = part0;
+
+    // Field 1: Họ và tên (Giải mã Hex UTF-8 nếu là chuỗi mã hóa hex)
+    if (parts[1]) {
+      result.fullName = decodeHexUtf8(parts[1]);
+    }
+
+    // Field 2: Ngày sinh (Định dạng DD/MM/YYYY hoặc YYYYMMDD hoặc YYYY)
+    if (parts[2]) {
+      const dobStr = parts[2];
+      if (dobStr.includes('/')) {
+        const [d, m, y] = dobStr.split('/');
+        if (d && m && y) {
+          result.dateOfBirth = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+      } else if (/^\d{8}$/.test(dobStr)) {
+        const day = dobStr.substring(0, 2);
+        const month = dobStr.substring(2, 4);
+        const year = dobStr.substring(4, 8);
+        result.dateOfBirth = `${year}-${month}-${day}`;
+      } else if (/^\d{4}$/.test(dobStr)) {
+        result.dateOfBirth = `${dobStr}-01-01`;
+      }
+    }
+
+    // Field 3: Giới tính (1: Nam, 2: Nữ)
+    if (parts[3]) {
+      const g = parts[3].toLowerCase();
+      if (g === '1' || g.startsWith('nam') || g === 'male') {
+        result.gender = 'MALE';
+      } else if (g === '2' || g.startsWith('nữ') || g.startsWith('nu') || g === 'female') {
+        result.gender = 'FEMALE';
+      } else {
+        result.gender = 'OTHER';
+      }
+    }
+
+    // Field 4: Địa chỉ cư trú (Giải mã Hex UTF-8 nếu là chuỗi mã hóa hex)
+    if (parts[4]) {
+      result.address = decodeHexUtf8(parts[4]);
+    }
+
+    // Field 9: Mã định danh / CCCD / Mã BHXH
+    if (parts[9]) {
+      const code = parts[9];
+      if (/^\d{12}$/.test(code)) {
+        result.identityNumber = code;
+      } else if (code.length > 12 && /^\d+$/.test(code)) {
+        result.identityNumber = code.slice(-12);
+      } else if (/^\d{9,10}$/.test(code)) {
+        result.identityNumber = code;
+      }
+    }
+
+    return Object.keys(result).length > 0 ? result : null;
   };
 
   const processQRResult = (rawString: string) => {

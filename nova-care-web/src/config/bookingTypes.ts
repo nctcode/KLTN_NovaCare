@@ -26,7 +26,7 @@ export interface BookingTypeConfig {
   iconBg: string;
   badgeColor: string;
   features: string[];
-  
+
   // High-level behavior flags for the booking type
   requiresFacility: boolean;
   requiresDepartment: boolean;
@@ -47,7 +47,7 @@ export interface BookingTypeConfig {
 export const BOOKING_TYPES_CONFIG: Record<BookingType, BookingTypeConfig> = {
   SERVICE: {
     id: 'SERVICE',
-    title: 'Khám Dịch Vụ / Xét Nghiệm',
+    title: 'Khám Dịch Vụ',
     badge: 'Gói khám & Xét nghiệm',
     description: 'Đăng ký các gói khám tổng quát, xét nghiệm máu, chẩn đoán hình ảnh kỹ thuật cao.',
     icon: FileText,
@@ -147,7 +147,7 @@ export const BOOKING_TYPES_CONFIG: Record<BookingType, BookingTypeConfig> = {
   DOCTOR: {
     id: 'DOCTOR',
     title: 'Khám Theo Bác Sĩ',
-    badge: 'Khuyên dùng • Lựa chọn BS',
+    badge: 'Khuyên dùng • Lựa chọn Bác sĩ',
     description: 'Chủ động lựa chọn Bác sĩ chuyên khoa giỏi, xem học vị, lịch khám và giữ khung giờ hẹn.',
     icon: UserCheck,
     color: 'border-[#0c4b39] bg-emerald-50/60',

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Stethoscope,
   UserCheck,
@@ -82,6 +83,7 @@ export function Step1BookingInfo({
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [timeSession, setTimeSession] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
+  const [noticeModalData, setNoticeModalData] = useState<{ isBHYT: boolean; serviceName: string } | null>(null);
 
   // Fetch all Doctors at this hospital for AI matching
   const { data: allHospitalDoctors = [] } = useQuery({
@@ -641,8 +643,8 @@ export function Step1BookingInfo({
           </Card>
         )}
 
-        {/* 2B/3A. CHỌN DỊCH VỤ (HIỂN THỊ LÀ BƯỚC 2 Ở KHÁM DỊCH VỤ, BƯỚC 3 Ở KHÁM BÁC SĨ) */}
-        {(bookingMode === 'DOCTOR' || bookingMode === 'SERVICE') && (
+        {/* 2B/3A. CHỌN DỊCH VỤ (HIỂN THỊ LÀ BƯỚC 2 Ở KHÁM DỊCH VỤ, BƯỚC 3 Ở KHÁM THƯỜNG / BÁC SĨ) */}
+        {(bookingMode === 'DOCTOR' || bookingMode === 'SERVICE' || bookingMode === 'GENERAL') && (
           <Card
             onClick={() => {
               if (!selectedSpecialty) {
@@ -751,6 +753,19 @@ export function Step1BookingInfo({
           </Card>
         )}
       </div>
+
+      {/* 4. MEDPRO HINT KHI CHƯA CHỌN ĐỦ THÔNG TIN KHÁM THƯỜNG */}
+      {!canShowDate && bookingMode === 'GENERAL' && (
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 space-y-2 shadow-xs text-slate-500 font-medium">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+            <CalendarIcon className="w-4 h-4 text-[#0c4b39]" />
+            <span>Ngày khám <span className="text-red-500">*</span></span>
+          </div>
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs text-slate-500 font-semibold">
+            Chọn thông tin trên để hiển thị ngày giờ khám
+          </div>
+        </div>
+      )}
 
       {/* 4. CHỌN NGÀY KHÁM (MEDPRO STYLE: CHỈ HIỂN THỊ CÁC NGÀY CÓ LỊCH KHẢ DỤNG TỪ ADMIN) */}
       {canShowDate && (
@@ -1007,16 +1022,70 @@ export function Step1BookingInfo({
         services={specialtyServices}
         selectedServiceId={selectedService?.id || null}
         onSelect={(srv) => {
-          if (srv.id !== selectedService?.id) {
-            setSelectedService(srv);
-            setSelectedRoom(null);
-            setSelectedDate('');
-            setSelectedSlotTime('');
-            setSelectedSlotId(null);
+          setSelectedService(srv);
+          setSelectedDate('');
+          setSelectedSlotTime('');
+          setSelectedSlotId(null);
+          if (bookingMode === 'GENERAL') {
+            const isBHYT = (srv as any).isBHYT ?? srv.name.includes('Có BHYT');
+            setNoticeModalData({ isBHYT, serviceName: srv.name });
           }
         }}
         hospitalName={hospital.name}
+        bookingMode={bookingMode}
+        specialtyName={selectedSpecialty?.name}
       />
+
+      {/* MEDPRO BHYT / SERVICE NOTICE MODAL */}
+      <Dialog open={!!noticeModalData} onOpenChange={() => setNoticeModalData(null)}>
+        <DialogContent className="max-w-lg bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-2xl space-y-4">
+          <DialogHeader className="text-center space-y-1">
+            <DialogTitle className="text-lg sm:text-xl font-black text-slate-900">
+              Thông tin Dịch vụ
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="text-xs text-slate-700 leading-relaxed space-y-3 bg-slate-50 p-4.5 rounded-2xl border border-slate-200/80">
+            <p className="font-bold text-slate-900">
+              Lưu ý: Quý bệnh nhân đang đặt khám vào Khoa Khám bệnh (Địa chỉ: {hospital.address || 'Địa chỉ cơ sở y tế'})
+            </p>
+
+            {noticeModalData?.isBHYT ? (
+              <>
+                <p className="font-bold text-slate-800">Bệnh viện chỉ tiếp nhận khám BHYT cho người bệnh có:</p>
+                <ul className="list-disc pl-4 space-y-1 text-slate-700 font-semibold">
+                  <li>Thẻ BHYT có nơi Khám chữa bệnh ban đầu tại <strong className="text-slate-950">{hospital.name}</strong>.</li>
+                  <li>Có giấy chuyển tuyến, giấy hẹn khám lại tại <strong className="text-slate-950">{hospital.name}</strong>.</li>
+                  <li>Thẻ BHYT còn hạn sử dụng, hợp lệ.</li>
+                </ul>
+                <p className="text-amber-900 font-bold bg-amber-50 p-3 rounded-xl border border-amber-200 mt-2">
+                  Nếu người bệnh KHÔNG thuộc trường hợp trên vui lòng chọn các dịch vụ khám Không BHYT.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-slate-800">
+                  Dịch vụ chỉ tiếp nhận người bệnh Không sử dụng BHYT. Trong trường hợp người bệnh có:
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-slate-700 font-semibold">
+                  <li>Thẻ BHYT có nơi Khám chữa bệnh ban đầu tại <strong className="text-slate-950">{hospital.name}</strong>.</li>
+                  <li>Có giấy chuyển tuyến, giấy hẹn khám lại tại <strong className="text-slate-950">{hospital.name}</strong>.</li>
+                </ul>
+                <p className="text-[#0c4b39] font-bold bg-emerald-50 p-3 rounded-xl border border-emerald-200 mt-2">
+                  Vui lòng chọn các dịch vụ Khám BHYT để được đảm bảo quyền lợi.
+                </p>
+              </>
+            )}
+          </div>
+
+          <Button
+            onClick={() => setNoticeModalData(null)}
+            className="w-full bg-[#009beb] hover:bg-[#0086cc] text-white font-black text-xs h-11 rounded-2xl shadow-md cursor-pointer"
+          >
+            Đóng
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

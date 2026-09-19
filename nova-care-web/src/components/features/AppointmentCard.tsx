@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, User, ChevronRight, CheckCircle2, AlertCircle, XCircle, Loader2, FileText, Stethoscope } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Calendar, Clock, MapPin, User, ChevronRight, CheckCircle2, AlertCircle, XCircle, Loader2, FileText, Ban } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Appointment } from '@/types/appointment.types';
@@ -27,6 +35,10 @@ const statusConfig: Record<string, { label: string; style: string; icon: React.R
 export function AppointmentCard({ appointment }: { appointment: Appointment }) {
   const queryClient = useQueryClient();
   const [isFulfilling, setIsFulfilling] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('Bệnh nhân thay đổi kế hoạch');
+
   const [isEMRModalOpen, setIsEMRModalOpen] = useState(false);
   const [activeEncounter, setActiveEncounter] = useState<MedicalEncounterData | null>(null);
 
@@ -62,6 +74,24 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
     }
   };
 
+  const handleCancelAppointment = async () => {
+    setIsCancelling(true);
+    try {
+      await appointmentService.cancel(appointment.id, { reason: cancelReason });
+      toast.success('Hủy lịch khám thành công', {
+        description: 'Lịch khám đã được chuyển sang danh sách Đã hủy.',
+      });
+      setShowCancelModal(false);
+      queryClient.invalidateQueries({ queryKey: ['appointments-upcoming'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments-history'] });
+      queryClient.invalidateQueries({ queryKey: ['user-all-appointments-so-suc-khoe'] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể hủy lịch khám');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const handleOpenEMR = () => {
     if (appointment.medicalEncounter) {
       setActiveEncounter({
@@ -72,6 +102,8 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
       setIsEMRModalOpen(true);
     }
   };
+
+  const isCancellable = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'PAID'].includes(appointment.status);
 
   return (
     <>
@@ -116,8 +148,9 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
                 {appointment.totalPrice?.toLocaleString() || 0}đ
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {appointment.status !== 'COMPLETED' && appointment.status !== 'CANCELLED' && (
+
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {appointment.status !== 'COMPLETED' && appointment.status !== 'CANCELLED' && appointment.status !== 'EXPIRED' && (
                 <Button
                   onClick={handleFulfill}
                   disabled={isFulfilling}
@@ -135,6 +168,18 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
                       Tôi đã khám xong
                     </>
                   )}
+                </Button>
+              )}
+
+              {isCancellable && (
+                <Button
+                  onClick={() => setShowCancelModal(true)}
+                  size="sm"
+                  variant="outline"
+                  className="border-red-200 hover:bg-red-50 text-red-600 font-semibold text-xs gap-1 cursor-pointer"
+                >
+                  <Ban className="w-3.5 h-3.5" />
+                  Hủy lịch
                 </Button>
               )}
 
@@ -160,6 +205,46 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
         </CardContent>
       </Card>
 
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <DialogContent className="border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900">Xác nhận hủy lịch khám</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 pt-1">
+              Bạn có chắc chắn muốn hủy phiếu khám mã <strong className="font-mono text-slate-900 font-bold">{appointment.bookingCode}</strong> không?
+              Lịch khám sau khi hủy sẽ được lưu giữ tại mục <strong>"Đã hủy"</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            <label className="text-xs font-bold text-slate-900">Lý do hủy lịch:</label>
+            <input
+              type="text"
+              className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900 text-slate-900"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Nhập lý do..."
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowCancelModal(false)} disabled={isCancelling} className="font-semibold">
+              Quay lại
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleCancelAppointment} disabled={isCancelling} className="font-semibold gap-1.5">
+              {isCancelling ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Đang hủy...
+                </>
+              ) : (
+                'Xác nhận hủy'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Vietnam Official EMR Full Dialog */}
       <VietnamEMRModal
         isOpen={isEMRModalOpen}
@@ -169,4 +254,3 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
     </>
   );
 }
-
