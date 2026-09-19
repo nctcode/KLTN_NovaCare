@@ -227,8 +227,8 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
   if (loadingHospital && !hospital) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[500px] gap-3">
-        <Loader2 className="animate-spin h-8 w-8 text-[#0c4b39] dark:text-[#66FF33]" />
-        <p className="text-xs text-slate-700 dark:text-slate-300 font-bold">Đang tải dữ liệu bệnh viện...</p>
+        <Loader2 className="animate-spin h-8 w-8 text-emerald-600" />
+        <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">Đang tải dữ liệu Bệnh viện...</p>
       </div>
     );
   }
@@ -243,25 +243,21 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
           <Button
             type="button"
             onClick={() => router.push(`/admin/hospitals/${id}`)}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className={`rounded-2xl text-xs font-bold px-3.5 py-2 ${
-              isLight ? 'border-slate-300 text-slate-800 hover:bg-slate-100' : 'border-slate-800 text-slate-300 hover:bg-slate-900'
-            }`}
+            className="text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           >
-            <ArrowLeft className="w-4 h-4 mr-1.5 text-[#0c4b39] dark:text-[#66FF33]" />
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
             Quay lại chi tiết
           </Button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               onClick={() => router.push(`/admin/hospitals/${id}`)}
               variant="outline"
               size="sm"
-              className={`text-xs font-bold rounded-2xl ${
-                isLight ? 'border-slate-300 text-slate-700 hover:bg-slate-100' : 'border-slate-800 text-slate-300 hover:bg-slate-900'
-              }`}
+              className="text-xs rounded-xl border-slate-300"
             >
               Hủy bỏ
             </Button>
@@ -269,7 +265,7 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
               type="submit"
               disabled={updateMutation.isPending}
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl px-6 py-2 flex items-center gap-2 shadow-md"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl px-5 py-2 flex items-center gap-1.5 shadow-sm"
             >
               {updateMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -283,15 +279,12 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
 
         <div>
           <div className="flex items-center gap-3">
-            <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isLight ? 'text-slate-950' : 'text-white'}`}>
-              Chỉnh sửa Bệnh viện: <span className="text-[#0c4b39] dark:text-[#66FF33]">{hospital?.name}</span>
+            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              Chỉnh sửa: <span className="text-emerald-700 dark:text-emerald-400">{hospital?.name}</span>
             </h1>
-            <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40 text-[11px] font-black px-3 py-0.5 rounded-xl">
-              Trang Chỉnh sửa Riêng (Edit Page)
-            </Badge>
           </div>
-          <p className="text-xs text-slate-500 font-medium mt-1">
-            Cập nhật các trường thông tin đối tác y tế. Sau khi nhấn "Lưu thay đổi", hệ thống sẽ tự động cập nhật và quay về trang Chi tiết Bệnh viện.
+          <p className="text-xs text-slate-500 font-normal mt-1">
+            Cập nhật các trường thông tin đối tác y tế. Sau khi lưu, hệ thống sẽ tự động cập nhật và quay về trang Chi tiết Bệnh viện.
           </p>
         </div>
       </div>
@@ -301,16 +294,16 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
          ================================================== */}
       <div className="space-y-6">
         {/* CARD 1: THÔNG TIN CƠ BẢN */}
-        <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-6 border`}>
-          <div className="flex items-center gap-3 border-b pb-4 border-slate-200 dark:border-slate-800">
-            <div className="p-3 rounded-2xl bg-emerald-50 text-[#0c4b39] dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
-              <Building2 className="w-5 h-5" />
+        <Card className={`${cardBg} rounded-xl p-5 space-y-4 border`}>
+          <div className="flex items-center gap-3 border-b pb-3 border-slate-200 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>
+              <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 1. Thông tin cơ bản
               </h3>
-              <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+              <p className="text-xs text-slate-500">
                 Logo, Ảnh bìa Banner, Tên bệnh viện, Phân loại & Mô tả giới thiệu
               </p>
             </div>
@@ -427,7 +420,7 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
               <select
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className={`w-full text-xs font-extrabold rounded-xl p-2.5 border focus:outline-none focus:ring-2 focus:ring-[#0c4b39] ${
+                className={`w-full text-xs font-medium rounded-xl p-2.5 border focus:outline-none focus:ring-1 focus:ring-emerald-600 ${
                   isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                 }`}
               >
@@ -439,28 +432,28 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
               Bài viết giới thiệu tổng quan
             </label>
             <textarea
               rows={4}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className={`w-full text-xs font-medium p-3.5 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-[#0c4b39] ${
-                isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              className={`w-full text-xs font-normal p-3 rounded-xl border focus:outline-none focus:ring-1 focus:ring-emerald-600 ${
+                isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             />
           </div>
         </Card>
 
         {/* CARD 2: THÔNG TIN LIÊN HỆ */}
-        <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-6 border`}>
-          <div className="flex items-center gap-3 border-b pb-4 border-slate-200 dark:border-slate-800">
-            <div className="p-3 rounded-2xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
-              <Phone className="w-5 h-5" />
+        <Card className={`${cardBg} rounded-xl p-5 space-y-4 border`}>
+          <div className="flex items-center gap-3 border-b pb-3 border-slate-200 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
+              <Phone className="w-4 h-4" />
             </div>
             <div>
-              <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>
+              <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 2. Thông tin liên hệ
               </h3>
               <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
@@ -550,16 +543,16 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
         </Card>
 
         {/* CARD 3: VỊ TRÍ GEOFENCING */}
-        <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-6 border`}>
-          <div className="flex items-center gap-3 border-b pb-4 border-slate-200 dark:border-slate-800">
-            <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
-              <Compass className="w-5 h-5" />
+        <Card className={`${cardBg} rounded-xl p-5 space-y-4 border`}>
+          <div className="flex items-center gap-3 border-b pb-3 border-slate-200 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <Compass className="w-4 h-4" />
             </div>
             <div>
-              <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>
+              <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 3. Vị trí địa lý & Maps
               </h3>
-              <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+              <p className="text-xs text-slate-500">
                 Google Maps Embed URL & Tọa độ GPS (Latitude/Longitude)
               </p>
             </div>
@@ -567,7 +560,7 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                 Google Maps Embed URL / Map Link
               </label>
               <Input
@@ -579,7 +572,7 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Vĩ độ (Latitude)
                 </label>
                 <Input
@@ -587,12 +580,12 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
                   step="0.0001"
                   value={formData.latitude}
                   onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                  className="text-xs font-mono font-bold rounded-xl"
+                  className="text-xs font-mono font-medium rounded-xl"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Kinh độ (Longitude)
                 </label>
                 <Input
@@ -600,7 +593,7 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
                   step="0.0001"
                   value={formData.longitude}
                   onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                  className="text-xs font-mono font-bold rounded-xl"
+                  className="text-xs font-mono font-medium rounded-xl"
                 />
               </div>
             </div>
@@ -608,16 +601,16 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
         </Card>
 
         {/* CARD 4: TRẠNG THÁI HỢP TÁC & HIỂN THỊ */}
-        <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-6 border`}>
-          <div className="flex items-center gap-3 border-b pb-4 border-slate-200 dark:border-slate-800">
-            <div className="p-3 rounded-2xl bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
-              <Sparkles className="w-5 h-5" />
+        <Card className={`${cardBg} rounded-xl p-5 space-y-4 border`}>
+          <div className="flex items-center gap-3 border-b pb-3 border-slate-200 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+              <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>
+              <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 4. Trạng thái & Bật/Tắt hiển thị hệ thống
               </h3>
-              <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+              <p className="text-xs text-slate-500">
                 Thiết lập quyền truy cập và xuất hiện công khai trên ứng dụng NovaCare
               </p>
             </div>
@@ -625,13 +618,13 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
             <div className="space-y-1.5">
-              <label className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                 Trạng thái hợp tác
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className={`w-full text-xs font-extrabold rounded-xl p-2.5 border focus:outline-none focus:ring-2 focus:ring-[#0c4b39] ${
+                className={`w-full text-xs font-medium rounded-xl p-2.5 border focus:outline-none focus:ring-1 focus:ring-emerald-600 ${
                   isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                 }`}
               >

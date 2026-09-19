@@ -118,11 +118,10 @@ export function StepSelectTime({ onNext, onBack }: StepSelectTimeProps) {
               <Card
                 key={wp.id}
                 onClick={() => handleSelectWorkplace(wp.id)}
-                className={`cursor-pointer transition-all duration-200 rounded-2xl ${
-                  selectedWorkplaceId === wp.id
+                className={`cursor-pointer transition-all duration-200 rounded-2xl ${selectedWorkplaceId === wp.id
                     ? 'border-2 border-[#4caf50] bg-[#4caf50]/[0.02] shadow-sm'
                     : 'border border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <CardContent className="p-3.5 space-y-1">
                   <p className="font-bold text-secondary text-sm flex items-center justify-between">
@@ -159,11 +158,10 @@ export function StepSelectTime({ onNext, onBack }: StepSelectTimeProps) {
                   setSelectedDate(d);
                   setSelectedSlotId(null);
                 }}
-                className={`flex flex-col items-center p-3 rounded-2xl border min-w-[82px] transition-all duration-200 shrink-0 cursor-pointer ${
-                  isSelected
+                className={`flex flex-col items-center p-3 rounded-2xl border min-w-[82px] transition-all duration-200 shrink-0 cursor-pointer ${isSelected
                     ? 'bg-[#4caf50] border-[#4caf50] text-white font-bold shadow-md shadow-emerald-100 scale-105'
                     : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
-                }`}
+                  }`}
               >
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/90' : 'text-gray-400'}`}>
                   {formatDayName(d)}
@@ -213,13 +211,12 @@ export function StepSelectTime({ onNext, onBack }: StepSelectTimeProps) {
                         type="button"
                         disabled={isFull}
                         onClick={() => handleSelectSlot(slot)}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all duration-200 text-center cursor-pointer relative ${
-                          isFull
+                        className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all duration-200 text-center cursor-pointer relative ${isFull
                             ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
                             : isSelected
-                            ? 'bg-[#4caf50] border-[#4caf50] text-white shadow-md shadow-emerald-100 font-bold scale-[1.02]'
-                            : 'bg-white hover:bg-emerald-50/50 border-gray-200 text-secondary hover:border-[#4caf50]/40'
-                        }`}
+                              ? 'bg-[#4caf50] border-[#4caf50] text-white shadow-md shadow-emerald-100 font-bold scale-[1.02]'
+                              : 'bg-white hover:bg-emerald-50/50 border-gray-200 text-secondary hover:border-[#4caf50]/40'
+                          }`}
                       >
                         {formattedTime}
                         {isFull && <span className="block text-[9px] font-normal text-gray-400">Đã đầy</span>}
@@ -250,13 +247,12 @@ export function StepSelectTime({ onNext, onBack }: StepSelectTimeProps) {
                         type="button"
                         disabled={isFull}
                         onClick={() => handleSelectSlot(slot)}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all duration-200 text-center cursor-pointer relative ${
-                          isFull
+                        className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all duration-200 text-center cursor-pointer relative ${isFull
                             ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
                             : isSelected
-                            ? 'bg-[#4caf50] border-[#4caf50] text-white shadow-md shadow-emerald-100 font-bold scale-[1.02]'
-                            : 'bg-white hover:bg-emerald-50/50 border-gray-200 text-secondary hover:border-[#4caf50]/40'
-                        }`}
+                              ? 'bg-[#4caf50] border-[#4caf50] text-white shadow-md shadow-emerald-100 font-bold scale-[1.02]'
+                              : 'bg-white hover:bg-emerald-50/50 border-gray-200 text-secondary hover:border-[#4caf50]/40'
+                          }`}
                       >
                         {formattedTime}
                         {isFull && <span className="block text-[9px] font-normal text-gray-400">Đã đầy</span>}

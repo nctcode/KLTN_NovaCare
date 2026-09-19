@@ -15,7 +15,9 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { AdminUsersService } from './admin-users.service';
+import { CreateHospitalAdminDto } from './dto/create-hospital-admin.dto';
 import { Role } from '@prisma/client';
+import { Post } from '@nestjs/common';
 
 @ApiTags('Admin - Quản lý Người dùng')
 @ApiBearerAuth('access-token')
@@ -24,6 +26,17 @@ import { Role } from '@prisma/client';
 @Roles('ADMIN')
 export class AdminUsersController {
   constructor(private readonly service: AdminUsersService) {}
+
+  @Post('hospital-admin')
+  @ApiOperation({ summary: 'Cấp tài khoản Quản trị viên Bệnh viện (Hospital Admin)' })
+  createHospitalAdmin(
+    @Body() dto: CreateHospitalAdminDto,
+    @Req() req: any,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ) {
+    return this.service.createHospitalAdmin(dto, req.user.id, ip, ua);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Danh sách tất cả người dùng (Phân trang, tìm kiếm, lọc)' })

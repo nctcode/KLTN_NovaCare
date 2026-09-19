@@ -5,7 +5,7 @@ import { UpdateWorkplaceDto } from './dto/update-workplace.dto';
 
 @Injectable()
 export class DoctorWorkplacesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(createDto: CreateWorkplaceDto) {
     try {

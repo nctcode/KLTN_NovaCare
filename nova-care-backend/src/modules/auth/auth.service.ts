@@ -18,7 +18,9 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
-  user: Omit<User, 'passwordHash'>;
+  user: Omit<User, 'passwordHash'> & {
+    hospital?: { id: string; name: string; logoUrl?: string | null; externalId?: string | null } | null;
+  };
 }
 
 import { EmailService } from '@/modules/email/email.service';
@@ -72,6 +74,16 @@ export class AuthService {
         OR: [{ email: username }, { phone: username }],
         deletedAt: null,
       },
+      include: {
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+            externalId: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -110,7 +122,20 @@ export class AuthService {
       const tokenHash = this.hashToken(refreshToken);
       const storedToken = await this.prisma.refreshToken.findUnique({
         where: { tokenHash },
-        include: { user: true },
+        include: {
+          user: {
+            include: {
+              hospital: {
+                select: {
+                  id: true,
+                  name: true,
+                  logoUrl: true,
+                  externalId: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!storedToken || storedToken.isRevoked) {
@@ -215,12 +240,17 @@ export class AuthService {
     return { message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.' };
   }
 
-  private async generateTokens(user: User): Promise<{
+  private async generateTokens(user: any): Promise<{
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
   }> {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      hospitalId: user.hospitalId || null,
+    };
 
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('app.jwt.accessSecret') as string,

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -12,6 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AppointmentSlotsService } from './appointment-slots.service';
 import { CreateSlotDto } from './dto/create-slot.dto';
+import { UpdateSlotDto } from './dto/update-slot.dto';
 import { GenerateSlotsDto } from './dto/generate-slots.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { Public } from '@/common/decorators/public.decorator';
@@ -20,6 +22,40 @@ import { Public } from '@/common/decorators/public.decorator';
 @Controller('api/v1/appointment-slots')
 export class AppointmentSlotsController {
   constructor(private readonly service: AppointmentSlotsService) {}
+
+  @Get()
+  @Public()
+  @ApiOperation({ summary: 'Lấy danh sách khung giờ khám (Admin - Lọc theo ngày, bệnh viện, bác sĩ, chuyên khoa...)' })
+  async findAll(
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('doctorWorkplaceId') doctorWorkplaceId?: string,
+    @Query('doctorId') doctorId?: string,
+    @Query('hospitalId') hospitalId?: string,
+    @Query('specialtyId') specialtyId?: string,
+    @Query('isActive') isActive?: string,
+    @Query('isAvailable') isAvailable?: string,
+    @Query('search') search?: string,
+  ) {
+    const data = await this.service.findAll({
+      date,
+      startDate,
+      endDate,
+      doctorWorkplaceId,
+      doctorId,
+      hospitalId,
+      specialtyId,
+      isActive,
+      isAvailable,
+      search,
+    });
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy danh sách khung giờ khám thành công',
+      data,
+    };
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -42,6 +78,7 @@ export class AppointmentSlotsController {
     const result = await this.service.generateSlots(
       generateDto.doctorId,
       generateDto.doctorWorkplaceId,
+      generateDto.hospitalId,
       new Date(generateDto.startDate),
       new Date(generateDto.endDate),
       generateDto.slotDuration,
@@ -51,6 +88,19 @@ export class AppointmentSlotsController {
       statusCode: HttpStatus.CREATED,
       message: 'Tự động tạo khung giờ khám thành công',
       data: result,
+    };
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Cập nhật khung giờ khám (Sức chứa, Khóa/Mở, Kích hoạt)' })
+  async updateSlot(@Param('id') id: string, @Body() updateDto: UpdateSlotDto) {
+    const data = await this.service.updateSlot(id, updateDto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Cập nhật khung giờ khám thành công',
+      data,
     };
   }
 

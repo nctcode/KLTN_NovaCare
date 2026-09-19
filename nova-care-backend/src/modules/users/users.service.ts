@@ -45,9 +45,19 @@ export class UsersService {
     return result;
   }
 
-  async findById(id: string): Promise<User | null> {
+  async findById(id: string): Promise<any> {
     return this.prisma.user.findFirst({
       where: { id, deletedAt: null },
+      include: {
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+            externalId: true,
+          },
+        },
+      },
     });
   }
 

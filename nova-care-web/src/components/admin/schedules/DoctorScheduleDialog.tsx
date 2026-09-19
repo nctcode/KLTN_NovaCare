@@ -166,8 +166,8 @@ export function DoctorScheduleDialog({ open, onClose, scheduleToEdit }: DoctorSc
         }`}
       >
         <DialogHeader>
-          <DialogTitle className="text-lg font-black tracking-tight">
-            {isEdit ? 'Sửa Lịch Làm Việc Bác Sĩ' : 'Thêm Lịch Làm Việc Định Kỳ'}
+          <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">
+            {isEdit ? 'Sửa Lịch Khám Bác Sĩ' : 'Thêm Ca Khám Định Kỳ'}
           </DialogTitle>
         </DialogHeader>
 
@@ -182,7 +182,7 @@ export function DoctorScheduleDialog({ open, onClose, scheduleToEdit }: DoctorSc
           {/* Select Doctor (Only when creating) */}
           {!isEdit ? (
             <div className="space-y-1.5">
-              <label className="font-bold text-slate-700 dark:text-slate-300">
+              <label className="font-semibold text-slate-700 dark:text-slate-300">
                 1. Chọn Bác sĩ <span className="text-rose-500">*</span>
               </label>
               {isLoadingDoctors ? (
@@ -193,7 +193,7 @@ export function DoctorScheduleDialog({ open, onClose, scheduleToEdit }: DoctorSc
                 <select
                   value={selectedDoctorId}
                   onChange={(e) => setSelectedDoctorId(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                  className={`w-full p-2.5 rounded-xl border font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                     isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                   }`}
                 >
@@ -208,8 +208,8 @@ export function DoctorScheduleDialog({ open, onClose, scheduleToEdit }: DoctorSc
             </div>
           ) : (
             <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Bác sĩ</div>
-              <div className="font-extrabold text-sm text-emerald-600 dark:text-[#66FF33] mt-0.5">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Bác sĩ</div>
+              <div className="font-bold text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">
                 {scheduleToEdit?.doctorWorkplace?.doctor?.fullName}
               </div>
             </div>
@@ -395,7 +395,7 @@ export function DoctorScheduleDialog({ open, onClose, scheduleToEdit }: DoctorSc
             type="button"
             variant="outline"
             onClick={onClose}
-            className={`rounded-xl ${isLight ? 'border-slate-300 text-slate-700' : 'border-slate-800 text-slate-300'}`}
+            className={`rounded-xl text-xs ${isLight ? 'border-slate-300 text-slate-700' : 'border-slate-800 text-slate-300'}`}
           >
             Hủy bỏ
           </Button>
@@ -403,10 +403,10 @@ export function DoctorScheduleDialog({ open, onClose, scheduleToEdit }: DoctorSc
             type="button"
             disabled={saveMutation.isPending || (!isEdit && !doctorWorkplaceId)}
             onClick={() => saveMutation.mutate()}
-            className="rounded-xl font-bold bg-[#0c4b39] hover:bg-[#083629] text-white dark:bg-emerald-600 dark:hover:bg-emerald-700"
+            className="rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {isEdit ? 'Lưu cập nhật' : 'Tạo lịch làm việc'}
+            {saveMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            {isEdit ? 'Lưu thay đổi' : 'Tạo ca khám'}
           </Button>
         </DialogFooter>
       </DialogContent>

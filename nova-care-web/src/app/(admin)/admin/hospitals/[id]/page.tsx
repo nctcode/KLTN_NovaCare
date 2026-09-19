@@ -941,8 +941,8 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
   if (loadingHospital && !hospital) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[500px] gap-3">
-        <Loader2 className="animate-spin h-8 w-8 text-[#0c4b39] dark:text-[#66FF33]" />
-        <p className="text-xs text-slate-700 dark:text-slate-300 font-bold">Đang tải dữ liệu Bệnh viện SaaS NovaCare...</p>
+        <Loader2 className="animate-spin h-8 w-8 text-emerald-600" />
+        <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">Đang tải dữ liệu Bệnh viện...</p>
       </div>
     );
   }
@@ -955,7 +955,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
         <p className="text-slate-500 text-xs leading-relaxed max-w-md">
           Dữ liệu bệnh viện không tồn tại hoặc đã bị gỡ khỏi hệ thống NovaCare.
         </p>
-        <Button onClick={() => router.push('/admin/hospitals')} className="bg-[#0c4b39] text-white text-xs rounded-xl">
+        <Button onClick={() => router.push('/admin/hospitals')} className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs rounded-xl">
           Quay lại danh sách bệnh viện
         </Button>
       </div>
@@ -972,201 +972,212 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12 font-sans relative">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-6 right-6 z-[100] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-top-4 duration-200 font-bold text-xs">
-          <CheckCircle2 className="w-5 h-5 text-white shrink-0" />
+        <div className="fixed top-6 right-6 z-[100] flex items-center gap-3 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-lg animate-in fade-in slide-in-from-top-4 duration-200 text-xs font-semibold">
+          <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* ==================================================
-          1. HEADER TOOLBAR
+          1. BREADCRUMB & ACTIONS
          ================================================== */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-xs font-bold">
-            <Button
-              onClick={() => router.push('/admin/hospitals')}
-              variant="outline"
-              size="sm"
-              className={`rounded-2xl text-xs font-bold px-3 py-1.5 ${
-                isLight ? 'border-slate-300 text-slate-800 hover:bg-slate-100' : 'border-slate-800 text-slate-300 hover:bg-slate-900'
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4 mr-1 text-[#0c4b39] dark:text-[#66FF33]" />
-              Danh sách Bệnh viện
-            </Button>
-            <span className="text-slate-400">/</span>
-            <span className="text-slate-500 truncate max-w-[200px]">{hospital.name}</span>
-          </div>
-
-          {/* DEDICATED EDIT PAGE LINK */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className={`text-xs font-bold rounded-2xl px-4 py-2 ${
-                isLight ? 'border-slate-300 text-slate-900 hover:bg-slate-100' : 'border-slate-800 text-slate-100 hover:bg-slate-900'
-              }`}
-            >
-              <Link href={`/admin/hospitals/${id}/edit`}>
-                <Pencil className="w-3.5 h-3.5 mr-1.5 text-[#0c4b39] dark:text-[#66FF33]" />
-                Chỉnh sửa thông tin
-              </Link>
-            </Button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs">
+          <Button
+            onClick={() => router.push('/admin/hospitals')}
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+            Danh sách Bệnh viện
+          </Button>
+          <span className="text-slate-300 dark:text-slate-700">/</span>
+          <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[240px]">{hospital.name}</span>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 border-slate-200 dark:border-slate-800">
-          <div className="space-y-1">
-            <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isLight ? 'text-slate-950' : 'text-white'}`}>
-              {hospital.name}
-            </h1>
-            <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
-              <span>Mã ID SaaS: <code className="font-mono text-[#0c4b39] dark:text-[#66FF33] font-bold">{hospital.id}</code></span>
-              <span>•</span>
-              <span>Cập nhật gần nhất: {hospital.updatedAt ? new Date(hospital.updatedAt).toLocaleDateString('vi-VN') : 'Mới cập nhật'}</span>
-            </p>
-          </div>
-        </div>
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="text-xs font-medium rounded-xl border-slate-300 dark:border-slate-700 hover:bg-slate-50"
+        >
+          <Link href={`/admin/hospitals/${id}/edit`}>
+            <Pencil className="w-3.5 h-3.5 mr-1.5 text-slate-600" />
+            Chỉnh sửa thông tin
+          </Link>
+        </Button>
       </div>
 
       {/* ==================================================
-          2. 6 TABS NAVIGATION BAR
+          2. HOSPITAL SUMMARY CARD (Thay thế cover banner cồng kềnh)
+         ================================================== */}
+      <Card className={`${cardBg} rounded-xl p-5 border shadow-sm`}>
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white shrink-0 p-1 flex items-center justify-center">
+            {hospital.logoUrl ? (
+              <img
+                src={hospital.logoUrl}
+                alt={hospital.name}
+                className="w-full h-full object-cover rounded-lg"
+              />
+            ) : (
+              <Building2 className="w-8 h-8 text-slate-400" />
+            )}
+          </div>
+
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                {hospital.name}
+              </h1>
+              <Badge className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${
+                hospital.status === 'Hoạt động' || hospital.status === 'ACTIVE'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
+              }`}>
+                {hospitalStatusLabel}
+              </Badge>
+              <Badge variant="outline" className="text-[11px] font-normal border-slate-300 dark:border-slate-700">
+                {hospitalTypeLabel}
+              </Badge>
+              {hospital.externalId && (
+                <Badge variant="secondary" className="text-[11px] font-mono">
+                  HIS: {hospital.externalId}
+                </Badge>
+              )}
+            </div>
+
+            <div className="text-xs text-slate-500 flex flex-wrap items-center gap-x-4 gap-y-1">
+              {hospital.address && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  {hospital.address}
+                </span>
+              )}
+              {phoneValue && (
+                <span className="flex items-center gap-1">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  {phoneValue}
+                </span>
+              )}
+              {hospital.email && (
+                <span className="flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  {hospital.email}
+                </span>
+              )}
+              {hospital.operatingHours && (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  {hospital.operatingHours}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* ==================================================
+          3. TABS NAVIGATION (Giao diện chuẩn Admin)
          ================================================== */}
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid grid-cols-4 sm:grid-cols-8 w-full p-1.5 rounded-2xl h-auto ${isLight ? 'bg-slate-200/90' : 'bg-slate-900/90'}`}>
-          <TabsTrigger value="overview" className="text-xs font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" /> 1. Tổng quan
+        <TabsList className={`flex w-full justify-start border-b ${isLight ? 'border-slate-200' : 'border-slate-800'} bg-transparent p-0 h-auto rounded-none gap-2 sm:gap-6 overflow-x-auto`}>
+          <TabsTrigger
+            value="overview"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-none bg-transparent px-1 pb-2.5 pt-1 text-xs sm:text-sm font-medium transition-colors"
+          >
+            Tổng quan
           </TabsTrigger>
-          <TabsTrigger value="info" className="text-xs font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-            <FileText className="w-3.5 h-3.5 text-blue-500" /> 2. Thông tin
+          <TabsTrigger
+            value="info"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-none bg-transparent px-1 pb-2.5 pt-1 text-xs sm:text-sm font-medium transition-colors"
+          >
+            Thông tin chi tiết
           </TabsTrigger>
-          <TabsTrigger value="branches" className="text-xs font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-            <Building2 className="w-3.5 h-3.5 text-emerald-500" /> 3. Cơ sở ({fetchedBranches.length})
+          <TabsTrigger
+            value="branches"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-none bg-transparent px-1 pb-2.5 pt-1 text-xs sm:text-sm font-medium transition-colors"
+          >
+            Cơ sở ({fetchedBranches.length})
           </TabsTrigger>
-          <TabsTrigger value="doctors" className="text-xs font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-indigo-500" /> 4. Bác sĩ ({fetchedDoctors.length})
+          <TabsTrigger
+            value="doctors"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-none bg-transparent px-1 pb-2.5 pt-1 text-xs sm:text-sm font-medium transition-colors"
+          >
+            Bác sĩ ({fetchedDoctors.length})
           </TabsTrigger>
-          <TabsTrigger value="specialties" className="text-xs font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-            <Stethoscope className="w-3.5 h-3.5 text-purple-500" /> 5. Chuyên khoa ({activeHospitalSpecialties.length})
+          <TabsTrigger
+            value="specialties"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-none bg-transparent px-1 pb-2.5 pt-1 text-xs sm:text-sm font-medium transition-colors"
+          >
+            Chuyên khoa ({activeHospitalSpecialties.length})
           </TabsTrigger>
-          <TabsTrigger value="packages" className="text-xs font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-            <Package className="w-3.5 h-3.5 text-teal-500" /> 6. Gói khám ({hospitalPackages.length})
+          <TabsTrigger
+            value="packages"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-none bg-transparent px-1 pb-2.5 pt-1 text-xs sm:text-sm font-medium transition-colors"
+          >
+            Gói khám ({hospitalPackages.length})
           </TabsTrigger>
-          <TabsTrigger value="services" className="text-xs font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-emerald-500" /> 7. Dịch vụ ({hospitalMedicalServices.length})
+          <TabsTrigger
+            value="services"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-none bg-transparent px-1 pb-2.5 pt-1 text-xs sm:text-sm font-medium transition-colors"
+          >
+            Dịch vụ ({hospitalMedicalServices.length})
           </TabsTrigger>
-          <TabsTrigger value="logs" className="text-xs font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-            <History className="w-3.5 h-3.5 text-rose-500" /> 8. Nhật ký ({displayAuditLogs.length})
+          <TabsTrigger
+            value="logs"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-none bg-transparent px-1 pb-2.5 pt-1 text-xs sm:text-sm font-medium transition-colors"
+          >
+            Nhật ký ({displayAuditLogs.length})
           </TabsTrigger>
         </TabsList>
 
         {/* TAB 1: TỔNG QUAN */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="relative w-full min-h-[260px] sm:min-h-[320px] rounded-3xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 bg-slate-950">
-            <img
-              src={hospital.coverImageUrl || hospital.coverImage || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1600&q=80'}
-              alt={hospital.name}
-              className="w-full h-full object-cover opacity-80 absolute inset-0"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-
-            <div className="relative z-10 p-6 sm:p-8 flex flex-col justify-end min-h-[260px] sm:min-h-[320px] text-white space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
-                {hospitalStatusLabel && (
-                  <Badge className="bg-emerald-600 text-white font-bold text-xs px-3 py-1 rounded-xl shadow-sm">
-                    {hospitalStatusLabel}
-                  </Badge>
-                )}
-                {hospitalTypeLabel && (
-                  <Badge className="bg-blue-600 text-white font-bold text-xs px-3 py-1 rounded-xl shadow-sm">
-                    {hospitalTypeLabel}
-                  </Badge>
-                )}
-                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3.5 py-1 rounded-xl border border-white/20 text-xs font-extrabold ml-auto">
-                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  <span>{hospital.rating ? hospital.rating : 0} / 5.0</span>
-                  <span className="text-slate-300 font-semibold">({hospital.reviewCount || 0} lượt đánh giá)</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-white/30 shrink-0 bg-white p-1 shadow-md flex items-center justify-center">
-                  <img
-                    src={hospital.logoUrl || 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=120&auto=format&fit=crop&q=80'}
-                    alt={hospital.name}
-                    className="w-full h-full object-cover rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-1 flex-1">
-                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-md">
-                    {hospital.name}
-                  </h2>
-                  {hospital.address && (
-                    <p className="text-xs sm:text-sm text-slate-200 font-semibold flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>{hospital.address}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className={`${cardBg} rounded-3xl p-5 border shadow-sm transition hover:border-emerald-500/50`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>1. Tổng cơ sở</span>
-                <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-[#0c4b39] dark:text-[#66FF33]">
-                  <Building2 className="w-5 h-5" />
-                </div>
+            <Card className={`${cardBg} rounded-xl p-4 border`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Cơ sở / Chi nhánh</span>
+                <Building2 className="w-4 h-4 text-emerald-600" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black">{fetchedBranches?.length ?? 0}</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">Cơ sở chi nhánh hoạt động</p>
+              <p className="text-2xl font-bold mt-2">{fetchedBranches?.length ?? 0}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Chi nhánh hoạt động</p>
             </Card>
 
-            <Card className={`${cardBg} rounded-3xl p-5 border shadow-sm transition hover:border-indigo-500/50`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>2. Tổng bác sĩ</span>
-                <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                  <Users className="w-5 h-5" />
-                </div>
+            <Card className={`${cardBg} rounded-xl p-4 border`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Tổng bác sĩ</span>
+                <Users className="w-4 h-4 text-indigo-600" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black">{fetchedDoctors?.length ?? 0}</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">Bác sĩ đồng bộ hệ thống</p>
+              <p className="text-2xl font-bold mt-2">{fetchedDoctors?.length ?? 0}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Bác sĩ thuộc cơ sở</p>
             </Card>
 
-            <Card className={`${cardBg} rounded-3xl p-5 border shadow-sm transition hover:border-blue-500/50`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>3. Tổng chuyên khoa</span>
-                <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <Stethoscope className="w-5 h-5" />
-                </div>
+            <Card className={`${cardBg} rounded-xl p-4 border`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Chuyên khoa</span>
+                <Stethoscope className="w-4 h-4 text-purple-600" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black">{activeHospitalSpecialties.length}</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">Chuyên khoa khám bệnh</p>
+              <p className="text-2xl font-bold mt-2">{activeHospitalSpecialties.length}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Chuyên khoa khám bệnh</p>
             </Card>
 
-            <Card className={`${cardBg} rounded-3xl p-5 border shadow-sm transition hover:border-amber-500/50`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>4. Lượt đặt khám</span>
-                <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
+            <Card className={`${cardBg} rounded-xl p-4 border`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Lượt đặt khám</span>
+                <TrendingUp className="w-4 h-4 text-amber-600" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black">{(hospital.bookingCount || 0).toLocaleString('vi-VN')}</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">Tổng lượt đặt khám thành công</p>
+              <p className="text-2xl font-bold mt-2">{(hospital.bookingCount || 0).toLocaleString('vi-VN')}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Tổng lượt đặt</p>
             </Card>
           </div>
 
-          <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-4`}>
-            <h3 className={`text-base font-black flex items-center gap-2 ${isLight ? 'text-slate-950' : 'text-white'}`}>
-              <Sparkles className="w-5 h-5 text-[#0c4b39] dark:text-[#66FF33]" />
-              Giới thiệu tổng quan bệnh viện
+          <Card className={`${cardBg} rounded-xl p-5 border space-y-3`}>
+            <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              Giới thiệu tổng quan
             </h3>
-            <p className={`text-xs sm:text-sm leading-relaxed font-medium ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>
+            <p className={`text-xs sm:text-sm leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
               {hospital.description || 'Chưa có bài giới thiệu chi tiết cho bệnh viện này.'}
             </p>
           </Card>
@@ -1174,138 +1185,106 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
         {/* TAB 2: THÔNG TIN CHI TIẾT */}
         <TabsContent value="info" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-5`}>
-              <div className="flex items-center gap-3 border-b pb-4 border-slate-200 dark:border-slate-800">
-                <div className="p-3 rounded-2xl bg-emerald-50 text-[#0c4b39] border border-emerald-200/60">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>1. Thông tin cơ bản</h3>
-                  <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Tên, Phân loại, Logo & Banner</p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className={`${cardBg} rounded-xl p-5 border space-y-4`}>
+              <h3 className={`text-sm font-bold border-b pb-3 ${isLight ? 'border-slate-200 text-slate-900' : 'border-slate-800 text-white'}`}>
+                Thông tin chung & Quy mô
+              </h3>
 
-              <div className="space-y-4 text-xs">
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Tên chính thức</span>
-                  <p className="font-extrabold text-sm">{hospital.name}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Tên chính thức</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{hospital.name}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Loại bệnh viện</span>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-900 border-blue-300 font-bold">
-                      {hospitalTypeLabel}
-                    </Badge>
-                  </div>
-
-                  <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Trạng thái hợp tác</span>
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-900 border-emerald-300 font-bold">
-                      {hospitalStatusLabel}
-                    </Badge>
-                  </div>
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Loại hình bệnh viện</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{hospitalTypeLabel}</p>
                 </div>
 
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">URL Logo Bệnh viện</span>
-                  <p className="font-mono text-slate-600 dark:text-slate-400 text-xs truncate">{hospital.logoUrl || 'Chưa cập nhật'}</p>
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Trạng thái hợp tác</span>
+                  <p className="font-semibold text-emerald-600 dark:text-emerald-400">{hospitalStatusLabel}</p>
                 </div>
 
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">URL Banner (Cover Image)</span>
-                  <p className="font-mono text-slate-600 dark:text-slate-400 text-xs truncate">{hospital.coverImage || 'Chưa cập nhật'}</p>
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Quy mô giường bệnh</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{hospital.bedCount ? `${hospital.bedCount} giường` : 'Chưa cập nhật'}</p>
+                </div>
+
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Năm thành lập</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{hospital.establishedYear || 'Chưa cập nhật'}</p>
+                </div>
+
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Khung giờ hoạt động</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{hospital.operatingHours || '07:00 - 17:00'}</p>
                 </div>
               </div>
             </Card>
 
-            <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-5`}>
-              <div className="flex items-center gap-3 border-b pb-4 border-slate-200 dark:border-slate-800">
-                <div className="p-3 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200/60">
-                  <Phone className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>2. Thông tin liên hệ</h3>
-                  <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Hotline, Email, Website & Địa chỉ</p>
-                </div>
-              </div>
+            <Card className={`${cardBg} rounded-xl p-5 border space-y-4`}>
+              <h3 className={`text-sm font-bold border-b pb-3 ${isLight ? 'border-slate-200 text-slate-900' : 'border-slate-800 text-white'}`}>
+                Thông tin liên hệ
+              </h3>
 
-              <div className="space-y-4 text-xs">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 space-y-1">
-                    <span className="text-[11px] text-[#0c4b39] font-extrabold uppercase tracking-wider block">Hotline Đặt khám</span>
-                    <p className="font-black text-[#0c4b39] text-sm">{phoneValue || 'Chưa cập nhật'}</p>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-rose-50/80 border border-rose-200/80 space-y-1">
-                    <span className="text-[11px] text-rose-800 font-extrabold uppercase tracking-wider block">Hotline Cấp cứu</span>
-                    <p className="font-black text-rose-700 text-sm">{hospital.emergencyHotline || 'Chưa cập nhật'}</p>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Hotline tư vấn</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{phoneValue || 'Chưa cập nhật'}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Email liên hệ</span>
-                    <p className="font-bold truncate">{hospital.email || 'Chưa cập nhật'}</p>
-                  </div>
-
-                  <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Website chính thức</span>
-                    <p className="font-bold truncate">{hospital.website || 'Chưa cập nhật'}</p>
-                  </div>
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Hotline cấp cứu</span>
+                  <p className="font-semibold text-rose-600 dark:text-rose-400">{hospital.emergencyHotline || 'Chưa cập nhật'}</p>
                 </div>
 
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Tỉnh / Thành phố</span>
-                  <p className="font-bold text-sm">{hospital.city || 'TP. Hồ Chí Minh'}</p>
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Email</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{hospital.email || 'Chưa cập nhật'}</p>
                 </div>
 
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Địa chỉ chi tiết</span>
-                  <p className="font-extrabold leading-snug">{hospital.address || 'Chưa cập nhật'}</p>
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Website</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{hospital.website || 'Chưa cập nhật'}</p>
+                </div>
+
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5 sm:col-span-2">
+                  <span className="text-[11px] text-slate-400 font-medium">Địa chỉ trụ sở</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{hospital.address || 'Chưa cập nhật'}</p>
                 </div>
               </div>
             </Card>
 
-            <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-5 md:col-span-2`}>
-              <div className="flex items-center justify-between border-b pb-4 border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>3. Vị trí địa lý & Google Maps</h3>
-                    <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Tọa độ GPS & Nhúng bản đồ trực tiếp</p>
-                  </div>
-                </div>
-
+            <Card className={`${cardBg} rounded-xl p-5 border space-y-4 md:col-span-2`}>
+              <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+                <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  Vị trí & Bản đồ
+                </h3>
                 {googleMapUrl && (
-                  <Button asChild variant="outline" size="sm" className="text-xs font-bold rounded-2xl">
+                  <Button asChild variant="outline" size="sm" className="h-7 text-xs font-medium rounded-lg">
                     <a href={googleMapUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-3.5 h-3.5 mr-1" /> Mở Google Maps
+                      <ExternalLink className="w-3 h-3 mr-1" /> Mở Google Maps
                     </a>
                   </Button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                <div className="lg:col-span-5 space-y-3 text-xs">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                      <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Vĩ độ (Latitude)</span>
-                      <p className="font-mono font-bold">{hospital.latitude || 10.7769}</p>
-                    </div>
-
-                    <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                      <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Kinh độ (Longitude)</span>
-                      <p className="font-mono font-bold">{hospital.longitude || 106.7009}</p>
-                    </div>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-4 space-y-2 text-xs">
+                  <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                    <span className="text-[11px] text-slate-400 font-medium">Vĩ độ (Latitude)</span>
+                    <p className="font-mono font-medium">{hospital.latitude || 10.7769}</p>
+                  </div>
+                  <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                    <span className="text-[11px] text-slate-400 font-medium">Kinh độ (Longitude)</span>
+                    <p className="font-mono font-medium">{hospital.longitude || 106.7009}</p>
                   </div>
                 </div>
 
                 {mapEmbedUrl && (
-                  <div className="lg:col-span-7 h-[280px] rounded-3xl overflow-hidden border border-slate-300 dark:border-slate-800 shadow-inner">
+                  <div className="lg:col-span-8 h-[220px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
                     <iframe
                       title={`Google Maps ${hospital.name}`}
                       src={mapEmbedUrl}
@@ -1321,42 +1300,30 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
               </div>
             </Card>
 
-            <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-5 md:col-span-2`}>
-              <div className="flex items-center gap-3 border-b pb-4 border-slate-200 dark:border-slate-800">
-                <div className="p-3 rounded-2xl bg-purple-50 text-purple-700 border border-purple-200/60">
-                  <Server className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>4. Thông tin hệ thống NovaCare</h3>
-                  <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Mã ID, Trạng thái API & Thời gian khởi tạo</p>
-                </div>
-              </div>
+            <Card className={`${cardBg} rounded-xl p-5 border space-y-4 md:col-span-2`}>
+              <h3 className={`text-sm font-bold border-b pb-3 border-slate-200 dark:border-slate-800 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                Thông tin hệ thống NovaCare
+              </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">ID Hệ thống (UUID)</span>
-                  <p className="font-mono font-black text-[#0c4b39] dark:text-[#66FF33] text-xs truncate">{hospital.id}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">ID Hệ thống</span>
+                  <p className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 text-xs truncate">{hospital.id}</p>
                 </div>
-
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Hiển thị trên hệ thống</span>
-                  <p className="font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    {hospital.isActive !== false ? 'Hiển thị công khai' : 'Tạm ẩn hệ thống'}
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Mã HIS đối tác</span>
+                  <p className="font-mono font-semibold text-slate-800 dark:text-slate-200 text-xs">{hospital.externalId || 'Chưa liên kết HIS'}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Ngày tham gia</span>
+                  <p className="font-medium text-slate-800 dark:text-slate-200">
+                    {hospital.createdAt ? new Date(hospital.createdAt).toLocaleDateString('vi-VN') : '15/01/2024'}
                   </p>
                 </div>
-
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Ngày tạo</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200">
-                    {hospital.createdAt ? new Date(hospital.createdAt).toLocaleString('vi-VN') : '2024-01-15 08:30'}
-                  </p>
-                </div>
-
-                <div className={`p-4 rounded-2xl border ${tileBg} space-y-1`}>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Ngày cập nhật gần nhất</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200">
-                    {hospital.updatedAt ? new Date(hospital.updatedAt).toLocaleString('vi-VN') : 'Vừa cập nhật'}
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-0.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Cập nhật lần cuối</span>
+                  <p className="font-medium text-slate-800 dark:text-slate-200">
+                    {hospital.updatedAt ? new Date(hospital.updatedAt).toLocaleDateString('vi-VN') : 'Vừa xong'}
                   </p>
                 </div>
               </div>
@@ -1366,19 +1333,19 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
         {/* TAB 3: CƠ SỞ */}
         <TabsContent value="branches">
-          <Card className={`${cardBg} rounded-3xl p-6 space-y-5 border`}>
+          <Card className={`${cardBg} rounded-xl p-5 space-y-4 border`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4 border-slate-200 dark:border-slate-800">
               <div>
-                <h3 className={`text-base font-extrabold ${isLight ? 'text-slate-950' : 'text-white'}`}>
+                <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                   Cơ sở & Chi nhánh trực thuộc ({fetchedBranches.length})
                 </h3>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-500 font-normal">
                   Quản lý danh sách các chi nhánh khám chữa bệnh của bệnh viện.
                 </p>
               </div>
               <Button
                 onClick={() => setIsAddBranchOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm shrink-0"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl flex items-center gap-1.5 shadow-sm shrink-0"
               >
                 <Plus className="w-4 h-4" /> Thêm cơ sở mới
               </Button>
@@ -1386,26 +1353,26 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {fetchedBranches.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center col-span-2 space-y-3">
-                  <Building2 className="w-12 h-12 text-slate-400 opacity-60" />
-                  <h4 className="font-extrabold text-sm">Chưa có chi nhánh phụ được đăng ký</h4>
-                  <p className="text-xs font-medium text-slate-500 max-w-sm">
-                    Tất cả lịch khám và dịch vụ hiện đang tập trung xử lý tại Trụ sở chính. Nhấn nút &quot;Thêm cơ sở mới&quot; để thêm chi nhánh.
+                <div className="flex flex-col items-center justify-center py-12 text-center col-span-2 space-y-2">
+                  <Building2 className="w-10 h-10 text-slate-400 opacity-60" />
+                  <h4 className="font-semibold text-sm">Chưa có chi nhánh phụ được đăng ký</h4>
+                  <p className="text-xs text-slate-500 max-w-sm">
+                    Tất cả lịch khám và dịch vụ hiện đang tập trung xử lý tại Trụ sở chính.
                   </p>
                 </div>
               ) : (
                 fetchedBranches.map((br: any) => (
-                  <Card key={br.id} className={`${cardBg} rounded-3xl p-6 space-y-4 border hover:border-emerald-500/50 transition`}>
+                  <Card key={br.id} className={`${cardBg} rounded-xl p-4 space-y-3 border hover:border-slate-300 dark:hover:border-slate-700 transition`}>
                     <div className="flex items-center justify-between">
-                      <h4 className={`font-extrabold text-sm ${isLight ? 'text-slate-950' : 'text-white'}`}>{br.name || 'Chi nhánh phụ'}</h4>
-                      <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[11px]">Hoạt động</Badge>
+                      <h4 className={`font-semibold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>{br.name || 'Chi nhánh phụ'}</h4>
+                      <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-normal">Hoạt động</Badge>
                     </div>
-                    <p className={`text-xs flex items-start gap-2 ${isLight ? 'text-slate-800 font-medium' : 'text-slate-300'}`}>
-                      <MapPin className="w-4 h-4 text-[#0c4b39] dark:text-[#66FF33] shrink-0 mt-0.5" />
+                    <p className={`text-xs flex items-start gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                       <span>{br.address}</span>
                     </p>
                     {br.phone && (
-                      <p className="text-xs text-slate-500 font-semibold">Hotline chi nhánh: <strong className="text-slate-950 dark:text-white font-extrabold">{br.phone}</strong></p>
+                      <p className="text-xs text-slate-500 font-normal">Hotline chi nhánh: <strong className="text-slate-800 dark:text-white font-semibold">{br.phone}</strong></p>
                     )}
                   </Card>
                 ))
@@ -1416,24 +1383,24 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
         {/* TAB 4: BÁC SĨ */}
         <TabsContent value="doctors">
-          <Card className={`${cardBg} rounded-3xl p-6 space-y-5 border`}>
+          <Card className={`${cardBg} rounded-xl p-5 space-y-4 border`}>
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b pb-4 border-slate-200 dark:border-slate-800">
               <div>
-                <h3 className={`text-base font-extrabold ${isLight ? 'text-slate-950' : 'text-white'}`}>
+                <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                   Đội ngũ Bác sĩ ({filteredDoctors.length})
                 </h3>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-500 font-normal">
                   Danh sách bác sĩ đang làm việc và nhận lịch khám tại cơ sở này.
                 </p>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <div className="relative flex-1 sm:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <Input
                     placeholder="Tìm theo tên bác sĩ..."
                     value={doctorSearch}
                     onChange={(e) => setDoctorSearch(e.target.value)}
-                    className={`pl-10 text-xs rounded-xl font-semibold ${isLight ? 'bg-white border-slate-300 text-slate-950' : 'bg-slate-900 border-slate-800 text-white'}`}
+                    className={`pl-9 text-xs rounded-xl ${isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
                   />
                 </div>
                 <Button
@@ -1445,19 +1412,19 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                     }));
                     setIsAddDoctorOpen(true);
                   }}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm shrink-0"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl flex items-center gap-1.5 shadow-sm shrink-0"
                 >
-                  <Plus className="w-4 h-4" /> Thêm Bác sĩ mới
+                  <Plus className="w-4 h-4" /> Thêm Bác sĩ
                 </Button>
               </div>
             </div>
 
             {filteredDoctors.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
-                <Users className="w-12 h-12 text-slate-400 opacity-60" />
-                <h4 className="font-extrabold text-sm">Chưa có bác sĩ nào thuộc bệnh viện này</h4>
-                <p className="text-xs font-medium text-slate-500 max-w-sm">
-                  Nhấn nút &quot;Thêm Bác sĩ mới&quot; ở trên để tạo hồ sơ bác sĩ công tác tại bệnh viện này.
+              <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+                <Users className="w-10 h-10 text-slate-400 opacity-60" />
+                <h4 className="font-semibold text-sm">Chưa có bác sĩ nào thuộc bệnh viện này</h4>
+                <p className="text-xs text-slate-500 max-w-sm">
+                  Nhấn nút &quot;Thêm Bác sĩ&quot; ở trên để tạo hồ sơ bác sĩ công tác tại bệnh viện này.
                 </p>
               </div>
             ) : (
@@ -1475,54 +1442,42 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                         setSelectedDoctorForDetail(doc);
                         setIsDoctorDetailOpen(true);
                       }}
-                      className={`p-4 rounded-2xl border ${
+                      className={`p-4 rounded-xl border ${
                         isLight
-                          ? 'bg-slate-50 border-slate-200 hover:border-emerald-500/50 hover:bg-slate-100/80'
-                          : 'bg-slate-900 border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800/80'
-                      } space-y-3 cursor-pointer transition group relative`}
+                          ? 'bg-white border-slate-200 hover:border-slate-300'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                      } space-y-3 cursor-pointer transition`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-[#0c4b39] dark:text-[#66FF33] font-black text-sm flex items-center justify-center shrink-0 border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm flex items-center justify-center shrink-0">
                           {doc.fullName.charAt(0)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            {doc.title && <Badge className="text-[9px] px-1.5 py-0 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20">{doc.title}</Badge>}
-                            <h4 className={`font-extrabold text-xs truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition ${isLight ? 'text-slate-950' : 'text-white'}`}>{doc.fullName}</h4>
+                            {doc.title && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{doc.title}</Badge>}
+                            <h4 className={`font-semibold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{doc.fullName}</h4>
                           </div>
-                          <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold truncate mt-0.5">{doc.qualification || 'Bác sĩ Chuyên khoa'}</p>
-                          <p className="text-[10px] text-slate-500 font-medium">
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">{doc.qualification || 'Bác sĩ Chuyên khoa'}</p>
+                          <p className="text-[10px] text-slate-400">
                             {doc.yearsOfExperience !== undefined ? `${doc.yearsOfExperience} năm kinh nghiệm` : (doc.experience || '5 năm kinh nghiệm')}
                           </p>
                         </div>
                       </div>
 
                       {/* Phân công Chuyên khoa, Cơ sở & Phí khám */}
-                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 space-y-1 text-[11px]">
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1 text-[11px]">
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-500 font-medium flex items-center gap-1">
-                            <Stethoscope className="w-3.5 h-3.5 text-purple-500 shrink-0" /> Chuyên khoa:
-                          </span>
-                          <span className="font-extrabold text-slate-900 dark:text-slate-100">{specName}</span>
+                          <span className="text-slate-400 flex items-center gap-1">Chuyên khoa:</span>
+                          <span className="font-medium text-slate-700 dark:text-slate-300">{specName}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-500 font-medium flex items-center gap-1">
-                            <Building2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Cơ sở:
-                          </span>
-                          <span className="font-bold text-slate-700 dark:text-slate-300">{branchName}</span>
+                          <span className="text-slate-400 flex items-center gap-1">Cơ sở:</span>
+                          <span className="text-slate-600 dark:text-slate-400">{branchName}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-500 font-medium flex items-center gap-1">
-                            <DollarSign className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Giá khám:
-                          </span>
-                          <span className="font-extrabold text-emerald-600 dark:text-emerald-400">{fee}</span>
+                          <span className="text-slate-400 flex items-center gap-1">Giá khám:</span>
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">{fee}</span>
                         </div>
-                      </div>
-
-                      <div className="pt-1 flex justify-end">
-                        <span className="text-[10px] font-bold text-[#0c4b39] dark:text-[#66FF33] group-hover:underline flex items-center gap-1">
-                          <Pencil className="w-3 h-3" /> Xem & Chỉnh sửa
-                        </span>
                       </div>
                     </Card>
                   );
@@ -1534,21 +1489,21 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
         {/* TAB 5: CHUYÊN KHOA */}
         <TabsContent value="specialties">
-          <Card className={`${cardBg} rounded-3xl p-6 border space-y-5`}>
+          <Card className={`${cardBg} rounded-xl p-5 border space-y-4`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4 border-slate-200 dark:border-slate-800">
               <div>
-                <h3 className={`text-base font-extrabold flex items-center gap-2 ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                  <Stethoscope className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <h3 className={`text-sm font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  <Stethoscope className="w-4 h-4 text-emerald-600" />
                   Các Chuyên khoa hoạt động ({activeHospitalSpecialties.length})
                 </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                <p className="text-xs text-slate-500 font-normal mt-0.5">
                   Danh sách chuyên khoa y tế đã gán và đang phục vụ khám chữa bệnh tại cơ sở này.
                 </p>
               </div>
 
               <Button
                 onClick={handleOpenAddSpecialtyModal}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm shrink-0 cursor-pointer"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Thêm Chuyên khoa
               </Button>
@@ -1556,19 +1511,17 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
             {/* Display Active Hospital Specialties */}
             {activeHospitalSpecialties.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+              <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
                 <Stethoscope className="w-10 h-10 text-slate-400 opacity-60" />
-                <p className={`text-xs font-bold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                <p className={`text-xs font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
                   Bệnh viện chưa được gán chuyên khoa nào
-                </p>
-                <p className="text-[11px] text-slate-500 max-w-sm">
-                  Nhấn nút &quot;Thêm Chuyên khoa&quot; bên trên để chọn các chuyên khoa hoạt động cho bệnh viện.
                 </p>
                 <Button
                   onClick={handleOpenAddSpecialtyModal}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 mt-2"
+                  variant="outline"
+                  className="text-xs rounded-xl mt-2"
                 >
-                  <Plus className="w-4 h-4" /> Chọn Chuyên khoa ngay
+                  <Plus className="w-4 h-4 mr-1" /> Chọn Chuyên khoa ngay
                 </Button>
               </div>
             ) : (
@@ -1576,20 +1529,20 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                 {activeHospitalSpecialties.map((spec: any) => (
                   <div
                     key={spec.id}
-                    className={`p-4 rounded-2xl border ${
-                      isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-900/80 border-slate-800'
-                    } flex flex-col justify-between space-y-3 relative group`}
+                    className={`p-4 rounded-xl border ${
+                      isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/50 border-slate-800'
+                    } flex flex-col justify-between space-y-2`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="p-2 rounded-xl bg-purple-600 text-white shrink-0">
+                        <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                           <Stethoscope className="w-4 h-4" />
                         </div>
                         <div>
-                          <h4 className={`font-extrabold text-xs truncate ${isLight ? 'text-slate-950' : 'text-white'}`}>
+                          <h4 className={`font-semibold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
                             {spec.name}
                           </h4>
-                          <p className="text-[10px] text-slate-500 font-medium">Chuyên khoa hoạt động</p>
+                          <p className="text-[10px] text-slate-400">Chuyên khoa hoạt động</p>
                         </div>
                       </div>
 
@@ -1597,7 +1550,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveSpecialty(spec.id)}
-                        className="h-8 w-8 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors shrink-0"
+                        className="h-7 w-7 text-slate-400 hover:text-rose-500 rounded-lg shrink-0"
                         title="Gỡ chuyên khoa"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1605,7 +1558,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                     </div>
 
                     {spec.description && (
-                      <p className={`text-[11px] line-clamp-2 ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+                      <p className={`text-[11px] line-clamp-2 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                         {spec.description}
                       </p>
                     )}
@@ -1618,17 +1571,17 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
         {/* TAB 6: GÓI KHÁM */}
         <TabsContent value="packages">
-          <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-6 border`}>
+          <Card className={`${cardBg} rounded-xl p-5 space-y-4 border`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4 border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-teal-50 text-teal-700 border border-teal-200/60">
-                  <Package className="w-5 h-5" />
+                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Package className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                    Danh sách Gói khám sức khỏe của {hospital.name} ({hospitalPackages.length})
+                  <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                    Danh sách Gói khám ({hospitalPackages.length})
                   </h3>
-                  <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+                  <p className="text-xs text-slate-500">
                     Dữ liệu được đồng bộ trực tiếp với Quản lý Gói khám cấp Hệ thống
                   </p>
                 </div>
@@ -1636,7 +1589,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
               <Button
                 onClick={handleOpenAddPackage}
-                className="bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs rounded-2xl px-5 py-2.5 flex items-center gap-2"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl px-4 py-2 flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" /> Thêm Gói khám mới
               </Button>
@@ -1651,7 +1604,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                   placeholder="Tìm gói khám theo tên..."
                   value={packageSearchFilter}
                   onChange={(e) => setPackageSearchFilter(e.target.value)}
-                  className={`pl-9 text-xs rounded-2xl ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'}`}
+                  className={`pl-9 text-xs rounded-xl ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}
                 />
               </div>
 
@@ -1659,7 +1612,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                 <select
                   value={packageStatusFilter}
                   onChange={(e: any) => setPackageStatusFilter(e.target.value)}
-                  className={`text-xs p-2.5 rounded-2xl border font-bold ${isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+                  className={`text-xs p-2 rounded-xl border ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'}`}
                 >
                   <option value="ALL">Tất cả trạng thái</option>
                   <option value="ACTIVE">Hoạt động</option>
@@ -1670,7 +1623,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
             {loadingPackages ? (
               <div className="p-12 flex justify-center">
-                <Loader2 className="w-8 h-8 text-[#0c4b39] animate-spin" />
+                <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
               </div>
             ) : (() => {
               const filteredList = hospitalPackages.filter((pkg: any) => {
@@ -1686,15 +1639,8 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
               if (filteredList.length === 0) {
                 return (
-                  <div className="text-center py-12 space-y-3">
-                    <Package className="w-12 h-12 text-slate-400 mx-auto" />
-                    <p className="text-xs font-bold text-slate-500">Chưa có gói khám phù hợp với tìm kiếm.</p>
-                    <Button
-                      onClick={handleOpenAddPackage}
-                      className="bg-[#0c4b39] text-white text-xs font-bold rounded-xl"
-                    >
-                      <Plus className="w-4 h-4 mr-1" /> Thêm Gói khám
-                    </Button>
+                  <div className="p-8 text-center text-slate-400 text-xs">
+                    Không tìm thấy gói khám nào phù hợp.
                   </div>
                 );
               }
@@ -1702,116 +1648,80 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
               return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredList.map((pkg: any) => {
-                    const parsedServices = Array.isArray(pkg.services)
+                    const servicesList = Array.isArray(pkg.services)
                       ? pkg.services
                       : typeof pkg.services === 'string'
-                      ? JSON.parse(pkg.services)
+                      ? JSON.parse(pkg.services || '[]')
                       : [];
 
                     return (
                       <div
                         key={pkg.id}
-                        className={`p-5 rounded-2xl border ${
-                          isLight ? 'bg-slate-50/80 border-slate-200 hover:border-slate-300' : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-                        } transition-all space-y-3 flex flex-col justify-between`}
+                        className={`border rounded-xl p-4 flex flex-col justify-between space-y-3 ${
+                          isLight ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-slate-900 border-slate-800'
+                        } transition`}
                       >
                         <div className="space-y-2">
                           <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border bg-white flex items-center justify-center">
-                                {pkg.thumbnailUrl ? (
-                                  <img src={pkg.thumbnailUrl} alt={pkg.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <Package className="w-5 h-5 text-[#0c4b39]" />
-                                )}
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                                <Package className="w-4 h-4 text-emerald-700" />
                               </div>
-                              <div>
-                                <h4 className={`font-black text-sm line-clamp-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                              <div className="min-w-0">
+                                <h4 className="font-semibold text-xs truncate" title={pkg.name}>
                                   {pkg.name}
                                 </h4>
-                                {pkg.specialty && (
-                                  <span className="text-[11px] text-purple-600 dark:text-purple-400 font-bold block">
-                                    🩺 {pkg.specialty.name}
-                                  </span>
-                                )}
+                                <p className="text-[11px] text-slate-400">{pkg.specialty?.name || 'Đa khoa'}</p>
                               </div>
                             </div>
-                            <button
-                              onClick={() => handleTogglePackageStatus(pkg)}
-                              title="Bấm để bật/tắt trạng thái"
-                              className="cursor-pointer"
-                            >
-                              <Badge className={pkg.isActive ? 'bg-emerald-600 text-white text-[10px]' : 'bg-rose-600 text-white text-[10px]'}>
-                                {pkg.isActive ? 'Hoạt động' : 'Ngưng'}
-                              </Badge>
-                            </button>
+                            <Badge className={pkg.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]' : 'bg-rose-50 text-rose-700 border-rose-200 text-[10px]'}>
+                              {pkg.isActive ? 'Hoạt động' : 'Tạm ngưng'}
+                            </Badge>
                           </div>
 
-                          <p className="text-xs text-slate-500 line-clamp-2">{pkg.description || 'Chưa có mô tả chi tiết.'}</p>
-
-                          <div className="pt-2 flex items-center justify-between border-t border-slate-200/60 dark:border-slate-800">
-                            <div>
-                              <span className="text-base font-black text-emerald-600 dark:text-[#66FF33]">
-                                {Number(pkg.price || 0).toLocaleString('vi-VN')}đ
-                              </span>
-                              {pkg.originalPrice && Number(pkg.originalPrice) > Number(pkg.price) && (
-                                <span className="text-[11px] text-slate-400 line-through ml-2">
-                                  {Number(pkg.originalPrice).toLocaleString('vi-VN')}đ
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-blue-500" /> {pkg.duration || 60}p
+                          <div className="flex items-baseline gap-2 pt-1">
+                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                              {Number(pkg.price || 0).toLocaleString('vi-VN')} đ
                             </span>
+                            {pkg.originalPrice && Number(pkg.originalPrice) > Number(pkg.price) && (
+                              <span className="text-xs text-slate-400 line-through">
+                                {Number(pkg.originalPrice).toLocaleString('vi-VN')} đ
+                              </span>
+                            )}
                           </div>
+
+                          {servicesList.length > 0 && (
+                            <div className="text-[11px] text-slate-500 pt-1">
+                              <span>Bao gồm {servicesList.length} dịch vụ chi tiết</span>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-2">
-                          <div className="flex items-center justify-between text-[11px] text-slate-500">
-                            <span>{parsedServices.length} dịch vụ đi kèm</span>
-                            <span className="text-[10px] text-slate-400">{pkg.estimatedResultTime || 'Trả KQ trong ngày'}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-1 pt-1">
-                            <div className="flex items-center gap-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenViewPackage(pkg)}
-                                className="h-7 text-[11px] rounded-lg px-2 text-slate-600 border-slate-200 hover:bg-slate-100 flex items-center gap-1"
-                                title="Xem chi tiết"
-                              >
-                                <Eye className="w-3 h-3 text-blue-600" /> Xem
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenEditPackage(pkg)}
-                                className="h-7 text-[11px] rounded-lg px-2 text-slate-600 border-slate-200 hover:bg-slate-100 flex items-center gap-1"
-                                title="Sửa gói khám"
-                              >
-                                <Pencil className="w-3 h-3 text-amber-600" /> Sửa
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeletePackage(pkg)}
-                                className="h-7 text-[11px] rounded-lg px-2 text-rose-600 border-rose-200 hover:bg-rose-50 flex items-center gap-1"
-                                title="Xóa gói khám"
-                              >
-                                <Trash2 className="w-3 h-3 text-rose-600" /> Xóa
-                              </Button>
-                            </div>
-
-                            <Button
-                              asChild
-                              variant="ghost"
-                              size="sm"
-                              className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 p-0 h-auto"
-                            >
-                              <Link href="/admin/health-packages">Quản lý →</Link>
-                            </Button>
-                          </div>
+                        <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenViewPackage(pkg)}
+                            className="h-7 px-2 text-xs"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" /> Chi tiết
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEditPackage(pkg)}
+                            className="h-7 px-2 text-xs"
+                          >
+                            <Pencil className="w-3.5 h-3.5 mr-1" /> Sửa
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeletePackage(pkg)}
+                            className="h-7 px-2 text-xs text-rose-500 hover:text-rose-700"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
                         </div>
                       </div>
                     );
@@ -1823,94 +1733,92 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
         </TabsContent>
 
         {/* TAB 7: DỊCH VỤ Y TẾ LẺ */}
-        <TabsContent value="services" className="space-y-6">
+        <TabsContent value="services" className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className={`text-base font-extrabold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                <Activity className="w-5 h-5 text-emerald-600 dark:text-[#66FF33]" />
+              <h3 className={`text-sm font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                <Activity className="w-4 h-4 text-emerald-600" />
                 Dịch vụ Y tế lẻ niêm yết ({hospitalMedicalServices.length})
               </h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Các dịch vụ khám lẻ do bệnh viện {hospital.name} trực tiếp cung cấp
               </p>
             </div>
 
             <Button
               onClick={handleOpenAddService}
-              className="bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs rounded-2xl px-4 py-2 flex items-center gap-2 shadow-sm"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl px-4 py-2 flex items-center gap-1.5 shadow-sm"
             >
               <Plus className="w-4 h-4" /> Thêm Dịch vụ mới
             </Button>
           </div>
 
-          <Card className={`${cardBg} rounded-3xl p-6 border`}>
+          <Card className={`${cardBg} rounded-xl p-5 border`}>
             {hospitalMedicalServices.length === 0 ? (
-              <div className="py-12 text-center space-y-3">
-                <Activity className="w-10 h-10 text-slate-400 mx-auto" />
-                <p className="text-xs font-bold text-slate-500">Bệnh viện chưa niêm yết dịch vụ y tế lẻ nào.</p>
-                <Button onClick={handleOpenAddService} className="bg-[#0c4b39] text-white text-xs font-bold rounded-xl">
+              <div className="py-12 text-center space-y-2">
+                <Activity className="w-10 h-10 text-slate-400 mx-auto opacity-60" />
+                <p className="text-xs text-slate-500">Bệnh viện chưa niêm yết dịch vụ y tế lẻ nào.</p>
+                <Button onClick={handleOpenAddService} variant="outline" className="text-xs rounded-xl">
                   <Plus className="w-4 h-4 mr-1" /> Thêm Dịch vụ đầu tiên
                 </Button>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse">
+                <table className="w-full text-xs text-left">
                   <thead>
-                    <tr className={`border-b font-extrabold text-[11px] uppercase tracking-wider ${
+                    <tr className={`border-b text-xs font-semibold ${
                       isLight ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-slate-900/60 text-slate-400 border-slate-800'
                     }`}>
-                      <th className="p-3.5 rounded-l-2xl">Tên Dịch vụ & Mô tả</th>
-                      <th className="p-3.5">Đơn giá (VNĐ)</th>
-                      <th className="p-3.5">Thời gian thực hiện</th>
-                      <th className="p-3.5">Trạng thái</th>
-                      <th className="p-3.5 text-right rounded-r-2xl">Thao tác</th>
+                      <th className="p-3">Tên Dịch vụ & Mô tả</th>
+                      <th className="p-3">Đơn giá (VNĐ)</th>
+                      <th className="p-3">Thời gian</th>
+                      <th className="p-3">Trạng thái</th>
+                      <th className="p-3 text-right">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {hospitalMedicalServices.map((srv: any) => (
-                      <tr key={srv.id} className={`transition ${isLight ? 'hover:bg-slate-50/80' : 'hover:bg-slate-900/40'}`}>
-                        <td className="p-3.5 max-w-xs">
-                          <div className="space-y-0.5">
-                            <span className="font-extrabold text-sm text-slate-900 dark:text-white block">{srv.name}</span>
-                            <p className="text-[11px] text-slate-500 line-clamp-2">{srv.description || 'Chưa có mô tả chi tiết.'}</p>
-                          </div>
+                      <tr key={srv.id} className={`transition ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-900/40'}`}>
+                        <td className="p-3 max-w-xs">
+                          <span className="font-semibold text-slate-900 dark:text-white block">{srv.name}</span>
+                          <p className="text-[11px] text-slate-400 line-clamp-1">{srv.description || 'Chưa có mô tả chi tiết.'}</p>
                         </td>
 
-                        <td className="p-3.5 font-black text-sm text-emerald-600 dark:text-[#66FF33]">
-                          {Number(srv.price || 0).toLocaleString('vi-VN')} VNĐ
+                        <td className="p-3 font-semibold text-emerald-600 dark:text-emerald-400">
+                          {Number(srv.price || 0).toLocaleString('vi-VN')} đ
                         </td>
 
-                        <td className="p-3.5 font-semibold text-slate-600 dark:text-slate-300">
-                          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-blue-500" /> {srv.duration || 30} phút</span>
+                        <td className="p-3 text-slate-500">
+                          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" /> {srv.duration || 30} phút</span>
                         </td>
 
-                        <td className="p-3.5">
+                        <td className="p-3">
                           <button onClick={() => handleToggleServiceStatus(srv)} title="Bấm để đổi trạng thái" className="cursor-pointer">
-                            <Badge className={srv.isActive ? 'bg-emerald-600 text-white text-[10px]' : 'bg-rose-600 text-white text-[10px]'}>
+                            <Badge className={srv.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]' : 'bg-rose-50 text-rose-700 border-rose-200 text-[10px]'}>
                               {srv.isActive ? 'Đang cung cấp' : 'Tạm ngưng'}
                             </Badge>
                           </button>
                         </td>
 
-                        <td className="p-3.5 text-right">
+                        <td className="p-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleOpenEditService(srv)}
-                              className="h-7 px-2 text-[11px] rounded-lg text-slate-600 border-slate-200 hover:bg-slate-100"
+                              className="h-7 px-2 text-[11px] rounded-lg"
                               title="Sửa dịch vụ"
                             >
-                              <Pencil className="w-3 h-3 text-amber-600" />
+                              <Pencil className="w-3 h-3" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleDeleteService(srv)}
-                              className="h-7 px-2 text-[11px] rounded-lg text-rose-600 border-rose-200 hover:bg-rose-50"
+                              className="h-7 px-2 text-[11px] rounded-lg text-rose-500 hover:text-rose-700"
                               title="Xóa dịch vụ"
                             >
-                              <Trash2 className="w-3 h-3 text-rose-600" />
+                              <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>
                         </td>
@@ -1925,27 +1833,22 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
         {/* TAB 8: NHẬT KÝ */}
         <TabsContent value="logs">
-          <Card className={`${cardBg} rounded-3xl p-6 sm:p-8 space-y-6 border`}>
+          <Card className={`${cardBg} rounded-xl p-5 space-y-4 border`}>
             <div className="flex items-center justify-between border-b pb-4 border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-rose-50 text-rose-700 border border-rose-200/60">
-                  <History className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`text-base font-black ${isLight ? 'text-slate-950' : 'text-white'}`}>Nhật ký hoạt động & Thay đổi hệ thống</h3>
-                  <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Lịch sử tác động của Admin & Hệ thống số hóa</p>
-                </div>
+              <div>
+                <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>Nhật ký hoạt động & Thay đổi hệ thống</h3>
+                <p className="text-xs text-slate-500">Lịch sử tác động của Admin & Hệ thống số hóa</p>
               </div>
             </div>
 
-            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
+            <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
               {displayAuditLogs.map((log: any, idx: number) => (
                 <div key={log.id || idx} className="relative group">
-                  <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-[#0c4b39] dark:bg-[#66FF33] border-2 border-white dark:border-slate-950 shadow-sm" />
-                  <div className={`p-4 rounded-2xl border ${tileBg} space-y-2`}>
+                  <div className="absolute -left-6 top-1.5 w-2.5 h-2.5 rounded-full bg-emerald-600 border-2 border-white dark:border-slate-950" />
+                  <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-1">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                       <div className="flex items-center gap-2">
-                        <Badge className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 font-mono text-[10px] uppercase">
+                        <Badge variant="outline" className="text-[10px] uppercase font-mono">
                           {log.action || 'SYSTEM_ACTION'}
                         </Badge>
                         <span className="text-xs font-black">{log.actor || log.user?.fullName || 'Hệ thống Admin'}</span>
@@ -1972,7 +1875,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
       {/* MODAL 1: THÊM CƠ SỞ / CHI NHÁNH MỚI */}
       {/* ========================================== */}
       <Dialog open={isAddBranchOpen} onOpenChange={setIsAddBranchOpen}>
-        <DialogContent className={`max-w-md p-6 rounded-3xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
+        <DialogContent className={`max-w-md p-6 rounded-xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
           <DialogHeader>
             <DialogTitle className="text-base font-extrabold flex items-center gap-2">
               <Building2 className="w-5 h-5 text-emerald-600" />
@@ -2065,63 +1968,63 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
       {/* MODAL 2: THÊM BÁC SĨ CHO BỆNH VIỆN */}
       {/* ========================================== */}
       <Dialog open={isAddDoctorOpen} onOpenChange={setIsAddDoctorOpen}>
-        <DialogContent className={`max-w-2xl p-6 sm:p-8 rounded-3xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
-          <DialogHeader className="border-b pb-4 border-slate-200 dark:border-slate-800">
-            <DialogTitle className="text-lg font-black flex items-center gap-2.5">
-              <div className="p-2.5 rounded-2xl bg-[#0c4b39]/10 text-[#0c4b39] dark:text-[#66FF33]">
-                <Users className="w-5 h-5" />
+        <DialogContent className={`max-w-2xl p-6 rounded-xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
+          <DialogHeader className="border-b pb-3 border-slate-200 dark:border-slate-800">
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <Users className="w-4 h-4" />
               </div>
               Phân Công / Thêm Bác Sĩ Cho Bệnh Viện
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 font-medium">
-              Thêm bác sĩ công tác tại bệnh viện <strong className="text-slate-900 dark:text-white font-bold">{hospital.name}</strong>.
+            <DialogDescription className="text-xs text-slate-500">
+              Thêm bác sĩ công tác tại bệnh viện <strong className="text-slate-800 dark:text-white font-medium">{hospital.name}</strong>.
             </DialogDescription>
 
             {/* TAB SELECTOR FOR OPTION 1 & OPTION 2 */}
-            <div className={`mt-3 p-1 rounded-2xl border flex items-center gap-1 ${isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+            <div className={`mt-3 p-1 rounded-xl border flex items-center gap-1 ${isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
               <button
                 type="button"
                 onClick={() => setAddDoctorTabMode('EXISTING')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                   addDoctorTabMode === 'EXISTING'
-                    ? 'bg-[#0c4b39] text-white shadow'
+                    ? 'bg-emerald-700 text-white shadow-sm'
                     : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Search className="w-3.5 h-3.5" /> 1. Chọn Bác sĩ đã có
+                <Search className="w-3.5 h-3.5" /> Chọn Bác sĩ đã có
               </button>
               <button
                 type="button"
                 onClick={() => setAddDoctorTabMode('NEW')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                   addDoctorTabMode === 'NEW'
-                    ? 'bg-[#0c4b39] text-white shadow'
+                    ? 'bg-emerald-700 text-white shadow-sm'
                     : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Plus className="w-3.5 h-3.5" /> 2. Tạo Bác sĩ mới
+                <Plus className="w-3.5 h-3.5" /> Tạo Bác sĩ mới
               </button>
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleAddDoctor} className="space-y-6 py-4 max-h-[70vh] overflow-y-auto pr-2">
+          <form onSubmit={handleAddDoctor} className="space-y-4 py-3 max-h-[70vh] overflow-y-auto pr-2">
             {/* OPTION 1: CHỌN BÁC SĨ ĐÃ CÓ TRONG HỆ THỐNG */}
             {addDoctorTabMode === 'EXISTING' && (
-              <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-wider text-[#0c4b39] dark:text-[#66FF33] flex items-center gap-2 border-b pb-2 border-slate-200 dark:border-slate-800">
-                  <Search className="w-4 h-4" /> เลือก Chọn bác sĩ từ cơ sở dữ liệu hệ thống
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 border-b pb-2 border-slate-200 dark:border-slate-800">
+                  <Search className="w-3.5 h-3.5" /> Chọn bác sĩ từ cơ sở dữ liệu hệ thống
                 </h4>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-extrabold block">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium block">
                     Tìm & Chọn Bác sĩ *
                   </label>
                   <select
                     required
                     value={selectedExistingDoctorId}
                     onChange={(e) => setSelectedExistingDoctorId(e.target.value)}
-                    className={`w-full text-xs rounded-xl p-3 font-bold border ${
-                      isLight ? 'bg-slate-50 border-slate-300 text-slate-950' : 'bg-slate-900 border-slate-800 text-white'
+                    className={`w-full text-xs rounded-xl p-2.5 border ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
                     <option value="">-- Click để chọn Bác sĩ trong hệ thống --</option>
@@ -2135,14 +2038,14 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
                 {/* DUPLICATE WARNING ALERT */}
                 {selectedExistingDoctor && isAlreadyInHospital && (
-                  <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-700 dark:text-rose-400 font-bold text-xs flex items-center gap-2">
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-                    <span>⚠️ Bác sĩ <strong>{selectedExistingDoctor.fullName}</strong> đã được thêm vào bệnh viện này. Vui lòng chọn bác sĩ khác.</span>
+                    <span>Bác sĩ <strong>{selectedExistingDoctor.fullName}</strong> đã được thêm vào bệnh viện này. Vui lòng chọn bác sĩ khác.</span>
                   </div>
                 )}
 
                 {selectedExistingDoctor && !isAlreadyInHospital && (
-                  <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center gap-2">
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>Bác sĩ <strong>{selectedExistingDoctor.fullName}</strong> hợp lệ để thêm vào bệnh viện này.</span>
                   </div>
@@ -2153,8 +2056,8 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
             {/* OPTION 2: TẠO BÁC SĨ MỚI */}
             {addDoctorTabMode === 'NEW' && (
               <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-wider text-[#0c4b39] dark:text-[#66FF33] flex items-center gap-2 border-b pb-2 border-slate-200 dark:border-slate-800">
-                  <Users className="w-4 h-4" /> 1. Thông tin cá nhân bác sĩ mới
+                <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 border-b pb-2 border-slate-200 dark:border-slate-800">
+                  <Users className="w-3.5 h-3.5" /> 1. Thông tin cá nhân bác sĩ mới
                 </h4>
 
                 {/* Chức danh & Họ và tên */}
@@ -2357,9 +2260,9 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                   id="isPrimaryWorkplace"
                   checked={doctorForm.isPrimary}
                   onChange={(e) => setDoctorForm({ ...doctorForm, isPrimary: e.target.checked })}
-                  className="w-4 h-4 text-[#0c4b39] rounded cursor-pointer"
+                  className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
                 />
-                <label htmlFor="isPrimaryWorkplace" className="text-xs font-extrabold cursor-pointer select-none">
+                <label htmlFor="isPrimaryWorkplace" className="text-xs font-semibold cursor-pointer select-none">
                   Đặt làm nơi công tác chính của bác sĩ
                 </label>
               </div>
@@ -2371,14 +2274,14 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddDoctorOpen(false)}
-                className="text-xs rounded-xl font-extrabold px-5 py-2"
+                className="text-xs rounded-xl font-medium px-4 py-2"
               >
                 Hủy
               </Button>
               <Button
                 type="submit"
                 disabled={submittingDoctor || (addDoctorTabMode === 'EXISTING' && (!selectedExistingDoctorId || isAlreadyInHospital))}
-                className="bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs rounded-xl px-6 py-2 shadow-md flex items-center gap-2 disabled:opacity-50"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl px-5 py-2 shadow-sm flex items-center gap-2 disabled:opacity-50"
               >
                 {submittingDoctor ? <Loader2 className="w-4 h-4 animate-spin" /> : (addDoctorTabMode === 'EXISTING' ? 'Phân công bác sĩ' : 'Tạo bác sĩ mới')}
               </Button>
@@ -2389,7 +2292,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
       {/* MODAL 3: THÊM CHUYÊN KHOA CHO BỆNH VIỆN */}
       <Dialog open={isAddSpecialtyOpen} onOpenChange={setIsAddSpecialtyOpen}>
-        <DialogContent className={`max-w-2xl rounded-3xl p-6 ${cardBg}`}>
+        <DialogContent className={`max-w-2xl rounded-xl p-6 ${cardBg}`}>
           <DialogHeader>
             <DialogTitle className="text-base font-extrabold flex items-center gap-2">
               <Stethoscope className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -2529,10 +2432,10 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
       {/* MODAL 5: THÊM / SỬA GÓI KHÁM (Khóa Hospital) */}
       {/* ========================================== */}
       <Dialog open={isAddPackageOpen} onOpenChange={setIsAddPackageOpen}>
-        <DialogContent className={`max-w-md p-6 rounded-3xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
+        <DialogContent className={`max-w-md p-6 rounded-xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
           <DialogHeader>
-            <DialogTitle className="text-base font-black flex items-center gap-2">
-              <Package className="w-5 h-5 text-[#0c4b39] dark:text-[#66FF33]" />
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Package className="w-5 h-5 text-emerald-600" />
               {editingPackage ? 'Chỉnh sửa Gói Khám Sức Khỏe' : 'Thêm Gói Khám Mới cho Bệnh viện'}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
@@ -2637,7 +2540,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
               <Button
                 type="submit"
                 disabled={submittingPackage}
-                className="bg-[#0c4b39] hover:bg-[#083629] text-white text-xs font-extrabold rounded-xl px-5"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium rounded-xl px-4 py-2"
               >
                 {submittingPackage ? <Loader2 className="w-4 h-4 animate-spin" /> : editingPackage ? 'Lưu cập nhật' : 'Tạo Gói khám'}
               </Button>
@@ -2650,7 +2553,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
       {/* MODAL 6: XEM CHI TIẾT GÓI KHÁM */}
       {/* ========================================== */}
       <Dialog open={isViewPackageOpen} onOpenChange={setIsViewPackageOpen}>
-        <DialogContent className={`max-w-lg p-6 rounded-3xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
+        <DialogContent className={`max-w-lg p-6 rounded-xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
           {viewingPackage && (() => {
             const parsedServices = Array.isArray(viewingPackage.services)
               ? viewingPackage.services
@@ -2662,8 +2565,8 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
               <div className="space-y-4">
                 <DialogHeader className="border-b pb-3">
                   <div className="flex items-center justify-between">
-                    <DialogTitle className="text-base font-black flex items-center gap-2">
-                      <Package className="w-5 h-5 text-[#0c4b39] dark:text-[#66FF33]" />
+                    <DialogTitle className="text-base font-bold flex items-center gap-2">
+                      <Package className="w-5 h-5 text-emerald-600" />
                       Chi tiết Gói Khám Sức Khỏe
                     </DialogTitle>
                     <Badge className={viewingPackage.isActive ? 'bg-emerald-600 text-white text-[10px]' : 'bg-rose-600 text-white text-[10px]'}>
@@ -2768,10 +2671,10 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
       {/* MODAL 7: THÊM / SỬA DỊCH VỤ Y TẾ LẺ */}
       {/* ========================================== */}
       <Dialog open={isAddServiceOpen} onOpenChange={setIsAddServiceOpen}>
-        <DialogContent className={`max-w-md p-6 rounded-3xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
+        <DialogContent className={`max-w-md p-6 rounded-xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
           <DialogHeader>
-            <DialogTitle className="text-base font-black flex items-center gap-2">
-              <Activity className="w-5 h-5 text-[#0c4b39] dark:text-[#66FF33]" />
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Activity className="w-5 h-5 text-emerald-600" />
               {editingService ? 'Chỉnh sửa Dịch vụ Y tế' : 'Thêm Dịch vụ Y tế mới'}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
@@ -2780,7 +2683,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
           </DialogHeader>
 
           {serviceFormError && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{serviceFormError}</span>
             </div>
@@ -2788,7 +2691,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
           <form onSubmit={handleSaveHospitalService} className="space-y-3.5 py-1">
             <div>
-              <label className="text-xs font-bold mb-1 block">Tên dịch vụ *</label>
+              <label className="text-xs font-medium mb-1 block">Tên dịch vụ *</label>
               <Input
                 required
                 placeholder="Ví dụ: Khám Nội tổng quát, Siêu âm ổ bụng..."
@@ -2800,7 +2703,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold mb-1 block">Giá dịch vụ (VNĐ) *</label>
+                <label className="text-xs font-medium mb-1 block">Giá dịch vụ (VNĐ) *</label>
                 <Input
                   type="number"
                   required
@@ -2808,12 +2711,12 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                   placeholder="150000"
                   value={serviceForm.price}
                   onChange={(e) => setServiceForm({ ...serviceForm, price: parseFloat(e.target.value) || 0 })}
-                  className={`text-xs rounded-xl font-black text-emerald-600 ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-slate-900 border-slate-800'}`}
+                  className={`text-xs rounded-xl font-bold text-emerald-600 ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-slate-900 border-slate-800'}`}
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold mb-1 block">Thời lượng (Phút) *</label>
+                <label className="text-xs font-medium mb-1 block">Thời lượng (Phút) *</label>
                 <Input
                   type="number"
                   required
@@ -2827,7 +2730,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
             </div>
 
             <div>
-              <label className="text-xs font-bold mb-1 block">Mô tả dịch vụ</label>
+              <label className="text-xs font-medium mb-1 block">Mô tả dịch vụ</label>
               <textarea
                 rows={3}
                 placeholder="Mô tả quy trình, lợi ích hoặc yêu cầu của dịch vụ..."
@@ -2847,7 +2750,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                 onChange={(e) => setServiceForm({ ...serviceForm, isActive: e.target.checked })}
                 className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
               />
-              <label htmlFor="isActiveHospServiceCheck" className="text-xs font-bold cursor-pointer">
+              <label htmlFor="isActiveHospServiceCheck" className="text-xs font-medium cursor-pointer">
                 Đang mở cung cấp dịch vụ này
               </label>
             </div>
@@ -2857,14 +2760,14 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddServiceOpen(false)}
-                className="text-xs rounded-xl font-bold"
+                className="text-xs rounded-xl font-medium"
               >
                 Hủy bỏ
               </Button>
               <Button
                 type="submit"
                 disabled={submittingService}
-                className="bg-[#0c4b39] hover:bg-[#083629] text-white text-xs font-extrabold rounded-xl px-5"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium rounded-xl px-5"
               >
                 {submittingService ? <Loader2 className="w-4 h-4 animate-spin" /> : editingService ? 'Cập nhật dịch vụ' : 'Tạo Dịch vụ'}
               </Button>

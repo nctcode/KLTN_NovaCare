@@ -83,7 +83,8 @@ export interface AdminUserItem {
   createdAt: string;
   lastLogin: string;
   status: AccountStatus;
-  role: 'PATIENT' | 'ADMIN' | 'HOSPITAL_STAFF';
+  role: 'PATIENT' | 'ADMIN' | 'HOSPITAL_ADMIN' | string;
+  hospital?: { id: string; name: string };
   totalBookings: number;
   hasPendingBooking: boolean;
   avatarUrl?: string;

@@ -26,6 +26,7 @@ import { HealthPackagesModule } from '@/modules/health-packages/health-packages.
 import { AdminModule } from '@/modules/admin/admin.module';
 import { ClinicalModule } from '@/modules/clinical/clinical.module';
 import { IntegrationModule } from '@/modules/integration/integration.module';
+import { HospitalAdminModule } from '@/modules/hospital-admin/hospital-admin.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { IntegrationModule } from '@/modules/integration/integration.module';
     AdminModule,
     ClinicalModule,
     IntegrationModule,
+    HospitalAdminModule,
   ],
 })
 export class AppModule {}

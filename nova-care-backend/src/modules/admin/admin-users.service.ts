@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { AuditLogService } from '@/common/services/audit-log.service';
 import { Role } from '@prisma/client';
+import * as argon2 from 'argon2';
+import { CreateHospitalAdminDto } from './dto/create-hospital-admin.dto';
 
 @Injectable()
 export class AdminUsersService {
@@ -23,7 +25,7 @@ export class AdminUsersService {
 
     const where: any = {
       deletedAt: null,
-      role: params.role || Role.PATIENT,
+      ...(params.role ? { role: params.role } : {}),
     };
 
     if (params.isActive !== undefined) {
@@ -51,6 +53,10 @@ export class AdminUsersService {
           fullName: true,
           role: true,
           isActive: true,
+          hospitalId: true,
+          hospital: {
+            select: { id: true, name: true },
+          },
           lastLoginAt: true,
           createdAt: true,
           patientProfiles: true,
@@ -69,6 +75,72 @@ export class AdminUsersService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async createHospitalAdmin(
+    dto: CreateHospitalAdminDto,
+    adminUserId: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    // 1. Kiểm tra bệnh viện có tồn tại không
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: dto.hospitalId },
+    });
+    if (!hospital) {
+      throw new NotFoundException('Cơ sở y tế không tồn tại');
+    }
+
+    // 2. Kiểm tra email đã được đăng ký chưa
+    const existingEmail = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (existingEmail) {
+      throw new ConflictException('Email này đã được sử dụng trong hệ thống');
+    }
+
+    // 3. Hash mật khẩu
+    const passwordHash = await argon2.hash(dto.password);
+
+    // 4. Tạo User role HOSPITAL_ADMIN
+    const newUser = await this.prisma.user.create({
+      data: {
+        fullName: dto.fullName?.trim() || `Quản Trị Viện - ${hospital.name}`,
+        email: dto.email,
+        phone: dto.phone || null,
+        passwordHash,
+        role: Role.HOSPITAL_ADMIN,
+        hospitalId: dto.hospitalId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        role: true,
+        hospitalId: true,
+        hospital: { select: { id: true, name: true } },
+        createdAt: true,
+      },
+    });
+
+    // 5. Audit Log
+    await this.auditLogService.logAction({
+      userId: adminUserId,
+      action: 'CREATE_HOSPITAL_ADMIN',
+      entityType: 'User',
+      entityId: newUser.id,
+      newValue: {
+        email: newUser.email,
+        role: newUser.role,
+        hospitalId: newUser.hospitalId,
+      },
+      ipAddress,
+      userAgent,
+    });
+
+    return newUser;
   }
 
   async findOne(id: string) {

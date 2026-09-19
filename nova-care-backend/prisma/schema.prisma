@@ -19,6 +19,7 @@ enum Gender {
 enum Role {
   PATIENT
   ADMIN
+  HOSPITAL_ADMIN
 }
 
 enum AppointmentStatus {
@@ -137,6 +138,8 @@ model User {
   auditLogs        AuditLog[]
   preExamSessions  PreExamSession[]
   medicalPassport  MedicalPassport?
+  hospitalId       String?
+  hospital         Hospital?        @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
@@ -371,6 +374,8 @@ model Hospital {
   status           PartnershipStatus @default(ACTIVE)
   rating           Float             @default(0)
   reviewCount      Int               @default(0)
+  externalId       String?           @unique
+  source           DataSource        @default(MANUAL)
   isActive         Boolean           @default(true)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -385,6 +390,7 @@ model Hospital {
   patientLinks        PatientHospitalLink[]
   sourceConsents      PatientConsent[]        @relation("SourceHospitalConsents")
   targetConsents      PatientConsent[]        @relation("TargetHospitalConsents")
+  users               User[]
 
   @@map("hospitals")
 }

@@ -158,6 +158,58 @@ export const adminService = {
     return extractData(response);
   },
 
+  // Appointment Slots (Khung giờ khám theo ngày - Chuẩn Medpro)
+  async getAppointmentSlots(params?: {
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    doctorWorkplaceId?: string;
+    doctorId?: string;
+    hospitalId?: string;
+    specialtyId?: string;
+    isActive?: string;
+    isAvailable?: string;
+    search?: string;
+  }): Promise<any> {
+    const query = new URLSearchParams();
+    if (params?.date) query.append('date', params.date);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.doctorWorkplaceId) query.append('doctorWorkplaceId', params.doctorWorkplaceId);
+    if (params?.doctorId) query.append('doctorId', params.doctorId);
+    if (params?.hospitalId) query.append('hospitalId', params.hospitalId);
+    if (params?.specialtyId) query.append('specialtyId', params.specialtyId);
+    if (params?.isActive !== undefined && params?.isActive !== '') query.append('isActive', params.isActive);
+    if (params?.isAvailable !== undefined && params?.isAvailable !== '') query.append('isAvailable', params.isAvailable);
+    if (params?.search) query.append('search', params.search);
+
+    const response = await apiClient.get<any>(`/appointment-slots?${query.toString()}`);
+    return extractData(response);
+  },
+
+  async generateAppointmentSlots(data: {
+    doctorId?: string;
+    doctorWorkplaceId?: string;
+    hospitalId?: string;
+    startDate: string;
+    endDate: string;
+    slotDuration?: number;
+    capacity?: number;
+  }): Promise<any> {
+    const response = await apiClient.post<any>('/appointment-slots/generate', data);
+    return extractData(response);
+  },
+
+  async updateAppointmentSlot(slotId: string, data: { capacity?: number; isAvailable?: boolean; isActive?: boolean }): Promise<any> {
+    const response = await apiClient.patch<any>(`/appointment-slots/${slotId}`, data);
+    return extractData(response);
+  },
+
+  async deleteAppointmentSlot(slotId: string): Promise<any> {
+    const response = await apiClient.delete<any>(`/appointment-slots/${slotId}`);
+    return extractData(response);
+  },
+
   // Payments
   async getPayments(params?: PaginationParams): Promise<any> {
     const query = new URLSearchParams();
@@ -413,6 +465,18 @@ export const adminService = {
 
   async deleteSpecialty(id: string): Promise<any> {
     const response = await apiClient.delete<any>(`/admin/specialties/${id}`);
+    return extractData(response);
+  },
+
+  // Hospital Admin Creation
+  async createHospitalAdmin(data: {
+    fullName: string;
+    email: string;
+    password: string;
+    phone?: string;
+    hospitalId: string;
+  }): Promise<any> {
+    const response = await apiClient.post<any>('/admin/users/hospital-admin', data);
     return extractData(response);
   },
 };

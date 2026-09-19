@@ -109,13 +109,12 @@ export function Step8Slot({ onNext, onBack }: Step8SlotProps) {
                         type="button"
                         disabled={isFull}
                         onClick={() => handleSelectSlot(slot)}
-                        className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all duration-200 text-center cursor-pointer relative ${
-                          isFull
+                        className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all duration-200 text-center cursor-pointer relative ${isFull
                             ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
                             : isSelected
-                            ? 'bg-[#0c4b39] border-[#0c4b39] text-white shadow-md shadow-emerald-100 font-extrabold scale-[1.03]'
-                            : 'bg-white hover:bg-emerald-50/50 border-gray-200 text-secondary hover:border-[#0c4b39]/40'
-                        }`}
+                              ? 'bg-[#0c4b39] border-[#0c4b39] text-white shadow-md shadow-emerald-100 font-extrabold scale-[1.03]'
+                              : 'bg-white hover:bg-emerald-50/50 border-gray-200 text-secondary hover:border-[#0c4b39]/40'
+                          }`}
                       >
                         {formattedTime}
                         {isFull && <span className="block text-[9px] font-normal text-gray-400">Đã đầy</span>}
@@ -146,13 +145,12 @@ export function Step8Slot({ onNext, onBack }: Step8SlotProps) {
                         type="button"
                         disabled={isFull}
                         onClick={() => handleSelectSlot(slot)}
-                        className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all duration-200 text-center cursor-pointer relative ${
-                          isFull
+                        className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all duration-200 text-center cursor-pointer relative ${isFull
                             ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
                             : isSelected
-                            ? 'bg-[#0c4b39] border-[#0c4b39] text-white shadow-md shadow-emerald-100 font-extrabold scale-[1.03]'
-                            : 'bg-white hover:bg-emerald-50/50 border-gray-200 text-secondary hover:border-[#0c4b39]/40'
-                        }`}
+                              ? 'bg-[#0c4b39] border-[#0c4b39] text-white shadow-md shadow-emerald-100 font-extrabold scale-[1.03]'
+                              : 'bg-white hover:bg-emerald-50/50 border-gray-200 text-secondary hover:border-[#0c4b39]/40'
+                          }`}
                       >
                         {formattedTime}
                         {isFull && <span className="block text-[9px] font-normal text-gray-400">Đã đầy</span>}

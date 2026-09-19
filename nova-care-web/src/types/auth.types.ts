@@ -5,6 +5,8 @@ export interface User {
   phone?: string;
   fullName: string;
   role: string;
+  hospitalId?: string;
+  hospital?: { id: string; name: string };
   isActive: boolean;
 }
 

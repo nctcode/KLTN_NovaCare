@@ -251,23 +251,23 @@ export default function AdminSpecialtiesPage() {
     : 'bg-slate-950 border-slate-800 text-white shadow-sm';
 
   const tableHeaderBg = isLight
-    ? 'bg-slate-50 border-slate-200 text-slate-700 font-extrabold text-xs'
-    : 'bg-slate-900 border-slate-800 text-slate-300 font-extrabold text-xs';
+    ? 'bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs'
+    : 'bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold text-xs';
 
   const tableRowBg = isLight
     ? 'border-b border-slate-100 hover:bg-slate-50/80 transition-colors'
     : 'border-b border-slate-800/60 hover:bg-slate-900/60 transition-colors';
 
   const inputBg = isLight
-    ? 'bg-slate-50 border-slate-200 text-slate-950 placeholder:text-slate-400'
+    ? 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
     : 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-500';
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12 font-sans relative">
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed top-6 right-6 z-[100] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-top-4 duration-200 font-bold text-xs">
-          <CheckCircle2 className="w-5 h-5 text-white shrink-0" />
+        <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 bg-emerald-700 text-white px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium">
+          <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -275,18 +275,18 @@ export default function AdminSpecialtiesPage() {
       {/* ========================================== */}
       {/* 1. HEADER TOOLBAR */}
       {/* ========================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5 border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 border-slate-200 dark:border-slate-800">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <div className="p-2.5 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
-              <Stethoscope className="w-6 h-6 stroke-[2.5]" />
+            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <Stethoscope className="w-5 h-5" />
             </div>
             <div>
-              <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                Quản lý Chuyên khoa
+              <h1 className={`text-xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                Danh mục Chuyên khoa
               </h1>
-              <p className="text-xs text-slate-500 font-medium">
-                Danh mục chuyên khoa hệ thống trực tiếp từ Cơ sở dữ liệu PostgreSQL (không thuộc riêng bất kỳ bệnh viện nào)
+              <p className="text-xs text-slate-500">
+                Quản lý danh mục chuyên khoa chuẩn toàn sàn NovaCare.
               </p>
             </div>
           </div>
@@ -295,9 +295,9 @@ export default function AdminSpecialtiesPage() {
         {/* Top Action Button */}
         <Button
           onClick={handleOpenAddModal}
-          className="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-2xl px-5 py-2.5 shadow-md flex items-center gap-2 shrink-0 transition"
+          className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-lg px-3.5 py-2 h-9 flex items-center gap-1.5 shrink-0 transition shadow-xs"
         >
-          <Plus className="w-4 h-4 stroke-[3]" />
+          <Plus className="w-4 h-4" />
           <span>Thêm chuyên khoa</span>
         </Button>
       </div>
@@ -307,62 +307,62 @@ export default function AdminSpecialtiesPage() {
       {/* ========================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total */}
-        <Card className={`${cardBg} rounded-3xl p-5 border shadow-sm transition hover:border-purple-500/50`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Tổng chuyên khoa</span>
-            <div className="p-2.5 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
-              <Stethoscope className="w-5 h-5" />
+        <Card className={`${cardBg} rounded-xl p-4 border shadow-xs`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tổng chuyên khoa</span>
+            <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              <Stethoscope className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black">{stats.totalSpecialties}</p>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">Dữ liệu CSDL PostgreSQL</p>
+          <p className="text-xl font-bold">{stats.totalSpecialties}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Dữ liệu hệ thống</p>
         </Card>
 
         {/* Card 2: Active */}
-        <Card className={`${cardBg} rounded-3xl p-5 border shadow-sm transition hover:border-emerald-500/50`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Đang hoạt động</span>
-            <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="w-5 h-5" />
+        <Card className={`${cardBg} rounded-xl p-4 border shadow-xs`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Đang hoạt động</span>
+            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">{stats.activeSpecialties}</p>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">Sẵn sàng gán cho bệnh viện</p>
+          <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{stats.activeSpecialties}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Sẵn sàng áp dụng</p>
         </Card>
 
         {/* Card 3: Inactive */}
-        <Card className={`${cardBg} rounded-3xl p-5 border shadow-sm transition hover:border-amber-500/50`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Tạm ngưng</span>
-            <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <Power className="w-5 h-5" />
+        <Card className={`${cardBg} rounded-xl p-4 border shadow-xs`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tạm ngưng</span>
+            <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+              <Power className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400">{stats.inactiveSpecialties}</p>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">Ẩn khỏi danh mục tạo mới</p>
+          <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{stats.inactiveSpecialties}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Tạm ngưng sử dụng</p>
         </Card>
 
         {/* Card 4: Hospitals Using */}
-        <Card className={`${cardBg} rounded-3xl p-5 border shadow-sm transition hover:border-blue-500/50`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Bệnh viện đang áp dụng</span>
-            <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <Building2 className="w-5 h-5" />
+        <Card className={`${cardBg} rounded-xl p-4 border shadow-xs`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Bệnh viện áp dụng</span>
+            <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+              <Building2 className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400">{stats.totalHospitalsUsing}</p>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">Lượt kết nối bệnh viện</p>
+          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats.totalHospitalsUsing}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Lượt liên kết</p>
         </Card>
       </div>
 
       {/* ========================================== */}
       {/* 3. SEARCH & FILTERS TOOLBAR */}
       {/* ========================================== */}
-      <Card className={`${cardBg} rounded-3xl p-4 sm:p-5 border space-y-4`}>
+      <Card className={`${cardBg} rounded-xl p-3 sm:p-4 border border-slate-200 dark:border-slate-800 shadow-xs`}>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <Input
               placeholder="Tìm kiếm theo tên chuyên khoa hoặc mô tả..."
               value={searchTerm}
@@ -370,7 +370,7 @@ export default function AdminSpecialtiesPage() {
                 setSearchTerm(e.target.value);
                 setPage(1);
               }}
-              className={`pl-10 text-xs rounded-2xl font-semibold h-10 ${inputBg}`}
+              className={`pl-9 text-xs rounded-lg font-normal h-9 border-slate-200 dark:border-slate-800 ${inputBg}`}
             />
             {searchTerm && (
               <button
@@ -384,20 +384,20 @@ export default function AdminSpecialtiesPage() {
 
           {/* Filter Status Dropdown */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs font-bold text-slate-500 shrink-0">Trạng thái:</span>
+            <span className="text-xs font-medium text-slate-500 shrink-0">Trạng thái:</span>
             <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className={`text-xs rounded-2xl px-3.5 py-2.5 font-bold border transition ${
-                isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              className={`text-xs rounded-lg px-3 py-1.5 font-normal border transition ${
+                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             >
               <option value="ALL">Tất cả trạng thái</option>
-              <option value="ACTIVE">● Hoạt động</option>
-              <option value="PAUSED">○ Tạm ngưng</option>
+              <option value="ACTIVE">Hoạt động</option>
+              <option value="PAUSED">Tạm ngưng</option>
             </select>
           </div>
         </div>
@@ -406,27 +406,27 @@ export default function AdminSpecialtiesPage() {
       {/* ========================================== */}
       {/* 4. SPECIALTY TABLE (REAL DATABASE RECORDS) */}
       {/* ========================================== */}
-      <Card className={`${cardBg} rounded-3xl border overflow-hidden shadow-sm`}>
+      <Card className={`${cardBg} rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className={tableHeaderBg}>
-                <th className="py-4 px-5 min-w-[70px]">Icon</th>
-                <th className="py-4 px-5 min-w-[180px]">Tên chuyên khoa</th>
-                <th className="py-4 px-5 min-w-[280px]">Mô tả ngắn</th>
-                <th className="py-4 px-5 min-w-[140px] text-center">Bệnh viện sử dụng</th>
-                <th className="py-4 px-5 min-w-[130px]">Trạng thái</th>
-                <th className="py-4 px-5 min-w-[130px]">Ngày tạo</th>
-                <th className="py-4 px-5 min-w-[160px] text-right">Hành động</th>
+                <th className="py-3 px-3.5 min-w-[60px]">Icon</th>
+                <th className="py-3 px-3.5 min-w-[160px]">Tên chuyên khoa</th>
+                <th className="py-3 px-3.5 min-w-[240px]">Mô tả ngắn</th>
+                <th className="py-3 px-3.5 min-w-[120px] text-center">Bệnh viện</th>
+                <th className="py-3 px-3.5 min-w-[120px]">Trạng thái</th>
+                <th className="py-3 px-3.5 min-w-[100px]">Ngày tạo</th>
+                <th className="py-3 px-3.5 min-w-[120px] text-right">Hành động</th>
               </tr>
             </thead>
-            <tbody className="text-xs font-medium">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {isLoading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
                     <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-                      <span>Đang kết nối CSDL và tải danh sách chuyên khoa...</span>
+                      <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                      <span>Đang tải danh sách chuyên khoa...</span>
                     </div>
                   </td>
                 </tr>
@@ -434,9 +434,9 @@ export default function AdminSpecialtiesPage() {
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Stethoscope className="w-8 h-8 text-slate-400 opacity-50" />
-                      <p className="font-bold">Không tìm thấy chuyên khoa phù hợp</p>
-                      <p className="text-[11px] text-slate-400">Thử thay đổi từ khóa tìm kiếm hoặc bấm &quot;Thêm chuyên khoa&quot; để tạo mới</p>
+                      <Stethoscope className="w-7 h-7 text-slate-400 opacity-60" />
+                      <p className="font-medium text-slate-600 dark:text-slate-400">Không tìm thấy chuyên khoa phù hợp</p>
+                      <p className="text-[11px] text-slate-400">Thử thay đổi từ khóa tìm kiếm hoặc tạo mới</p>
                     </div>
                   </td>
                 </tr>
@@ -444,74 +444,74 @@ export default function AdminSpecialtiesPage() {
                 items.map((spec: any) => (
                   <tr key={spec.id} className={tableRowBg}>
                     {/* Icon */}
-                    <td className="py-3.5 px-5">
-                      <div className="w-10 h-10 rounded-2xl overflow-hidden bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+                    <td className="py-3 px-3.5">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
                         {spec.icon && spec.icon.startsWith('http') ? (
                           <img src={spec.icon} alt={spec.name} className="w-full h-full object-cover" />
                         ) : spec.icon ? (
-                          <span className="text-lg">{spec.icon}</span>
+                          <span className="text-sm">{spec.icon}</span>
                         ) : (
-                          <Stethoscope className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                          <Stethoscope className="w-4 h-4 text-emerald-600" />
                         )}
                       </div>
                     </td>
 
                     {/* Tên chuyên khoa */}
-                    <td className="py-3.5 px-5">
+                    <td className="py-3 px-3.5 font-medium text-slate-900 dark:text-white">
                       <button
                         onClick={() => handleOpenDetailModal(spec, false)}
-                        className="font-extrabold text-sm text-left hover:text-purple-600 dark:hover:text-purple-400 transition"
+                        className="hover:text-emerald-600 dark:hover:text-emerald-400 transition text-left"
                       >
                         {spec.name}
                       </button>
                     </td>
 
                     {/* Mô tả ngắn */}
-                    <td className="py-3.5 px-5">
-                      <p className={`line-clamp-2 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <td className="py-3 px-3.5 text-slate-500 dark:text-slate-400">
+                      <p className="line-clamp-1 max-w-[260px]">
                         {spec.description || 'Chưa có mô tả ngắn'}
                       </p>
                     </td>
 
                     {/* Số bệnh viện đang sử dụng */}
-                    <td className="py-3.5 px-5 text-center">
-                      <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-300/40 dark:border-blue-800 font-extrabold text-[11px] px-3 py-1 rounded-xl">
-                        {spec.hospitalCount || 0} Bệnh viện
-                      </Badge>
+                    <td className="py-3 px-3.5 text-center">
+                      <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        {spec.hospitalCount || 0} BV
+                      </span>
                     </td>
 
                     {/* Trạng thái */}
-                    <td className="py-3.5 px-5">
+                    <td className="py-3 px-3.5">
                       {spec.isActive ? (
-                        <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-300/50 dark:border-emerald-800 font-bold text-[11px] px-2.5 py-1 rounded-xl flex items-center gap-1.5 w-fit">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           Hoạt động
-                        </Badge>
+                        </span>
                       ) : (
-                        <Badge className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 font-bold text-[11px] px-2.5 py-1 rounded-xl flex items-center gap-1.5 w-fit">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                           <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                           Tạm ngưng
-                        </Badge>
+                        </span>
                       )}
                     </td>
 
                     {/* Ngày tạo */}
-                    <td className="py-3.5 px-5 font-mono text-slate-500 text-[11px]">
+                    <td className="py-3 px-3.5 font-mono text-slate-500 text-[11px]">
                       {spec.createdAt ? new Date(spec.createdAt).toLocaleDateString('vi-VN') : '---'}
                     </td>
 
                     {/* Hành động */}
-                    <td className="py-3.5 px-5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="py-3 px-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         {/* Xem chi tiết */}
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenDetailModal(spec, false)}
-                          className="h-8 w-8 text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded-xl transition-colors"
+                          className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                           title="Xem chi tiết"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5" />
                         </Button>
 
                         {/* Chỉnh sửa */}
@@ -519,10 +519,10 @@ export default function AdminSpecialtiesPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenDetailModal(spec, true)}
-                          className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-colors"
-                          title="Chỉnh sửa thông tin"
+                          className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                          title="Chỉnh sửa"
                         >
-                          <Pencil className="w-4 h-4" />
+                          <Pencil className="w-3.5 h-3.5" />
                         </Button>
 
                         {/* Ngừng hoạt động / Kích hoạt lại */}
@@ -531,20 +531,20 @@ export default function AdminSpecialtiesPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleOpenDeactivateModal(spec)}
-                            className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
+                            className="h-7 w-7 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
                             title="Ngừng hoạt động"
                           >
-                            <Power className="w-4 h-4" />
+                            <Power className="w-3.5 h-3.5" />
                           </Button>
                         ) : (
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleConfirmToggleStatus(true)}
-                            className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl transition-colors"
+                            className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
                             title="Kích hoạt lại"
                           >
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                           </Button>
                         )}
                       </div>
@@ -557,7 +557,7 @@ export default function AdminSpecialtiesPage() {
         </div>
 
         {/* Table Footer & Pagination */}
-        <div className={`p-4 border-t ${isLight ? 'border-slate-100 bg-slate-50/50' : 'border-slate-800 bg-slate-900/50'} flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold text-slate-500`}>
+        <div className={`p-3.5 border-t ${isLight ? 'border-slate-100 bg-slate-50/50' : 'border-slate-800 bg-slate-900/50'} flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-medium text-slate-500`}>
           <span>
             Hiển thị {items.length > 0 ? (page - 1) * limit + 1 : 0} -{' '}
             {Math.min(page * limit, rawSpecialtiesData?.total || items.length)} trên tổng số {rawSpecialtiesData?.total || items.length} chuyên khoa CSDL
@@ -822,11 +822,10 @@ export default function AdminSpecialtiesPage() {
                   <Button
                     type="button"
                     onClick={() => setIsEditMode(!isEditMode)}
-                    className={`text-xs font-extrabold rounded-xl px-3.5 py-1.5 shadow-md flex items-center gap-1.5 border ${
-                      isEditMode
+                    className={`text-xs font-extrabold rounded-xl px-3.5 py-1.5 shadow-md flex items-center gap-1.5 border ${isEditMode
                         ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-400'
                         : 'bg-white/90 text-slate-950 hover:bg-white border-white'
-                    }`}
+                      }`}
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     <span>{isEditMode ? 'Hủy chỉnh sửa' : 'Chỉnh sửa'}</span>

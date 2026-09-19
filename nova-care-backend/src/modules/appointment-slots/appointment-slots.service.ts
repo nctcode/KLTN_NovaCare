@@ -1,15 +1,97 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { CreateSlotDto } from './dto/create-slot.dto';
+import { UpdateSlotDto } from './dto/update-slot.dto';
 import { AppointmentSlot } from '@prisma/client';
 
 @Injectable()
 export class AppointmentSlotsService {
   constructor(private prisma: PrismaService) {}
 
+  // Lấy danh sách tất cả các khung giờ (Admin query có bộ lọc theo Ngày, Bệnh viện, Bác sĩ, Chuyên khoa, v.v.)
+  async findAll(params?: {
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    doctorWorkplaceId?: string;
+    doctorId?: string;
+    hospitalId?: string;
+    specialtyId?: string;
+    isActive?: string;
+    isAvailable?: string;
+    search?: string;
+  }): Promise<any[]> {
+    const where: any = {};
+
+    if (params?.date) {
+      const startOfDay = new Date(params.date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(params.date);
+      endOfDay.setHours(23, 59, 59, 999);
+      where.startTime = { gte: startOfDay, lte: endOfDay };
+    } else if (params?.startDate || params?.endDate) {
+      where.startTime = {};
+      if (params.startDate) {
+        const s = new Date(params.startDate);
+        s.setHours(0, 0, 0, 0);
+        where.startTime.gte = s;
+      }
+      if (params.endDate) {
+        const e = new Date(params.endDate);
+        e.setHours(23, 59, 59, 999);
+        where.startTime.lte = e;
+      }
+    }
+
+    if (params?.isActive !== undefined && params?.isActive !== '') {
+      where.isActive = String(params.isActive) === 'true';
+    }
+
+    if (params?.isAvailable !== undefined && params?.isAvailable !== '') {
+      where.isAvailable = String(params.isAvailable) === 'true';
+    }
+
+    const workplaceWhere: any = {};
+    if (params?.doctorWorkplaceId) workplaceWhere.id = params.doctorWorkplaceId;
+    if (params?.doctorId) workplaceWhere.doctorId = params.doctorId;
+    if (params?.hospitalId) workplaceWhere.hospitalId = params.hospitalId;
+    if (params?.specialtyId) workplaceWhere.specialtyId = params.specialtyId;
+
+    if (params?.search) {
+      workplaceWhere.doctor = {
+        fullName: { contains: params.search, mode: 'insensitive' },
+      };
+    }
+
+    if (Object.keys(workplaceWhere).length > 0) {
+      where.doctorWorkplace = workplaceWhere;
+    }
+
+    return this.prisma.appointmentSlot.findMany({
+      where,
+      orderBy: { startTime: 'asc' },
+      include: {
+        doctorWorkplace: {
+          include: {
+            doctor: true,
+            hospital: true,
+            branch: true,
+            specialty: true,
+          },
+        },
+        _count: {
+          select: {
+            appointments: {
+              where: { status: { notIn: ['CANCELLED', 'EXPIRED'] } },
+            },
+          },
+        },
+      },
+    });
+  }
+
   // Tạo một slot đơn lẻ
   async create(createDto: CreateSlotDto): Promise<AppointmentSlot> {
-    // Kiểm tra workplace tồn tại
     const workplace = await this.prisma.doctorWorkplace.findUnique({
       where: { id: createDto.doctorWorkplaceId },
     });
@@ -17,7 +99,6 @@ export class AppointmentSlotsService {
       throw new NotFoundException('Nơi làm việc không tồn tại');
     }
 
-    // Kiểm tra slot trùng
     const existing = await this.prisma.appointmentSlot.findUnique({
       where: {
         doctorWorkplaceId_startTime: {
@@ -43,6 +124,7 @@ export class AppointmentSlotsService {
           include: {
             doctor: true,
             hospital: true,
+            branch: true,
             specialty: true,
           },
         },
@@ -50,99 +132,168 @@ export class AppointmentSlotsService {
     });
   }
 
-  // Tự động tạo slots từ lịch làm việc của bác sĩ trong khoảng ngày
+  // Tự động tạo slots từ lịch làm việc của bác sĩ trong khoảng ngày (Hỗ trợ theo cơ sở đơn lẻ hoặc hàng loạt)
   async generateSlots(
-    doctorId: string,
-    workplaceId: string,
-    startDate: Date,
-    endDate: Date,
+    doctorId?: string,
+    workplaceId?: string,
+    hospitalId?: string,
+    startDate: Date = new Date(),
+    endDate: Date = new Date(),
     slotDuration: number = 30, // phút
     capacity: number = 1
   ): Promise<{ created: number; failed: number }> {
-    // Lấy lịch làm việc của nơi làm việc
-    const schedules = await this.prisma.doctorSchedule.findMany({
-      where: {
-        doctorWorkplaceId: workplaceId,
-        isActive: true,
-      },
-    });
-    if (schedules.length === 0) {
-      throw new BadRequestException('Nơi làm việc chưa có lịch làm việc cố định');
+    // 1. Xác định danh sách workplaceId cần sinh slot
+    let workplacesToProcess: { id: string }[] = [];
+
+    if (workplaceId) {
+      workplacesToProcess = [{ id: workplaceId }];
+    } else {
+      const wpWhere: any = { isActive: true };
+      if (doctorId) wpWhere.doctorId = doctorId;
+      if (hospitalId) wpWhere.hospitalId = hospitalId;
+
+      workplacesToProcess = await this.prisma.doctorWorkplace.findMany({
+        where: wpWhere,
+        select: { id: true },
+      });
     }
 
-    // Tạo map dayOfWeek -> schedule
-    const scheduleMap = new Map();
-    schedules.forEach((s) => scheduleMap.set(s.dayOfWeek, s));
+    if (workplacesToProcess.length === 0) {
+      throw new BadRequestException('Không tìm thấy nơi công tác phù hợp để sinh khung giờ.');
+    }
 
-    let created = 0;
-    let failed = 0;
-    const currentDate = new Date(startDate);
+    let totalCreated = 0;
+    let totalFailed = 0;
 
-    while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getDay(); // 0=Sunday, 1=Monday, ...
-      const schedule = scheduleMap.get(dayOfWeek);
+    for (const wp of workplacesToProcess) {
+      const schedules = await this.prisma.doctorSchedule.findMany({
+        where: {
+          doctorWorkplaceId: wp.id,
+          isActive: true,
+        },
+      });
+      if (schedules.length === 0) continue;
 
-      if (schedule) {
-        // Parse giờ làm việc
-        const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
-        const [endHour, endMinute] = schedule.endTime.split(':').map(Number);
+      const scheduleMap = new Map();
+      schedules.forEach((s) => scheduleMap.set(s.dayOfWeek, s));
 
-        let slotStart = new Date(currentDate);
-        slotStart.setHours(startHour, startMinute, 0, 0);
-        const slotEnd = new Date(currentDate);
-        slotEnd.setHours(endHour, endMinute, 0, 0);
+      const currentDate = new Date(startDate);
+      const endLimit = new Date(endDate);
 
-        // Tạo các slot trong khoảng thời gian làm việc
-        while (slotStart < slotEnd) {
-          const endTime = new Date(slotStart.getTime() + slotDuration * 60000);
-          if (endTime > slotEnd) break;
+      while (currentDate <= endLimit) {
+        const dayOfWeek = currentDate.getDay(); // 0=Sunday, 1=Monday...
+        const schedule = scheduleMap.get(dayOfWeek);
 
-          // Kiểm tra break nếu có
-          let isBreak = false;
-          if (schedule.breakStart && schedule.breakEnd) {
-            const [breakStartHour, breakStartMinute] = schedule.breakStart.split(':').map(Number);
-            const [breakEndHour, breakEndMinute] = schedule.breakEnd.split(':').map(Number);
+        if (schedule) {
+          const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
+          const [endHour, endMinute] = schedule.endTime.split(':').map(Number);
 
-            const breakStart = new Date(slotStart);
-            breakStart.setHours(breakStartHour, breakStartMinute, 0, 0);
-            const breakEnd = new Date(slotStart);
-            breakEnd.setHours(breakEndHour, breakEndMinute, 0, 0);
+          let slotStart = new Date(currentDate);
+          slotStart.setHours(startHour, startMinute, 0, 0);
+          const slotEnd = new Date(currentDate);
+          slotEnd.setHours(endHour, endMinute, 0, 0);
 
-            if (slotStart >= breakStart && slotStart < breakEnd) {
-              isBreak = true;
+          while (slotStart < slotEnd) {
+            const slotEndTime = new Date(slotStart.getTime() + slotDuration * 60000);
+            if (slotEndTime > slotEnd) break;
+
+            let isBreak = false;
+            if (schedule.breakStart && schedule.breakEnd) {
+              const [breakStartHour, breakStartMinute] = schedule.breakStart.split(':').map(Number);
+              const [breakEndHour, breakEndMinute] = schedule.breakEnd.split(':').map(Number);
+
+              const breakStart = new Date(slotStart);
+              breakStart.setHours(breakStartHour, breakStartMinute, 0, 0);
+              const breakEnd = new Date(slotStart);
+              breakEnd.setHours(breakEndHour, breakEndMinute, 0, 0);
+
+              if (slotStart >= breakStart && slotStart < breakEnd) {
+                isBreak = true;
+              }
             }
-          }
 
-          if (!isBreak) {
-            try {
-              await this.prisma.appointmentSlot.create({
-                data: {
-                  doctorWorkplaceId: workplaceId,
-                  startTime: new Date(slotStart),
-                  endTime: new Date(endTime),
-                  capacity,
-                  bookedCount: 0,
-                  isAvailable: true,
-                },
-              });
-              created++;
-            } catch (error) {
-              failed++;
+            if (!isBreak) {
+              try {
+                // Kiểm tra nếu slot đã tồn tại thì bỏ qua tránh lỗi duplicate key
+                const exists = await this.prisma.appointmentSlot.findUnique({
+                  where: {
+                    doctorWorkplaceId_startTime: {
+                      doctorWorkplaceId: wp.id,
+                      startTime: new Date(slotStart),
+                    },
+                  },
+                });
+
+                if (!exists) {
+                  await this.prisma.appointmentSlot.create({
+                    data: {
+                      doctorWorkplaceId: wp.id,
+                      startTime: new Date(slotStart),
+                      endTime: new Date(slotEndTime),
+                      capacity,
+                      bookedCount: 0,
+                      isAvailable: true,
+                      isActive: true,
+                    },
+                  });
+                  totalCreated++;
+                }
+              } catch (error) {
+                totalFailed++;
+              }
             }
+            slotStart = new Date(slotEndTime);
           }
-          slotStart = new Date(endTime);
         }
+        currentDate.setDate(currentDate.getDate() + 1);
       }
-      currentDate.setDate(currentDate.getDate() + 1);
     }
-    return { created, failed };
+
+    return { created: totalCreated, failed: totalFailed };
   }
 
-  // Lấy danh sách slot trống theo ngày
-  async getAvailableSlots(
-    doctorWorkplaceId: string,
-    date: Date
-  ): Promise<AppointmentSlot[]> {
+  // Cập nhật slot (Capacity, Khóa/Mở slot, Bật/Tắt)
+  async updateSlot(id: string, data: UpdateSlotDto): Promise<AppointmentSlot> {
+    const slot = await this.prisma.appointmentSlot.findUnique({ where: { id } });
+    if (!slot) {
+      throw new NotFoundException('Khung giờ không tồn tại');
+    }
+
+    const updateData: any = {};
+    if (data.capacity !== undefined) {
+      if (data.capacity < slot.bookedCount) {
+        throw new BadRequestException(
+          `Sức chứa mới (${data.capacity}) không thể nhỏ hơn số lượng đã đặt (${slot.bookedCount})`
+        );
+      }
+      updateData.capacity = Number(data.capacity);
+      updateData.isAvailable = slot.bookedCount < updateData.capacity;
+    }
+    if (data.isAvailable !== undefined) {
+      updateData.isAvailable = Boolean(data.isAvailable);
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = Boolean(data.isActive);
+    }
+
+    return this.prisma.appointmentSlot.update({
+      where: { id },
+      data: updateData,
+      include: {
+        doctorWorkplace: {
+          include: {
+            doctor: true,
+            hospital: true,
+            branch: true,
+            specialty: true,
+          },
+        },
+      },
+    });
+  }
+
+  // Lấy danh sách slot trống theo ngày (Public cho Bệnh nhân)
+  async getAvailableSlots(doctorWorkplaceId: string, date: Date): Promise<AppointmentSlot[]> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
@@ -219,7 +370,6 @@ export class AppointmentSlotsService {
   async remove(id: string): Promise<void> {
     const slot = await this.findOne(id);
 
-    // Kiểm tra có lịch hẹn nào đang hoạt động (chưa hủy, chưa hoàn thành)
     const hasActiveAppointments = await this.prisma.appointment.count({
       where: {
         slotId: id,

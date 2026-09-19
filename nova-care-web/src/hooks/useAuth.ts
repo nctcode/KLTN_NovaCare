@@ -23,7 +23,13 @@ export function useAuth() {
       const { user, accessToken, refreshToken } = response.data;
       setAuth(user, accessToken, refreshToken);
       toast.success('Đăng nhập thành công!');
-      router.push('/');
+
+      // Tự động điều hướng theo Role
+      if (user.role === 'ADMIN') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Đăng nhập thất bại');

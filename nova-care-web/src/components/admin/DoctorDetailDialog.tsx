@@ -49,6 +49,7 @@ interface DoctorDetailDialogProps {
   onSuccess?: () => void;
   initialTab?: 'INFO' | 'WORKPLACE' | 'SCHEDULE' | 'STATS';
   initialIsEditing?: boolean;
+  readOnly?: boolean;
 }
 
 interface WorkplaceModalData {
@@ -91,6 +92,7 @@ export function DoctorDetailDialog({
   onSuccess,
   initialTab = 'INFO',
   initialIsEditing = false,
+  readOnly = true,
 }: DoctorDetailDialogProps) {
   const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
@@ -425,7 +427,11 @@ export function DoctorDetailDialog({
             </div>
 
             <div className="flex items-center gap-2 pr-6">
-              {!isEditing ? (
+              {readOnly ? (
+                <Badge variant="outline" className="text-emerald-400 border-emerald-500/40 bg-emerald-500/10 text-xs font-semibold px-2.5 py-1">
+                  Chế độ Giám sát (Read-Only)
+                </Badge>
+              ) : !isEditing ? (
                 <Button
                   onClick={() => setIsEditing(true)}
                   className="bg-[#0c4b39] hover:bg-[#09392b] text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm"
@@ -656,9 +662,11 @@ export function DoctorDetailDialog({
                     <h3 className="font-black text-xs uppercase tracking-wider text-[#0c4b39] dark:text-[#66FF33] flex items-center gap-1.5">
                       <Building2 className="w-4 h-4" /> Danh sách nơi công tác
                     </h3>
-                    <Button onClick={handleOpenAddWorkplace} size="sm" className="bg-[#0c4b39] text-white text-xs font-bold rounded-xl">
-                      <Plus className="w-3.5 h-3.5 mr-1" /> Thêm nơi công tác
-                    </Button>
+                    {!readOnly && (
+                      <Button onClick={handleOpenAddWorkplace} size="sm" className="bg-[#0c4b39] text-white text-xs font-bold rounded-xl">
+                        <Plus className="w-3.5 h-3.5 mr-1" /> Thêm nơi công tác
+                      </Button>
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -674,16 +682,18 @@ export function DoctorDetailDialog({
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          {!wp.isPrimary && (
-                            <Button size="sm" variant="outline" onClick={() => handleSetPrimaryWorkplace(wp.id)} className="text-[11px]">
-                              Đặt làm chính
+                        {!readOnly && (
+                          <div className="flex items-center gap-2">
+                            {!wp.isPrimary && (
+                              <Button size="sm" variant="outline" onClick={() => handleSetPrimaryWorkplace(wp.id)} className="text-[11px]">
+                                Đặt làm chính
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => handleToggleWorkplaceStatus(wp.id, wp.isActive)} className="text-[11px]">
+                              {wp.isActive ? 'Ngừng công tác' : 'Kích hoạt'}
                             </Button>
-                          )}
-                          <Button size="sm" variant="outline" onClick={() => handleToggleWorkplaceStatus(wp.id, wp.isActive)} className="text-[11px]">
-                            {wp.isActive ? 'Ngừng công tác' : 'Kích hoạt'}
-                          </Button>
-                        </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -697,9 +707,11 @@ export function DoctorDetailDialog({
                     <h3 className="font-black text-xs uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
                       <Calendar className="w-4 h-4" /> Ca làm việc theo tuần
                     </h3>
-                    <Button onClick={handleOpenAddSchedule} size="sm" className="bg-[#0c4b39] text-white text-xs font-bold rounded-xl">
-                      <Plus className="w-3.5 h-3.5 mr-1" /> Thêm ca làm
-                    </Button>
+                    {!readOnly && (
+                      <Button onClick={handleOpenAddSchedule} size="sm" className="bg-[#0c4b39] text-white text-xs font-bold rounded-xl">
+                        <Plus className="w-3.5 h-3.5 mr-1" /> Thêm ca làm
+                      </Button>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -713,9 +725,11 @@ export function DoctorDetailDialog({
                                 <span className="font-bold text-emerald-600">{DAY_NAMES[sch.dayOfWeek] || `Thứ ${sch.dayOfWeek}`}</span>
                                 <p className="text-[11px] font-semibold">{sch.startTime} - {sch.endTime}</p>
                               </div>
-                              <button onClick={() => handleDeleteSchedule(sch.id)} className="text-rose-600 hover:underline text-[11px]">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {!readOnly && (
+                                <button onClick={() => handleDeleteSchedule(sch.id)} className="text-rose-600 hover:underline text-[11px]">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>

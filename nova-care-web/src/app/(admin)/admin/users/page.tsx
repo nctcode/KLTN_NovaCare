@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
@@ -22,9 +23,20 @@ import {
   ChevronRight,
   ShieldCheck,
   AlertCircle,
+  Plus,
+  Building2,
 } from 'lucide-react';
+import { CreateHospitalAdminDialog } from '@/components/admin/CreateHospitalAdminDialog';
 
-export default function AdminUsersPage() {
+function AdminUsersContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'all';
+
+  const handleTabChange = (tab: string) => {
+    router.push(`/admin/users?tab=${tab}`);
+  };
+
   const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
@@ -39,6 +51,7 @@ export default function AdminUsersPage() {
   // Selected User for Modal
   const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
 
   // Local state for optimistic updates
   const [localUsers, setLocalUsers] = useState<AdminUserItem[]>(MOCK_ADMIN_USERS);
@@ -81,6 +94,7 @@ export default function AdminUsersPage() {
           lastLogin: u.lastLoginAt || u.updatedAt || u.createdAt || new Date().toISOString(),
           status: u.isActive === false ? 'LOCKED' : 'ACTIVE',
           role: u.role || 'PATIENT',
+          hospital: u.hospital,
           totalBookings: u._count?.appointments ?? 0,
           hasPendingBooking: false,
           avatarUrl: u.avatarUrl,
@@ -120,8 +134,13 @@ export default function AdminUsersPage() {
       list = apiUsers;
     }
 
+    // Filter by tab
     return list.filter((user) => {
       if (user.role === 'ADMIN') return false;
+
+      if (currentTab === 'hospital-admin') {
+        if (user.role !== 'HOSPITAL_ADMIN') return false;
+      }
 
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -137,7 +156,7 @@ export default function AdminUsersPage() {
 
       return true;
     });
-  }, [apiData, localUsers, search, statusFilter, pendingFilter]);
+  }, [apiData, localUsers, search, statusFilter, pendingFilter, currentTab]);
 
   const totalUsersCount = apiData?.total ?? displayedUsers.length;
   const activeUsersCount = useMemo(() => displayedUsers.filter((u) => u.status === 'ACTIVE').length, [displayedUsers]);
@@ -148,7 +167,7 @@ export default function AdminUsersPage() {
     setSelectedUser(user);
     setIsDrawerOpen(true);
 
-    if (user.id && !user.id.startsWith('usr-local')) {
+    if (user.id && !user.id.startsWith('usr-local') && !user.id.startsWith('hosp-admin')) {
       try {
         const detail = await adminService.getUserDetail(user.id);
         if (detail) {
@@ -285,19 +304,19 @@ export default function AdminUsersPage() {
     toast.success('Đã xuất danh sách người dùng ra file Excel thành công!');
   };
 
-  const getStatusBadge = (status: AccountStatus) => {
+   const getStatusBadge = (status: AccountStatus) => {
     switch (status) {
       case 'ACTIVE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-950 border border-emerald-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-600" />
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             Hoạt động
           </span>
         );
       case 'LOCKED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-950 border border-rose-300">
-            <span className="w-2 h-2 rounded-full bg-rose-600" />
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
             Đã khóa
           </span>
         );
@@ -305,19 +324,19 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12 text-slate-950">
+    <div className="space-y-6 pb-12 text-slate-950 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-slate-900 text-white">
-            <Users className="w-5 h-5" />
+            <Users className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-950 tracking-tight">
-              Quản Lý Tài Khoản Người Dùng
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              Quản Lý Người Dùng
             </h1>
-            <p className="text-xs font-medium text-slate-900 mt-0.5">
-              Quản lý danh sách người dùng và theo dõi hoạt động trên nền tảng NovaCare.
+            <p className="text-xs text-slate-500 mt-0.5">
+              Xem và quản lý tất cả tài khoản người dùng đăng ký trên nền tảng NovaCare.
             </p>
           </div>
         </div>
@@ -360,35 +379,36 @@ export default function AdminUsersPage() {
       />
 
       {/* SECTION 3: USER DATA TABLE */}
-      <Card className="rounded-xl overflow-hidden border border-slate-300 bg-white shadow-xs">
+      <Card className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm">
         <CardContent className="p-0 overflow-x-auto">
           {isLoading ? (
             <div className="p-16 flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-7 h-7 text-slate-900 animate-spin" />
-              <span className="text-xs text-slate-900 font-bold">Đang tải dữ liệu...</span>
+              <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
+              <span className="text-xs text-slate-500 font-medium">Đang tải dữ liệu...</span>
             </div>
           ) : (
             <table className="w-full text-left text-xs whitespace-nowrap">
-              <thead className="bg-slate-100 border-b border-slate-300 text-slate-950 font-bold text-xs uppercase tracking-wider">
+              <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold text-xs">
                 <tr>
-                  <th className="p-3.5">Avatar</th>
-                  <th className="p-3.5">Họ và Tên</th>
-                  <th className="p-3.5">Email</th>
-                  <th className="p-3.5">Số điện thoại</th>
-                  <th className="p-3.5 text-center">Hồ sơ</th>
-                  <th className="p-3.5 text-center">Lịch khám</th>
-                  <th className="p-3.5">Trạng thái</th>
-                  <th className="p-3.5 text-right">Hành động</th>
+                  <th className="py-2.5 px-3 w-12 text-center">Avatar</th>
+                  <th className="py-2.5 px-3 min-w-[150px]">Họ và Tên</th>
+                  <th className="py-2.5 px-3 min-w-[110px]">Vai trò</th>
+                  <th className="py-2.5 px-3 min-w-[160px]">Email</th>
+                  <th className="py-2.5 px-3 min-w-[120px]">Số điện thoại</th>
+                  <th className="py-2.5 px-3 text-center min-w-[90px]">Hồ sơ</th>
+                  <th className="py-2.5 px-3 text-center min-w-[90px]">Lịch khám</th>
+                  <th className="py-2.5 px-3 text-center min-w-[110px]">Trạng thái</th>
+                  <th className="py-2.5 px-3 text-right min-w-[140px]">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-950">
                 {displayedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-12 text-center text-slate-900 font-bold">
+                    <td colSpan={9} className="p-12 text-center text-slate-500 font-medium">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <AlertCircle className="w-7 h-7 text-slate-600" />
-                        <span className="font-bold text-slate-950">Không tìm thấy tài khoản phù hợp</span>
-                        <Button variant="link" size="sm" onClick={handleResetFilters} className="text-xs text-slate-900 underline font-bold">
+                        <AlertCircle className="w-6 h-6 text-slate-400" />
+                        <span className="font-medium text-slate-600 dark:text-slate-400">Không tìm thấy tài khoản phù hợp.</span>
+                        <Button variant="link" size="sm" onClick={handleResetFilters} className="text-xs text-emerald-700 underline">
                           Làm mới bộ lọc
                         </Button>
                       </div>
@@ -398,66 +418,77 @@ export default function AdminUsersPage() {
                   displayedUsers.map((user) => (
                     <tr
                       key={user.id}
-                      className="hover:bg-slate-100/80 transition-colors"
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors"
                     >
                       {/* Avatar */}
-                      <td className="p-3.5">
+                      <td className="py-2.5 px-3 align-middle text-center">
                         {user.avatarUrl ? (
                           <img
                             src={user.avatarUrl}
                             alt={user.fullName}
-                            className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-400"
+                            className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700 inline-block"
                           />
                         ) : (
-                          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white font-bold flex items-center justify-center text-xs">
-                            {user.fullName.charAt(0)}
+                          <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium inline-flex items-center justify-center text-xs border border-slate-200 dark:border-slate-700">
+                            {user.fullName?.charAt(0) || 'U'}
                           </div>
                         )}
                       </td>
 
                       {/* Full Name */}
-                      <td className="p-3.5 font-bold text-slate-950 max-w-[140px] truncate" title={user.fullName}>
-                        <span className="truncate">{user.fullName}</span>
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white max-w-[160px] truncate align-middle" title={user.fullName}>
+                        {user.fullName}
+                      </td>
+
+                      {/* Role */}
+                      <td className="py-2.5 px-3 align-middle">
+                        {user.role === 'ADMIN' ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                            Platform Admin
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            Bệnh nhân
+                          </span>
+                        )}
                       </td>
 
                       {/* Email */}
-                      <td className="p-3.5 font-medium text-slate-900 max-w-[170px] truncate" title={user.email || ''}>
-                        {user.email || <span className="text-slate-500 italic">Chưa có email</span>}
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 max-w-[180px] truncate align-middle" title={user.email || ''}>
+                        {user.email || <span className="text-slate-400 italic">Chưa có</span>}
                       </td>
 
                       {/* Phone */}
-                      <td className="p-3.5 font-mono font-bold text-slate-950">
+                      <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300 align-middle">
                         {user.phone}
                       </td>
 
                       {/* Patient Profiles Count */}
-                      <td className="p-3.5 text-center font-bold text-slate-950">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-950 font-black border border-blue-200">
+                      <td className="py-2.5 px-3 text-center align-middle">
+                        <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                           {user.patientProfilesCount || user.patientProfiles?.length || 0} hồ sơ
                         </span>
                       </td>
 
                       {/* Total Bookings */}
-                      <td className="p-3.5 text-center font-bold text-slate-950">
-                        <span className="inline-block px-2.5 py-0.5 rounded bg-slate-200 text-slate-950 font-black">
-                          {user.totalBookings}
-                        </span>
+                      <td className="py-2.5 px-3 text-center font-medium text-slate-700 dark:text-slate-300 align-middle">
+                        {user.totalBookings || 0}
                       </td>
 
                       {/* Status */}
-                      <td className="p-3.5">
+                      <td className="py-2.5 px-3 text-center align-middle">
                         {getStatusBadge(user.status)}
                       </td>
 
                       {/* Actions */}
-                      <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-right space-x-1 whitespace-nowrap align-middle">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleOpenModal(user)}
-                          className="text-xs font-bold rounded-lg border-slate-300 bg-white text-slate-950 hover:bg-slate-100"
+                          className="h-7 text-xs font-normal rounded-lg border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-2"
                         >
-                          <Eye className="w-3.5 h-3.5 mr-1 text-slate-700" /> Xem chi tiết
+                          <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" /> Chi tiết
                         </Button>
 
                         <Button
@@ -465,19 +496,19 @@ export default function AdminUsersPage() {
                           size="sm"
                           disabled={toggleStatusMutation.isPending}
                           onClick={() => handleToggleStatus(user.id, user.status)}
-                          className={`text-xs font-bold rounded-lg ${
+                          className={`h-7 text-xs font-normal rounded-lg px-2 ${
                             user.status === 'LOCKED'
-                              ? 'border-emerald-400 bg-emerald-50 text-emerald-950 hover:bg-emerald-100'
-                              : 'border-rose-400 bg-rose-50 text-rose-950 hover:bg-rose-100'
+                              ? 'border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                           }`}
                         >
                           {user.status === 'LOCKED' ? (
                             <>
-                              <Unlock className="w-3.5 h-3.5 mr-1" /> Mở khóa
+                              <Unlock className="w-3.5 h-3.5 mr-1 text-emerald-600" /> Mở khóa
                             </>
                           ) : (
                             <>
-                              <Lock className="w-3.5 h-3.5 mr-1" /> Khóa
+                              <Lock className="w-3.5 h-3.5 mr-1 text-slate-500" /> Khóa
                             </>
                           )}
                         </Button>
@@ -494,7 +525,7 @@ export default function AdminUsersPage() {
       {/* Pagination */}
       <div className="flex items-center justify-between p-4 rounded-xl border border-slate-300 bg-white text-xs text-slate-950 font-medium">
         <span>
-          Hiển thị <strong>{displayedUsers.length}</strong> người dùng (Tổng số: <strong>{totalUsersCount}</strong>)
+          Hiển thị <strong>{displayedUsers.length}</strong> tài khoản (Tổng số: <strong>{totalUsersCount}</strong>)
         </span>
 
         <div className="flex gap-2">
@@ -530,6 +561,21 @@ export default function AdminUsersPage() {
         onAddInternalNote={handleAddInternalNote}
         isLight={isLight}
       />
+
+      {/* CREATE HOSPITAL ADMIN MODAL */}
+      <CreateHospitalAdminDialog
+        open={isCreateAdminOpen}
+        onOpenChange={setIsCreateAdminOpen}
+        onSuccess={() => refetch()}
+      />
     </div>
+  );
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Đang tải trang Người dùng...</div>}>
+      <AdminUsersContent />
+    </Suspense>
   );
 }

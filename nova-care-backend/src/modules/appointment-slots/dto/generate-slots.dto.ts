@@ -4,17 +4,30 @@ import { IsDateString, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 export class GenerateSlotsDto {
   @ApiProperty({
     example: 'uuid-of-doctor',
-    description: 'ID bác sĩ',
+    description: 'ID bác sĩ (tùy chọn)',
+    required: false,
   })
+  @IsOptional()
   @IsUUID()
-  doctorId: string;
+  doctorId?: string;
 
   @ApiProperty({
     example: 'uuid-of-doctor-workplace',
-    description: 'ID nơi làm việc của bác sĩ',
+    description: 'ID nơi làm việc của bác sĩ (tùy chọn)',
+    required: false,
   })
+  @IsOptional()
   @IsUUID()
-  doctorWorkplaceId: string;
+  doctorWorkplaceId?: string;
+
+  @ApiProperty({
+    example: 'uuid-of-hospital',
+    description: 'ID bệnh viện (tùy chọn)',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  hospitalId?: string;
 
   @ApiProperty({
     example: '2026-07-20',

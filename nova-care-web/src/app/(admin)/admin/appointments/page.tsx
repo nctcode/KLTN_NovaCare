@@ -1,86 +1,40 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useAdminTheme } from '@/components/admin/AdminThemeContext';
+import Link from 'next/link';
 import { Calendar, CalendarCheck } from 'lucide-react';
-import { DoctorScheduleTab } from '@/components/admin/schedules/DoctorScheduleTab';
 import { AppointmentTab } from '@/components/admin/schedules/AppointmentTab';
+import { Button } from '@/components/ui/button';
 
-export default function AdminSchedulesPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { theme } = useAdminTheme();
-  const isLight = theme === 'light';
-
-  const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'schedules' | 'appointments'>(
-    tabParam === 'appointments' ? 'appointments' : 'schedules'
-  );
-
-  useEffect(() => {
-    if (tabParam === 'appointments' || tabParam === 'schedules') {
-      setActiveTab(tabParam);
-    }
-  }, [tabParam]);
-
-  const handleTabChange = (tab: 'schedules' | 'appointments') => {
-    setActiveTab(tab);
-    router.push(`/admin/appointments?tab=${tab}`);
-  };
-
+export default function AdminAppointmentsPage() {
   return (
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <h1 className={`text-xl font-black flex items-center gap-2.5 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-            <CalendarCheck className="w-6 h-6 text-[#0c4b39] dark:text-[#66FF33]" />
-            Quản Lý Lịch Hệ Thống
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <CalendarCheck className="w-5 h-5 text-emerald-600" />
+            Quản lý lịch hẹn
           </h1>
-          <p className={`text-xs mt-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-            Quản lý cấu hình lịch làm việc bác sĩ và theo dõi toàn bộ danh sách lịch hẹn khám NovaCare.
+          <p className="text-xs text-slate-500 mt-1">
+            Theo dõi danh sách và trạng thái các lịch hẹn khám trên toàn hệ thống.
           </p>
         </div>
 
-        {/* Dual Tab Switcher */}
-        <div className={`flex p-1 rounded-2xl border ${isLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-900 border-slate-800'}`}>
-          <button
-            onClick={() => handleTabChange('schedules')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition ${
-              activeTab === 'schedules'
-                ? isLight
-                  ? 'bg-white text-[#0c4b39] shadow-sm'
-                  : 'bg-emerald-600 text-white shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            Lịch làm việc
-          </button>
-
-          <button
-            onClick={() => handleTabChange('appointments')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition ${
-              activeTab === 'appointments'
-                ? isLight
-                  ? 'bg-white text-[#0c4b39] shadow-sm'
-                  : 'bg-emerald-600 text-white shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <CalendarCheck className="w-4 h-4" />
-            Lịch khám
-          </button>
-        </div>
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="rounded-xl text-xs font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900"
+        >
+          <Link href="/admin/schedules" className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+            <Calendar className="w-4 h-4 text-emerald-600" />
+            <span>Xem Quản lý lịch khám (Bác sĩ)</span>
+          </Link>
+        </Button>
       </div>
 
-      {/* Tab Contents */}
-      {activeTab === 'schedules' ? <DoctorScheduleTab /> : <AppointmentTab />}
+      {/* Appointment Monitoring Grid & Details */}
+      <AppointmentTab />
     </div>
   );
 }

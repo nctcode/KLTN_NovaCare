@@ -59,21 +59,21 @@ export function AdminHeader() {
           variant="outline"
           size="sm"
           onClick={toggleTheme}
-          className={`flex items-center gap-2 rounded-xl text-xs font-extrabold transition border ${
+          className={`flex items-center gap-2 rounded-lg text-xs font-medium transition border ${
             isLight
-              ? 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'
-              : 'bg-slate-950 border-slate-800 text-[#66FF33] hover:bg-slate-800'
+              ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
           }`}
           title={isLight ? 'Chuyển sang Chế độ Nền Tối (Dark Mode)' : 'Chuyển sang Chế độ Nền Sáng (Light Mode)'}
         >
           {isLight ? (
             <>
-              <Moon className="w-4 h-4 text-purple-600" />
+              <Moon className="w-3.5 h-3.5 text-slate-600" />
               <span className="hidden sm:inline">Nền Tối</span>
             </>
           ) : (
             <>
-              <Sun className="w-4 h-4 text-amber-400 animate-spin-slow" />
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">Nền Sáng</span>
             </>
           )}
@@ -83,10 +83,10 @@ export function AdminHeader() {
         <Button
           variant="ghost"
           size="icon"
-          className={`rounded-xl relative ${isLight ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+          className={`rounded-lg relative ${isLight ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
           <Bell className="w-4 h-4" />
-          <span className="w-2 h-2 bg-[#66FF33] rounded-full absolute top-2 right-2 ring-2 ring-slate-900" />
+          <span className="w-2 h-2 bg-emerald-500 rounded-full absolute top-2 right-2 ring-2 ring-white dark:ring-slate-900" />
         </Button>
 
         {/* User Dropdown */}
@@ -94,20 +94,20 @@ export function AdminHeader() {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className={`pl-2 pr-3 py-1 rounded-xl border text-left gap-2 ${
+              className={`pl-2 pr-3 py-1 rounded-lg border text-left gap-2 ${
                 isLight
-                  ? 'bg-slate-100 border-slate-200 text-slate-800 hover:bg-slate-200'
-                  : 'bg-slate-950 border-slate-800 text-white hover:bg-slate-800'
+                  ? 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100'
+                  : 'bg-slate-900 border-slate-800 text-white hover:bg-slate-800'
               }`}
             >
               <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-[#0c4b39] text-[#66FF33] font-black text-xs">
+                <AvatarFallback className="bg-emerald-700 text-white font-semibold text-xs">
                   {user?.fullName?.charAt(0) || 'A'}
                 </AvatarFallback>
               </Avatar>
               <div className="text-left hidden sm:block">
-                <p className="text-xs font-bold truncate max-w-[120px]">{user?.fullName || 'Quản trị viên'}</p>
-                <p className="text-[10px] text-[#0c4b39] font-black">ADMIN</p>
+                <p className="text-xs font-semibold truncate max-w-[120px]">{user?.fullName || 'Quản trị viên'}</p>
+                <p className="text-[10px] text-emerald-600 font-medium">ADMIN</p>
               </div>
             </Button>
           </DropdownMenuTrigger>

@@ -209,23 +209,21 @@ export default function AdminDoctorsPage() {
 
   return (
     <div className="space-y-5 max-w-[1600px] mx-auto pb-12 font-sans">
-      {/* 1. BỐ CỤC PHẦN ĐẦU: TIÊU ĐỀ & NÚT THÊM */}
+      {/* 1. BỐ CỤC PHẦN ĐẦU: TIÊU ĐỀ GIÁM SÁT TOÀN SÀN */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-            Quản lý bác sĩ
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              Giám sát Bác sĩ Toàn Sàn
+            </h1>
+            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-xs font-semibold">
+              Chế độ Giám sát
+            </Badge>
+          </div>
           <p className={`text-xs mt-1 font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-            Quản lý danh sách bác sĩ và thông tin công tác trên hệ thống NovaCare.
+            Theo dõi đội ngũ y bác sĩ, đơn vị công tác và nguồn dữ liệu (HIS API / Thủ công) trên toàn nền tảng NovaCare.
           </p>
         </div>
-
-        <Button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-[#0c4b39] hover:bg-[#083629] text-white font-medium text-xs px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Thêm bác sĩ
-        </Button>
       </div>
 
       {/* 2. BỘ LỌC TÌM KIẾM TỐI GIẢN */}
@@ -324,7 +322,7 @@ export default function AdminDoctorsPage() {
                   <th className="p-3.5">Kinh nghiệm</th>
                   <th className="p-3.5">Đánh giá</th>
                   <th className="p-3.5">Trạng thái</th>
-                  <th className="p-3.5 text-right">Thao tác</th>
+                  <th className="p-3.5 text-right">Thông tin & Hồ sơ</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
@@ -368,9 +366,22 @@ export default function AdminDoctorsPage() {
                                 doc.fullName.charAt(0)
                               )}
                             </div>
-                            <span className={`font-semibold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                              {doc.fullName}
-                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className={`font-semibold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                                {doc.fullName}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {doc.source === 'API' || doc.externalId ? (
+                                  <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] font-mono px-1.5 py-0">
+                                    HIS API {doc.externalId ? `(${doc.externalId})` : ''}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-slate-400 border-slate-700 text-[10px] px-1.5 py-0">
+                                    Thủ công
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </td>
 
@@ -432,76 +443,18 @@ export default function AdminDoctorsPage() {
                           )}
                         </td>
 
-                        {/* 8. Thao tác */}
+                        {/* 8. Thao tác giám sát (Chỉ xem) */}
                         <td className="p-3.5 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDetailDialog(doc.id, 'INFO', false)}
-                              className={`h-7 text-xs font-medium px-2.5 rounded-lg border ${
-                                isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
-                              }`}
-                            >
-                              <Eye className="w-3.5 h-3.5 mr-1 text-[#0c4b39] dark:text-[#66FF33]" /> Xem
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDetailDialog(doc.id, 'INFO', true)}
-                              className={`h-7 text-xs font-medium px-2.5 rounded-lg border ${
-                                isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
-                              }`}
-                            >
-                              <Edit className="w-3.5 h-3.5 mr-1 text-slate-500" /> Sửa
-                            </Button>
-
-                            {/* Dropdown Menu ... */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className={`h-7 w-7 p-0 rounded-lg border ${
-                                    isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
-                                  }`}
-                                >
-                                  <MoreHorizontal className="w-4 h-4 text-slate-500" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48 text-xs font-medium">
-                                <DropdownMenuItem onClick={() => openDetailDialog(doc.id, 'INFO', false)}>
-                                  <Eye className="w-3.5 h-3.5 mr-2 text-slate-500" /> Xem chi tiết
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openDetailDialog(doc.id, 'WORKPLACE', false)}>
-                                  <Building2 className="w-3.5 h-3.5 mr-2 text-slate-500" /> Quản lý nơi công tác
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openDetailDialog(doc.id, 'SCHEDULE', false)}>
-                                  <Calendar className="w-3.5 h-3.5 mr-2 text-slate-500" /> Quản lý lịch làm việc
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    toggleStatusMutation.mutate({ id: doc.id, isActive: !doc.isActive })
-                                  }
-                                >
-                                  <Power className="w-3.5 h-3.5 mr-2 text-slate-500" />
-                                  {doc.isActive ? 'Tạm ngưng' : 'Kích hoạt'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    if (confirm(`Bạn có chắc chắn muốn xóa mềm bác sĩ ${doc.fullName}?`)) {
-                                      deleteMutation.mutate(doc.id);
-                                    }
-                                  }}
-                                  className="text-rose-600 dark:text-rose-400 focus:text-rose-600 font-medium"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Xóa
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDetailDialog(doc.id, 'INFO', false)}
+                            className={`h-7 text-xs font-semibold px-3 rounded-lg border ${
+                              isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
+                            }`}
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1.5 text-[#0c4b39] dark:text-[#66FF33]" /> Xem hồ sơ
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -636,14 +589,15 @@ export default function AdminDoctorsPage() {
         </div>
       )}
 
-      {/* 6. MODAL CHI TIẾT BÁC SĨ (ĐẦY ĐỦ THÔNG TIN, NƠI CÔNG TÁC & LỊCH LÀM VIỆC) */}
+      {/* 6. MODAL CHI TIẾT BÁC SĨ (CHẾ ĐỘ GIÁM SÁT READ-ONLY) */}
       {selectedDoctorId && (
         <DoctorDetailDialog
           doctorId={selectedDoctorId}
           open={isDetailDialogOpen}
           onOpenChange={setIsDetailDialogOpen}
           initialTab={dialogTab}
-          initialIsEditing={dialogEditing}
+          initialIsEditing={false}
+          readOnly={true}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['admin-doctors'] });
           }}

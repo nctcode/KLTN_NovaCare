@@ -30,16 +30,16 @@ import {
 import { toast } from 'sonner';
 
 const STATUS_MAP: Record<string, { label: string; styleDark: string; styleLight: string }> = {
-  PENDING: { label: 'Chờ xác nhận', styleDark: 'bg-amber-950 text-amber-400 border-amber-800', styleLight: 'bg-amber-100 text-amber-800 border-amber-300' },
-  AWAITING_PAYMENT: { label: 'Chờ thanh toán', styleDark: 'bg-orange-950 text-orange-400 border-orange-800', styleLight: 'bg-orange-100 text-orange-800 border-orange-300' },
-  CONFIRMED: { label: 'Đã xác nhận', styleDark: 'bg-blue-950 text-blue-400 border-blue-800', styleLight: 'bg-blue-100 text-blue-800 border-blue-300' },
-  PAID: { label: 'Đã thanh toán', styleDark: 'bg-purple-950 text-purple-400 border-purple-800', styleLight: 'bg-purple-100 text-purple-800 border-purple-300' },
-  COMPLETED: { label: 'Hoàn thành khám', styleDark: 'bg-emerald-950 text-[#66FF33] border-emerald-800', styleLight: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-  CANCELLED: { label: 'Đã hủy', styleDark: 'bg-rose-950 text-rose-400 border-rose-800', styleLight: 'bg-rose-100 text-rose-800 border-rose-300' },
-  EXPIRED: { label: 'Quá hạn', styleDark: 'bg-slate-900 text-slate-400 border-slate-800', styleLight: 'bg-slate-100 text-slate-700 border-slate-300' },
-  NO_SHOW: { label: 'Vắng mặt', styleDark: 'bg-rose-950 text-rose-400 border-rose-800', styleLight: 'bg-rose-100 text-rose-800 border-rose-300' },
-  FAILED: { label: 'Thất bại', styleDark: 'bg-rose-950 text-rose-400 border-rose-800', styleLight: 'bg-rose-100 text-rose-800 border-rose-300' },
-  REFUNDED: { label: 'Đã hoàn tiền', styleDark: 'bg-amber-950 text-amber-300 border-amber-800', styleLight: 'bg-amber-100 text-amber-800 border-amber-300' },
+  PENDING: { label: 'Chờ xác nhận', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800/60', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
+  AWAITING_PAYMENT: { label: 'Chờ thanh toán', styleDark: 'bg-orange-950/40 text-orange-400 border-orange-800/60', styleLight: 'bg-orange-50 text-orange-700 border-orange-200' },
+  CONFIRMED: { label: 'Đã xác nhận', styleDark: 'bg-blue-950/40 text-blue-400 border-blue-800/60', styleLight: 'bg-blue-50 text-blue-700 border-blue-200' },
+  PAID: { label: 'Đã thanh toán', styleDark: 'bg-purple-950/40 text-purple-400 border-purple-800/60', styleLight: 'bg-purple-50 text-purple-700 border-purple-200' },
+  COMPLETED: { label: 'Hoàn thành khám', styleDark: 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60', styleLight: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  CANCELLED: { label: 'Đã hủy', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
+  EXPIRED: { label: 'Quá hạn', styleDark: 'bg-slate-800 text-slate-400 border-slate-700', styleLight: 'bg-slate-100 text-slate-600 border-slate-200' },
+  NO_SHOW: { label: 'Vắng mặt', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
+  FAILED: { label: 'Thất bại', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
+  REFUNDED: { label: 'Đã hoàn tiền', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800/60', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
 };
 
 export function AppointmentTab() {
@@ -64,8 +64,8 @@ export function AppointmentTab() {
     : 'bg-slate-950 border-slate-800 text-white shadow-sm';
 
   const tableHeaderStyle = isLight
-    ? 'bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider'
-    : 'bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider';
+    ? 'bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs'
+    : 'bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold text-xs';
 
   // Fetch Stats (4 small stat cards)
   const { data: stats } = useQuery({
@@ -173,30 +173,28 @@ export function AppointmentTab() {
         <div className={`flex p-1 rounded-xl border ${isLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-900 border-slate-800'}`}>
           <button
             onClick={() => setViewMode('table')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              viewMode === 'table'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'table'
                 ? isLight
                   ? 'bg-white text-emerald-800 shadow-sm'
                   : 'bg-emerald-600 text-white shadow-sm'
                 : isLight
-                ? 'text-slate-600 hover:text-slate-900'
-                : 'text-slate-400 hover:text-white'
-            }`}
+                  ? 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-400 hover:text-white'
+              }`}
           >
             <List className="w-4 h-4" /> Danh sách
           </button>
 
           <button
             onClick={() => setViewMode('calendar')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              viewMode === 'calendar'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'calendar'
                 ? isLight
                   ? 'bg-white text-emerald-800 shadow-sm'
                   : 'bg-emerald-600 text-white shadow-sm'
                 : isLight
-                ? 'text-slate-600 hover:text-slate-900'
-                : 'text-slate-400 hover:text-white'
-            }`}
+                  ? 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-400 hover:text-white'
+              }`}
           >
             <CalendarIcon className="w-4 h-4" /> Lịch
           </button>
@@ -206,84 +204,84 @@ export function AppointmentTab() {
       {/* 4 Small Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Today Total */}
-        <Card className={`${cardStyle} p-4`}>
+        <Card className={`${cardStyle} p-4 rounded-xl border border-slate-200 dark:border-slate-800`}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Lịch hôm nay</div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">Lịch hôm nay</div>
+              <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
                 {stats?.todayTotal ?? 0}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
-              <CalendarIcon className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <CalendarIcon className="w-4 h-4" />
             </div>
           </div>
         </Card>
 
         {/* Confirmed */}
-        <Card className={`${cardStyle} p-4`}>
+        <Card className={`${cardStyle} p-4 rounded-xl border border-slate-200 dark:border-slate-800`}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Đã xác nhận</div>
-              <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">Đã xác nhận</div>
+              <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">
                 {stats?.confirmed ?? 0}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
         </Card>
 
         {/* Completed */}
-        <Card className={`${cardStyle} p-4`}>
+        <Card className={`${cardStyle} p-4 rounded-xl border border-slate-200 dark:border-slate-800`}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Đã hoàn thành</div>
-              <div className="text-2xl font-black text-emerald-600 dark:text-[#66FF33] mt-1">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">Đã hoàn thành</div>
+              <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                 {stats?.completed ?? 0}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-              <Activity className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Activity className="w-4 h-4" />
             </div>
           </div>
         </Card>
 
         {/* Cancelled */}
-        <Card className={`${cardStyle} p-4`}>
+        <Card className={`${cardStyle} p-4 rounded-xl border border-slate-200 dark:border-slate-800`}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Đã hủy</div>
-              <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">Đã hủy</div>
+              <div className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">
                 {stats?.cancelled ?? 0}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center font-bold">
-              <XCircle className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <XCircle className="w-4 h-4" />
             </div>
           </div>
         </Card>
       </div>
 
       {/* Toolbar / Multi-Filter Bar */}
-      <Card className={`${cardStyle} p-4`}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <Card className={`${cardStyle} p-3.5 rounded-xl border border-slate-200 dark:border-slate-800`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {/* Search input */}
           <div className="relative w-full lg:col-span-2">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               type="text"
-              placeholder="🔍 Tìm mã đặt lịch / bệnh nhân / SĐT..."
+              placeholder="Tìm mã đặt lịch, tên bệnh nhân, số điện thoại..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className={`pl-9 text-xs rounded-xl ${
+              className={`pl-9 text-xs rounded-lg h-9 border-slate-200 dark:border-slate-700 ${
                 isLight
-                  ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
-                  : 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-500'
+                  ? 'bg-white text-slate-900 placeholder:text-slate-400'
+                  : 'bg-slate-900 text-white placeholder:text-slate-500'
               }`}
             />
           </div>
@@ -295,11 +293,11 @@ export function AppointmentTab() {
               setHospitalId(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
+              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
             }`}
           >
-            <option value="">Bệnh viện ▼ (Tất cả)</option>
+            <option value="">Bệnh viện (Tất cả)</option>
             {hospitalsData?.items?.map((h: any) => (
               <option key={h.id} value={h.id}>
                 {h.name}
@@ -314,11 +312,11 @@ export function AppointmentTab() {
               setDoctorId(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
+              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
             }`}
           >
-            <option value="">Bác sĩ ▼ (Tất cả)</option>
+            <option value="">Bác sĩ (Tất cả)</option>
             {doctorsData?.items?.map((d: any) => (
               <option key={d.id} value={d.id}>
                 {d.title ? `${d.title} ` : ''}{d.fullName}
@@ -333,11 +331,11 @@ export function AppointmentTab() {
               setSpecialtyId(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
+              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
             }`}
           >
-            <option value="">Chuyên khoa ▼ (Tất cả)</option>
+            <option value="">Chuyên khoa (Tất cả)</option>
             {specialtiesData?.items?.map((s: any) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -352,11 +350,11 @@ export function AppointmentTab() {
               setMedicalServiceId(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
+              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
             }`}
           >
-            <option value="">Dịch vụ ▼ (Tất cả)</option>
+            <option value="">Dịch vụ (Tất cả)</option>
             {servicesData?.items?.map((srv: any) => (
               <option key={srv.id} value={srv.id}>
                 {srv.name}
@@ -371,19 +369,19 @@ export function AppointmentTab() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
+              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
             }`}
           >
-            <option value="">Trạng thái ▼ (Tất cả)</option>
-            <option value="PENDING">Chờ xác nhận (PENDING)</option>
-            <option value="AWAITING_PAYMENT">Chờ thanh toán (AWAITING_PAYMENT)</option>
-            <option value="CONFIRMED">Đã xác nhận (CONFIRMED)</option>
-            <option value="PAID">Đã thanh toán (PAID)</option>
-            <option value="COMPLETED">Hoàn thành khám (COMPLETED)</option>
-            <option value="CANCELLED">Đã hủy (CANCELLED)</option>
-            <option value="EXPIRED">Quá hạn (EXPIRED)</option>
-            <option value="NO_SHOW">Vắng mặt (NO_SHOW)</option>
+            <option value="">Trạng thái (Tất cả)</option>
+            <option value="PENDING">Chờ xác nhận</option>
+            <option value="AWAITING_PAYMENT">Chờ thanh toán</option>
+            <option value="CONFIRMED">Đã xác nhận</option>
+            <option value="PAID">Đã thanh toán</option>
+            <option value="COMPLETED">Hoàn thành khám</option>
+            <option value="CANCELLED">Đã hủy</option>
+            <option value="EXPIRED">Quá hạn</option>
+            <option value="NO_SHOW">Vắng mặt</option>
           </select>
 
           {/* Date Picker Filter */}
@@ -395,8 +393,8 @@ export function AppointmentTab() {
                 setDateFilter(e.target.value);
                 setPage(1);
               }}
-              className={`text-xs rounded-xl font-mono ${
-                isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              className={`text-xs rounded-lg h-9 font-mono border-slate-200 dark:border-slate-700 ${
+                isLight ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'
               }`}
             />
             {hasActiveFilter && (
@@ -404,7 +402,7 @@ export function AppointmentTab() {
                 variant="outline"
                 size="sm"
                 onClick={handleResetFilters}
-                className={`rounded-xl text-xs shrink-0 ${isLight ? 'border-slate-300 text-slate-700' : 'border-slate-800 text-slate-300'}`}
+                className="h-9 px-2.5 rounded-lg text-xs shrink-0 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
                 title="Đặt lại bộ lọc"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -417,41 +415,41 @@ export function AppointmentTab() {
       {/* Main Content Area: Table vs Calendar */}
       {viewMode === 'table' ? (
         /* TABLE VIEW */
-        <Card className={`${cardStyle} overflow-hidden`}>
+        <Card className={`${cardStyle} rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs`}>
           <CardContent className="p-0 overflow-x-auto">
             {isLoading ? (
               <div className="p-12 flex justify-center">
                 <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
               </div>
             ) : (
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs whitespace-nowrap">
                 <thead className={tableHeaderStyle}>
                   <tr>
-                    <th className="p-4">Mã đặt lịch</th>
-                    <th className="p-4">Bệnh nhân</th>
-                    <th className="p-4">Bác sĩ</th>
-                    <th className="p-4">Bệnh viện</th>
-                    <th className="p-4">Chuyên khoa</th>
-                    <th className="p-4">Ngày giờ khám</th>
-                    <th className="p-4">Dịch vụ</th>
-                    <th className="p-4">Tổng tiền</th>
-                    <th className="p-4">Trạng thái</th>
-                    <th className="p-4 text-right">Thao tác</th>
+                    <th className="py-2.5 px-3 w-[120px] font-semibold">Mã đặt lịch</th>
+                    <th className="py-2.5 px-3 min-w-[150px] font-semibold">Bệnh nhân</th>
+                    <th className="py-2.5 px-3 min-w-[130px] font-semibold">Bác sĩ</th>
+                    <th className="py-2.5 px-3 min-w-[180px] max-w-[240px] font-semibold">Bệnh viện</th>
+                    <th className="py-2.5 px-3 min-w-[110px] font-semibold">Chuyên khoa</th>
+                    <th className="py-2.5 px-3 min-w-[130px] font-semibold">Ngày giờ khám</th>
+                    <th className="py-2.5 px-3 min-w-[150px] max-w-[200px] font-semibold">Dịch vụ</th>
+                    <th className="py-2.5 px-3 text-right min-w-[95px] font-semibold">Tổng tiền</th>
+                    <th className="py-2.5 px-3 text-center min-w-[120px] font-semibold">Trạng thái</th>
+                    <th className="py-2.5 px-3 text-right min-w-[90px] font-semibold">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
+                <tbody className={`divide-y ${isLight ? 'divide-slate-100' : 'divide-slate-800/60'}`}>
                   {data?.items?.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="p-8 text-center text-slate-500 font-medium">
+                      <td colSpan={10} className="py-10 text-center text-slate-500 font-normal">
                         <div className="flex flex-col items-center gap-2">
-                          <AlertCircle className="w-6 h-6 text-slate-400" />
+                          <AlertCircle className="w-5 h-5 text-slate-400" />
                           <span>Chưa có lịch khám phù hợp với bộ lọc hiện tại.</span>
                           {hasActiveFilter && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={handleResetFilters}
-                              className="mt-2 rounded-xl text-xs"
+                              className="mt-2 rounded-lg text-xs"
                             >
                               Đặt lại bộ lọc
                             </Button>
@@ -461,7 +459,7 @@ export function AppointmentTab() {
                     </tr>
                   ) : (
                     data?.items?.map((appt: any) => {
-                      const st = STATUS_MAP[appt.status] || { label: appt.status, styleDark: 'bg-slate-800 text-white', styleLight: 'bg-slate-100 text-slate-800' };
+                      const st = STATUS_MAP[appt.status] || { label: appt.status, styleDark: 'bg-slate-800 text-slate-300 border-slate-700', styleLight: 'bg-slate-100 text-slate-700 border-slate-200' };
                       const docWp = appt.slot?.doctorWorkplace;
                       const slotStart = appt.slot?.startTime ? new Date(appt.slot.startTime) : null;
                       const slotEnd = appt.slot?.endTime ? new Date(appt.slot.endTime) : null;
@@ -470,119 +468,92 @@ export function AppointmentTab() {
                         <tr
                           key={appt.id}
                           onClick={() => setSelectedAppointmentId(appt.id)}
-                          className={`transition cursor-pointer ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-900/50'}`}
+                          className={`border-b transition cursor-pointer text-xs ${isLight ? 'border-slate-100 hover:bg-slate-50/80' : 'border-slate-800/60 hover:bg-slate-900/50'}`}
                         >
                           {/* Booking Code */}
-                          <td className="p-4 font-mono font-black text-emerald-600 dark:text-[#66FF33]">
+                          <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300 font-medium align-middle whitespace-nowrap">
                             #{appt.bookingCode}
                           </td>
 
                           {/* Patient */}
-                          <td className={`p-4 font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                            <div>{appt.patientProfile?.fullName || appt.user?.fullName}</div>
-                            <div className="text-[11px] font-mono text-slate-500 font-normal">
+                          <td className="py-2.5 px-3 align-middle">
+                            <div className="font-medium text-slate-900 dark:text-white leading-tight">
+                              {appt.patientProfile?.fullName || appt.user?.fullName}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-mono mt-0.5 leading-tight">
                               {appt.patientProfile?.phone || appt.user?.phone}
                             </div>
                           </td>
 
                           {/* Doctor */}
-                          <td className={`p-4 font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 align-middle whitespace-nowrap">
                             {docWp?.doctor?.fullName ? (
-                              <div>BS. {docWp.doctor.fullName}</div>
+                              <span className="font-medium">BS. {docWp.doctor.fullName}</span>
                             ) : (
-                              <span className="text-slate-400 italic">Chưa xếp Bác sĩ</span>
+                              <span className="text-slate-400 italic">Chưa xếp</span>
                             )}
                           </td>
 
                           {/* Hospital */}
-                          <td className={`p-4 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                            <div className="font-semibold">{docWp?.hospital?.name || 'N/A'}</div>
-                            <div className="text-[11px] text-slate-400">{docWp?.branch?.name || docWp?.branch?.address || 'Cơ sở chính'}</div>
+                          <td className="py-2.5 px-3 align-middle max-w-[240px]">
+                            <div className="text-slate-800 dark:text-slate-200 font-medium truncate leading-tight">
+                              {docWp?.hospital?.name || 'N/A'}
+                            </div>
+                            <div className="text-[11px] text-slate-400 truncate mt-0.5 leading-tight">
+                              {docWp?.branch?.name || docWp?.branch?.address || 'Cơ sở chính'}
+                            </div>
                           </td>
 
                           {/* Specialty */}
-                          <td className={`p-4 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                            {docWp?.specialty?.name || 'N/A'}
+                          <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 align-middle whitespace-nowrap">
+                            {docWp?.specialty?.name || '---'}
                           </td>
 
                           {/* Date/Time */}
-                          <td className={`p-4 font-semibold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                          <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 align-middle whitespace-nowrap leading-tight">
                             {slotStart ? (
                               <div>
                                 <div>{slotStart.toLocaleDateString('vi-VN')}</div>
-                                <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
                                   {slotStart.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {slotEnd?.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-slate-400 italic">Chưa xếp khung giờ</span>
+                              <span className="text-slate-400 italic">Chưa xếp</span>
                             )}
                           </td>
 
                           {/* Service */}
-                          <td className={`p-4 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                            {appt.medicalService?.name || 'Khám chuyên khoa'}
+                          <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 align-middle max-w-[200px]">
+                            <div className="truncate" title={appt.medicalService?.name || 'Khám chuyên khoa'}>
+                              {appt.medicalService?.name || 'Khám chuyên khoa'}
+                            </div>
                           </td>
 
                           {/* Price */}
-                          <td className={`p-4 font-mono font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                            {Number(appt.totalPrice || appt.consultationFee || 0).toLocaleString()}đ
+                          <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-slate-200 text-right align-middle whitespace-nowrap font-medium">
+                            {Number(appt.totalPrice || appt.consultationFee || 0).toLocaleString('vi-VN')}đ
                           </td>
 
                           {/* Status */}
-                          <td className="p-4">
+                          <td className="py-2.5 px-3 text-center align-middle whitespace-nowrap">
                             <span
-                              className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
-                                isLight ? st.styleLight : st.styleDark
-                              }`}
+                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${isLight ? st.styleLight : st.styleDark}`}
                             >
                               {st.label}
                             </span>
                           </td>
 
                           {/* Actions */}
-                          <td className="p-4 text-right space-x-1" onClick={(e) => e.stopPropagation()}>
+                          <td className="py-2.5 px-3 text-right align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => setSelectedAppointmentId(appt.id)}
-                              className={`text-xs font-bold rounded-xl ${
-                                isLight ? 'border-slate-300 text-slate-800 hover:bg-slate-100' : 'border-slate-800 text-white hover:bg-slate-900'
-                              }`}
+                              className="h-7 text-xs font-normal rounded-lg px-2.5 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
                             >
-                              <Eye className="w-3.5 h-3.5 mr-1 text-emerald-500" /> Chi tiết
+                              <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" /> Chi tiết
                             </Button>
-
-                            {appt.status !== 'COMPLETED' && appt.status !== 'CANCELLED' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={updateStatusMutation.isPending}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateStatusMutation.mutate({ id: appt.id, status: 'COMPLETED' });
-                                }}
-                                className={`text-xs font-bold rounded-xl ${
-                                  isLight ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' : 'border-emerald-800 text-[#66FF33] hover:bg-emerald-950'
-                                }`}
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Duyệt
-                              </Button>
-                            )}
-
-                            {appt.status !== 'CANCELLED' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={cancelMutation.isPending}
-                                onClick={(e) => handleCancelClick(appt.id, e)}
-                                className={`text-xs font-bold rounded-xl ${
-                                  isLight ? 'border-rose-300 text-rose-700 hover:bg-rose-50' : 'border-rose-900 text-rose-400 hover:bg-rose-950'
-                                }`}
-                              >
-                                <XCircle className="w-3.5 h-3.5 mr-1" /> Hủy
-                              </Button>
-                            )}
                           </td>
                         </tr>
                       );
@@ -630,11 +601,10 @@ export function AppointmentTab() {
                     <div
                       key={appt.id}
                       onClick={() => setSelectedAppointmentId(appt.id)}
-                      className={`p-3.5 rounded-2xl border transition cursor-pointer hover:scale-[1.01] ${
-                        isLight
+                      className={`p-3.5 rounded-2xl border transition cursor-pointer hover:scale-[1.01] ${isLight
                           ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
                           : 'bg-slate-900/80 hover:bg-slate-900 border-slate-800 text-slate-200'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-mono font-black text-xs text-emerald-600 dark:text-[#66FF33]">
@@ -683,9 +653,8 @@ export function AppointmentTab() {
       {/* Pagination (for Table mode) */}
       {viewMode === 'table' && data?.totalPages > 1 && (
         <div
-          className={`flex items-center justify-between p-4 rounded-xl border text-xs ${
-            isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
-          }`}
+          className={`flex items-center justify-between p-4 rounded-xl border text-xs ${isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
+            }`}
         >
           <span>
             Hiển thị trang <strong>{data.page}</strong> / <strong>{data.totalPages}</strong> (Tổng {data.total} lịch)

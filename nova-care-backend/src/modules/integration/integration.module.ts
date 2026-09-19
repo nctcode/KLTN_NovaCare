@@ -9,6 +9,9 @@ import { InteroperabilityPortalController } from './interoperability-portal.cont
 import { InteroperabilityPortalService } from './interoperability-portal.service';
 import { HospitalDataAdapter } from './hospital-data.adapter';
 import { MedicalDataNormalizerService } from './medical-data-normalizer.service';
+import { CatalogSyncController } from './catalog-sync/catalog-sync.controller';
+import { CatalogSyncService } from './catalog-sync/catalog-sync.service';
+import { CatalogNormalizerService } from './catalog-sync/catalog-normalizer.service';
 
 @Module({
   controllers: [
@@ -16,6 +19,7 @@ import { MedicalDataNormalizerService } from './medical-data-normalizer.service'
     ConsentController,
     MedicalIntegrationController,
     InteroperabilityPortalController,
+    CatalogSyncController,
   ],
   providers: [
     IdentityMatchingService,
@@ -24,6 +28,8 @@ import { MedicalDataNormalizerService } from './medical-data-normalizer.service'
     InteroperabilityPortalService,
     HospitalDataAdapter,
     MedicalDataNormalizerService,
+    CatalogSyncService,
+    CatalogNormalizerService,
   ],
   exports: [
     IdentityMatchingService,
@@ -32,6 +38,8 @@ import { MedicalDataNormalizerService } from './medical-data-normalizer.service'
     InteroperabilityPortalService,
     HospitalDataAdapter,
     MedicalDataNormalizerService,
+    CatalogSyncService,
+    CatalogNormalizerService,
   ],
 })
 export class IntegrationModule {}

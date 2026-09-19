@@ -65,13 +65,25 @@ export class AdminHospitalsService {
       return {
         id: item.id,
         name: item.name,
-        hotline: item.phone || '028 1234 5678',
+        hotline: item.phone || item.hotline || '028 1234 5678',
         logoUrl: item.logoUrl || '',
         type: item.type === 'PUBLIC' ? 'Công' : item.type === 'PRIVATE' ? 'Tư nhân' : 'Quốc tế',
+        rawType: item.type,
         city: item.city || 'TP. Hồ Chí Minh',
+        address: item.address || 'TP. Hồ Chí Minh, Việt Nam',
+        email: item.email || 'contact@novacare.vn',
+        website: item.website || '',
+        emergencyHotline: item.emergencyHotline || item.hotline || item.phone || '115',
+        operatingHours: item.operatingHours || '07:00 - 17:00 (Thứ 2 - Thứ 7)',
+        bedCount: item.bedCount || null,
+        establishedYear: item.establishedYear || null,
         doctorCount: item.workPlaces.length,
         specialtyCount: count > 0 ? count : 4,
         status: item.status === 'ACTIVE' ? 'Hoạt động' : item.status === 'PAUSED' ? 'Tạm ngưng' : 'Ngừng hợp tác',
+        rawStatus: item.status,
+        source: item.source,
+        externalId: item.externalId,
+        createdAt: item.createdAt,
       };
     });
 

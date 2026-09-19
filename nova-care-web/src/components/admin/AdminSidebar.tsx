@@ -9,113 +9,165 @@ import {
   UserCheck,
   Building2,
   Stethoscope,
-  Package,
-  Activity,
+  Network,
   CalendarCheck,
-  History,
+  Calendar,
+  ClipboardList,
   ExternalLink,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { Suspense } from 'react';
 
-const ADMIN_MENU_ITEMS = [
-  { href: '/admin', label: 'Dashboard Thống kê', icon: LayoutDashboard },
-  { href: '/admin/hospitals', label: 'Quản lý Bệnh viện', icon: Building2 },
-  { href: '/admin/doctors', label: 'Quản lý Bác sĩ', icon: UserCheck },
-  { href: '/admin/specialties', label: 'Quản lý Chuyên khoa', icon: Stethoscope },
-  { href: '/admin/health-packages', label: 'Quản lý Gói khám', icon: Package },
-  { href: '/admin/medical-services', label: 'Quản lý Dịch vụ', icon: Activity },
-  { href: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
-  { href: '/admin/appointments', label: 'Quản lý lịch', icon: CalendarCheck },
-  { href: '/admin/audit-logs', label: 'Nhật ký Hệ thống', icon: History },
+interface MenuItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: any;
+}
+
+const ADMIN_MENU_ITEMS: MenuItem[] = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    href: '/admin',
+    icon: LayoutDashboard,
+  },
+  {
+    id: 'hospitals',
+    label: 'Bệnh viện',
+    href: '/admin/hospitals',
+    icon: Building2,
+  },
+  {
+    id: 'doctors',
+    label: 'Bác sĩ',
+    href: '/admin/doctors',
+    icon: UserCheck,
+  },
+  {
+    id: 'specialties',
+    label: 'Chuyên khoa',
+    href: '/admin/specialties',
+    icon: Stethoscope,
+  },
+  {
+    id: 'schedules',
+    label: 'Lịch khám',
+    href: '/admin/schedules',
+    icon: Calendar,
+  },
+  {
+    id: 'appointments',
+    label: 'Lịch hẹn',
+    href: '/admin/appointments',
+    icon: CalendarCheck,
+  },
+  {
+    id: 'users',
+    label: 'Người dùng',
+    href: '/admin/users',
+    icon: Users,
+  },
+  {
+    id: 'his-sync',
+    label: 'Tích hợp HIS',
+    href: '/admin/his-sync',
+    icon: Network,
+  },
+  {
+    id: 'audit-logs',
+    label: 'Logs',
+    href: '/admin/audit-logs',
+    icon: ClipboardList,
+  },
 ];
 
-export function AdminSidebar() {
+function AdminSidebarInner() {
   const pathname = usePathname();
   const { theme } = useAdminTheme();
-  const [collapsed, setCollapsed] = useState(false);
   const isLight = theme === 'light';
 
   return (
     <aside
-      className={`transition-all duration-300 flex flex-col z-30 shrink-0 border-r ${
-        collapsed ? 'w-20' : 'w-64'
-      } ${
+      className={`w-64 flex flex-col shrink-0 border-r ${
         isLight
-          ? 'bg-[#0c4b39] text-white border-[#083629]'
-          : 'bg-slate-950 text-white border-slate-800'
+          ? 'bg-white text-slate-800 border-slate-200'
+          : 'bg-slate-900 text-slate-200 border-slate-800'
       }`}
     >
-      {/* Sidebar Header Logo */}
-      <div className={`h-16 border-b flex items-center justify-between px-4 ${isLight ? 'border-emerald-800/60' : 'border-slate-800/80'}`}>
-        <Link href="/admin" className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-xl text-slate-950 shadow-md shrink-0">
+      {/* Brand Header */}
+      <div className={`h-16 flex items-center px-5 border-b ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+        <Link href="/admin" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-sm">
             N
           </div>
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
-                NovaCare <span className="text-[10px] font-black uppercase px-1.5 py-0.2 rounded bg-[#66FF33] text-slate-950">Admin</span>
-              </span>
-              <span className="text-[10px] text-emerald-200 font-medium">Hệ thống Quản trị</span>
-            </div>
-          )}
+          <div>
+            <span className="font-bold text-sm tracking-tight block">NovaCare Admin</span>
+            <span className="text-[11px] text-slate-400 block -mt-0.5">Quản trị nền tảng</span>
+          </div>
         </Link>
-
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className={`p-1 rounded-lg transition ${isLight ? 'text-emerald-200 hover:text-white hover:bg-emerald-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-          title={collapsed ? 'Mở rộng thanh menu' : 'Thu gọn thanh menu'}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+      {/* Nav List */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {ADMIN_MENU_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+          const isActive =
+            item.href === '/admin'
+              ? pathname === '/admin'
+              : pathname.startsWith(item.href);
 
           return (
             <Link
-              key={item.href}
+              key={item.id}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all ${
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
                 isActive
                   ? isLight
-                    ? 'bg-emerald-600/60 text-[#66FF33] shadow-sm border border-emerald-400/30'
-                    : 'bg-gradient-to-r from-[#0c4b39] to-emerald-800 text-[#66FF33] shadow-sm border border-emerald-500/30'
+                    ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60'
+                    : 'bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-800/50'
                   : isLight
-                  ? 'text-emerald-100 hover:bg-emerald-800/40 hover:text-white'
-                  : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+                  ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
               }`}
-              title={collapsed ? item.label : undefined}
             >
-              <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-[#66FF33]' : isLight ? 'text-emerald-300' : 'text-slate-400'}`} />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              <Icon
+                className={`w-4 h-4 shrink-0 ${
+                  isActive
+                    ? isLight
+                      ? 'text-emerald-700'
+                      : 'text-emerald-400'
+                    : 'text-slate-400'
+                }`}
+              />
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom Client Link */}
-      <div className={`p-3 border-t ${isLight ? 'border-emerald-800/60' : 'border-slate-800'}`}>
+      {/* Footer */}
+      <div className={`p-3 border-t ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
         <Link
           href="/"
           target="_blank"
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition border ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition ${
             isLight
-              ? 'bg-emerald-900/60 hover:bg-emerald-800 text-emerald-100 border-emerald-700/50'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
+              ? 'text-slate-600 hover:bg-slate-100'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}
-          title={collapsed ? 'Trang Bệnh nhân' : undefined}
         >
-          <ExternalLink className="w-4 h-4 text-[#66FF33] shrink-0" />
-          {!collapsed && <span>Về Trang Bệnh nhân</span>}
+          <ExternalLink className="w-4 h-4 shrink-0" />
+          <span>Trang Bệnh nhân</span>
         </Link>
       </div>
     </aside>
+  );
+}
+
+export function AdminSidebar() {
+  return (
+    <Suspense fallback={<div className="w-64 shrink-0 border-r border-slate-200 bg-white" />}>
+      <AdminSidebarInner />
+    </Suspense>
   );
 }

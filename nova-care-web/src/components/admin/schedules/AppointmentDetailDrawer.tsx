@@ -22,16 +22,16 @@ import {
 import { toast } from 'sonner';
 
 const STATUS_BADGE: Record<string, { label: string; styleDark: string; styleLight: string }> = {
-  PENDING: { label: 'Chờ xác nhận', styleDark: 'bg-amber-950 text-amber-400 border-amber-800', styleLight: 'bg-amber-100 text-amber-800 border-amber-300' },
-  AWAITING_PAYMENT: { label: 'Chờ thanh toán', styleDark: 'bg-orange-950 text-orange-400 border-orange-800', styleLight: 'bg-orange-100 text-orange-800 border-orange-300' },
-  CONFIRMED: { label: 'Đã xác nhận', styleDark: 'bg-blue-950 text-blue-400 border-blue-800', styleLight: 'bg-blue-100 text-blue-800 border-blue-300' },
-  PAID: { label: 'Đã thanh toán', styleDark: 'bg-purple-950 text-purple-400 border-purple-800', styleLight: 'bg-purple-100 text-purple-800 border-purple-300' },
-  COMPLETED: { label: 'Hoàn tất khám', styleDark: 'bg-emerald-950 text-[#66FF33] border-emerald-800', styleLight: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-  CANCELLED: { label: 'Đã hủy', styleDark: 'bg-rose-950 text-rose-400 border-rose-800', styleLight: 'bg-rose-100 text-rose-800 border-rose-300' },
-  EXPIRED: { label: 'Quá hạn', styleDark: 'bg-slate-900 text-slate-400 border-slate-800', styleLight: 'bg-slate-100 text-slate-700 border-slate-300' },
-  NO_SHOW: { label: 'Vắng mặt', styleDark: 'bg-rose-950 text-rose-400 border-rose-800', styleLight: 'bg-rose-100 text-rose-800 border-rose-300' },
-  FAILED: { label: 'Thất bại', styleDark: 'bg-rose-950 text-rose-400 border-rose-800', styleLight: 'bg-rose-100 text-rose-800 border-rose-300' },
-  REFUNDED: { label: 'Đã hoàn tiền', styleDark: 'bg-amber-950 text-amber-300 border-amber-800', styleLight: 'bg-amber-100 text-amber-800 border-amber-300' },
+  PENDING: { label: 'Chờ xác nhận', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800/60', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
+  AWAITING_PAYMENT: { label: 'Chờ thanh toán', styleDark: 'bg-orange-950/40 text-orange-400 border-orange-800/60', styleLight: 'bg-orange-50 text-orange-700 border-orange-200' },
+  CONFIRMED: { label: 'Đã xác nhận', styleDark: 'bg-blue-950/40 text-blue-400 border-blue-800/60', styleLight: 'bg-blue-50 text-blue-700 border-blue-200' },
+  PAID: { label: 'Đã thanh toán', styleDark: 'bg-purple-950/40 text-purple-400 border-purple-800/60', styleLight: 'bg-purple-50 text-purple-700 border-purple-200' },
+  COMPLETED: { label: 'Hoàn tất khám', styleDark: 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60', styleLight: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  CANCELLED: { label: 'Đã hủy', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
+  EXPIRED: { label: 'Quá hạn', styleDark: 'bg-slate-800 text-slate-400 border-slate-700', styleLight: 'bg-slate-100 text-slate-600 border-slate-200' },
+  NO_SHOW: { label: 'Vắng mặt', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
+  FAILED: { label: 'Thất bại', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
+  REFUNDED: { label: 'Đã hoàn tiền', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800/60', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
 };
 
 interface AppointmentDetailDrawerProps {
@@ -110,9 +110,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
   return (
     <Dialog open={open} onOpenChange={(v: boolean) => !v && onClose()}>
       <DialogContent
-        className={`max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl ${
-          isLight ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-950 text-white border-slate-800'
-        }`}
+        className={`max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl ${isLight ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-950 text-white border-slate-800'
+          }`}
       >
         <DialogHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
           <DialogTitle className="text-lg font-black flex items-center gap-2">
@@ -131,9 +130,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
           <div className="space-y-5 pt-2 text-xs">
             {/* Header Info Banner */}
             <div
-              className={`p-4 rounded-2xl border flex items-center justify-between ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
-              }`}
+              className={`p-4 rounded-2xl border flex items-center justify-between ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
+                }`}
             >
               <div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mã đặt lịch</div>
@@ -143,9 +141,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
               </div>
 
               <span
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border ${
-                  isLight ? st?.styleLight : st?.styleDark
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border ${isLight ? st?.styleLight : st?.styleDark
+                  }`}
               >
                 {st?.label}
               </span>
@@ -159,9 +156,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
               </h3>
 
               <div
-                className={`p-4 rounded-2xl border space-y-2 ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
-                }`}
+                className={`p-4 rounded-2xl border space-y-2 ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                  }`}
               >
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -234,9 +230,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
               </h3>
 
               <div
-                className={`p-4 rounded-2xl border space-y-3 ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
-                }`}
+                className={`p-4 rounded-2xl border space-y-3 ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center font-bold text-emerald-600 shrink-0">
@@ -298,9 +293,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
               </h3>
 
               <div
-                className={`p-4 rounded-2xl border space-y-2 ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
-                }`}
+                className={`p-4 rounded-2xl border space-y-2 ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                  }`}
               >
                 {slotStartTime && slotEndTime ? (
                   <>
@@ -348,9 +342,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
               </h3>
 
               <div
-                className={`p-4 rounded-2xl border space-y-2 ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
-                }`}
+                className={`p-4 rounded-2xl border space-y-2 ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                  }`}
               >
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500">Phí khám bác sĩ:</span>
@@ -396,9 +389,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
               </h3>
 
               <div
-                className={`p-4 rounded-2xl border ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
-                }`}
+                className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                  }`}
               >
                 {!appt.statusHistory || appt.statusHistory.length === 0 ? (
                   <p className="text-slate-500 italic text-center py-2">Chưa ghi nhận lịch sử trạng thái</p>
@@ -411,9 +403,8 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
                           <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-950" />
                           <div className="flex items-center justify-between gap-2">
                             <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
-                                isLight ? histBadge.styleLight : histBadge.styleDark
-                              }`}
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${isLight ? histBadge.styleLight : histBadge.styleDark
+                                }`}
                             >
                               {histBadge.label}
                             </span>
@@ -434,30 +425,18 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-2 justify-end">
-              {appt.status !== 'COMPLETED' && appt.status !== 'CANCELLED' && (
-                <Button
-                  disabled={updateStatusMutation.isPending}
-                  onClick={() => updateStatusMutation.mutate({ id: appt.id, status: 'COMPLETED' })}
-                  className="rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-1.5" /> Duyệt hoàn tất khám
-                </Button>
-              )}
-
-              {appt.status !== 'CANCELLED' && (
-                <Button
-                  variant="outline"
-                  disabled={cancelMutation.isPending}
-                  onClick={handleCancel}
-                  className={`rounded-xl font-bold text-xs ${
-                    isLight ? 'border-rose-300 text-rose-700 hover:bg-rose-50' : 'border-rose-900 text-rose-400 hover:bg-rose-950'
-                  }`}
-                >
-                  <XCircle className="w-4 h-4 mr-1.5" /> Hủy lịch khám
-                </Button>
-              )}
+            {/* Chế độ Giám sát & Đối soát */}
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="text-[11px] text-slate-500 font-medium italic">
+                * Chế độ Giám sát: Quyền duyệt hoàn tất khám hoặc hủy lịch thuộc thẩm quyền tiếp nhận của Quản trị viên Bệnh viện.
+              </div>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="rounded-xl font-bold text-xs"
+              >
+                Đóng
+              </Button>
             </div>
           </div>
         )}
