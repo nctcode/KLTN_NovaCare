@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { interoperabilityService } from '@/services/interoperability.service';
 import { VietnamEMRModal, MedicalEncounterData } from '@/components/emr/VietnamEMRModal';
+import Qd4750ExtractionModal from '@/components/emr/Qd4750ExtractionModal';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -61,6 +62,15 @@ function DoctorInteroperabilityPortalContent() {
   // EMR Modal State
   const [selectedEncounter, setSelectedEncounter] = useState<MedicalEncounterData | null>(null);
   const [isEMRModalOpen, setIsEMRModalOpen] = useState(false);
+
+  // QĐ 4750 Extraction Modal State
+  const [isQd4750Open, setIsQd4750Open] = useState(false);
+  const [selectedQd4750Code, setSelectedQd4750Code] = useState('');
+
+  const openQd4750Modal = (code: string) => {
+    setSelectedQd4750Code(code);
+    setIsQd4750Open(true);
+  };
 
   // Active Tab: 'RECORDS' | 'AUDIT_LOGS'
   const [activeTab, setActiveTab] = useState<'RECORDS' | 'AUDIT_LOGS'>('RECORDS');
@@ -533,13 +543,23 @@ function DoctorInteroperabilityPortalContent() {
                                 </div>
 
                                 {/* Nút xem chi tiết bệnh án */}
-                                <Button
-                                  onClick={() => openEMRDetail(enc, searchResult.patient)}
-                                  className="bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-300 font-semibold text-xs h-8.5 px-3.5 rounded-lg shadow-2xs gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
-                                >
-                                  <FileText className="w-3.5 h-3.5 text-slate-500" />
-                                  <span>Xem bệnh án (EMR)</span>
-                                </Button>
+                                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                                  <Button
+                                    onClick={() => openEMRDetail(enc, searchResult.patient)}
+                                    className="bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-300 font-semibold text-xs h-8.5 px-3 rounded-lg shadow-2xs gap-1.5 cursor-pointer"
+                                  >
+                                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Xem bệnh án (EMR)</span>
+                                  </Button>
+
+                                  <Button
+                                    onClick={() => openQd4750Modal(enc.encounterCode || enc.id)}
+                                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold text-xs h-8.5 px-3 rounded-lg shadow-2xs gap-1.5 cursor-pointer"
+                                  >
+                                    <FileCheck2 className="w-3.5 h-3.5 text-emerald-700" />
+                                    <span>Trích xuất QĐ 4750</span>
+                                  </Button>
+                                </div>
                               </div>
                             );
                           })}
@@ -641,6 +661,15 @@ function DoctorInteroperabilityPortalContent() {
         isOpen={isEMRModalOpen}
         onClose={() => setIsEMRModalOpen(false)}
         encounter={selectedEncounter}
+      />
+
+      {/* ========================================================= */}
+      {/* 7. MODAL TRÍCH XUẤT CHUẨN QĐ 4750/QĐ-BYT */}
+      {/* ========================================================= */}
+      <Qd4750ExtractionModal
+        isOpen={isQd4750Open}
+        onClose={() => setIsQd4750Open(false)}
+        encounterCode={selectedQd4750Code}
       />
 
     </div>

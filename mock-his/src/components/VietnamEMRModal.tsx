@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Printer,
   X,
@@ -8,8 +8,10 @@ import {
   Stethoscope,
   ShieldCheck,
   FileText,
+  FileCheck2,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { Qd4750ExtractionModal } from './Qd4750ExtractionModal';
 
 export interface DiagnosisItem {
   icdCode: string;
@@ -108,6 +110,8 @@ export function VietnamEMRModal({
   onClose,
   encounter,
 }: VietnamEMRModalProps) {
+  const [is4750Open, setIs4750Open] = useState(false);
+
   if (!isOpen || !encounter) return null;
 
   const patient = encounter.patientProfile;
@@ -208,6 +212,15 @@ export function VietnamEMRModal({
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIs4750Open(true)}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer"
+              title="Trích xuất chuẩn Quyết định 4750/QĐ-BYT gửi Cổng tiếp nhận BHYT"
+            >
+              <FileCheck2 className="w-3.5 h-3.5" />
+              Trích xuất QĐ 4750
+            </button>
             <button
               onClick={handlePrint}
               type="button"
@@ -847,6 +860,13 @@ export function VietnamEMRModal({
 
         </div>
       </div>
+
+      {/* MODAL TRÍCH XUẤT CHUẨN QĐ 4750/QĐ-BYT */}
+      <Qd4750ExtractionModal
+        isOpen={is4750Open}
+        onClose={() => setIs4750Open(false)}
+        encounterCode={encounter.encounterCode || encounter.id || null}
+      />
     </div>
   );
 }

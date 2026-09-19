@@ -201,8 +201,9 @@ export function Step1BookingInfo({
     return filtered;
   }, [medicalServices, selectedSpecialty, hospital.id]);
 
-  // Auto-select service when specialty changes or when there's only 1 service for that specialty
+  // Auto-select service when specialty changes or when there's only 1 service for that specialty (Only for SERVICE / GENERAL modes)
   useEffect(() => {
+    if (bookingMode === 'DOCTOR') return;
     if (!selectedSpecialty || specialtyServices.length === 0) return;
 
     if (specialtyServices.length === 1) {
@@ -214,7 +215,7 @@ export function Step1BookingInfo({
       // If previous selected service does not belong to newly selected specialty, switch to first item
       setSelectedService(specialtyServices[0]);
     }
-  }, [selectedSpecialty, specialtyServices, selectedService, setSelectedService]);
+  }, [bookingMode, selectedSpecialty, specialtyServices, selectedService, setSelectedService]);
 
   // AUTO-ASSIGNMENT LOGIC FOR SERVICE / GENERAL BOOKING MODE
   useEffect(() => {

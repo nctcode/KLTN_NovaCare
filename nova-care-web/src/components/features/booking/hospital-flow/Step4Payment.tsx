@@ -80,8 +80,8 @@ export function Step4Payment({
   const doctorWorkplaceId = doctor?.workPlaces?.find((w) => w.hospitalId === hospital.id)?.id || doctor?.workPlaces?.[0]?.id || null;
 
   const handleProcessBooking = async () => {
-    if (!patientProfile || !doctorWorkplaceId) {
-      toast.error('Thiếu thông tin đặt khám bắt buộc!');
+    if (!patientProfile) {
+      toast.error('Vui lòng chọn hồ sơ bệnh nhân đi khám!');
       return;
     }
 
@@ -96,12 +96,23 @@ export function Step4Payment({
 
       // 1. Re-use created appointment if already created for this slot & profile, otherwise create
       if (!appointment || appointment.slotId !== selectedSlotId || appointment.patientProfileId !== patientProfile.id) {
+        // Only send medicalServiceId if it is a valid UUID and not a virtual/fallback string (e.g. default-service-...)
+        const isValidUUID = (id?: string | null): boolean =>
+          typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+        const validServiceId = isValidUUID(service?.id) ? service?.id : undefined;
+
+        const idempotencyKey =
+          typeof window !== 'undefined' && window.crypto?.randomUUID
+            ? window.crypto.randomUUID()
+            : `hosp_book_${patientProfile.id}_${selectedSlotId}_${Date.now()}`;
+
         appointment = await appointmentService.create({
           patientProfileId: patientProfile.id,
           slotId: selectedSlotId,
-          medicalServiceId: service?.id || undefined,
+          ...(validServiceId ? { medicalServiceId: validServiceId } : {}),
           reason: reason || `Khám theo bác sĩ - ${specialty?.name || 'Chuyên khoa'}`,
-          idempotencyKey: `hosp_book_${patientProfile.id}_${selectedSlotId}`,
+          idempotencyKey,
         } as any);
 
         setCreatedAppointment(appointment);
@@ -134,7 +145,13 @@ export function Step4Payment({
       }
     } catch (error: any) {
       console.error('Error creating appointment:', error);
-      toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi tạo lịch hẹn. Vui lòng thử lại!');
+      const serverMessage = error?.response?.data?.message;
+      const displayMsg = Array.isArray(serverMessage)
+        ? serverMessage.join(', ')
+        : typeof serverMessage === 'string'
+        ? serverMessage
+        : 'Có lỗi xảy ra khi tạo lịch hẹn. Vui lòng thử lại!';
+      toast.error(displayMsg);
     } finally {
       setIsSubmitting(false);
     }

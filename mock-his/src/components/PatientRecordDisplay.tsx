@@ -25,9 +25,11 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
+  FileCheck2,
 } from 'lucide-react';
 import { LookupResponseData, EncounterItem, HospitalGroup } from '@/services/novacare-api.service';
 import { VietnamEMRModal, MedicalEncounterData } from './VietnamEMRModal';
+import { Qd4750ExtractionModal } from './Qd4750ExtractionModal';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -96,6 +98,10 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
   // State quản lý mở EMR Modal chính thống
   const [selectedEncounter, setSelectedEncounter] = useState<MedicalEncounterData | null>(null);
   const [isEMRModalOpen, setIsEMRModalOpen] = useState(false);
+
+  // State quản lý mở QĐ 4750 Extraction Modal
+  const [selected4750EncounterCode, setSelected4750EncounterCode] = useState<string | null>(null);
+  const [isQd4750ModalOpen, setIsQd4750ModalOpen] = useState(false);
 
   // State quản lý mở/đóng danh sách lần khám của từng bệnh viện (mặc định thu gọn)
   const [expandedHospitals, setExpandedHospitals] = useState<Record<string, boolean>>({});
@@ -700,14 +706,28 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
                               </div>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEMR(enc, group)}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition shrink-0 self-start sm:self-auto cursor-pointer"
-                            >
-                              <FileText className="w-3.5 h-3.5 text-slate-300" />
-                              <span>Xem bệnh án (EMR)</span>
-                            </button>
+                            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEMR(enc, group)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-slate-300" />
+                                <span>Xem bệnh án (EMR)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelected4750EncounterCode(enc.encounterCode || enc.id);
+                                  setIsQd4750ModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer"
+                                title="Trích xuất gói dữ liệu chuẩn QĐ 4750/QĐ-BYT gửi Cổng BHYT"
+                              >
+                                <FileCheck2 className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>Trích xuất QĐ 4750</span>
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -735,6 +755,13 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
         isOpen={isEMRModalOpen}
         onClose={() => setIsEMRModalOpen(false)}
         encounter={selectedEncounter}
+      />
+
+      {/* MODAL TRÍCH XUẤT CHUẨN QĐ 4750/QĐ-BYT (BẢNG CHECK-IN & BẢNG 1) */}
+      <Qd4750ExtractionModal
+        isOpen={isQd4750ModalOpen}
+        onClose={() => setIsQd4750ModalOpen(false)}
+        encounterCode={selected4750EncounterCode}
       />
     </div>
   );

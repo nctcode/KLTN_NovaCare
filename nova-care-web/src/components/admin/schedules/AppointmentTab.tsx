@@ -174,12 +174,12 @@ export function AppointmentTab() {
           <button
             onClick={() => setViewMode('table')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'table'
-                ? isLight
-                  ? 'bg-white text-emerald-800 shadow-sm'
-                  : 'bg-emerald-600 text-white shadow-sm'
-                : isLight
-                  ? 'text-slate-600 hover:text-slate-900'
-                  : 'text-slate-400 hover:text-white'
+              ? isLight
+                ? 'bg-white text-emerald-800 shadow-sm'
+                : 'bg-emerald-600 text-white shadow-sm'
+              : isLight
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-400 hover:text-white'
               }`}
           >
             <List className="w-4 h-4" /> Danh sách
@@ -188,12 +188,12 @@ export function AppointmentTab() {
           <button
             onClick={() => setViewMode('calendar')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'calendar'
-                ? isLight
-                  ? 'bg-white text-emerald-800 shadow-sm'
-                  : 'bg-emerald-600 text-white shadow-sm'
-                : isLight
-                  ? 'text-slate-600 hover:text-slate-900'
-                  : 'text-slate-400 hover:text-white'
+              ? isLight
+                ? 'bg-white text-emerald-800 shadow-sm'
+                : 'bg-emerald-600 text-white shadow-sm'
+              : isLight
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-400 hover:text-white'
               }`}
           >
             <CalendarIcon className="w-4 h-4" /> Lịch
@@ -278,11 +278,10 @@ export function AppointmentTab() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className={`pl-9 text-xs rounded-lg h-9 border-slate-200 dark:border-slate-700 ${
-                isLight
+              className={`pl-9 text-xs rounded-lg h-9 border-slate-200 dark:border-slate-700 ${isLight
                   ? 'bg-white text-slate-900 placeholder:text-slate-400'
                   : 'bg-slate-900 text-white placeholder:text-slate-500'
-              }`}
+                }`}
             />
           </div>
 
@@ -293,9 +292,8 @@ export function AppointmentTab() {
               setHospitalId(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
-              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
-            }`}
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
+              }`}
           >
             <option value="">Bệnh viện (Tất cả)</option>
             {hospitalsData?.items?.map((h: any) => (
@@ -312,9 +310,8 @@ export function AppointmentTab() {
               setDoctorId(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
-              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
-            }`}
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
+              }`}
           >
             <option value="">Bác sĩ (Tất cả)</option>
             {doctorsData?.items?.map((d: any) => (
@@ -331,9 +328,8 @@ export function AppointmentTab() {
               setSpecialtyId(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
-              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
-            }`}
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
+              }`}
           >
             <option value="">Chuyên khoa (Tất cả)</option>
             {specialtiesData?.items?.map((s: any) => (
@@ -350,9 +346,8 @@ export function AppointmentTab() {
               setMedicalServiceId(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
-              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
-            }`}
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
+              }`}
           >
             <option value="">Dịch vụ (Tất cả)</option>
             {servicesData?.items?.map((srv: any) => (
@@ -369,9 +364,8 @@ export function AppointmentTab() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${
-              isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
-            }`}
+            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
+              }`}
           >
             <option value="">Trạng thái (Tất cả)</option>
             <option value="PENDING">Chờ xác nhận</option>
@@ -393,9 +387,8 @@ export function AppointmentTab() {
                 setDateFilter(e.target.value);
                 setPage(1);
               }}
-              className={`text-xs rounded-lg h-9 font-mono border-slate-200 dark:border-slate-700 ${
-                isLight ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'
-              }`}
+              className={`text-xs rounded-lg h-9 font-mono border-slate-200 dark:border-slate-700 ${isLight ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'
+                }`}
             />
             {hasActiveFilter && (
               <Button
@@ -427,12 +420,9 @@ export function AppointmentTab() {
                   <tr>
                     <th className="py-2.5 px-3 w-[120px] font-semibold">Mã đặt lịch</th>
                     <th className="py-2.5 px-3 min-w-[150px] font-semibold">Bệnh nhân</th>
-                    <th className="py-2.5 px-3 min-w-[130px] font-semibold">Bác sĩ</th>
-                    <th className="py-2.5 px-3 min-w-[180px] max-w-[240px] font-semibold">Bệnh viện</th>
-                    <th className="py-2.5 px-3 min-w-[110px] font-semibold">Chuyên khoa</th>
-                    <th className="py-2.5 px-3 min-w-[130px] font-semibold">Ngày giờ khám</th>
-                    <th className="py-2.5 px-3 min-w-[150px] max-w-[200px] font-semibold">Dịch vụ</th>
-                    <th className="py-2.5 px-3 text-right min-w-[95px] font-semibold">Tổng tiền</th>
+                    <th className="py-2.5 px-3 min-w-[140px] font-semibold">Bác sĩ</th>
+                    <th className="py-2.5 px-3 min-w-[180px] font-semibold">Bệnh viện</th>
+                    <th className="py-2.5 px-3 min-w-[140px] font-semibold">Ngày giờ khám</th>
                     <th className="py-2.5 px-3 text-center min-w-[120px] font-semibold">Trạng thái</th>
                     <th className="py-2.5 px-3 text-right min-w-[90px] font-semibold">Thao tác</th>
                   </tr>
@@ -440,7 +430,7 @@ export function AppointmentTab() {
                 <tbody className={`divide-y ${isLight ? 'divide-slate-100' : 'divide-slate-800/60'}`}>
                   {data?.items?.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-10 text-center text-slate-500 font-normal">
+                      <td colSpan={7} className="py-10 text-center text-slate-500 font-normal">
                         <div className="flex flex-col items-center gap-2">
                           <AlertCircle className="w-5 h-5 text-slate-400" />
                           <span>Chưa có lịch khám phù hợp với bộ lọc hiện tại.</span>
@@ -480,9 +470,6 @@ export function AppointmentTab() {
                             <div className="font-medium text-slate-900 dark:text-white leading-tight">
                               {appt.patientProfile?.fullName || appt.user?.fullName}
                             </div>
-                            <div className="text-[11px] text-slate-500 font-mono mt-0.5 leading-tight">
-                              {appt.patientProfile?.phone || appt.user?.phone}
-                            </div>
                           </td>
 
                           {/* Doctor */}
@@ -495,18 +482,10 @@ export function AppointmentTab() {
                           </td>
 
                           {/* Hospital */}
-                          <td className="py-2.5 px-3 align-middle max-w-[240px]">
+                          <td className="py-2.5 px-3 align-middle">
                             <div className="text-slate-800 dark:text-slate-200 font-medium truncate leading-tight">
                               {docWp?.hospital?.name || 'N/A'}
                             </div>
-                            <div className="text-[11px] text-slate-400 truncate mt-0.5 leading-tight">
-                              {docWp?.branch?.name || docWp?.branch?.address || 'Cơ sở chính'}
-                            </div>
-                          </td>
-
-                          {/* Specialty */}
-                          <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 align-middle whitespace-nowrap">
-                            {docWp?.specialty?.name || '---'}
                           </td>
 
                           {/* Date/Time */}
@@ -521,18 +500,6 @@ export function AppointmentTab() {
                             ) : (
                               <span className="text-slate-400 italic">Chưa xếp</span>
                             )}
-                          </td>
-
-                          {/* Service */}
-                          <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 align-middle max-w-[200px]">
-                            <div className="truncate" title={appt.medicalService?.name || 'Khám chuyên khoa'}>
-                              {appt.medicalService?.name || 'Khám chuyên khoa'}
-                            </div>
-                          </td>
-
-                          {/* Price */}
-                          <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-slate-200 text-right align-middle whitespace-nowrap font-medium">
-                            {Number(appt.totalPrice || appt.consultationFee || 0).toLocaleString('vi-VN')}đ
                           </td>
 
                           {/* Status */}
@@ -602,8 +569,8 @@ export function AppointmentTab() {
                       key={appt.id}
                       onClick={() => setSelectedAppointmentId(appt.id)}
                       className={`p-3.5 rounded-2xl border transition cursor-pointer hover:scale-[1.01] ${isLight
-                          ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
-                          : 'bg-slate-900/80 hover:bg-slate-900 border-slate-800 text-slate-200'
+                        ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
+                        : 'bg-slate-900/80 hover:bg-slate-900 border-slate-800 text-slate-200'
                         }`}
                     >
                       <div className="flex items-center justify-between mb-2">

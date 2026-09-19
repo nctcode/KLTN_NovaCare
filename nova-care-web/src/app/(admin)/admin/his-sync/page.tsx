@@ -81,8 +81,8 @@ function HisSyncContent() {
       });
       return res.data;
     },
-    onSuccess: (data) => {
-      setSyncResult(data.data);
+    onSuccess: (data: any) => {
+      setSyncResult(data.data || data);
       toast.success('Đồng bộ danh mục HIS thành công!');
     },
     onError: (err: any) => {

@@ -172,6 +172,13 @@ model PatientProfile {
   relation             String?
   identityNumber       String?   @unique
   healthInsurance      String?
+  bhytInitialHospitalCode String?  @map("bhyt_initial_hospital_code")
+  bhytValidFrom        DateTime? @map("bhyt_valid_from")
+  bhytValidTo          DateTime? @map("bhyt_valid_to")
+  provinceCode         String?   @map("province_code")
+  districtCode         String?   @map("district_code")
+  wardCode             String?   @map("ward_code")
+  bloodType            String?   @map("blood_type")
   ethnicity            String?   @default("Kinh")
   nationality          String?   @default("Việt Nam")
   occupation           String?
@@ -374,6 +381,7 @@ model Hospital {
   status           PartnershipStatus @default(ACTIVE)
   rating           Float             @default(0)
   reviewCount      Int               @default(0)
+  hospitalCode     String?           @map("hospital_code")
   externalId       String?           @unique
   source           DataSource        @default(MANUAL)
   isActive         Boolean           @default(true)
@@ -748,8 +756,9 @@ model Prescription {
 model PrescriptionItem {
   id               String   @id @default(uuid())
   prescriptionId   String
-  drugName         String
-  dosage           String
+  drugName             String
+  activeIngredientCode String?  @map("active_ingredient_code")
+  dosage               String
   usageInstruction String
   quantity         Int
   unit             String?

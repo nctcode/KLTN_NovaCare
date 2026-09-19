@@ -221,7 +221,7 @@ export default function AdminDoctorsPage() {
             </Badge>
           </div>
           <p className={`text-xs mt-1 font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-            Theo dõi đội ngũ y bác sĩ, đơn vị công tác và nguồn dữ liệu (HIS API / Thủ công) trên toàn nền tảng NovaCare.
+            Theo dõi đội ngũ y bác sĩ và đơn vị công tác trên toàn nền tảng NovaCare.
           </p>
         </div>
       </div>
@@ -366,22 +366,9 @@ export default function AdminDoctorsPage() {
                                 doc.fullName.charAt(0)
                               )}
                             </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className={`font-semibold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                                {doc.fullName}
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                {doc.source === 'API' || doc.externalId ? (
-                                  <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] font-mono px-1.5 py-0">
-                                    HIS API {doc.externalId ? `(${doc.externalId})` : ''}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-slate-400 border-slate-700 text-[10px] px-1.5 py-0">
-                                    Thủ công
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
+                            <span className={`font-semibold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                              {doc.fullName}
+                            </span>
                           </div>
                         </td>
 

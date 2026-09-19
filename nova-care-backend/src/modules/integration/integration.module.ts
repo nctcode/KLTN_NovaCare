@@ -12,6 +12,8 @@ import { MedicalDataNormalizerService } from './medical-data-normalizer.service'
 import { CatalogSyncController } from './catalog-sync/catalog-sync.controller';
 import { CatalogSyncService } from './catalog-sync/catalog-sync.service';
 import { CatalogNormalizerService } from './catalog-sync/catalog-normalizer.service';
+import { Qd4750Controller } from './qd4750/qd4750.controller';
+import { Qd4750ExtractorService } from './qd4750/qd4750-extractor.service';
 
 @Module({
   controllers: [
@@ -20,6 +22,7 @@ import { CatalogNormalizerService } from './catalog-sync/catalog-normalizer.serv
     MedicalIntegrationController,
     InteroperabilityPortalController,
     CatalogSyncController,
+    Qd4750Controller,
   ],
   providers: [
     IdentityMatchingService,
@@ -30,6 +33,7 @@ import { CatalogNormalizerService } from './catalog-sync/catalog-normalizer.serv
     MedicalDataNormalizerService,
     CatalogSyncService,
     CatalogNormalizerService,
+    Qd4750ExtractorService,
   ],
   exports: [
     IdentityMatchingService,
@@ -40,6 +44,7 @@ import { CatalogNormalizerService } from './catalog-sync/catalog-normalizer.serv
     MedicalDataNormalizerService,
     CatalogSyncService,
     CatalogNormalizerService,
+    Qd4750ExtractorService,
   ],
 })
 export class IntegrationModule {}

@@ -200,6 +200,13 @@ async function main() {
       relation: 'Bản thân',
       identityNumber: '079088012345',
       healthInsurance: 'DN479088012345',
+      bhytInitialHospitalCode: '79014',
+      bhytValidFrom: new Date('2026-01-01T00:00:00Z'),
+      bhytValidTo: new Date('2026-12-31T23:59:59Z'),
+      provinceCode: '79',
+      districtCode: '760',
+      wardCode: '26740',
+      bloodType: 'O+',
       medicalHistory: 'Tiền sử tăng huyết áp nhẹ, dị ứng hải sản',
       isDefault: true,
     },
@@ -324,6 +331,7 @@ async function main() {
       reviewCount: 320,
       establishedYear: 2015,
       bedCount: 500,
+      hospitalCode: '79014',
     },
     {
       name: 'Bệnh viện Quốc tế Nova Central',
@@ -344,6 +352,7 @@ async function main() {
       reviewCount: 480,
       establishedYear: 2018,
       bedCount: 350,
+      hospitalCode: '79020',
     },
     {
       name: 'Bệnh viện Y Dược NovaCare Chợ Lớn',
@@ -1014,6 +1023,7 @@ async function main() {
       {
         prescriptionId: prescription.id,
         drugName: 'Amlodipine 5mg',
+        activeIngredientCode: '40.12',
         dosage: '5mg',
         usageInstruction: 'Uống 1 viên vào buổi sáng sau khi ăn',
         quantity: 14,
@@ -1024,6 +1034,7 @@ async function main() {
       {
         prescriptionId: prescription.id,
         drugName: 'Atorvastatin 10mg',
+        activeIngredientCode: '40.18',
         dosage: '10mg',
         usageInstruction: 'Uống 1 viên vào buổi tối trước khi đi ngủ',
         quantity: 14,
