@@ -119,7 +119,16 @@ fun NavGraph(
         }
         
         composable(Screen.Profiles.route) {
-            ProfileListScreen(navController = navController, patientViewModel = patientViewModel)
+            ProfileListScreen(
+                navController = navController,
+                patientViewModel = patientViewModel,
+                onBookProfile = { profile ->
+                    bookingViewModel.resetBooking()
+                    bookingViewModel.selectProfile(profile)
+                    bookingViewModel.setStep(1)
+                    navController.navigate(Screen.Search.route)
+                }
+            )
         }
         
         composable(Screen.Appointments.route) {
@@ -134,7 +143,11 @@ fun NavGraph(
             AppointmentDetailScreen(
                 appointmentId = appointmentId,
                 navController = navController,
-                appointmentViewModel = appointmentViewModel
+                appointmentViewModel = appointmentViewModel,
+                onPay = { appointment ->
+                    bookingViewModel.resumePayment(appointment)
+                    navController.navigate(Screen.BookingCheckout.route)
+                }
             )
         }
         
@@ -147,6 +160,13 @@ fun NavGraph(
             PaymentScreen(url = decodedUrl, navController = navController)
         }
         
+        composable(Screen.BookingCheckout.route) {
+            com.example.kltn_novacare.ui.screens.booking.BookingJourney(
+                bookingViewModel, patientViewModel, navController,
+                onBackFromInfo = { navController.popBackStack() }, info = {}
+            )
+        }
+
         composable(Screen.Notifications.route) {
             NotificationScreen(navController = navController, appointmentViewModel = appointmentViewModel)
         }
@@ -158,6 +178,8 @@ fun NavGraph(
         composable(
             route = Screen.HospitalBooking.route,
             arguments = listOf(
+                navArgument("specialtyId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("reason") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("hospitalId") {
                     type = NavType.StringType
                     nullable = true
@@ -168,6 +190,8 @@ fun NavGraph(
             val hospitalId = backStackEntry.arguments?.getString("hospitalId")
             com.example.kltn_novacare.ui.screens.booking.HospitalFacilityBookingScreen(
                 initialHospitalId = hospitalId,
+                initialSpecialtyId = backStackEntry.arguments?.getString("specialtyId"),
+                initialReason = backStackEntry.arguments?.getString("reason"),
                 navController = navController,
                 bookingViewModel = bookingViewModel,
                 doctorViewModel = doctorViewModel,
@@ -178,10 +202,10 @@ fun NavGraph(
         composable(Screen.PreExamScreening.route) {
             com.example.kltn_novacare.ui.screens.PreExamScreeningScreen(
                 onSkipScreening = {
-                    navController.navigate(Screen.HospitalBooking.createRoute(null))
+                    navController.navigate(Screen.HospitalBooking.createRoute(null)) { popUpTo(Screen.PreExamScreening.route) { inclusive = true } }
                 },
                 onCompletedToBooking = { doctorId, specialtyId, hospitalId, reason ->
-                    navController.navigate(Screen.HospitalBooking.createRoute(hospitalId))
+                    navController.navigate(Screen.HospitalBooking.createRoute(hospitalId, specialtyId, reason)) { popUpTo(Screen.PreExamScreening.route) { inclusive = true } }
                 }
             )
         }

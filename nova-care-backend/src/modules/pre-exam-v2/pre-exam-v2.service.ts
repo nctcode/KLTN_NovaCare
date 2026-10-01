@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { AuditLogService } from '@/common/services/audit-log.service';
@@ -12,6 +13,15 @@ import { AnswerQuestionDto } from './dto/answer-question.dto';
 
 import { MedicalRAGService } from '@/modules/ai/services/medical-rag.service';
 
+import { AiScreeningOrchestratorService } from './ai/ai-screening-orchestrator.service';
+import { QuestionEngineService } from './engines/question-engine.service';
+import { ClinicalFeatureExtractorService } from './services/clinical-feature-extractor.service';
+import { ClinicalPatternEngineService } from './engines/clinical-pattern-engine.service';
+import { SpecialtyConstraintValidatorService } from './validators/specialty-constraint-validator.service';
+import { ICDCandidateResolverService } from './services/icd-candidate-resolver.service';
+import { RedFlagEngineService } from './engines/red-flag-engine.service';
+import { SpecialtyRecommendationEngineService } from './engines/specialty-recommendation-engine.service';
+
 @Injectable()
 export class PreExamV2Service {
   constructor(
@@ -23,6 +33,14 @@ export class PreExamV2Service {
     private speechService: GoogleSpeechToTextService,
     private visionService: OpenAIVisionService,
     private ragService: MedicalRAGService,
+    private orchestrator: AiScreeningOrchestratorService,
+    private questionEngine: QuestionEngineService,
+    private redFlagEngine: RedFlagEngineService,
+    private featureExtractor: ClinicalFeatureExtractorService,
+    private patternEngine: ClinicalPatternEngineService,
+    private constraintValidator: SpecialtyConstraintValidatorService,
+    private icdResolver: ICDCandidateResolverService,
+    private specialtyEngine: SpecialtyRecommendationEngineService,
   ) { }
 
   async startSession(userId: string, dto: StartPreExamDto) {
@@ -216,96 +234,8 @@ export class PreExamV2Service {
     return session;
   }
 
-  async analyzeSmartphoneInputs(dto: {
-    symptoms?: string;
-    heartRateBpm?: number;
-    heightCm?: number;
-    weightKg?: number;
-    hospitalId?: string;
-    bodyAreas?: any;
-    questionnaire?: any;
-  }, files?: { voiceFile?: any; imageFiles?: any[] }) {
-    // 1. Process Voice via Whisper if uploaded
-    let transcript = '';
-    if (files?.voiceFile) {
-      try {
-        transcript = await this.speechService.transcribe(files.voiceFile);
-      } catch (err) {
-        transcript = '';
-      }
-    }
-
-    // 2. Process Images via GPT-4o Vision
-    const imageAnalysisFindings: string[] = [];
-    if (files?.imageFiles && files.imageFiles.length > 0) {
-      for (const img of files.imageFiles) {
-        try {
-          const result = await this.visionService.analyzeImage(img);
-          if (result?.findings) imageAnalysisFindings.push(result.findings);
-        } catch {
-          // ignore error
-        }
-      }
-    }
-
-    // 3. Parse Body Areas and Questionnaire JSON safely
-    let parsedBodyAreas: string[] = [];
-    if (dto.bodyAreas) {
-      if (Array.isArray(dto.bodyAreas)) {
-        parsedBodyAreas = dto.bodyAreas;
-      } else {
-        try {
-          parsedBodyAreas = JSON.parse(dto.bodyAreas);
-        } catch {
-          parsedBodyAreas = [dto.bodyAreas];
-        }
-      }
-    }
-
-    let parsedQuestionnaire: any = null;
-    if (dto.questionnaire) {
-      try {
-        parsedQuestionnaire = typeof dto.questionnaire === 'string' ? JSON.parse(dto.questionnaire) : dto.questionnaire;
-      } catch {
-        parsedQuestionnaire = null;
-      }
-    }
-
-    // 4. Fetch hospital and available specialties if hospitalId provided
-    let hospitalName = 'Bệnh viện NovaCare';
-    let availableSpecialties: string[] = [];
-    if (dto.hospitalId) {
-      const hosp = await this.prisma.hospital.findUnique({
-        where: { id: dto.hospitalId },
-        include: { hospitalSpecialties: { include: { specialty: true } } },
-      });
-      if (hosp) {
-        hospitalName = hosp.name;
-        availableSpecialties = hosp.hospitalSpecialties.map((hs) => hs.specialty.name);
-      }
-    }
-
-    // 5. Run OpenAIService Smartphone Triage
-    const result = await this.openAIService.analyzeSmartphoneInputs({
-      symptoms: dto.symptoms,
-      voiceTranscript: transcript,
-      heartRateBpm: dto.heartRateBpm ? Number(dto.heartRateBpm) : undefined,
-      heightCm: dto.heightCm ? Number(dto.heightCm) : undefined,
-      weightKg: dto.weightKg ? Number(dto.weightKg) : undefined,
-      imageAnalysisFindings,
-      bodyAreas: parsedBodyAreas,
-      questionnaire: parsedQuestionnaire,
-      hospitalName,
-      availableSpecialties,
-    });
-
-    return {
-      ...result,
-      transcript,
-      imageAnalysisFindings,
-      bodyAreas: parsedBodyAreas,
-      questionnaire: parsedQuestionnaire,
-    };
+  async analyzeSmartphoneInputs(dto: any, files?: { voiceFile?: any; imageFiles?: any[] }) {
+    return this.orchestrator.orchestrateScreening(randomUUID(), { ...dto, files });
   }
 
   async evaluateHealthAssessment(
@@ -482,10 +412,13 @@ export class PreExamV2Service {
     const dbSpecialties = await this.prisma.specialty.findMany();
     let matchedSpec = dbSpecialties.find((s) => s.id === ragResult.matchedSpecialtyId);
 
-    if (!matchedSpec) {
+    if (!matchedSpec && ragResult.matchedSpecialtyName) {
       matchedSpec = dbSpecialties.find(
         (s) => s.name.toLowerCase().includes((ragResult.matchedSpecialtyName || '').toLowerCase())
-      ) || dbSpecialties[0];
+      );
+    }
+    if (!matchedSpec) {
+      matchedSpec = dbSpecialties.find((s) => s.name.toLowerCase().includes('nội')) || dbSpecialties[0];
     }
     const suggestedSpecialtyName = matchedSpec?.name || 'Nội tổng quát';
     const retrievedMedicalKnowledge = `Chuyên khoa: ${matchedSpec?.name || 'Nội tổng quát'}. Mô tả: ${matchedSpec?.description || ''}. Cần khám khi có triệu chứng liên quan.`;
@@ -639,7 +572,7 @@ export class PreExamV2Service {
         vital_signs_interpretation: vitalSigns.heartRate
           ? `Nhịp tim đo qua camera PPG: ${vitalSigns.heartRate} BPM (Chỉ số sinh hiệu sẵn sàng).`
           : 'Chỉ số sinh hiệu ở mức ổn định.',
-        rag_matching_reason: ragResult.reasoning,
+        llm_reasoning: ragResult.reasoning,
         specialty_description: matchedSpec?.description || 'Chuyên khoa phụ trách chẩn đoán và điều trị chuyên sâu.',
       },
       recommendation:
@@ -648,9 +581,9 @@ export class PreExamV2Service {
           : riskLevel === 'MODERATE'
             ? 'Bạn nên đặt lịch để được bác sĩ chuyên khoa đánh giá trực tiếp.'
             : 'Bạn có thể theo dõi tình trạng tại nhà. Nếu triệu chứng kéo dài hoặc nặng hơn, hãy đi khám.',
-      reasoning_summary: `${ragResult.reasoning} Nhịp tim: ${hr || 'bình thường'}, BMI/Chỉ số: sẵn sàng.`,
+      reasoning_summary: `${ragResult.reasoning}. Nhịp tim: ${hr || 'bình thường'}, BMI/Chỉ số: sẵn sàng.`,
       missing_information: [],
-      disclaimer: 'Lưu ý: Đây là đánh giá sơ bộ dựa trên AI RAG và không thay thế chẩn đoán hoặc thăm khám trực tiếp bởi nhân viên y tế.',
+      disclaimer: 'Lưu ý: Đây là đánh giá sơ bộ dựa trên mô hình AI LLM (OpenAI GPT-4o) và không thay thế chẩn đoán hoặc thăm khám trực tiếp bởi nhân viên y tế.',
     };
   }
 }

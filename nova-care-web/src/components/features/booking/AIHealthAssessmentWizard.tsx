@@ -459,7 +459,7 @@ export const AIHealthAssessmentWizard: React.FC<AIHealthAssessmentWizardProps> =
             {showPPGScanner && (
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
                 <HeartRatePPGScanner
-                  onComplete={(bpm) => {
+                  onComplete={({ bpm }) => {
                     setHeartRate(bpm);
                     setVitalSource('camera_ppg');
                     toast.success(`Đã cập nhật nhịp tim PPG: ${bpm} BPM`);

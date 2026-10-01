@@ -28,6 +28,11 @@ export interface PatientConsentItem {
   status: 'PENDING' | 'GRANTED' | 'REVOKED' | 'EXPIRED';
   grantedAt?: string | null;
   expiresAt?: string | null;
+  scope?: {
+    encounterIds: string[];
+    allowedSections: ConsentSection[];
+  } | null;
+  purpose?: string;
   createdAt: string;
   sourceHospital: {
     id: string;
@@ -39,6 +44,29 @@ export interface PatientConsentItem {
     name: string;
     city?: string;
   };
+}
+
+export type ConsentSection = 'SUMMARY' | 'DIAGNOSES' | 'OBSERVATIONS' | 'PRESCRIPTIONS';
+
+export interface ShareableMedicalRecord {
+  id: string;
+  encounterCode: string;
+  encounterDate: string;
+  specialtyName: string;
+  clinicalSummary?: string | null;
+  hospital: { id: string; name: string };
+}
+
+export interface SharedRecordAccessLog {
+  id: string;
+  createdAt: string;
+  newValue: {
+    consentId: string;
+    sourceHospitalId: string;
+    targetHospitalId: string;
+    encounterIds: string[];
+  };
+  user: { fullName: string; hospital?: { id: string; name: string } | null };
 }
 
 export interface UnifiedDiagnosis {
@@ -120,6 +148,31 @@ export const interoperabilityService = {
 
   async getPatientConsents(patientProfileId: string): Promise<PatientConsentItem[]> {
     const res = await apiClient.get<any>(`/integration/patients/${patientProfileId}/consents`);
+    return res.data;
+  },
+
+  async getShareableRecords(patientProfileId: string, targetHospitalId: string): Promise<ShareableMedicalRecord[]> {
+    const res = await apiClient.get<any>(
+      `/integration/patients/${patientProfileId}/shareable-records?targetHospitalId=${encodeURIComponent(targetHospitalId)}`,
+    );
+    return res.data;
+  },
+
+  async getSharedAccessLogs(patientProfileId: string): Promise<SharedRecordAccessLog[]> {
+    const res = await apiClient.get<any>(`/integration/patients/${patientProfileId}/shared-access-logs`);
+    return res.data;
+  },
+
+  async createConsent(dto: {
+    patientProfileId: string;
+    sourceHospitalId: string;
+    targetHospitalId: string;
+    encounterIds: string[];
+    allowedSections: ConsentSection[];
+    expiresAt: string;
+    purpose?: string;
+  }): Promise<PatientConsentItem> {
+    const res = await apiClient.post<any>('/integration/consents', dto);
     return res.data;
   },
 

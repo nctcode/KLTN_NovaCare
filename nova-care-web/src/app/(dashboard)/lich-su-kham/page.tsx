@@ -470,10 +470,11 @@ export default function ElectronicHealthRecordPage() {
 
   // Query: Lấy nhật ký truy cập hồ sơ (Audit Logs) từ cơ sở dữ liệu
   const { data: rawServerAuditLogs, isLoading: isLoadingAuditLogs, refetch: refetchAuditLogs } = useQuery({
-    queryKey: ['my-portal-audit-logs', selectedProfile?.id],
+    queryKey: ['my-scoped-interoperability-access-logs', selectedProfile?.id],
     queryFn: async () => {
       try {
-        const res = await interoperabilityService.getPortalAuditLogs(undefined, selectedProfile?.id);
+        if (!selectedProfile?.id) return [];
+        const res = await interoperabilityService.getSharedAccessLogs(selectedProfile.id);
         const list = (res as any)?.data || res;
         return Array.isArray(list) ? list : [];
       } catch (err) {
@@ -521,31 +522,23 @@ export default function ElectronicHealthRecordPage() {
   const auditLogs: AuditLogItem[] = useMemo(() => {
     if (!Array.isArray(rawServerAuditLogs) || rawServerAuditLogs.length === 0) return [];
     return rawServerAuditLogs.map((log: any) => {
-      const logDate = new Date(log.accessedAt);
+      const logDate = new Date(log.createdAt);
       const formattedDate = format(logDate, 'dd/MM/yyyy HH:mm:ss', { locale: vi });
 
-      let cleanHosp = log.hospitalName;
-      if (
-        !cleanHosp ||
-        cleanHosp.toLowerCase().includes('bất kỳ') ||
-        /Windows NT|Macintosh|iPhone|Android|Linux x86|WebKit|Chrome|Safari|Mozilla/i.test(cleanHosp)
-      ) {
-        cleanHosp = (log.sharedWith && !log.sharedWith.toLowerCase().includes('bất kỳ') && !/Windows NT/i.test(log.sharedWith))
-          ? log.sharedWith
-          : 'Bệnh viện liên kết NovaCare';
-      }
+      let cleanHosp = log.user?.hospital?.name;
+      if (!cleanHosp) cleanHosp = 'Cơ sở y tế đích NovaCare';
 
-      const cleanDoctor = log.doctorName || 'BS. Tiếp nhận điều trị';
+      const cleanDoctor = log.user?.fullName || 'Tài khoản cơ sở y tế';
 
       return {
         id: log.id,
         timestamp: formattedDate,
         hospitalName: cleanHosp,
         doctorName: cleanDoctor,
-        purpose: log.purpose || 'Tra cứu liên viện tiếp nhận điều trị',
-        accessedData: log.accessedData || 'Lịch sử khám, Chẩn đoán, Đơn thuốc',
+        purpose: 'Tiếp nhận và khám chữa bệnh theo lịch hẹn',
+        accessedData: `${log.newValue?.encounterIds?.length || 0} hồ sơ trong phạm vi đã cấp quyền`,
         status: 'SUCCESS' as const,
-        note: log.ipAddress ? `IP: ${log.ipAddress}` : undefined,
+        note: log.newValue?.consentId ? `Consent: ${log.newValue.consentId.slice(0, 8).toUpperCase()}` : undefined,
       };
     });
   }, [rawServerAuditLogs]);

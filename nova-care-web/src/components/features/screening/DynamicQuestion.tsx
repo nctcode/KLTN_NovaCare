@@ -50,6 +50,7 @@ export function DynamicQuestion({
               ? [
                   { id: 'yes', value: 'yes', label: 'Có' },
                   { id: 'no', value: 'no', label: 'Không' },
+                  { id: 'unknown', value: 'unknown', label: 'Không rõ' },
                 ]
               : [])
           ).map((opt: any, optIdx: number) => {
@@ -124,7 +125,7 @@ export function DynamicQuestion({
               <Flame className="w-4 h-4 text-rose-500" /> Chọn mức độ (1-10):
             </span>
             <Badge className={`font-black text-xs ${Number(currentAnswer) >= 7 ? 'bg-rose-600 text-white' : 'bg-[#0c4b39] text-[#66FF33]'}`}>
-              Mức {currentAnswer || 5} / 10
+              {currentAnswer == null ? 'Chưa trả lời' : `Mức ${currentAnswer} / 10`}
             </Badge>
           </div>
           <input

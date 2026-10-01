@@ -19,8 +19,8 @@ export class RedFlagEngine {
         (Array.isArray(ans.answer) && ans.answer.includes('yes'));
 
       // Check question-level red flag
-      if (question.redFlag && isYesAnswer) {
-        const severity: RedFlagSeverity = question.redFlagSeverity || 'MODERATE';
+      if ((question.redFlag || question.riskImpact?.redFlagSeverity) && isYesAnswer) {
+        const severity: RedFlagSeverity = question.riskImpact?.redFlagSeverity || question.redFlagSeverity || 'MODERATE';
         if (severity === 'CRITICAL') {
           hasCriticalRedFlag = true;
         }
@@ -41,7 +41,7 @@ export class RedFlagEngine {
       // Check option-level red flag
       if (question.options) {
         const matchedOption = question.options.find(
-          (opt) => opt.id === ans.answer || opt.label === ans.answer
+          (opt) => opt.id === ans.answer || opt.value === ans.answer || opt.label === ans.answer
         );
         if (matchedOption && matchedOption.redFlagSeverity) {
           const severity = matchedOption.redFlagSeverity;

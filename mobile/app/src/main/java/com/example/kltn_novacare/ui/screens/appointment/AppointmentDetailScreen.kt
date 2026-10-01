@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.kltn_novacare.data.model.Appointment
 import com.example.kltn_novacare.ui.components.QRCodeDraw
+import com.example.kltn_novacare.ui.screens.booking.bookingTime
 import com.example.kltn_novacare.ui.theme.Primary
 import com.example.kltn_novacare.ui.theme.Secondary
 import com.example.kltn_novacare.ui.theme.TextSecondary
@@ -33,7 +34,8 @@ import java.util.*
 fun AppointmentDetailScreen(
     appointmentId: String,
     navController: NavController,
-    appointmentViewModel: AppointmentViewModel
+    appointmentViewModel: AppointmentViewModel,
+    onPay: (Appointment) -> Unit = {}
 ) {
     val detailState by appointmentViewModel.appointmentDetails.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -68,10 +70,17 @@ fun AppointmentDetailScreen(
                 }
                 is NetworkState.Success -> {
                     val appointment = (detailState as NetworkState.Success<Appointment>).data
+                    Column {
+                        if (appointment.status == "AWAITING_PAYMENT") {
+                            Button(onClick = { onPay(appointment) }, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Text("Tiếp tục thanh toán")
+                            }
+                        }
                     AppointmentDetailContent(
                         appointment = appointment,
                         onCancelClick = { showCancelDialog = true }
                     )
+                    }
                 }
                 is NetworkState.Error -> {
                     Text("Lỗi tải chi tiết lịch hẹn", color = Color.Red, modifier = Modifier.align(Alignment.Center))
@@ -148,10 +157,6 @@ fun AppointmentDetailContent(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                QRCodeDraw(
-                    data = appointment.bookingCode,
-                    color = Secondary
-                )
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -162,7 +167,7 @@ fun AppointmentDetailContent(
                     color = Secondary
                 )
                 Text(
-                    text = "Quét mã tại quầy tiếp đón của bệnh viện để check-in",
+                    text = "Xuất trình mã đặt khám tại quầy tiếp đón của bệnh viện",
                     fontSize = 12.sp,
                     color = TextSecondary,
                     modifier = Modifier.padding(top = 4.dp)
@@ -183,17 +188,22 @@ fun AppointmentDetailContent(
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF1F5F9))
 
-                DetailRow("Bác sĩ khám", (appointment.workplace?.hospital?.province ?: "ThS. BS ") + (appointment.workplace?.hospital?.name ?: "Nguyễn Văn A"))
-                DetailRow("Cơ sở y tế", appointment.workplace?.hospital?.name ?: "Bệnh viện Đa khoa NovaCare")
+                val workplace = appointment.workplace ?: appointment.slot?.doctorWorkplace
+                DetailRow("Bác sĩ khám", workplace?.doctor?.fullName ?: "Chưa cập nhật")
+                DetailRow("Cơ sở y tế", workplace?.hospital?.name ?: "Chưa cập nhật")
                 
-                val time = appointment.slot?.startTime?.substringBeforeLast(":")?.substringAfter("T") ?: "08:00"
-                val date = appointment.slot?.startTime?.substringBefore("T") ?: "2026-07-20"
+                val time = appointment.slot?.startTime?.let { bookingTime(it) } ?: "Chưa cập nhật"
+                val date = appointment.slot?.startTime?.substringBefore("T") ?: ""
                 DetailRow("Thời gian khám", "$time ngày $date")
                 DetailRow("Bệnh nhân", appointment.patientProfile?.fullName ?: "Bệnh nhân")
                 DetailRow("Lý do khám", appointment.reason ?: "Khám tổng quát")
-                DetailRow("Phương thức", when (appointment.paymentMethod) {
+                DetailRow("Phương thức", when (appointment.payment?.paymentMethod ?: appointment.paymentMethod) {
                     "VNPAY" -> "Ví điện tử VNPay"
-                    else -> "Thanh toán tại quầy"
+                    "MOMO" -> "MoMo"
+                    "VIETQR" -> "VietQR"
+                    "CARD" -> "Thẻ"
+                    "CASH" -> "Thanh toán tại quầy"
+                    else -> if (appointment.status == "CONFIRMED") "Thanh toán tại cơ sở y tế" else "Chưa cập nhật"
                 })
                 DetailRow("Tổng chi phí", formattedPrice)
             }

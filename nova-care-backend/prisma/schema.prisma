@@ -107,6 +107,31 @@ enum ConsentStatus {
   EXPIRED
 }
 
+enum ScheduleExceptionType {
+  DAY_OFF
+  BLOCK_TIME
+}
+
+enum ScheduleSource {
+  INTERNAL
+  HIS_API
+}
+
+enum SlotStatus {
+  AVAILABLE
+  FULL
+  BLOCKED
+  CONFLICTED
+  CANCELLED
+}
+
+enum BookingType {
+  ALL
+  HOSPITAL
+  ON_DEMAND
+  ONLINE
+}
+
 
 // ============================================
 // Core Tables
@@ -231,8 +256,9 @@ model Appointment {
 
   patientProfile   PatientProfile           @relation(fields: [patientProfileId], references: [id])
   user             User                     @relation(fields: [userId], references: [id])
-  slot             AppointmentSlot          @relation(fields: [slotId], references: [id])
+  slot             AppointmentSlot          @relation("PrimaryAppointmentSlot", fields: [slotId], references: [id], onDelete: Restrict)
   medicalService   MedicalService?          @relation(fields: [medicalServiceId], references: [id])
+  slotBookings     AppointmentSlotBooking[]
   statusHistory    AppointmentStatusHistory[]
   payment          PaymentTransaction?
   medicalEncounter MedicalEncounter?
@@ -241,23 +267,41 @@ model Appointment {
 }
 
 model AppointmentSlot {
-  id                String  @id @default(uuid())
+  id                String          @id @default(uuid())
   doctorWorkplaceId String
+  date              DateTime?       @db.Date
   startTime         DateTime
   endTime           DateTime
-  capacity          Int      @default(1)
-  bookedCount       Int      @default(0)
-  isAvailable       Boolean  @default(true)
-  isActive          Boolean  @default(true)
-  version           Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  capacity          Int             @default(1)
+  bookedCount       Int             @default(0)
+  isAvailable       Boolean         @default(true)
+  isActive          Boolean         @default(true)
+  status            SlotStatus      @default(AVAILABLE)
+  version           Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  doctorWorkplace DoctorWorkplace @relation(fields: [doctorWorkplaceId], references: [id])
-  appointments    Appointment[]
+  doctorWorkplace     DoctorWorkplace          @relation(fields: [doctorWorkplaceId], references: [id])
+  primaryAppointments Appointment[]            @relation("PrimaryAppointmentSlot")
+  slotBookings        AppointmentSlotBooking[]
 
   @@unique([doctorWorkplaceId, startTime])
+  @@index([doctorWorkplaceId, status])
   @@map("appointment_slots")
+}
+
+model AppointmentSlotBooking {
+  id            String          @id @default(uuid())
+  appointmentId String
+  slotId        String
+  createdAt     DateTime        @default(now())
+
+  appointment   Appointment     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  slot          AppointmentSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
+
+  @@unique([appointmentId, slotId])
+  @@index([slotId])
+  @@map("appointment_slot_bookings")
 }
 
 model AppointmentStatusHistory {
@@ -400,8 +444,29 @@ model Hospital {
   sourceConsents      PatientConsent[]        @relation("SourceHospitalConsents")
   targetConsents      PatientConsent[]        @relation("TargetHospitalConsents")
   users               User[]
+  bookingConfigs      HospitalBookingConfig[]
 
   @@map("hospitals")
+}
+
+model HospitalBookingConfig {
+  id                  String         @id @default(uuid())
+  hospitalId          String
+  bookingType         BookingType    @default(ALL)
+  maxAdvanceDays      Int            @default(30)
+  allowSaturday       Boolean        @default(true)
+  allowSunday         Boolean        @default(true)
+  minAdvanceMinutes   Int            @default(60)
+  defaultSlotDuration Int            @default(30)
+  scheduleSource      ScheduleSource @default(INTERNAL)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  hospital            Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([hospitalId, bookingType])
+  @@index([hospitalId])
+  @@map("hospital_booking_configs")
 }
 
 model HospitalBranch {
@@ -481,45 +546,64 @@ model Doctor {
 }
 
 model DoctorWorkplace {
-  id              String          @id @default(uuid())
+  id              String            @id @default(uuid())
   doctorId        String
   hospitalId      String
   branchId        String?
   specialtyId     String
-  consultationFee Decimal         @default(0)
+  consultationFee Decimal           @default(0)
   position        String?
   joinedAt        DateTime?
-  isPrimary       Boolean         @default(false)
-  isActive        Boolean         @default(true)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  isPrimary       Boolean           @default(false)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
-  doctor    Doctor          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  hospital  Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  branch    HospitalBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  specialty Specialty       @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
-  schedules DoctorSchedule[]
-  slots     AppointmentSlot[]
+  doctor          Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital        Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  branch          HospitalBranch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  specialty       Specialty         @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  schedules       DoctorSchedule[]
+  slots           AppointmentSlot[]
+  exceptions      ScheduleException[]
 
   @@unique([doctorId, hospitalId, specialtyId])
   @@map("doctor_workplaces")
 }
 
-model MedicalService {
-  id          String   @id @default(uuid())
-  hospitalId  String
-  specialtyId String?
-  name        String
-  description String?
-  price       Decimal  @default(0)
-  duration    Int      @default(30)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model ScheduleException {
+  id                String                @id @default(uuid())
+  doctorWorkplaceId String
+  date              DateTime              @db.Date
+  startTime         String?
+  endTime           String?
+  exceptionType     ScheduleExceptionType
+  reason            String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
-  hospital     Hospital   @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  specialty    Specialty? @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
-  appointments Appointment[]
+  doctorWorkplace   DoctorWorkplace       @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Cascade)
+
+  @@index([doctorWorkplaceId, date])
+  @@map("schedule_exceptions")
+}
+
+model MedicalService {
+  id                String                  @id @default(uuid())
+  hospitalId        String
+  specialtyId       String?
+  name              String
+  description       String?
+  price             Decimal                 @default(0)
+  duration          Int                     @default(30)
+  isActive          Boolean                 @default(true)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  hospital          Hospital                @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  specialty         Specialty?              @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
+  appointments      Appointment[]
+  scheduleServices  DoctorScheduleService[]
 
   @@map("medical_services")
 }
@@ -548,21 +632,41 @@ model HealthPackage {
 }
 
 model DoctorSchedule {
-  id                String          @id @default(uuid())
+  id                String                  @id @default(uuid())
   doctorWorkplaceId String
+  bookingType       BookingType             @default(ALL)
   dayOfWeek         Int
   startTime         String
   endTime           String
   breakStart        String?
   breakEnd          String?
-  isActive          Boolean         @default(true)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  slotDuration      Int?
+  capacity          Int                     @default(1)
+  effectiveFrom     DateTime?               @db.Date @default(now())
+  effectiveTo       DateTime?               @db.Date
+  isActive          Boolean                 @default(true)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
 
-  doctorWorkplace   DoctorWorkplace @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Cascade)
+  doctorWorkplace   DoctorWorkplace         @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Cascade)
+  scheduleServices  DoctorScheduleService[]
 
-  @@unique([doctorWorkplaceId, dayOfWeek])
+  @@index([doctorWorkplaceId, dayOfWeek])
   @@map("doctor_schedules")
+}
+
+model DoctorScheduleService {
+  id               String         @id @default(uuid())
+  scheduleId       String
+  medicalServiceId String
+  createdAt        DateTime       @default(now())
+
+  schedule         DoctorSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  medicalService   MedicalService @relation(fields: [medicalServiceId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, medicalServiceId])
+  @@index([medicalServiceId])
+  @@map("doctor_schedule_services")
 }
 
 // ============================================
@@ -587,6 +691,7 @@ model PreExamSession {
 
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   questions PreExamQuestion[]
+  media     ScreeningMedia[]
 
   @@map("pre_exam_sessions")
 }
@@ -602,6 +707,24 @@ model PreExamQuestion {
   preExamSession PreExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("pre_exam_questions")
+}
+
+model ScreeningMedia {
+  id               String   @id @default(uuid())
+  sessionId        String
+  type             String   // VIDEO_VOICE, SYMPTOM_IMAGE, MEDICAL_DOCUMENT, VOICE_AUDIO
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  durationMs       Int?
+  scriptId         String?  @default("DEFAULT_VOICE_SAMPLE")
+  processingStatus String   @default("PROCESSING") // PROCESSING, READY, ERROR
+  transcript       String?
+  createdAt        DateTime @default(now())
+
+  session          PreExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("screening_media")
 }
 
 model MedicalPassport {
@@ -799,6 +922,13 @@ model PatientConsent {
   grantedAt        DateTime?
   expiresAt        DateTime?
   revokedAt        DateTime?
+  // The patient-selected clinical record and data categories that may be read.
+  // Keeping this as JSON lets the consent remain portable when a partner HIS
+  // exposes a different internal document structure.
+  scope            Json?
+  purpose          String          @default("TREATMENT")
+  confirmedAt      DateTime?
+  policyVersion    String          @default("novacare-consent-v1")
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 

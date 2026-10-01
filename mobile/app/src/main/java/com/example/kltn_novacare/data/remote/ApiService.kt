@@ -1,6 +1,7 @@
 package com.example.kltn_novacare.data.remote
 
 import com.example.kltn_novacare.data.model.*
+import com.google.gson.annotations.SerializedName
 import retrofit2.Call
 import retrofit2.http.*
 
@@ -86,7 +87,7 @@ interface ApiService {
     @PUT("patient-profiles/{id}")
     fun updatePatientProfile(
         @Path("id") id: String,
-        @Body request: CreatePatientProfileRequest
+        @Body request: okhttp3.RequestBody
     ): Call<ApiResponse<PatientProfile>>
 
     @DELETE("patient-profiles/{id}")
@@ -95,11 +96,26 @@ interface ApiService {
     @PATCH("patient-profiles/{id}/default")
     fun setDefaultPatientProfile(@Path("id") id: String): Call<ApiResponse<PatientProfile>>
 
+    @GET("interoperability/portal/share-codes")
+    fun getHealthShares(): Call<ApiResponse<List<HealthShare>>>
+
+    @POST("interoperability/portal/share-codes")
+    fun createHealthShare(@Body request: CreateHealthShareRequest): Call<ApiResponse<HealthShare>>
+
+    @PATCH("interoperability/portal/share-codes/{id}/revoke")
+    fun revokeHealthShare(@Path("id") id: String): Call<ApiResponse<Unit>>
+
     // ==========================================
     // APPOINTMENTS
     // ==========================================
     @POST("appointments")
     fun createAppointment(@Body request: CreateAppointmentRequest): Call<ApiResponse<Appointment>>
+
+    @PATCH("appointments/{id}/confirm")
+    fun confirmAppointment(@Path("id") id: String): Call<ApiResponse<Appointment>>
+
+    @POST("payments/simulate-success")
+    fun simulatePayment(@Body request: SimulatePaymentRequest): Call<ApiResponse<SimulatedPayment>>
 
     @GET("appointments/me")
     fun getAppointments(): Call<ApiResponse<List<Appointment>>>
@@ -170,23 +186,30 @@ data class RefreshTokenRequest(
 data class CreatePatientProfileRequest(
     val fullName: String,
     val phone: String,
-    val email: String? = null,
     val dateOfBirth: String,
     val gender: String,
-    val identityCard: String? = null,
+    @SerializedName("identityNumber", alternate = ["identityCard"]) val identityCard: String? = null,
     val healthInsurance: String? = null,
     val address: String? = null,
-    val relationship: String = "BAN_THAN"
+    @SerializedName("relation", alternate = ["relationship"]) val relationship: String = "Bản thân",
+    val medicalHistory: String? = null,
+    val allergies: String? = null,
+    val emergencyContact: String? = null,
+    val emergencyPhone: String? = null,
+    val isDefault: Boolean? = null
 )
 
 data class CreateAppointmentRequest(
     val slotId: String,
     val patientProfileId: String,
-    val paymentMethod: String,
     val reason: String?,
     val symptoms: String?,
-    val idempotencyKey: String
+    val idempotencyKey: String,
+    val medicalServiceId: String? = null
 )
+
+data class SimulatePaymentRequest(val appointmentId: String, val paymentMethod: String)
+data class SimulatedPayment(val appointmentId: String, val status: String, val bookingCode: String?, val paymentMethod: String?)
 
 data class CancelAppointmentRequest(
     val reason: String

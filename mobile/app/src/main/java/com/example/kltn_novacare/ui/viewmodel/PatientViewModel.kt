@@ -5,25 +5,21 @@ import androidx.lifecycle.viewModelScope
 import com.example.kltn_novacare.data.model.PatientProfile
 import com.example.kltn_novacare.data.repository.PatientRepository
 import com.example.kltn_novacare.data.remote.CreatePatientProfileRequest
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class PatientViewModel(private val patientRepository: PatientRepository = PatientRepository()) : ViewModel() {
-
     private val _profiles = MutableStateFlow<NetworkState<List<PatientProfile>>>(NetworkState.Idle)
-    val profiles: StateFlow<NetworkState<List<PatientProfile>>> = _profiles.asStateFlow()
-
-    private val _profileOperation = MutableStateFlow<NetworkState<PatientProfile>>(NetworkState.Idle)
-    val profileOperation: StateFlow<NetworkState<PatientProfile>> = _profileOperation.asStateFlow()
-
-    init {
-        loadProfiles()
-    }
+    val profiles = _profiles.asStateFlow()
+    private val _profileOperation = MutableStateFlow<NetworkState<Unit>>(NetworkState.Idle)
+    val profileOperation = _profileOperation.asStateFlow()
+    private var loadJob: Job? = null
 
     fun loadProfiles() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _profiles.value = NetworkState.Loading
             patientRepository.getPatientProfiles().fold(
                 onSuccess = { _profiles.value = NetworkState.Success(it) },
@@ -32,53 +28,34 @@ class PatientViewModel(private val patientRepository: PatientRepository = Patien
         }
     }
 
-    fun createProfile(request: CreatePatientProfileRequest, onSuccess: () -> Unit) {
+    fun resetOperation() {
+        if (_profileOperation.value !is NetworkState.Loading) _profileOperation.value = NetworkState.Idle
+    }
+
+    private fun <T> mutate(action: suspend () -> Result<T>, onSuccess: (T) -> Unit) {
+        if (_profileOperation.value is NetworkState.Loading) return
+        _profileOperation.value = NetworkState.Loading
         viewModelScope.launch {
-            _profileOperation.value = NetworkState.Loading
-            patientRepository.createPatientProfile(request).fold(
+            action().fold(
                 onSuccess = {
-                    _profileOperation.value = NetworkState.Success(it)
+                    _profileOperation.value = NetworkState.Success(Unit)
                     loadProfiles()
-                    onSuccess()
+                    onSuccess(it)
                 },
-                onFailure = {
-                    _profileOperation.value = NetworkState.Error(it.message ?: "Tạo hồ sơ thất bại")
-                }
+                onFailure = { _profileOperation.value = NetworkState.Error(it.message ?: "Không thể cập nhật hồ sơ") }
             )
         }
     }
 
-    fun updateProfile(id: String, request: CreatePatientProfileRequest, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            _profileOperation.value = NetworkState.Loading
-            patientRepository.updatePatientProfile(id, request).fold(
-                onSuccess = {
-                    _profileOperation.value = NetworkState.Success(it)
-                    loadProfiles()
-                    onSuccess()
-                },
-                onFailure = {
-                    _profileOperation.value = NetworkState.Error(it.message ?: "Cập nhật hồ sơ thất bại")
-                }
-            )
-        }
-    }
+    fun createProfile(request: CreatePatientProfileRequest, onSuccess: (PatientProfile) -> Unit) =
+        mutate({ patientRepository.createPatientProfile(request) }, onSuccess)
 
-    fun deleteProfile(id: String) {
-        viewModelScope.launch {
-            patientRepository.deletePatientProfile(id).fold(
-                onSuccess = { loadProfiles() },
-                onFailure = { /* Handle error silently or post value */ }
-            )
-        }
-    }
+    fun updateProfile(id: String, request: CreatePatientProfileRequest, onSuccess: () -> Unit) =
+        mutate({ patientRepository.updatePatientProfile(id, request) }) { onSuccess() }
 
-    fun setDefaultProfile(id: String) {
-        viewModelScope.launch {
-            patientRepository.setDefaultPatientProfile(id).fold(
-                onSuccess = { loadProfiles() },
-                onFailure = { /* Handle error */ }
-            )
-        }
-    }
+    fun deleteProfile(id: String, onSuccess: () -> Unit = {}) =
+        mutate({ patientRepository.deletePatientProfile(id) }) { onSuccess() }
+
+    fun setDefaultProfile(id: String, onSuccess: () -> Unit = {}) =
+        mutate({ patientRepository.setDefaultPatientProfile(id) }) { onSuccess() }
 }

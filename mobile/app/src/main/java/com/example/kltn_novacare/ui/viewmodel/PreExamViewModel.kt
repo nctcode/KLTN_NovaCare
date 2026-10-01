@@ -1,328 +1,168 @@
 package com.example.kltn_novacare.ui.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.kltn_novacare.data.api.PreExamApiService
 import com.example.kltn_novacare.data.model.*
 import com.example.kltn_novacare.data.remote.ApiClient
-import com.example.kltn_novacare.domain.engine.*
-import com.example.kltn_novacare.domain.service.*
 import com.google.gson.Gson
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 
+data class ScreeningImage(val file: File, val mime: String)
 data class PreExamUiState(
-    val session: ScreeningSession = ScreeningSession(),
-    val activeTab: Int = 1, // 1: BodyMap, 2: Questionnaire, 3: Camera, 4: Vitals, 5: Result
-    val selectedBodyAreas: Set<String> = emptySet(),
-    val selectedBodyRegions: Set<BodyRegion> = emptySet(),
-    val duration: String = "< 24 giờ",
-    val painLevel: Int = 3,
-    val selectedWarnings: Set<String> = emptySet(),
-    val selectedHistories: Set<String> = emptySet(),
-    val symptomsText: String = "",
-    val adaptiveQuestions: List<Question> = emptyList(),
-    val questionAnswers: Map<String, String> = emptyMap(),
-    val recordedVoiceFile: File? = null,
-    val imageFiles: List<File> = emptyList(),
-    val visionResult: VisionAnalysisResult? = null,
-    val measuredHeartRate: Int = 75,
-    val ppgResult: PPGMeasurementResult? = null,
-    val heightCm: String = "170",
-    val weightKg: String = "65",
-    val bmiValue: String = "22.5",
-    val isAnalyzing: Boolean = false,
-    val screeningPayload: ScreeningResultPayload? = null,
-    val triageResult: TriageResult? = null,
-    val errorMessage: String? = null
-)
+    val step: Int = 0, val catalog: MobileScreeningCatalog? = null, val hospitals: List<Hospital> = emptyList(),
+    val loading: Boolean = true, val hospitalId: String? = null, val regions: Set<String> = emptySet(),
+    val age: String = "", val symptoms: String = "", val pain: String = "", val duration: String = "",
+    val answers: Map<String, String> = emptyMap(), val images: List<ScreeningImage> = emptyList(),
+    val consent: Boolean = false, val ppg: ScreeningPpg? = null, val transcript: String = "", val confirmed: Boolean = false,
+    val busy: Boolean = false, val importing: Boolean = false, val transcribing: Boolean = false,
+    val revision: Long = 0, val result: MobileScreeningResult? = null, val error: String? = null
+) {
+    val questions get() = catalog?.questions.orEmpty().filter { q -> q.regionIds.any { it in regions } }.sortedWith(compareByDescending<ScreeningQuestion> { it.safety }.thenByDescending { it.priority })
+    val unansweredSafety get() = questions.filter { it.safety && answers[it.id] !in listOf("yes", "no") }
+    val hasWarning get() = questions.any { it.safety && answers[it.id] == "yes" }
+    val canApply get() = result?.applicable(revision, hospitalId) == true
+}
 
-class PreExamViewModel : ViewModel() {
-
-    private val _uiState = MutableStateFlow(PreExamUiState())
-    val uiState: StateFlow<PreExamUiState> = _uiState.asStateFlow()
-
-    init {
-        updateAdaptiveQuestions()
-    }
-
-    fun setActiveTab(tab: Int) {
-        val currentSession = _uiState.value.session.copy(currentStep = tab)
-        _uiState.value = _uiState.value.copy(activeTab = tab, session = currentSession)
-    }
-
-    fun toggleBodyArea(areaName: String) {
-        val currentAreas = _uiState.value.selectedBodyAreas.toMutableSet()
-        if (currentAreas.contains(areaName)) {
-            currentAreas.remove(areaName)
-        } else {
-            currentAreas.add(areaName)
+class PreExamViewModel(private val api: PreExamApiService = ApiClient.getPreExamApiService()) : ViewModel() {
+    private val gson = Gson()
+    private val mutable = MutableStateFlow(PreExamUiState())
+    val uiState = mutable.asStateFlow()
+    private var analysis: Job? = null
+    private var voice: Job? = null
+    private var voiceGeneration = 0L
+    private var importJob: Job? = null
+    init { load() }
+    fun load() { viewModelScope.launch {
+        mutable.value = mutable.value.copy(loading = true, error = null)
+        try {
+            val response = api.screeningCatalog()
+            check(response.isSuccessful) { "Không tải được bộ câu hỏi. Hãy kiểm tra kết nối và thử lại." }
+            val catalog = gson.fromJson(unwrapScreeningResponse(response.body()!!), MobileScreeningCatalog::class.java)
+            check(catalog.version.isNotBlank() && catalog.regions.isNotEmpty())
+            check(catalog.questions.all { it.type in listOf("boolean", "single_choice") })
+            val hospitals = api.screeningHospitals()
+            analysis?.cancel()
+            val changed = mutable.value.catalog?.version != catalog.version
+            mutable.value = mutable.value.copy(catalog = catalog, hospitals = hospitals.body()?.data.orEmpty(), loading = false,
+                answers = if (changed) emptyMap() else mutable.value.answers, result = null, busy = false, revision = mutable.value.revision + 1,
+                step = if (changed && mutable.value.catalog != null) 1 else mutable.value.step,
+                error = if (hospitals.isSuccessful) null else "Chưa tải được cơ sở y tế. Bạn vẫn có thể sàng lọc và chọn cơ sở sau.")
+        } catch (e: CancellationException) { throw e } catch (_: Exception) {
+            mutable.value = mutable.value.copy(loading = false, error = "Chưa tải được dữ liệu sàng lọc. Vui lòng thử lại.")
         }
-
-        val matchedRegion = BodyRegionMapper.findRegionByEntityName(areaName) ?: BodyRegion(
-            id = areaName.lowercase().replace(" ", "_"),
-            name = areaName,
-            displayName = areaName,
-            side = "center",
-            category = "general"
-        )
-        val currentRegions = _uiState.value.selectedBodyRegions.toMutableSet()
-        if (currentRegions.contains(matchedRegion)) {
-            currentRegions.remove(matchedRegion)
-        } else {
-            currentRegions.add(matchedRegion)
-        }
-
-        _uiState.value = _uiState.value.copy(
-            selectedBodyAreas = currentAreas,
-            selectedBodyRegions = currentRegions
-        )
-        updateAdaptiveQuestions()
+    } }
+    private fun edit(change: (PreExamUiState) -> PreExamUiState) {
+        analysis?.cancel()
+        mutable.value = change(mutable.value).copy(revision = mutable.value.revision + 1, result = null, busy = false, error = null)
     }
-
-    fun toggleBodyRegion(region: BodyRegion) {
-        val currentRegions = _uiState.value.selectedBodyRegions.toMutableSet()
-        val currentAreas = _uiState.value.selectedBodyAreas.toMutableSet()
-
-        if (currentRegions.contains(region)) {
-            currentRegions.remove(region)
-            currentAreas.remove(region.name)
-            currentAreas.remove(region.displayName)
-        } else {
-            currentRegions.add(region)
-            currentAreas.add(region.displayName)
-        }
-
-        _uiState.value = _uiState.value.copy(
-            selectedBodyRegions = currentRegions,
-            selectedBodyAreas = currentAreas
-        )
-        updateAdaptiveQuestions()
+    fun error(message: String) { mutable.value = mutable.value.copy(error = message) }
+    fun step(index: Int) {
+        if (mutable.value.busy || mutable.value.transcribing || mutable.value.importing) return
+        if (index > 0 && mutable.value.regions.isEmpty()) { error("Chọn ít nhất một vùng cơ thể."); return }
+        mutable.value = mutable.value.copy(step = index.coerceIn(0, 5), error = null)
     }
-
-    fun clearBodyRegions() {
-        _uiState.value = _uiState.value.copy(
-            selectedBodyRegions = emptySet(),
-            selectedBodyAreas = emptySet()
-        )
-        updateAdaptiveQuestions()
+    fun region(id: String) {
+        val old = mutable.value
+        if (id !in old.regions && old.regions.size >= 10) { error("Chọn tối đa 10 vùng cơ thể."); return }
+        voiceGeneration++; voice?.cancel(); importJob?.cancel(); old.images.forEach { it.file.delete() }
+        edit { it.copy(regions = if (id in it.regions) it.regions - id else it.regions + id,
+            answers = emptyMap(), images = emptyList(), ppg = null, transcript = "", confirmed = false, transcribing = false, importing = false) }
     }
-
-    private fun updateAdaptiveQuestions() {
-        val selectedCodes = _uiState.value.selectedBodyRegions.mapNotNull { BodyRegionCode.fromBodyRegion(it) }.toSet()
-        val questions = QuestionEngine.selectAdaptiveQuestions(selectedCodes)
-        _uiState.value = _uiState.value.copy(adaptiveQuestions = questions)
-    }
-
-    fun answerQuestion(questionId: String, answer: String) {
-        val updated = _uiState.value.questionAnswers.toMutableMap()
-        updated[questionId] = answer
-        _uiState.value = _uiState.value.copy(questionAnswers = updated)
-    }
-
-    fun buildStep1Result(): ScreeningStep1Result {
-        val locations = _uiState.value.selectedBodyRegions.map { region ->
-            val code = BodyRegionCode.fromBodyRegion(region)
-            ScreeningBodyLocation(
-                code = code?.code ?: region.id.uppercase(),
-                name = region.displayName,
-                side = region.side.uppercase()
-            )
-        }
-        return ScreeningStep1Result(step = 1, selectedRegions = locations)
-    }
-
-    fun setDuration(duration: String) {
-        _uiState.value = _uiState.value.copy(duration = duration)
-    }
-
-    fun setPainLevel(level: Int) {
-        _uiState.value = _uiState.value.copy(painLevel = level)
-    }
-
-    fun toggleWarning(sign: String) {
-        val current = _uiState.value.selectedWarnings.toMutableSet()
-        if (current.contains(sign)) {
-            current.remove(sign)
-        } else {
-            current.add(sign)
-        }
-        _uiState.value = _uiState.value.copy(selectedWarnings = current)
-    }
-
-    fun toggleHistory(history: String) {
-        val current = _uiState.value.selectedHistories.toMutableSet()
-        if (current.contains(history)) {
-            current.remove(history)
-        } else {
-            current.add(history)
-        }
-        _uiState.value = _uiState.value.copy(selectedHistories = current)
-    }
-
-    fun setSymptomsText(text: String) {
-        _uiState.value = _uiState.value.copy(symptomsText = text)
-    }
-
-    fun setVoiceFile(file: File?) {
-        _uiState.value = _uiState.value.copy(recordedVoiceFile = file)
-    }
-
-    fun addImageFile(file: File) {
-        val current = _uiState.value.imageFiles.toMutableList()
-        current.add(file)
-        _uiState.value = _uiState.value.copy(imageFiles = current)
-
-        // Run vision quality check pipeline
-        viewModelScope.launch {
-            val result = DefaultVisionAnalysisService.analyzeClinicalImage(file)
-            _uiState.value = _uiState.value.copy(visionResult = result)
-        }
-    }
-
-    fun removeImageFile(index: Int) {
-        val current = _uiState.value.imageFiles.toMutableList()
-        if (index in current.indices) {
-            current.removeAt(index)
-            _uiState.value = _uiState.value.copy(imageFiles = current)
-        }
-    }
-
-    fun setHeartRate(bpm: Int) {
-        val ppg = DefaultPPGService.measureHeartRate(simulatedBpm = bpm)
-        _uiState.value = _uiState.value.copy(measuredHeartRate = bpm, ppgResult = ppg)
-    }
-
-    fun setHeightAndWeight(height: String, weight: String) {
-        val h = height.toDoubleOrNull() ?: 170.0
-        val w = weight.toDoubleOrNull() ?: 65.0
-        val bmiRes = DefaultPPGService.calculateBMI(h, w)
-        _uiState.value = _uiState.value.copy(
-            heightCm = height,
-            weightKg = weight,
-            bmiValue = bmiRes.bmiValue.toString()
-        )
-    }
-
-    fun runAIAnalysis() {
-        val state = _uiState.value
-        _uiState.value = state.copy(isAnalyzing = true, activeTab = 5, errorMessage = null)
-
-        viewModelScope.launch {
-            // Run clinical engines locally for instant assessment & red flag override calculation
-            val selectedCodes = state.selectedBodyRegions.mapNotNull { BodyRegionCode.fromBodyRegion(it) }.toSet()
-            val findings = state.visionResult?.findings ?: emptyList()
-
-            val payload = ScreeningEngine.runScreening(
-                sessionId = state.session.id,
-                regions = selectedCodes,
-                painLevel = state.painLevel,
-                symptomsText = state.symptomsText,
-                warnings = state.selectedWarnings,
-                answers = state.questionAnswers,
-                heartRateBpm = state.measuredHeartRate,
-                findings = findings
-            )
-
-            _uiState.value = _uiState.value.copy(screeningPayload = payload)
-
-            // Sync with backend API
+    fun hospital(id: String?) = edit { it.copy(hospitalId = id) }
+    fun age(value: String) = edit { it.copy(age = value.filter(Char::isDigit).take(3)) }
+    fun symptoms(value: String) = edit { it.copy(symptoms = value.take(4000)) }
+    fun pain(value: String) = edit { it.copy(pain = value.filter(Char::isDigit).take(2)) }
+    fun duration(value: String) = edit { it.copy(duration = value.take(100)) }
+    fun answer(id: String, value: String) = edit { it.copy(answers = it.answers + (id to value)) }
+    fun consent(value: Boolean) { if (!value) { voiceGeneration++; voice?.cancel() }; edit { it.copy(consent = value, transcribing = if (value) it.transcribing else false, confirmed = if (value) it.confirmed else false) } }
+    fun ppg(value: ScreeningPpg?) = edit { it.copy(ppg = value) }
+    fun transcript(value: String) = edit { it.copy(transcript = value.take(4000), confirmed = false) }
+    fun confirm(value: Boolean) = edit { it.copy(confirmed = value) }
+    fun removeImage(image: ScreeningImage) { edit { it.copy(images = it.images - image) }; image.file.delete() }
+    fun addImage(context: Context, uri: Uri, capturedFile: File? = null) {
+        if (mutable.value.images.size >= 3 || mutable.value.importing) { capturedFile?.delete(); error("Tối đa 3 ảnh mỗi phiên."); return }
+        val revision = mutable.value.revision
+        importJob = viewModelScope.launch {
+            mutable.value = mutable.value.copy(importing = true)
+            var copied: File? = null
             try {
-                val gson = Gson()
-                val bodyAreasJson = gson.toJson(state.selectedBodyAreas.toList())
-                val questionnaireObj = QuestionnaireData(
-                    duration = state.duration,
-                    painLevel = state.painLevel,
-                    warningSigns = state.selectedWarnings.toList(),
-                    medicalHistory = state.selectedHistories.toList()
-                )
-                val questionnaireJson = gson.toJson(questionnaireObj)
-
-                val bodyAreasPart = bodyAreasJson.toRequestBody("text/plain".toMediaTypeOrNull())
-                val questionnairePart = questionnaireJson.toRequestBody("text/plain".toMediaTypeOrNull())
-
-                val voicePart = state.recordedVoiceFile?.let { file ->
-                    val requestFile = file.asRequestBody("audio/*".toMediaTypeOrNull())
-                    MultipartBody.Part.createFormData("voice", file.name, requestFile)
+                val image = withContext(Dispatchers.IO) {
+                    val mime = context.contentResolver.getType(uri)?.substringBefore(';') ?: ""
+                    require(mime in listOf("image/jpeg", "image/png", "image/webp"))
+                    val file = File.createTempFile("screening-", ".image", context.cacheDir); copied = file
+                    context.contentResolver.openInputStream(uri)!!.use { input -> file.outputStream().use { output ->
+                        val buffer = ByteArray(8192); var total = 0
+                        while (true) { val size = input.read(buffer); if (size < 0) break; total += size; require(total <= 5 * 1024 * 1024); output.write(buffer, 0, size) }
+                        require(total > 0)
+                    } }
+                    ScreeningImage(file, mime)
                 }
-
-                val imageParts = state.imageFiles.map { file ->
-                    val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
-                    MultipartBody.Part.createFormData("images", file.name, requestFile)
-                }
-
-                val api = ApiClient.getPreExamApiService()
-                val response = api.analyzeSmartphoneInputs(
-                    bodyAreas = bodyAreasPart,
-                    questionnaire = questionnairePart,
-                    voice = voicePart,
-                    images = imageParts.ifEmpty { null }
-                )
-
-                if (response.isSuccessful && response.body()?.data != null) {
-                    val currentSession = state.session.copy(
-                        status = ScreeningSessionStatus.COMPLETED,
-                        riskLevel = payload.riskLevel,
-                        riskScore = payload.riskScore,
-                        recommendedSpecialtyId = payload.specialties.firstOrNull()?.specialtyId
-                    )
-                    _uiState.value = _uiState.value.copy(
-                        isAnalyzing = false,
-                        session = currentSession,
-                        triageResult = response.body()!!.data
-                    )
-                } else {
-                    fallbackTriage(payload)
-                }
-            } catch (e: Exception) {
-                fallbackTriage(payload)
+                if (mutable.value.revision == revision) { edit { it.copy(images = it.images + image) }; copied = null }
+            } catch (e: CancellationException) { throw e } catch (_: Exception) { error("Chọn ảnh JPEG, PNG hoặc WebP không quá 5 MB.") }
+            finally { copied?.delete(); capturedFile?.delete(); mutable.value = mutable.value.copy(importing = false) }
+        }
+    }
+    fun transcribe(file: File) {
+        if (!mutable.value.consent) { file.delete(); error("Cần đồng ý xử lý bản ghi trước khi gửi."); return }
+        val generation = ++voiceGeneration
+        voice?.cancel(); edit { it.copy(transcript = "", confirmed = false, transcribing = true) }
+        val revision = mutable.value.revision
+        voice = viewModelScope.launch {
+            try {
+                val response = api.transcribe(MultipartBody.Part.createFormData("file", "voice.m4a", file.asRequestBody("audio/mp4".toMediaType())), "true".toRequestBody())
+                check(response.isSuccessful)
+                val text = unwrapScreeningResponse(response.body()!!).get("transcript")?.asString.orEmpty()
+                check(text.isNotBlank())
+                if (mutable.value.revision == revision) edit { it.copy(transcript = text, confirmed = false) }
+            } catch (e: CancellationException) { throw e } catch (_: Exception) {
+                if (mutable.value.revision == revision) error("Chưa chuyển được giọng nói. Hãy thử lại hoặc nhập mô tả triệu chứng.")
+            } finally { file.delete(); if (voiceGeneration == generation) mutable.value = mutable.value.copy(transcribing = false) }
+        }
+    }
+    fun analyze(urgent: Boolean = false) {
+        val state = mutable.value
+        if (state.busy || state.transcribing || state.importing) return
+        if (state.regions.isEmpty()) { error("Chọn vùng cơ thể."); return }
+        if (!urgent && state.age.toIntOrNull()?.let { it in 0..120 } != true) { step(0); error("Nhập tuổi thực tế từ 0 đến 120."); return }
+        if (!urgent && state.pain.isNotBlank() && state.pain.toIntOrNull()?.let { it in 0..10 } != true) { step(1); error("Mức đau từ 0 đến 10 hoặc để trống."); return }
+        if (!urgent && state.images.isNotEmpty() && !state.consent) { step(2); error("Đồng ý xử lý ảnh hoặc xóa ảnh để tiếp tục."); return }
+        if (!urgent && state.transcript.isNotBlank() && !state.confirmed) { step(4); error("Kiểm tra và xác nhận lời kể trước khi phân tích."); return }
+        val revision = state.revision
+        analysis = viewModelScope.launch {
+            mutable.value = mutable.value.copy(busy = true, step = 5, result = null, error = null)
+            try {
+                val fields = screeningFields(state, gson, urgent).mapValues { it.value.toRequestBody("text/plain".toMediaType()) }
+                val images = if (urgent) emptyList() else state.images.map { MultipartBody.Part.createFormData("images", "image", it.file.asRequestBody(it.mime.toMediaType())) }
+                val response = api.analyzeV3(fields, images)
+                check(response.isSuccessful) { if (response.code() == 400) "Bộ câu hỏi hoặc dữ liệu đã thay đổi. Hãy tải lại bộ câu hỏi và kiểm tra thông tin." else "Chưa nhận được kết quả. Vui lòng thử lại." }
+                val result = gson.fromJson(unwrapScreeningResponse(response.body()!!), MobileScreeningResult::class.java)
+                check(result.schemaVersion == "3" && result.inputRevision == revision.toString() && !result.summary.isNullOrBlank()) { "Phản hồi sàng lọc không hợp lệ." }
+                if (mutable.value.revision == revision) mutable.value = mutable.value.copy(result = result, busy = false)
+            } catch (e: CancellationException) { throw e } catch (e: Exception) {
+                if (mutable.value.revision == revision) mutable.value = mutable.value.copy(busy = false, error = if (e is IllegalStateException) e.message else "Không kết nối được dịch vụ. Chưa có kết quả AI; hãy thử lại.")
             }
         }
     }
+    override fun onCleared() { mutable.value.images.forEach { it.file.delete() }; super.onCleared() }
+}
 
-    private fun fallbackTriage(payload: ScreeningResultPayload) {
-        val state = _uiState.value
-        val topSpecialty = payload.specialties.firstOrNull()?.specialtyName ?: "Nội tổng quát"
-        val isEmergency = payload.hasRedFlags || payload.riskLevel == RiskLevel.EMERGENCY
-
-        val updatedSession = state.session.copy(
-            status = ScreeningSessionStatus.COMPLETED,
-            riskLevel = payload.riskLevel,
-            riskScore = payload.riskScore,
-            recommendedSpecialtyId = payload.specialties.firstOrNull()?.specialtyId
-        )
-
-        val result = TriageResult(
-            riskLevel = payload.riskLevel.name,
-            riskLabel = payload.riskLevel.label,
-            riskColor = if (isEmergency) "rose" else "amber",
-            recommendedSpecialtyName = topSpecialty,
-            summary = payload.summary,
-            vitalSignsAssessment = "Nhịp tim PPG ${state.measuredHeartRate} BPM. Chỉ số BMI: ${state.bmiValue}.",
-            triageDetails = TriageDetails(
-                urgencyReason = if (isEmergency) "Phát hiện dấu hiệu cảnh báo đỏ (Red Flag) nguy hiểm!" else "Cần bác sĩ chuyên khoa kiểm tra lâm sàng.",
-                actionAdvice = payload.recommendation.title + ": " + payload.recommendation.description,
-                keyObservations = listOf(
-                    "Vùng cơ thể: ${state.selectedBodyAreas.joinToString(", ").ifBlank { "Chưa chọn" }}",
-                    "Mức đau: ${state.painLevel}/10",
-                    "Điểm nguy cơ AI: ${payload.riskScore}/100",
-                    "Khuyến nghị: ${payload.recommendation.title}"
-                )
-            ),
-            imageAnalysisFindings = state.visionResult?.findings?.map { "${it.displayName} (${(it.confidence * 100).toInt()}%)" },
-            transcript = if (state.recordedVoiceFile != null) "Đã chuyển đổi giọng nói thành văn bản thành công." else null
-        )
-
-        _uiState.value = _uiState.value.copy(
-            isAnalyzing = false,
-            session = updatedSession,
-            triageResult = result
-        )
-    }
+fun screeningFields(state: PreExamUiState, gson: Gson = Gson(), urgent: Boolean = false): Map<String, String> = buildMap {
+    put("schemaVersion", "3"); put("inputRevision", state.revision.toString()); put("bodyAreas", gson.toJson(state.regions))
+    put("questionnaire", gson.toJson(mapOf("version" to state.catalog?.version, "answers" to state.answers.map { mapOf("questionId" to it.key, "answer" to it.value) },
+        "painLevel" to state.pain.toIntOrNull()?.takeIf { it in 0..10 }, "duration" to state.duration.ifBlank { null })))
+    state.age.toIntOrNull()?.takeIf { it in 0..120 }?.let { put("age", it.toString()) }
+    state.hospitalId?.let { put("hospitalId", it) }; put("symptoms", state.symptoms)
+    put("mediaConsent", state.consent.toString())
+    if (!urgent) state.ppg?.let { put("ppg", gson.toJson(it)) }
+    if (state.confirmed && state.transcript.isNotBlank()) { put("voiceTranscript", state.transcript); put("voiceConfirmed", "true") }
 }

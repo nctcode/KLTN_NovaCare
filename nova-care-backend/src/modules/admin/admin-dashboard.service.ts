@@ -195,7 +195,7 @@ export class AdminDashboardService {
             hospital: { select: { name: true } },
             slots: {
               include: {
-                appointments: true,
+                primaryAppointments: true,
               },
             },
           },
@@ -204,16 +204,16 @@ export class AdminDashboardService {
     });
 
     return doctors
-      .map((doc) => {
+      .map((doc: any) => {
         let appointmentCount = 0;
         const specialtyNames = new Set<string>();
         const hospitalNames = new Set<string>();
 
-        doc.workPlaces.forEach((wp) => {
+        (doc.workPlaces || []).forEach((wp: any) => {
           if (wp.specialty) specialtyNames.add(wp.specialty.name);
           if (wp.hospital) hospitalNames.add(wp.hospital.name);
-          wp.slots.forEach((slot) => {
-            appointmentCount += slot.appointments.length;
+          (wp.slots || []).forEach((slot: any) => {
+            appointmentCount += (slot.primaryAppointments || []).length;
           });
         });
 
@@ -239,7 +239,7 @@ export class AdminDashboardService {
           include: {
             slots: {
               include: {
-                appointments: {
+                primaryAppointments: {
                   select: { id: true, status: true },
                 },
               },
@@ -263,7 +263,7 @@ export class AdminDashboardService {
 
       hosp.workPlaces.forEach((wp) => {
         wp.slots.forEach((slot) => {
-          slot.appointments.forEach((apt) => appointmentIds.add(apt.id));
+          slot.primaryAppointments.forEach((apt) => appointmentIds.add(apt.id));
         });
       });
 

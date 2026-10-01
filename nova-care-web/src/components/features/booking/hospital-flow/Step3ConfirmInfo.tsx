@@ -29,6 +29,7 @@ import { formatPrice } from '@/lib/utils';
 
 import { ClinicRoom } from './RoomSelectModal';
 import { BookingType } from '@/config/bookingTypes';
+import { MedicalRecordShareConsent, MedicalRecordShareDraft } from './MedicalRecordShareConsent';
 
 interface Step3ConfirmInfoProps {
   hospital: Hospital;
@@ -42,6 +43,8 @@ interface Step3ConfirmInfoProps {
   patientProfile: PatientProfile | null;
   reason: string;
   setReason: (reason: string) => void;
+  medicalRecordShare: MedicalRecordShareDraft | null;
+  setMedicalRecordShare: (value: MedicalRecordShareDraft | null) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -58,6 +61,8 @@ export function Step3ConfirmInfo({
   patientProfile,
   reason,
   setReason,
+  medicalRecordShare,
+  setMedicalRecordShare,
   onNext,
   onBack,
 }: Step3ConfirmInfoProps) {
@@ -257,6 +262,14 @@ export function Step3ConfirmInfo({
               </div>
             </CardContent>
           </Card>
+
+          <MedicalRecordShareConsent
+            patientProfile={patientProfile}
+            targetHospitalId={hospital.id}
+            targetHospitalName={hospital.name}
+            value={medicalRecordShare}
+            onChange={setMedicalRecordShare}
+          />
         </div>
 
         {/* Sidebar Cost & Confirm Card (1 col) */}

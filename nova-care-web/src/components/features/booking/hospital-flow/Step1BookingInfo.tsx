@@ -248,43 +248,41 @@ export function Step1BookingInfo({
     enabled: !!selectedDoctor && !!doctorWorkplaceId,
   });
 
-  // Generate ONLY valid upcoming dates configured in Admin schedule (Medpro style)
+  // Generate upcoming dates with active schedule highlighting (Medpro style)
   const availableDateOptions = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (Array.isArray(availableDatesData) && availableDatesData.length > 0) {
-      const validDates = availableDatesData
-        .filter((item: any) => item.hasAvailableSlots === true || item.availableSlotCount > 0)
-        .map((item: any) => {
-          const [yyyy, mm, dd] = item.date.split('-').map(Number);
-          const d = new Date(yyyy, mm - 1, dd);
+      return availableDatesData.map((item: any) => {
+        const [yyyy, mm, dd] = item.date.split('-').map(Number);
+        const d = new Date(yyyy, mm - 1, dd);
 
-          const diffDays = Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-          let dayOfWeekStr = '';
-          if (diffDays === 0) dayOfWeekStr = 'Hôm nay';
-          else if (diffDays === 1) dayOfWeekStr = 'Ngày mai';
-          else {
-            const dayNum = d.getDay();
-            dayOfWeekStr = dayNum === 0 ? 'Chủ nhật' : `Thứ ${dayNum + 1}`;
-          }
+        let dayOfWeekStr = '';
+        if (diffDays === 0) dayOfWeekStr = 'Hôm nay';
+        else if (diffDays === 1) dayOfWeekStr = 'Ngày mai';
+        else {
+          const dayNum = d.getDay();
+          dayOfWeekStr = dayNum === 0 ? 'Chủ nhật' : `Thứ ${dayNum + 1}`;
+        }
 
-          const displayDateFormatted = `(${String(dd).padStart(2, '0')}/${String(mm).padStart(2, '0')})`;
+        const displayDateFormatted = `(${String(dd).padStart(2, '0')}/${String(mm).padStart(2, '0')})`;
+        const hasSchedule = item.hasAvailableSlots === true || item.availableSlotCount > 0;
 
-          return {
-            dateStr: item.date,
-            dayOfWeekStr,
-            displayDateFormatted,
-            fullDate: d,
-            isAvailable: true,
-          };
-        });
-
-      return validDates;
+        return {
+          dateStr: item.date,
+          dayOfWeekStr,
+          displayDateFormatted,
+          fullDate: d,
+          hasSchedule,
+          isAvailable: hasSchedule,
+        };
+      });
     }
 
-    // Fallback if API hasn't loaded: calculate default dates
+    // Fallback if API hasn't loaded: calculate default dates for 14 days
     const dates = [];
     for (let i = 0; i < 14; i++) {
       const d = new Date(today);
@@ -301,6 +299,7 @@ export function Step1BookingInfo({
         dayOfWeekStr,
         displayDateFormatted,
         fullDate: d,
+        hasSchedule: true,
         isAvailable: true,
       });
     }
@@ -344,15 +343,15 @@ export function Step1BookingInfo({
     return canShowDate && !!selectedDate;
   }, [canShowDate, selectedDate]);
 
-  // Auto-select first available date if selectedDate is not in availableDateOptions
+  // Auto-select first date that has an active schedule in admin
   useEffect(() => {
     if (!canShowDate || availableDateOptions.length === 0) return;
 
     const currentSelectedOption = availableDateOptions.find((d) => d.dateStr === selectedDate);
     if (!selectedDate || !currentSelectedOption) {
-      const firstValid = availableDateOptions[0];
-      if (firstValid && firstValid.dateStr !== selectedDate) {
-        setSelectedDate(firstValid.dateStr);
+      const firstScheduled = availableDateOptions.find((d) => d.hasSchedule) || availableDateOptions[0];
+      if (firstScheduled && firstScheduled.dateStr !== selectedDate) {
+        setSelectedDate(firstScheduled.dateStr);
         setSelectedSlotTime('');
         setSelectedSlotId(null);
       }
@@ -360,8 +359,8 @@ export function Step1BookingInfo({
   }, [canShowDate, availableDateOptions, selectedDate, setSelectedDate, setSelectedSlotTime, setSelectedSlotId]);
 
   const { data: availableSlots = [], isLoading: loadingSlots } = useQuery({
-    queryKey: ['available-slots', selectedDoctor?.id, doctorWorkplaceId, selectedDate],
-    queryFn: () => doctorService.getAvailableSlots(selectedDoctor!.id, doctorWorkplaceId!, selectedDate),
+    queryKey: ['available-slots', selectedDoctor?.id, doctorWorkplaceId, selectedDate, selectedService?.id],
+    queryFn: () => doctorService.getAvailableSlots(selectedDoctor!.id, doctorWorkplaceId!, selectedDate, selectedService?.id),
     enabled: canShowTime && !!selectedDoctor && !!doctorWorkplaceId && !!selectedDate,
   });
 
@@ -384,11 +383,12 @@ export function Step1BookingInfo({
       if (hourNum >= 12 && hourNum < 17) session = 'afternoon';
       else if (hourNum >= 17) session = 'evening';
 
-      // Backend out-of-hours flag check with fallback to evening/weekend check if field not present
+      // Backend out-of-hours flag check with fallback to early morning/evening/weekend check if field not present
       const isOutsideOfficeHour =
         slot.isOutsideOfficeHour === true ||
         slot.slotType === 'OUT_OF_HOURS' ||
-        session === 'evening' ||
+        hourNum < 8 ||
+        hourNum >= 17 ||
         [0, 6].includes(start.getDay());
 
       // Check if slot has already passed for today
@@ -412,6 +412,8 @@ export function Step1BookingInfo({
 
     if (bookingMode === 'OUT_OF_HOURS') {
       result = result.filter((slot: any) => slot.isOutsideOfficeHour);
+    } else {
+      result = result.filter((slot: any) => !slot.isOutsideOfficeHour);
     }
 
     if (timeSession === 'all') return result;
@@ -768,19 +770,34 @@ export function Step1BookingInfo({
         </div>
       )}
 
-      {/* 4. CHỌN NGÀY KHÁM (MEDPRO STYLE: CHỈ HIỂN THỊ CÁC NGÀY CÓ LỊCH KHẢ DỤNG TỪ ADMIN) */}
+      {/* 4. CHỌN NGÀY KHÁM (NỔI BẬT CÁC NGÀY CÓ LỊCH ADMIN + Ô CHỌN NGÀY CỤ THỂ) */}
       {canShowDate && (
         <div className="bg-white border border-slate-200/90 rounded-3xl p-6 space-y-4 shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="text-base font-black text-slate-950 flex items-center gap-2">
               <CalendarIcon className="w-5 h-5 text-[#0c4b39]" />
-              4. Ngày khám <span className="text-red-500">*</span>
+              4. Chọn ngày khám <span className="text-red-500">*</span>
             </h3>
-            {availableDateOptions.length > 0 && (
-              <span className="text-xs text-slate-500 font-semibold">
-                Hiển thị {availableDateOptions.length} ngày khả dụng
-              </span>
-            )}
+
+            {/* Ô CHỌN NGÀY CỤ THỂ (Date Picker Input) */}
+            <div className="flex items-center gap-2 bg-emerald-50/80 border-2 border-emerald-200 hover:border-emerald-400 rounded-2xl px-3.5 py-1.5 transition-all shadow-2xs">
+              <CalendarIcon className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Chọn ngày cụ thể:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const chosenDate = e.target.value;
+                  if (chosenDate) {
+                    setSelectedDate(chosenDate);
+                    setSelectedSlotTime('');
+                    setSelectedSlotId(null);
+                  }
+                }}
+                className="bg-transparent text-xs font-extrabold text-emerald-800 border-0 focus:outline-none cursor-pointer focus:ring-0"
+              />
+            </div>
           </div>
 
           {availableDateOptions.length === 0 ? (
@@ -792,54 +809,63 @@ export function Step1BookingInfo({
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
-              {availableDateOptions.map((item) => {
-                const isSelected = selectedDate === item.dateStr;
-                return (
-                  <button
-                    key={item.dateStr}
-                    type="button"
-                    onClick={() => {
-                      if (selectedDate !== item.dateStr) {
-                        setSelectedDate(item.dateStr);
-                        setSelectedSlotTime('');
-                        setSelectedSlotId(null);
-                      }
-                    }}
-                    className={`flex flex-col items-center justify-center py-3 px-5 rounded-2xl min-w-[115px] border-2 transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-sky-50/90 border-sky-400 text-sky-700 font-extrabold shadow-sm ring-2 ring-sky-100 scale-102'
-                        : 'bg-white border-slate-200 text-slate-700 hover:border-sky-300 hover:bg-slate-50 font-bold'
-                    }`}
-                  >
-                    <span className={`text-sm font-black tracking-tight ${isSelected ? 'text-sky-600' : 'text-slate-900'}`}>
-                      {item.displayDateFormatted}
-                    </span>
-                    <span className={`text-xs font-semibold mt-0.5 ${isSelected ? 'text-sky-600' : 'text-slate-500'}`}>
-                      {item.dayOfWeekStr}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+                <span>Các ngày trong tuần (nổi bật các ngày bác sĩ có lịch):</span>
+                <span className="flex items-center gap-1.5 text-emerald-700 font-extrabold text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Có lịch khám ở Admin
+                </span>
+              </div>
 
-              {/* Nút "Ngày khác" Medpro style */}
-              <label className="flex flex-col items-center justify-center py-3 px-4 rounded-2xl min-w-[115px] border-2 border-slate-200 bg-white hover:border-sky-300 hover:bg-slate-50 text-slate-700 font-bold transition-all cursor-pointer shrink-0">
-                <CalendarIcon className="w-5 h-5 text-sky-500 mb-0.5" />
-                <span className="text-xs font-black text-slate-800">Ngày khác</span>
-                <input
-                  type="date"
-                  className="sr-only"
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => {
-                    const chosenDate = e.target.value;
-                    if (chosenDate) {
-                      setSelectedDate(chosenDate);
-                      setSelectedSlotTime('');
-                      setSelectedSlotId(null);
-                    }
-                  }}
-                />
-              </label>
+              <div className="flex items-center gap-2.5 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-slate-200">
+                {availableDateOptions.map((item) => {
+                  const isSelected = selectedDate === item.dateStr;
+                  const hasSchedule = item.hasSchedule;
+
+                  return (
+                    <button
+                      key={item.dateStr}
+                      type="button"
+                      onClick={() => {
+                        if (selectedDate !== item.dateStr) {
+                          setSelectedDate(item.dateStr);
+                          setSelectedSlotTime('');
+                          setSelectedSlotId(null);
+                        }
+                      }}
+                      className={`flex flex-col items-center justify-center py-2.5 px-4 rounded-2xl min-w-[108px] border-2 transition-all cursor-pointer relative shrink-0 ${
+                        isSelected
+                          ? hasSchedule
+                            ? 'bg-emerald-600 border-emerald-600 text-white shadow-md ring-2 ring-emerald-200 scale-102 font-extrabold'
+                            : 'bg-sky-600 border-sky-600 text-white shadow-md ring-2 ring-sky-200 scale-102 font-extrabold'
+                          : hasSchedule
+                          ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 hover:bg-emerald-100 hover:border-emerald-400 font-bold shadow-2xs ring-1 ring-emerald-200/50'
+                          : 'bg-slate-50/80 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600 font-semibold opacity-75'
+                      }`}
+                    >
+                      {/* Badge Nổi bật nếu có lịch */}
+                      {hasSchedule && !isSelected && (
+                        <span className="absolute -top-2.5 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-xs">
+                          Có lịch
+                        </span>
+                      )}
+
+                      <span className={`text-xs font-black tracking-tight ${isSelected ? 'text-white' : hasSchedule ? 'text-emerald-900' : 'text-slate-700'}`}>
+                        {item.displayDateFormatted}
+                      </span>
+                      <span className={`text-[11px] font-bold mt-0.5 ${isSelected ? 'text-emerald-100' : hasSchedule ? 'text-emerald-700' : 'text-slate-400'}`}>
+                        {item.dayOfWeekStr}
+                      </span>
+                      {!hasSchedule && (
+                        <span className={`text-[9px] font-medium mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                          Nghỉ
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

@@ -1,44 +1,30 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useEffect, useRef, useState } from "react";
 import {
-  Sparkles,
-  Mic,
-  MicOff,
-  Camera,
-  Heart,
-  Activity,
-  FileText,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldAlert,
-  Loader2,
-  ArrowRight,
-  Upload,
-  X,
-  Stethoscope,
-  Building2,
-  UserCheck,
-  ClipboardList,
-  Flame,
-  Clock,
-  Check,
-} from 'lucide-react';
-import { Hospital, Specialty } from '@/types';
-import { HeartRatePPGScanner } from './HeartRatePPGScanner';
-import { BodyDiagram } from '../BodyDiagram';
-import { ScreeningStep2 } from '@/components/features/screening/ScreeningStep2';
-import { toast } from 'sonner';
-import { apiClient } from '@/lib/api-client';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Hospital, Specialty } from "@/types";
+import { BookingType } from "@/config/bookingTypes";
+import { BodyDiagram } from "../BodyDiagram";
+import { ScreeningStep2 } from "@/components/features/screening/ScreeningStep2";
+import { RedFlagEngine } from "@/services/screening/RedFlagEngine";
+import { HeartRatePPGScanner } from "./HeartRatePPGScanner";
+import { VideoVoiceRecorder } from "./VideoVoiceRecorder";
+import {
+  analyzeBookingScreening,
+  transcribeScreening,
+  BookingScreeningDraft,
+  BookingScreeningResult,
+} from "@/services/screening/bookingScreening";
+import { Loader2, ShieldAlert, Sparkles } from "lucide-react";
 
-import { BookingType } from '@/config/bookingTypes';
-
-interface AIAssistedBookingModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   hospital: Hospital;
@@ -54,38 +40,30 @@ interface AIAssistedBookingModalProps {
     doctor?: any;
   }) => void;
 }
-
-const BODY_AREAS = [
-  { id: 'head', name: 'Đầu / Trán / Mắt', category: 'Phần trên' },
-  { id: 'throat', name: 'Cổ / Vùng Họng', category: 'Phần trên' },
-  { id: 'chest', name: 'Vùng Ngực / Tim', category: 'Phần thân' },
-  { id: 'abdomen', name: 'Vùng Bụng / Dạ Dày', category: 'Phần thân' },
-  { id: 'back', name: 'Cột Sống / Lưng', category: 'Phần thân' },
-  { id: 'arms', name: 'Cánh Tay / Bàn Tay', category: 'Tứ chi' },
-  { id: 'legs', name: 'Đùi / Bắp Chân / Khớp', category: 'Tứ chi' },
-  { id: 'skin', name: 'Toàn Thân / Phát Ban Da', category: 'Da liễu' },
-];
-
-const DURATION_OPTIONS = [
-  '< 24 giờ (Cấp tính)',
-  '1 - 3 ngày',
-  '1 tuần',
-  '> 1 tháng (Dai dẳng)',
-];
-
-const WARNING_SIGNS = [
-  'Sốt cao trên 38.5°C',
-  'Tức ngực, khó thở',
-  'Chóng mặt, choáng váng',
-  'Tổn thương da / Phát ban',
-  'Chảy máu / Vết thương hở',
-];
-
-const MEDICAL_HISTORIES = [
-  'Huyết áp cao / Tim mạch',
-  'Tiểu đường',
-  'Hen suyễn / Bệnh phổi',
-  'Dị ứng thuốc / Thực phẩm',
+const emptyDraft = (): BookingScreeningDraft => ({
+  regions: [],
+  answers: [],
+  symptoms: "",
+  age: "",
+  painLevel: "",
+  duration: "",
+  heightCm: "",
+  weightKg: "",
+  ppg: null,
+  images: [],
+  mediaConsent: false,
+  transcript: "",
+  transcriptConfirmed: false,
+});
+const inputClass =
+  "w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900";
+const steps = [
+  "Vùng đau",
+  "Trắc nghiệm",
+  "Ảnh tổn thương",
+  "Nhịp tim",
+  "Giọng nói",
+  "Kết quả",
 ];
 
 export function AIAssistedBookingModal({
@@ -94,577 +72,587 @@ export function AIAssistedBookingModal({
   hospital,
   specialties,
   onApplyAIRecommendation,
-}: AIAssistedBookingModalProps) {
-  const [activeTab, setActiveTab] = useState<'bodymap' | 'survey' | 'camera' | 'vitals' | 'result'>('bodymap');
-
-  // Input states
-  const [selectedBodyAreas, setSelectedBodyAreas] = useState<string[]>([]);
-  const [symptomsText, setSymptomsText] = useState('');
-  const [duration, setDuration] = useState('< 24 giờ (Cấp tính)');
-  const [painLevel, setPainLevel] = useState<number>(4);
-  const [selectedWarnings, setSelectedWarnings] = useState<string[]>([]);
-  const [selectedHistories, setSelectedHistories] = useState<string[]>([]);
-
-  // Voice & Vision states
-  const [isRecording, setIsRecording] = useState(false);
-  const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null);
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-
-  // Vitals states
-  const [measuredHeartRate, setMeasuredHeartRate] = useState<number | null>(null);
-  const [heightCm, setHeightCm] = useState<string>('168');
-  const [weightKg, setWeightKg] = useState<string>('62');
-
-  // Result state
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [triageResult, setTriageResult] = useState<any | null>(null);
-
-  // Recording logic
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-
-  const toggleBodyArea = (name: string) => {
-    if (selectedBodyAreas.includes(name)) {
-      setSelectedBodyAreas(selectedBodyAreas.filter((a) => a !== name));
-    } else {
-      setSelectedBodyAreas([...selectedBodyAreas, name]);
+}: Props) {
+  const [draft, setDraft] = useState(emptyDraft);
+  const [step, setStep] = useState(0);
+  const [result, setResult] = useState<BookingScreeningResult | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const revision = useRef(0);
+  const request = useRef<AbortController | null>(null);
+  const voiceRequest = useRef<AbortController | null>(null);
+  const active = useRef(false);
+  useEffect(() => {
+    active.current = isOpen;
+    request.current?.abort();
+    voiceRequest.current?.abort();
+    revision.current++;
+    setBusy(false);
+    setTranscribing(false);
+    setDraft(emptyDraft());
+    setResult(null);
+    setError("");
+    setStep(0);
+    return () => {
+      active.current = false;
+      request.current?.abort();
+      voiceRequest.current?.abort();
+    };
+  }, [isOpen, hospital.id]);
+  const change = (patch: Partial<BookingScreeningDraft>) => {
+    if (patch.regions || patch.mediaConsent === false) {
+      voiceRequest.current?.abort();
+      setTranscribing(false);
     }
+    revision.current++;
+    request.current?.abort();
+    setBusy(false);
+    setError("");
+    setResult(null);
+    setDraft((prev) => ({ ...prev, ...patch }));
   };
-
-  const toggleWarning = (item: string) => {
-    if (selectedWarnings.includes(item)) {
-      setSelectedWarnings(selectedWarnings.filter((i) => i !== item));
-    } else {
-      setSelectedWarnings([...selectedWarnings, item]);
+  const warning = RedFlagEngine.evaluateRedFlags(draft.answers);
+  const run = async () => {
+    if (busy || transcribing) return;
+    if (!draft.regions.length) {
+      setError("Vui lòng chọn vùng bất thường.");
+      setStep(0);
+      return;
     }
-  };
-
-  const toggleHistory = (item: string) => {
-    if (selectedHistories.includes(item)) {
-      setSelectedHistories(selectedHistories.filter((i) => i !== item));
-    } else {
-      setSelectedHistories([...selectedHistories, item]);
+    if (draft.images.length && !draft.mediaConsent) {
+      setError("Cần đồng ý xử lý ảnh hoặc xóa ảnh để tiếp tục.");
+      setStep(2);
+      return;
     }
-  };
-
-  const startVoiceRecording = async () => {
+    const currentRevision = String(revision.current);
+    const controller = new AbortController();
+    request.current?.abort();
+    request.current = controller;
+    setBusy(true);
+    setError("");
+    setResult(null);
+    setStep(5);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : 'audio/mp4';
-
-      const recorder = new MediaRecorder(stream, { mimeType });
-      const chunks: BlobPart[] = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        const actualType = mimeType.split(';')[0];
-        const blob = new Blob(chunks, { type: actualType });
-        setVoiceBlob(blob);
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      recorder.start(200);
-      setMediaRecorder(recorder);
-      setIsRecording(true);
-      toast.info('Đang ghi âm giọng nói / tiếng ho...');
-    } catch {
-      toast.error('Không thể truy cập Microphone!');
-    }
-  };
-
-  const stopVoiceRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
-      setIsRecording(false);
-      toast.success('Đã hoàn tất ghi âm!');
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const filesArr = Array.from(e.target.files).slice(0, 3);
-      setSelectedImages(filesArr);
-      const previews = filesArr.map((f) => URL.createObjectURL(f));
-      setImagePreviews(previews);
-      toast.success(`Đã chọn ${filesArr.length} ảnh soi lâm sàng/xét nghiệm`);
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setSelectedImages(selectedImages.filter((_, i) => i !== index));
-    setImagePreviews(imagePreviews.filter((_, i) => i !== index));
-  };
-
-  const bmiValue = (() => {
-    const h = parseFloat(heightCm) / 100;
-    const w = parseFloat(weightKg);
-    return h > 0 && w > 0 ? (w / (h * h)).toFixed(1) : null;
-  })();
-
-  // Execute AI Triage Analysis
-  const handleRunAIAnalysis = async () => {
-    setIsAnalyzing(true);
-    setActiveTab('result');
-
-    try {
-      const formData = new FormData();
-      if (symptomsText) formData.append('symptoms', symptomsText);
-      if (measuredHeartRate) formData.append('heartRateBpm', measuredHeartRate.toString());
-      if (heightCm) formData.append('heightCm', heightCm);
-      if (weightKg) formData.append('weightKg', weightKg);
-      if (hospital.id) formData.append('hospitalId', hospital.id);
-
-      if (selectedBodyAreas.length > 0) {
-        formData.append('bodyAreas', JSON.stringify(selectedBodyAreas));
-      }
-
-      const questionnaireData = {
-        duration,
-        painLevel,
-        warningSigns: selectedWarnings,
-        medicalHistory: selectedHistories,
-      };
-      formData.append('questionnaire', JSON.stringify(questionnaireData));
-
-      if (voiceBlob) {
-        const ext = voiceBlob.type.includes('webm') ? 'webm' : voiceBlob.type.includes('mp4') ? 'mp4' : 'wav';
-        formData.append('voice', voiceBlob, `voice.${ext}`);
-      }
-      selectedImages.forEach((img) => {
-        formData.append('images', img);
-      });
-
-      const response = await apiClient.post<any>('/pre-exam-v2/analyze-smartphone', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      const resData = response?.data?.data ? response.data.data : (response?.data ? response.data : response);
-
-      setTriageResult({
-        ...resData,
-        imageAnalysisFindings: resData?.imageAnalysisFindings && resData.imageAnalysisFindings.length > 0
-          ? resData.imageAnalysisFindings
-          : (selectedImages.length > 0 ? ['Phân tích ảnh soi camera (GPT-5 Vision): Đã ghi nhận hình ảnh tổn thương da/lâm sàng. Kết quả phát hiện tổn thương phù hợp để đối chiếu trực tiếp với bác sĩ.'] : []),
-        transcript: resData?.transcript || (voiceBlob ? 'Đã thu âm lời khai triệu chứng / tiếng ho và chuyển đổi thành văn bản thành công.' : ''),
-      });
-
-      toast.success('AI OpenAI (beeknoee key) đã hoàn tất phân tích sàng lọc!');
-    } catch {
-      console.warn('Backend call failed, using client smart fallback triage');
-      const textConcat = (selectedBodyAreas.join(' ') + ' ' + symptomsText + ' ' + selectedWarnings.join(' ')).toLowerCase();
-      let matchedSpec = specialties[0]?.name || 'Nội tổng quát';
-      if (textConcat.includes('mắt')) matchedSpec = 'Mắt';
-      else if (textConcat.includes('da') || textConcat.includes('phát ban')) matchedSpec = 'Da liễu';
-      else if (textConcat.includes('tim') || textConcat.includes('ngực') || (measuredHeartRate && measuredHeartRate > 100)) matchedSpec = 'Tim mạch';
-      else if (textConcat.includes('họng') || textConcat.includes('tai') || textConcat.includes('ho')) matchedSpec = 'Tai Mũi Họng';
-      else if (textConcat.includes('bụng') || textConcat.includes('dạ dày')) matchedSpec = 'Tiêu hóa';
-
-      const isEmergency = painLevel >= 8 || selectedWarnings.includes('Tức ngực, khó thở') || (measuredHeartRate && (measuredHeartRate > 130 || measuredHeartRate < 45));
-
-      setTriageResult({
-        riskLevel: isEmergency ? 'EMERGENCY' : 'CONSULT',
-        riskLabel: isEmergency ? 'CẦN ĐẾN CẤP CỨU NGAY' : 'Nên khám bác sĩ chuyên khoa',
-        riskColor: isEmergency ? 'rose' : 'amber',
-        recommendedSpecialtyName: matchedSpec,
-        summary: `Vùng bất thường: ${selectedBodyAreas.join(', ') || 'Chưa chọn'}. Mức đau ${painLevel}/10. Nhịp tim PPG: ${measuredHeartRate || 75} BPM.`,
-        vitalSignsAssessment: `Nhịp tim PPG ${measuredHeartRate || 75} BPM. Chỉ số BMI: ${bmiValue || '22.0'}.`,
-        triageDetails: {
-          urgencyReason: isEmergency ? 'Bất thường mức đau hoặc nhịp tim nguy hiểm!' : 'Cần bác sĩ chuyên khoa kiểm tra lâm sàng.',
-          actionAdvice: isEmergency ? 'Đến khoa cấp cứu gần nhất lập tức.' : 'Đăng ký đặt lịch khám với bác sĩ chuyên khoa phù hợp.',
-          keyObservations: [
-            `Vùng cơ thể: ${selectedBodyAreas.join(', ') || 'Chưa chọn'}`,
-            `Thời gian: ${duration}`,
-            `Mức đau: ${painLevel}/10`,
-            `Nhịp tim PPG: ${measuredHeartRate || 75} BPM`,
-          ],
-        },
-        imageAnalysisFindings: selectedImages.length > 0 ? ['Phân tích ảnh soi camera (GPT-5 Vision): Đã ghi nhận hình ảnh tổn thương da/lâm sàng. Kết quả phát hiện tổn thương phù hợp để đối chiếu trực tiếp với bác sĩ.'] : [],
-        transcript: voiceBlob ? 'Đã thu âm lời khai triệu chứng / tiếng ho và chuyển đổi thành văn bản thành công.' : '',
-      });
+      const response = await analyzeBookingScreening(
+        draft,
+        hospital.id,
+        currentRevision,
+        controller.signal,
+      );
+      if (
+        active.current &&
+        !controller.signal.aborted &&
+        currentRevision === String(revision.current)
+      )
+        setResult(response);
+    } catch (err: any) {
+      if (!controller.signal.aborted && active.current)
+        setError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Chưa phân tích được. Vui lòng thử lại.",
+        );
     } finally {
-      setIsAnalyzing(false);
+      if (request.current === controller && active.current) setBusy(false);
     }
   };
-
-  const handleApplyToBooking = () => {
-    if (!triageResult) return;
-    const recommendedName = triageResult.recommendedSpecialtyName || '';
-    const matched = specialties.find(
-      (s) => s.name.toLowerCase().includes(recommendedName.toLowerCase()) || recommendedName.toLowerCase().includes(s.name.toLowerCase())
-    ) || specialties[0];
-
-    // Determine recommended booking type based on triage severity
-    let recBookingType: BookingType = 'GENERAL';
-    if (triageResult.riskLevel === 'EMERGENCY') {
-      recBookingType = 'VIP';
-    } else if (selectedImages.length > 0) {
-      recBookingType = 'SERVICE';
-    } else if (triageResult.riskLevel === 'CONSULT') {
-      recBookingType = 'DOCTOR';
+  const transcribe = async (recording: { blob?: Blob | null }) => {
+    if (!recording.blob || !draft.mediaConsent) {
+      setError("Cần đồng ý xử lý bản ghi trước khi chuyển thành văn bản.");
+      return;
     }
-
-    if (matched) {
-      onApplyAIRecommendation({
-        specialtyId: matched.id,
-        specialtyName: matched.name,
-        bookingType: recBookingType,
-        reason: `AI Sàng lọc (${triageResult.riskLabel}): ${triageResult.summary}`,
-      });
-      onClose();
-      toast.success(`Đã tự động áp dụng gợi ý AI (${recBookingType} - Chuyên khoa ${matched.name}) vào lịch khám!`);
+    const controller = new AbortController();
+    voiceRequest.current?.abort();
+    voiceRequest.current = controller;
+    setTranscribing(true);
+    change({ transcript: "", transcriptConfirmed: false });
+    try {
+      const transcript = await transcribeScreening(
+        recording.blob,
+        controller.signal,
+      );
+      if (active.current && !controller.signal.aborted)
+        change({ transcript, transcriptConfirmed: false });
+    } catch (err: any) {
+      if (active.current && !controller.signal.aborted)
+        setError(
+          err?.response?.data?.message ||
+            "Chưa chuyển được giọng nói. Bạn có thể nhập mô tả triệu chứng.",
+        );
+    } finally {
+      if (voiceRequest.current === controller && active.current)
+        setTranscribing(false);
     }
   };
-
+  const apply = () => {
+    if (
+      !result?.canApply ||
+      result.nextAction !== "BOOK_SPECIALTY" ||
+      result.inputRevision !== String(revision.current)
+    )
+      return;
+    const specialty = specialties.find(
+      (s) => s.id === result.recommendedSpecialtyId,
+    );
+    if (!specialty) {
+      setError(
+        "Chuyên khoa này không có trong danh mục đặt khám hiện tại. Vui lòng chọn cơ sở phù hợp.",
+      );
+      return;
+    }
+    onApplyAIRecommendation({
+      specialtyId: specialty.id,
+      specialtyName: specialty.name,
+      reason: result.summary,
+    });
+    onClose();
+  };
+  const consent = (
+    <label className="flex items-start gap-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-700">
+      <input
+        type="checkbox"
+        checked={draft.mediaConsent}
+        onChange={(e) => {
+          if (!e.target.checked) voiceRequest.current?.abort();
+          change({ mediaConsent: e.target.checked });
+        }}
+      />
+      <span>
+        Tôi đồng ý gửi ảnh/bản ghi đã chọn đến nhà cung cấp AI được NovaCare cấu
+        hình để xử lý phiên này. Luồng này không lưu file vào hồ sơ; dữ liệu có
+        thể được nhà cung cấp xử lý theo chính sách của họ. Có thể bỏ qua và chỉ
+        nhập mô tả.
+      </span>
+    </label>
+  );
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl overflow-y-auto max-h-[92vh]">
-        <DialogHeader className="space-y-2 border-b border-slate-100 pb-4 text-left">
-          <div className="flex items-center justify-between">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#0c4b39] text-xs font-black">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              <span>100% Smartphone-Only • AI Assistant</span>
-            </div>
-            <Badge variant="outline" className="border-slate-200 text-slate-600 text-[10px] font-bold">
-              <Building2 className="w-3 h-3 mr-1" />
-              {hospital.name}
-            </Badge>
-          </div>
-          <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Trợ Lý AI Sàng Lọc Đa Dữ Liệu & Gợi Ý Chuyên Khoa
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-5 sm:p-8">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Sparkles className="text-emerald-700" />
+            Sàng lọc & gợi ý chuyên khoa
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-500 font-medium">
-            Phân tích 5 nguồn thông tin từ Smartphone: Sơ đồ vùng đau trên cơ thể + Khảo sát trắc nghiệm + Ghi âm giọng nói/tiếng ho + Ảnh soi camera + Nhịp tim PPG.
+          <DialogDescription>
+            {hospital.name} · Kết quả hỗ trợ chọn nơi khám, không thay thế chẩn
+            đoán của bác sĩ.
           </DialogDescription>
         </DialogHeader>
-
-        <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full space-y-5 pt-2">
-          {/* Tab Navigation */}
-          <TabsList className="grid grid-cols-5 bg-slate-100 p-1 rounded-2xl">
-            <TabsTrigger value="bodymap" className="rounded-xl text-xs font-bold gap-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <UserCheck className="w-3.5 h-3.5 text-[#0c4b39]" />
-              <span className="hidden sm:inline">1. Vùng Đau</span>
-            </TabsTrigger>
-            <TabsTrigger value="survey" className="rounded-xl text-xs font-bold gap-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <ClipboardList className="w-3.5 h-3.5 text-purple-600" />
-              <span className="hidden sm:inline">2. Trắc Nghiệm</span>
-            </TabsTrigger>
-            <TabsTrigger value="camera" className="rounded-xl text-xs font-bold gap-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Camera className="w-3.5 h-3.5 text-blue-600" />
-              <span className="hidden sm:inline">3. Ảnh Soi</span>
-            </TabsTrigger>
-            <TabsTrigger value="vitals" className="rounded-xl text-xs font-bold gap-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Heart className="w-3.5 h-3.5 text-rose-500" />
-              <span className="hidden sm:inline">4. PPG & BMI</span>
-            </TabsTrigger>
-            <TabsTrigger value="result" className="rounded-xl text-xs font-bold gap-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span className="hidden sm:inline">5. Kết Quả</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* TAB 1: BODY MAP SELECTOR */}
-          <TabsContent value="bodymap" className="space-y-4 text-left">
-            <div className="space-y-1">
-              <h4 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4 text-[#0c4b39]" />
-                <span>1. Chọn các vùng bất thường hoặc bị đau trên cơ thể:</span>
-              </h4>
-              <p className="text-[11px] text-slate-500 font-medium">
-                Chạm vào các vị trí dưới đây để đánh dấu vùng tổn thương cần AI phân tích.
-              </p>
-            </div>
-
-            {/* Interactive 3D Anatomy Canvas Body Model */}
-            <BodyDiagram selectedAreas={selectedBodyAreas} onChange={setSelectedBodyAreas} />
-
-            {selectedBodyAreas.length > 0 && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-[#0c4b39] flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Vùng đã chọn: {selectedBodyAreas.join(', ')}</span>
-              </div>
-            )}
-
-            <Button
+        <nav aria-label="Các bước sàng lọc" className="flex flex-wrap gap-2">
+          {steps.map((name, index) => (
+            <button
+              key={name}
               type="button"
-              onClick={() => setActiveTab('survey')}
-              className="w-full bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs h-11 rounded-2xl flex items-center justify-center gap-2"
+              disabled={
+                busy ||
+                transcribing ||
+                (index > 0 && !draft.regions.length) ||
+                (index === 5 && !result)
+              }
+              onClick={() => setStep(index)}
+              className={`rounded-full px-3 py-2 text-xs font-semibold ${step === index ? "bg-emerald-900 text-white" : "bg-slate-100 text-slate-600"}`}
             >
-              <span>Tiếp Theo: Khảo Sát Trắc Nghiệm Triệu Chứng</span>
-              <ArrowRight className="w-4 h-4" />
+              {index + 1}. {name}
+            </button>
+          ))}
+        </nav>
+        {error && (
+          <div
+            role="alert"
+            className="rounded-xl bg-red-50 p-4 text-sm text-red-800"
+          >
+            {String(error)}
+          </div>
+        )}
+        {warning.triggeredRedFlags.length > 0 && step !== 5 && (
+          <div
+            role="alert"
+            className="space-y-3 rounded-2xl border border-red-300 bg-red-50 p-4 text-red-900"
+          >
+            <p className="font-bold flex gap-2">
+              <ShieldAlert />
+              Có câu trả lời cần được đánh giá y tế sớm.
+            </p>
+            <p className="text-sm">
+              Không cần chờ chụp ảnh, đo nhịp tim hay ghi âm để tìm hỗ trợ.
+            </p>
+            <Button onClick={run}>Xem hướng dẫn ngay</Button>
+            {warning.hasCriticalRedFlag && (
+              <a href="tel:115" className="ml-4 underline">
+                Gọi 115 nếu cần cấp cứu
+              </a>
+            )}
+          </div>
+        )}
+        {step === 0 && (
+          <div className="space-y-4">
+            <BodyDiagram
+              selectedAreas={draft.regions}
+              onChange={(regions) =>
+                change({
+                  regions,
+                  answers: [],
+                  images: [],
+                  ppg: null,
+                  transcript: "",
+                  transcriptConfirmed: false,
+                })
+              }
+            />
+            <label className="block text-sm font-semibold">
+              Tuổi của người cần khám
+              <input
+                aria-label="Tuổi"
+                className={inputClass}
+                type="number"
+                min="0"
+                max="120"
+                value={draft.age}
+                onChange={(e) => change({ age: e.target.value })}
+                placeholder="Nhập tuổi thực tế"
+              />
+            </label>
+            <label className="block text-sm font-semibold">
+              Mô tả triệu chứng chính
+              <textarea
+                aria-label="Mô tả triệu chứng"
+                className={inputClass}
+                value={draft.symptoms}
+                maxLength={4000}
+                onChange={(e) => change({ symptoms: e.target.value })}
+                placeholder="Đau ở đâu, bắt đầu khi nào, có biểu hiện gì đi kèm?"
+              />
+            </label>
+            <Button disabled={!draft.regions.length} onClick={() => setStep(1)}>
+              Tiếp tục trắc nghiệm
             </Button>
-          </TabsContent>
-
-          {/* TAB 2: GENERAL TRIAGE QUESTIONNAIRE */}
-          <TabsContent value="survey" className="space-y-5 text-left">
+          </div>
+        )}
+        {step === 1 && (
+          <div className="space-y-4">
             <ScreeningStep2
-              selectedRegions={selectedBodyAreas}
-              onCompleted={(result) => {
-                toast.success('Đã hoàn thành trắc nghiệm sàng lọc y tế cá nhân hóa!');
+              key={draft.regions.join("|")}
+              selectedRegions={draft.regions}
+              initialAnswers={draft.answers}
+              onAnswersChange={(answers) => change({ answers })}
+              onCompleted={(value) => {
+                change({ answers: value.answers });
+                setStep(2);
               }}
-              onBack={() => setActiveTab('bodymap')}
+              onBack={() => setStep(0)}
             />
-
-            <Button
-              type="button"
-              onClick={() => setActiveTab('camera')}
-              className="w-full bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs h-11 rounded-2xl flex items-center justify-center gap-2"
-            >
-              <span>Tiếp Theo: Chụp Ảnh Soi Lâm Sàng</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </TabsContent>
-
-          {/* TAB 3: CAMERA VISION */}
-          <TabsContent value="camera" className="space-y-4 text-left">
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-900">
-                3. Chụp/Tải ảnh tổn thương hoặc Kết quả xét nghiệm:
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label className="text-sm">
+                Mức đau (0–10, bỏ trống nếu không rõ)
+                <input
+                  aria-label="Mức đau"
+                  type="number"
+                  min="0"
+                  max="10"
+                  className={inputClass}
+                  value={draft.painLevel}
+                  onChange={(e) => change({ painLevel: e.target.value })}
+                />
               </label>
-              <p className="text-[11px] text-slate-500">
-                Chụp vùng da phát ban, tổn thương mắt, họng hoặc phiếu kết quả xét nghiệm máu/ECG.
-              </p>
-
-              <div className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center transition-colors cursor-pointer bg-slate-50 relative">
-                <input type="file" accept="image/*" multiple onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-xs font-extrabold text-slate-700">Chạm để Chụp ảnh hoặc Chọn ảnh từ thư viện</p>
-              </div>
+              <label className="text-sm">
+                Thời gian xuất hiện
+                <input
+                  aria-label="Thời gian xuất hiện"
+                  className={inputClass}
+                  value={draft.duration}
+                  maxLength={100}
+                  onChange={(e) => change({ duration: e.target.value })}
+                  placeholder="Ví dụ: khoảng 2 ngày"
+                />
+              </label>
             </div>
-
-            {imagePreviews.length > 0 && (
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                {imagePreviews.map((src, idx) => (
-                  <div key={idx} className="relative rounded-2xl overflow-hidden border border-slate-200 aspect-square bg-slate-100">
-                    <img src={src} alt="Preview" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removeImage(idx)} className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-rose-600">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+          </div>
+        )}
+        {step === 2 && (
+          <div className="space-y-4">
+            <p className="text-sm">
+              Ảnh là tùy chọn, phù hợp với tổn thương nhìn thấy bên ngoài. Chọn
+              tối đa 3 ảnh JPEG/PNG/WebP, mỗi ảnh tối đa 5 MB. Không tải giấy tờ
+              có thông tin nhận dạng.
+            </p>
+            <input
+              aria-label="Ảnh tổn thương"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(e) => {
+                const images = Array.from(e.target.files || []);
+                if (
+                  images.length > 3 ||
+                  images.some(
+                    (f) =>
+                      f.size > 5 * 1024 * 1024 ||
+                      !["image/jpeg", "image/png", "image/webp"].includes(
+                        f.type,
+                      ),
+                  )
+                ) {
+                  setError(
+                    "Chỉ nhận tối đa 3 ảnh JPEG/PNG/WebP, mỗi ảnh không quá 5 MB.",
+                  );
+                  return;
+                }
+                change({ images });
+              }}
+            />
+            {draft.images.length > 0 && (
+              <div className="text-sm">
+                {draft.images.map((f) => f.name).join(", ")}{" "}
+                <button
+                  type="button"
+                  className="underline text-red-700"
+                  onClick={() => change({ images: [] })}
+                >
+                  Xóa ảnh
+                </button>
               </div>
             )}
-
-            <Button
-              type="button"
-              onClick={() => setActiveTab('vitals')}
-              className="w-full bg-[#0c4b39] hover:bg-[#083629] text-white font-extrabold text-xs h-11 rounded-2xl flex items-center justify-center gap-2"
-            >
-              <span>Tiếp Theo: Đo Nhịp Tim PPG & BMI</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </TabsContent>
-
-          {/* TAB 4: VITALS (PPG & BMI) */}
-          <TabsContent value="vitals" className="space-y-5 text-left">
-            <HeartRatePPGScanner
-              onComplete={(bpm) => {
-                setMeasuredHeartRate(bpm);
-                toast.success(`Đã ghi nhận Nhịp tim PPG: ${bpm} BPM`);
-              }}
-            />
-
-            <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700">Chiều cao (cm)</label>
-                <input type="number" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700">Cân nặng (kg)</label>
-                <input type="number" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white" />
-              </div>
-              <div className="space-y-1 text-center flex flex-col justify-center">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Chỉ số BMI</span>
-                <span className="text-base font-black text-[#0c4b39]">{bmiValue || '--'}</span>
-              </div>
+            {consent}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  change({ images: [] });
+                  setStep(3);
+                }}
+              >
+                Bỏ qua ảnh
+              </Button>
+              <Button onClick={() => setStep(3)}>Tiếp tục</Button>
             </div>
-
-            <Button
-              type="button"
-              onClick={handleRunAIAnalysis}
-              className="w-full bg-gradient-to-r from-emerald-600 to-[#0c4b39] hover:from-emerald-500 hover:to-[#083629] text-white font-black text-sm h-12 rounded-2xl shadow-md flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-5 h-5 text-amber-300" />
-              <span>Chạy AI Phân Tích & Triage</span>
-            </Button>
-          </TabsContent>
-
-          {/* TAB 5: RESULT & TRIAGE */}
-          <TabsContent value="result" className="space-y-5 text-left">
-            {isAnalyzing ? (
-              <div className="py-16 text-center space-y-4">
-                <Loader2 className="w-10 h-10 text-[#0c4b39] animate-spin mx-auto" />
-                <div className="space-y-1">
-                  <h4 className="text-base font-extrabold text-slate-900">
-                    Trợ lý AI đang phân tích 5 nguồn dữ liệu...
-                  </h4>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Tổng hợp Vùng đau ({selectedBodyAreas.length} vùng), Mức đau {painLevel}/10, Nhịp tim PPG {measuredHeartRate || 75} BPM, BMI {bmiValue}...
-                  </p>
-                </div>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="space-y-4">
+            <p className="text-sm">
+              Đo nhịp tim bằng camera là tùy chọn. Chỉ số ước lượng không dùng
+              để chẩn đoán rối loạn nhịp hoặc loại trừ tình trạng khẩn cấp.
+            </p>
+            <HeartRatePPGScanner
+              onComplete={(measurement) => change({ ppg: measurement })}
+              onReset={() => change({ ppg: null })}
+            />
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  change({ ppg: null });
+                  setStep(4);
+                }}
+              >
+                Bỏ qua phép đo
+              </Button>
+              <Button onClick={() => setStep(4)}>Tiếp tục</Button>
+            </div>
+          </div>
+        )}
+        {step === 4 && (
+          <div className="space-y-4">
+            <p className="text-sm">
+              Bạn có thể kể triệu chứng bằng giọng nói. Hãy mô tả tình trạng
+              thực tế; hệ thống chuyển lời nói thành văn bản để bạn kiểm tra,
+              không chẩn đoán bệnh qua âm sắc.
+            </p>
+            {consent}
+            {draft.mediaConsent && (
+              <VideoVoiceRecorder
+                isUploading={transcribing}
+                onConfirmRecording={transcribe}
+                onSkip={() => {
+                  change({ transcript: "", transcriptConfirmed: false });
+                }}
+                scriptText="Hãy tự mô tả: bạn đang khó chịu ở đâu, triệu chứng bắt đầu khi nào, điều gì làm nặng hơn và có biểu hiện gì đi kèm. Không đọc câu mẫu như lời khai của mình."
+              />
+            )}
+            {draft.transcript && (
+              <div className="space-y-3">
+                <label className="text-sm font-semibold">
+                  Kiểm tra và sửa lời kể
+                  <textarea
+                    aria-label="Bản chuyển giọng nói"
+                    className={inputClass}
+                    value={draft.transcript}
+                    onChange={(e) =>
+                      change({
+                        transcript: e.target.value,
+                        transcriptConfirmed: false,
+                      })
+                    }
+                  />
+                </label>
+                <label className="flex gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={draft.transcriptConfirmed}
+                    onChange={(e) =>
+                      change({ transcriptConfirmed: e.target.checked })
+                    }
+                  />
+                  Tôi xác nhận văn bản này đúng với triệu chứng của mình.
+                </label>
               </div>
-            ) : triageResult ? (
-              <div className="space-y-5 text-left">
-                {/* Triage Urgency Level Banner */}
+            )}
+            <Button
+              disabled={
+                transcribing ||
+                (Boolean(draft.transcript) && !draft.transcriptConfirmed)
+              }
+              onClick={run}
+            >
+              Phân tích & gợi ý chuyên khoa
+            </Button>
+            <Button
+              variant="outline"
+              disabled={transcribing}
+              onClick={() => {
+                change({ transcript: "", transcriptConfirmed: false });
+                setStep(0);
+              }}
+            >
+              Nhập mô tả thay cho giọng nói
+            </Button>
+          </div>
+        )}
+        {step === 5 && (
+          <div className="space-y-4">
+            {busy && (
+              <p role="status" className="flex items-center gap-2">
+                <Loader2 className="animate-spin" />
+                Đang kiểm tra thông tin sàng lọc…
+              </p>
+            )}
+            {!busy && !result && (
+              <Button onClick={run}>Thử phân tích lại</Button>
+            )}
+            {result && (
+              <>
                 <div
-                  className={`p-5 rounded-3xl border-2 flex items-start gap-4 ${triageResult.riskLevel === 'EMERGENCY'
-                      ? 'bg-rose-50 border-rose-500 text-rose-950'
-                      : triageResult.riskLevel === 'CONSULT'
-                        ? 'bg-amber-50 border-amber-500 text-amber-950'
-                        : 'bg-emerald-50 border-emerald-500 text-emerald-950'
-                    }`}
+                  className={`rounded-2xl border p-5 ${["EMERGENCY", "URGENT"].includes(result.riskLevel) ? "bg-red-50 border-red-300" : "bg-emerald-50 border-emerald-200"}`}
                 >
-                  <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-white font-black ${triageResult.riskLevel === 'EMERGENCY'
-                        ? 'bg-rose-600'
-                        : triageResult.riskLevel === 'CONSULT'
-                          ? 'bg-amber-600'
-                          : 'bg-emerald-600'
-                      }`}
-                  >
-                    {triageResult.riskLevel === 'EMERGENCY' ? (
-                      <ShieldAlert className="w-7 h-7" />
-                    ) : triageResult.riskLevel === 'CONSULT' ? (
-                      <AlertTriangle className="w-7 h-7" />
-                    ) : (
-                      <CheckCircle2 className="w-7 h-7" />
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase tracking-wider">Đánh giá nguy cơ (Triage)</span>
-                      <Badge className="bg-white/80 font-black text-[10px] border border-current">
-                        {triageResult.riskLevel}
-                      </Badge>
-                    </div>
-                    <h3 className="text-lg font-black tracking-tight">{triageResult.riskLabel}</h3>
-                    <p className="text-xs font-medium opacity-90">{triageResult.summary}</p>
-                  </div>
+                  <p className="font-bold text-lg">{result.riskLabel}</p>
+                  <p className="mt-2 text-sm">{result.summary}</p>
                 </div>
-
-                {/* Recommended Specialty Card */}
-                <Card className="border-2 border-emerald-500/80 bg-emerald-50/40 rounded-3xl p-5 space-y-3">
-                  <div className="flex items-center justify-between border-b border-emerald-200/80 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Stethoscope className="w-5 h-5 text-[#0c4b39]" />
-                      <span className="text-xs font-black text-slate-700">Chuyên Khoa AI Đề Xuất Phù Hợp Nhất</span>
-                    </div>
-                    <Badge className="bg-[#0c4b39] text-white font-black text-[10px]">
-                      Khuyên Dùng
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xl font-black text-[#0c4b39]">
-                        {triageResult.recommendedSpecialtyName}
-                      </h4>
-                      <p className="text-xs text-slate-600 font-medium">
-                        Tại cơ sở y tế: <strong>{hospital.name}</strong>
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Observations */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-                  <h4 className="font-extrabold text-slate-900 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-600" />
-                    <span>Chi Tiết Phân Tích Đa Phương Thức:</span>
-                  </h4>
-                  <p className="text-slate-600 font-medium">{triageResult.vitalSignsAssessment}</p>
-
-                  {triageResult.triageDetails?.keyObservations && (
-                    <div className="pt-2 border-t border-slate-200 flex flex-wrap gap-2">
-                      {triageResult.triageDetails.keyObservations.map((obs: string, idx: number) => (
-                        <Badge key={idx} variant="outline" className="bg-white text-slate-700 border-slate-300 text-[10px]">
-                          • {obs}
-                        </Badge>
+                {result.triageDetails.keyObservations.length > 0 && (
+                  <ul className="list-disc pl-6 text-sm space-y-2">
+                    {result.triageDetails.keyObservations.map((text, i) => (
+                      <li key={i}>{text}</li>
+                    ))}
+                  </ul>
+                )}
+                {result.nextAction === "EMERGENCY_GUIDANCE" && (
+                  <a
+                    href="tel:115"
+                    className="block rounded-xl bg-red-700 p-4 text-center font-bold text-white"
+                  >
+                    Gọi 115 / tìm hỗ trợ cấp cứu
+                  </a>
+                )}
+                {result.nextAction === "URGENT_GUIDANCE" && (
+                  <p className="font-semibold text-red-800">
+                    Liên hệ cơ sở y tế để được đánh giá sớm; không chờ hoàn tất
+                    các bước thu thập tùy chọn.
+                  </p>
+                )}
+                {result.missingInformation.length > 0 && (
+                  <p className="text-sm text-amber-900">
+                    Vui lòng quay lại kiểm tra tuổi, các câu hỏi cảnh báo chưa
+                    rõ và bổ sung mô tả triệu chứng.
+                  </p>
+                )}
+                {result.recommendedSpecialtyName && (
+                  <p className="text-lg font-bold text-emerald-900">
+                    Chuyên khoa gợi ý: {result.recommendedSpecialtyName}
+                  </p>
+                )}
+                {result.decisionReason === "REGION_CONFLICT" && (
+                  <Button variant="outline" onClick={() => setStep(0)}>
+                    Kiểm tra lại vùng đau
+                  </Button>
+                )}
+                {!!result.providerErrors?.length && (
+                  <p
+                    role="status"
+                    className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900"
+                  >
+                    {result.providerErrors.some(
+                      (e) => e.code === "INSUFFICIENT_BALANCE",
+                    )
+                      ? "Dịch vụ AI đang tạm ngừng do tài khoản nhà cung cấp không đủ số dư."
+                      : "Một phần phân tích AI chưa hoạt động. Bạn có thể thử lại hoặc liên hệ cơ sở y tế."}{" "}
+                    Kết quả hiện tại chưa phải phân tích AI đầy đủ.
+                  </p>
+                )}
+                {result.recommendationSource === "QUESTIONNAIRE_RULES" && (
+                  <p className="text-xs text-slate-600">
+                    Gợi ý ban đầu từ câu trả lời và quy tắc sàng lọc. Chưa có
+                    kết quả RAG + LLM được xác thực cho phiên này.
+                  </p>
+                )}
+                <div className="rounded-xl bg-slate-50 p-3 text-sm">
+                  Nhịp tim:{" "}
+                  {result.ppg.bpm === null
+                    ? "Chưa có số đo đủ chất lượng"
+                    : `${result.ppg.bpm} BPM (ước lượng)`}
+                  .{" "}
+                  {result.modalityStatuses.image === "PARTIAL_OR_FAILED" &&
+                    "Phân tích ảnh chưa hoàn tất; kết quả có thể thiếu thông tin."}
+                  {result.modalityStatuses.image ===
+                    "LOW_QUALITY_OR_UNRELATED" &&
+                    "Ảnh chưa đủ rõ hoặc không phù hợp để sử dụng."}
+                </div>
+                {result.imageAnalysisFindings.length > 0 && (
+                  <div className="text-sm">
+                    <p className="font-semibold">
+                      Quan sát từ ảnh, cần đối chiếu khi khám:
+                    </p>
+                    <ul className="list-disc pl-5">
+                      {result.imageAnalysisFindings.map((finding, i) => (
+                        <li key={i}>{finding}</li>
                       ))}
-                    </div>
+                    </ul>
+                  </div>
+                )}
+                {result.citations.length > 0 && (
+                  <div className="text-sm">
+                    <p className="font-semibold">Tài liệu tham chiếu:</p>
+                    {result.citations.map((c) => (
+                      <a
+                        key={c.id}
+                        href={c.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block underline text-emerald-800"
+                      >
+                        {c.title} — {c.section}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="outline" onClick={() => setStep(1)}>
+                    Kiểm tra lại thông tin
+                  </Button>
+                  {result.canApply && (
+                    <Button onClick={apply}>
+                      Áp dụng chuyên khoa vào đặt khám
+                    </Button>
                   )}
                 </div>
-
-                {/* Vision Image Analysis Card */}
-                {(selectedImages.length > 0 || (triageResult.imageAnalysisFindings && triageResult.imageAnalysisFindings.length > 0)) && (
-                  <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-2 text-xs text-left">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-extrabold text-blue-900 flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-blue-600" />
-                        <span>Phân Tích Ảnh Soi Lâm Sàng (GPT-5 Vision):</span>
-                      </h4>
-                      <Badge className="bg-blue-600 text-white font-black text-[10px]">Vision AI</Badge>
-                    </div>
-
-                    {imagePreviews.length > 0 && (
-                      <div className="flex gap-2 py-1">
-                        {imagePreviews.map((src, i) => (
-                          <img key={i} src={src} alt="Uploaded lesion preview" className="w-14 h-14 rounded-xl object-cover border border-blue-300 shadow-sm" />
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="p-3 rounded-xl bg-white border border-blue-200 text-blue-950 font-medium">
-                      {triageResult.imageAnalysisFindings && triageResult.imageAnalysisFindings.length > 0
-                        ? triageResult.imageAnalysisFindings.join('; ')
-                        : 'Phân tích ảnh soi camera (GPT-5 Vision): Đã ghi nhận hình ảnh tổn thương da/lâm sàng. Kết quả phát hiện tổn thương phù hợp để đối chiếu trực tiếp với bác sĩ.'}
-                    </div>
-                  </div>
-                )}
-
-                {/* Voice Transcript Card */}
-                {(voiceBlob || triageResult.transcript) && (
-                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2 text-xs text-left">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-extrabold text-emerald-900 flex items-center gap-2">
-                        <Mic className="w-4 h-4 text-emerald-600" />
-                        <span>Văn Bản Ghi Âm Giọng Nói / Tiếng Ho (Whisper-1 STT):</span>
-                      </h4>
-                      <Badge className="bg-emerald-600 text-white font-black text-[10px]">Whisper STT</Badge>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white border border-emerald-200 text-emerald-950 font-medium italic">
-                      "{triageResult.transcript || 'Đã thu âm lời khai triệu chứng / tiếng ho và chuyển đổi thành văn bản thành công.'}"
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                  <Button
-                    type="button"
-                    onClick={handleApplyToBooking}
-                    className="w-full bg-[#0c4b39] hover:bg-[#083629] text-white font-black text-xs h-12 rounded-2xl shadow-lg flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                    <span>Áp Dụng Gợi Ý AI Vào Lịch Đặt Khám</span>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    onClick={() => setActiveTab('bodymap')}
-                    variant="outline"
-                    className="w-full sm:w-auto border-slate-300 text-slate-700 font-bold text-xs h-12 rounded-2xl"
-                  >
-                    Khảo Sát Lại
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="py-12 text-center space-y-3">
-                <Sparkles className="w-12 h-12 text-slate-300 mx-auto" />
-                <p className="text-xs font-bold text-slate-600">Vui lòng hoàn tất khảo sát và bấm "Chạy AI Phân Tích"</p>
-              </div>
+              </>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

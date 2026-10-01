@@ -1,0 +1,21 @@
+{
+  "version": "draft-2026-09-29",
+  "chunks": [
+    {
+      "id": "nice-cg150-assessment-1.1.1",
+      "title": "NICE CG150: Headaches in over 12s",
+      "section": "1.1.1 Assessment",
+      "sourceUrl": "https://www.nice.org.uk/guidance/cg150/chapter/Recommendations",
+      "version": "review-required",
+      "text": "Hướng dẫn NICE CG150 đề nghị đánh giá và xem xét thăm dò hoặc chuyển tuyến thêm khi đau đầu khởi phát đột ngột, đạt mức tối đa trong vòng 5 phút. Cần xem toàn bộ mục đánh giá và xác nhận phạm vi áp dụng trước khi chuyển thành quy tắc sàng lọc tại địa phương.",
+      "regionIds": ["head", "face"],
+      "specialtyCodes": ["neurology", "general"],
+      "minAge": 12,
+      "maxAge": 120,
+      "reviewStatus": "DRAFT",
+      "reviewedBy": null,
+      "reviewedAt": null,
+      "expiresAt": "2027-09-29T00:00:00.000Z"
+    }
+  ]
+}

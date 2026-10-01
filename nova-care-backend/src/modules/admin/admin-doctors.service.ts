@@ -280,12 +280,10 @@ export class AdminDoctorsService {
 
   // Doctor Schedule Methods
   async createSchedule(workplaceId: string, data: any) {
-    const existing = await this.prisma.doctorSchedule.findUnique({
+    const existing = await this.prisma.doctorSchedule.findFirst({
       where: {
-        doctorWorkplaceId_dayOfWeek: {
-          doctorWorkplaceId: workplaceId,
-          dayOfWeek: Number(data.dayOfWeek),
-        },
+        doctorWorkplaceId: workplaceId,
+        dayOfWeek: Number(data.dayOfWeek),
       },
     });
     if (existing) {

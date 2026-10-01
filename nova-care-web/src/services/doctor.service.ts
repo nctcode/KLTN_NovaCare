@@ -19,11 +19,37 @@ export const doctorService = {
     return response.data;
   },
 
-  async getAvailableSlots(doctorId: string, workplaceId: string, date: string) {
+  async getAvailableSlots(doctorId: string, workplaceId: string, date: string, serviceId?: string) {
+    try {
+      const queryParams = new URLSearchParams({ doctorWorkplaceId: workplaceId, date });
+      if (serviceId) queryParams.append('medicalServiceId', serviceId);
+      const response = await apiClient.get<any>(`/booking/availability?${queryParams}`);
+      if (response && response.options) {
+        return response.options.map((opt: any) => ({
+          id: opt.id,
+          startTime: `${date}T${opt.startTime}:00+07:00`,
+          endTime: `${date}T${opt.endTime}:00+07:00`,
+          formattedTime: opt.formattedTime,
+          isAvailable: opt.isAvailable,
+          bookedCount: 0,
+          capacity: opt.remainingCapacity,
+        }));
+      }
+    } catch (e) {
+      // fallback
+    }
+
     const response = await apiClient.get<any>(
       `/doctors/${doctorId}/available-slots?workplaceId=${workplaceId}&date=${date}`
     );
     return response.data;
+  },
+
+  async getAvailabilityOptions(doctorWorkplaceId: string, date: string, medicalServiceId?: string) {
+    const queryParams = new URLSearchParams({ doctorWorkplaceId, date });
+    if (medicalServiceId) queryParams.append('medicalServiceId', medicalServiceId);
+    const response = await apiClient.get<any>(`/booking/availability?${queryParams}`);
+    return response;
   },
 
   async getWorkplace(id: string): Promise<DoctorWorkplace> {

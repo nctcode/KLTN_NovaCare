@@ -27,7 +27,7 @@ export class MedicalRAGService {
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
-    const apiKey = process.env.OPENAI_API_KEY || this.configService.get<string>('OPENAI_API_KEY') || 'sk-bee-a613857ed4c93784939978ad2e5bec8624d8757050e88448e8a448db01b4f84d';
+    const apiKey = process.env.OPENAI_API_KEY || this.configService.get<string>('OPENAI_API_KEY') || 'unconfigured';
     const baseUrl = process.env.OPENAI_BASE_URL || this.configService.get<string>('OPENAI_BASE_URL') || 'https://platform.beeknoee.com/api/v1';
 
     this.client = new OpenAI({
@@ -107,7 +107,7 @@ export class MedicalRAGService {
       'Thần kinh': ['đầu', 'mất ngủ', 'chóng mặt', 'tê tay', 'co giật', 'cột sống', 'migraine', 'thần kinh', 'đột quỵ'],
       'Tiêu hóa': ['dạ dày', 'ợ chua', 'ợ nóng', 'thượng vị', 'trào ngược', 'tiêu hóa', 'đại tràng', 'táo bón', 'bụng'],
       'Tai Mũi Họng': ['họng', 'sổ mũi', 'ngạt mũi', 'xoang', 'tai', 'amidan', 'khàn tiếng', 'ù tai'],
-      'Cơ xương khớp': ['khớp', 'lưng', 'cột sống', 'vai', 'gút', 'gout', 'xương', 'thoái hóa'],
+      'Cơ xương khớp': ['khớp', 'lưng', 'cột sống', 'vai', 'gút', 'gout', 'xương', 'thoái hóa', 'chân', 'bàn chân', 'bắp chân', 'đùi', 'tứ chi', 'tay', 'cánh tay', 'gối', 'khớp gối', 'mắt cá'],
       'Sản phụ khoa': ['kinh nguyệt', 'phụ khoa', 'thai', 'âm đạo', 'tử cung', 'buồng trứng', 'chậm kinh'],
       'Nhi khoa': ['trẻ', 'em bé', 'nhi', 'quấy khóc', 'nôn trớ'],
       'Hô hấp': ['phổi', 'hen', 'ho có đờm', 'khò khè', 'phế quản'],

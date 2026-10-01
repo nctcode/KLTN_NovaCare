@@ -22,13 +22,18 @@ sealed class Screen(val route: String) {
     }
     
     object Notifications : Screen("notifications")
+    object BookingCheckout : Screen("booking_checkout")
     object Settings : Screen("settings")
     object Payment : Screen("payment/{url}") {
         fun createRoute(url: String) = "payment/${java.net.URLEncoder.encode(url, "UTF-8")}"
     }
 
-    object HospitalBooking : Screen("hospital_booking?hospitalId={hospitalId}") {
-        fun createRoute(hospitalId: String? = null) = if (hospitalId != null) "hospital_booking?hospitalId=$hospitalId" else "hospital_booking"
+    object HospitalBooking : Screen("hospital_booking?hospitalId={hospitalId}&specialtyId={specialtyId}&reason={reason}") {
+        fun createRoute(hospitalId: String? = null, specialtyId: String? = null, reason: String? = null): String {
+            val parameters = listOfNotNull(hospitalId?.let { "hospitalId=${android.net.Uri.encode(it)}" },
+                specialtyId?.let { "specialtyId=${android.net.Uri.encode(it)}" }, reason?.let { "reason=${android.net.Uri.encode(it)}" })
+            return "hospital_booking" + if (parameters.isEmpty()) "" else "?" + parameters.joinToString("&")
+        }
     }
 
     object PreExamScreening : Screen("pre_exam_screening")

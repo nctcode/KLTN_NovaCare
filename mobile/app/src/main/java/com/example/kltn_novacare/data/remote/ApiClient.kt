@@ -13,9 +13,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    // ADB Reverse Port Forwarding (adb reverse tcp:3000 tcp:3000):
-    // Phone connects to localhost:3000, forwarded directly to PC localhost:3000 over ADB
-    private const val BASE_URL = "http://localhost:3000/api/v1/"
+    // 10.0.2.2 is Android Emulator's loopback alias to host PC localhost:3000
+    private const val BASE_URL = "http://10.0.2.2:3000/api/v1/"
     
     private var retrofit: Retrofit? = null
     private var apiService: ApiService? = null
@@ -26,7 +25,7 @@ object ApiClient {
         tokenManager = TokenManager(context.applicationContext)
         
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BASIC
         }
 
         // Header Interceptor to attach Access Token
@@ -112,7 +111,9 @@ object ApiClient {
             .build()
 
         apiService = retrofit?.create(ApiService::class.java)
-        preExamApiService = retrofit?.create(com.example.kltn_novacare.data.api.PreExamApiService::class.java)
+        preExamApiService = retrofit?.newBuilder()?.client(okHttpClient.newBuilder()
+            .readTimeout(150, TimeUnit.SECONDS).callTimeout(180, TimeUnit.SECONDS).build())?.build()
+            ?.create(com.example.kltn_novacare.data.api.PreExamApiService::class.java)
     }
 
     fun getService(): ApiService {

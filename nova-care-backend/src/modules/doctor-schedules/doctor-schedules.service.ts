@@ -2,10 +2,14 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { PrismaService } from '@/database/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { ScheduleOverlapValidator } from '../schedules/schedule-overlap.validator';
 
 @Injectable()
 export class DoctorSchedulesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private overlapValidator: ScheduleOverlapValidator,
+  ) {}
 
   async create(createDto: CreateScheduleDto) {
     // 1. Kiểm tra DoctorWorkplace
@@ -33,18 +37,15 @@ export class DoctorSchedulesService {
       }
     }
 
-    // 3. Kiểm tra trùng lặp
-    const existing = await this.prisma.doctorSchedule.findUnique({
-      where: {
-        doctorWorkplaceId_dayOfWeek: {
-          doctorWorkplaceId: createDto.doctorWorkplaceId,
-          dayOfWeek: createDto.dayOfWeek,
-        },
-      },
-    });
-    if (existing) {
-      throw new ConflictException('Nơi công tác này đã có lịch làm việc cho ngày này trong tuần');
-    }
+    // 3. Kiểm tra trùng lặp thời gian & hiệu lực
+    await this.overlapValidator.validateScheduleOverlap(
+      createDto.doctorWorkplaceId,
+      createDto.dayOfWeek,
+      createDto.startTime,
+      createDto.endTime,
+      (createDto as any).effectiveFrom,
+      (createDto as any).effectiveTo,
+    );
 
     return this.prisma.doctorSchedule.create({
       data: createDto,
@@ -55,6 +56,11 @@ export class DoctorSchedulesService {
             hospital: true,
             branch: true,
             specialty: true,
+          },
+        },
+        scheduleServices: {
+          include: {
+            medicalService: true,
           },
         },
       },
@@ -189,17 +195,15 @@ export class DoctorSchedulesService {
     }
 
     if (updateDto.doctorWorkplaceId && updateDto.dayOfWeek !== undefined) {
-      const existing = await this.prisma.doctorSchedule.findUnique({
-        where: {
-          doctorWorkplaceId_dayOfWeek: {
-            doctorWorkplaceId: updateDto.doctorWorkplaceId,
-            dayOfWeek: updateDto.dayOfWeek,
-          },
-        },
-      });
-      if (existing && existing.id !== id) {
-        throw new ConflictException('Nơi làm việc đã có lịch làm việc cho ngày này trong tuần');
-      }
+      await this.overlapValidator.validateScheduleOverlap(
+        updateDto.doctorWorkplaceId,
+        updateDto.dayOfWeek,
+        startTime,
+        endTime,
+        (updateDto as any).effectiveFrom || schedule.effectiveFrom,
+        (updateDto as any).effectiveTo || schedule.effectiveTo,
+        id,
+      );
     }
 
     const updated = await this.prisma.doctorSchedule.update({

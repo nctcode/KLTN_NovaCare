@@ -11,15 +11,17 @@ export class MedicalDataNormalizerService {
     sourceHospital: any,
     targetHospital: any,
     rawEncounters: any[],
+    allowedSections: string[] = [],
   ): UnifiedMedicalRecordDto {
+    const isAllowed = (section: string) => allowedSections.includes(section);
     const encounters: UnifiedEncounterDto[] = rawEncounters.map((enc) => {
-      const diagnoses = (enc.diagnoses || []).map((d: any) => ({
+      const diagnoses = isAllowed('DIAGNOSES') ? (enc.diagnoses || []).map((d: any) => ({
         icdCode: d.icdCode,
         diseaseName: d.diseaseName,
         isPrimary: d.isPrimary,
-      }));
+      })) : [];
 
-      const observations = (enc.observations || []).map((o: any) => ({
+      const observations = isAllowed('OBSERVATIONS') ? (enc.observations || []).map((o: any) => ({
         category: o.category,
         code: o.code || undefined,
         name: o.name,
@@ -27,10 +29,10 @@ export class MedicalDataNormalizerService {
         unit: o.unit || undefined,
         referenceRange: o.referenceRange || undefined,
         interpretation: o.interpretation || undefined,
-      }));
+      })) : [];
 
       let prescription: any = null;
-      if (enc.prescription) {
+      if (isAllowed('PRESCRIPTIONS') && enc.prescription) {
         prescription = {
           prescriptionCode: enc.prescription.prescriptionCode,
           prescribedAt: enc.prescription.prescribedAt,
@@ -55,8 +57,8 @@ export class MedicalDataNormalizerService {
           title: enc.doctorTitle || undefined,
         },
         specialty: enc.specialtyName,
-        chiefComplaint: enc.chiefComplaint || undefined,
-        clinicalSummary: enc.clinicalSummary || undefined,
+        chiefComplaint: isAllowed('SUMMARY') ? enc.chiefComplaint || undefined : undefined,
+        clinicalSummary: isAllowed('SUMMARY') ? enc.clinicalSummary || undefined : undefined,
         diagnoses,
         observations,
         prescription,

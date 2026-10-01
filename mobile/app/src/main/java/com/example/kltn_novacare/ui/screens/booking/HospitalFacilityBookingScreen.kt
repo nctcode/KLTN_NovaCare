@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,7 +32,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.kltn_novacare.data.model.*
-import com.example.kltn_novacare.data.remote.CreatePatientProfileRequest
 import com.example.kltn_novacare.ui.navigation.Screen
 import com.example.kltn_novacare.ui.theme.Primary
 import com.example.kltn_novacare.ui.theme.TextSecondary
@@ -121,704 +121,72 @@ fun getAvailableBookingModesForHospital(hospital: Hospital): List<HospitalBookin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HospitalFacilityBookingScreen(
-    initialHospitalId: String?,
-    navController: NavController,
-    bookingViewModel: BookingViewModel,
-    doctorViewModel: DoctorViewModel,
-    patientViewModel: PatientViewModel
+    initialHospitalId: String?, navController: NavController, bookingViewModel: BookingViewModel,
+    doctorViewModel: DoctorViewModel, patientViewModel: PatientViewModel,
+    initialSpecialtyId: String? = null, initialReason: String? = null
 ) {
-    val uiState by bookingViewModel.uiState.collectAsState()
-    
-    // mainStep:
-    // 1: StepSelectHospital
-    // 2: Doctor Booking Flow Step 1 ("Chọn thông tin khám")
-    // 3: Doctor Booking Flow Step 2 ("Chọn hồ sơ")
-    var mainStep by remember { mutableStateOf(1) }
-
+    var choosingHospital by rememberSaveable { mutableStateOf(true) }
+    var initialized by rememberSaveable { mutableStateOf(false) }
+    var appliedInitial by rememberSaveable { mutableStateOf(false) }
+    val hospitals by doctorViewModel.hospitals.collectAsState()
+    val specialties by doctorViewModel.specialties.collectAsState()
+    var appliedSuggestion by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        patientViewModel.loadProfiles()
+        if (!initialized) {
+            bookingViewModel.resetBooking()
+            initialized = true
+        }
+        doctorViewModel.loadHospitals()
+        if (initialSpecialtyId != null) doctorViewModel.loadSpecialties()
     }
-
-    when (mainStep) {
-        1 -> {
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                "Đặt khám theo cơ sở",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp,
-                                color = Color.White
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0C4B39))
-                    )
-                }
-            ) { innerPadding ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .background(Color(0xFFF8FAFC))
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
-                ) {
-                    StepSelectHospital(
-                        doctorViewModel = doctorViewModel,
-                        onHospitalAndModeSelected = { hospital, mode ->
-                            bookingViewModel.selectHospital(hospital)
-                            bookingViewModel.setBookingType(mode)
-                            mainStep = 2 // Advance to Doctor Booking Flow Step 1
-                        }
-                    )
-                }
-            }
-        }
-
-        2 -> {
-            DoctorBookingStepSelectInfo(
-                uiState = uiState,
-                bookingViewModel = bookingViewModel,
-                doctorViewModel = doctorViewModel,
-                onBack = { mainStep = 1 },
-                onNext = { mainStep = 3 }
-            )
-        }
-
-        3 -> {
-            DoctorBookingStepSelectProfile(
-                uiState = uiState,
-                patientViewModel = patientViewModel,
-                bookingViewModel = bookingViewModel,
-                navController = navController,
-                onBack = { mainStep = 2 },
-                onNext = {
-                    // Next steps will be implemented after receiving user mockups
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun MedproStepperHeader(
-    currentStep: Int,
-    title: String,
-    onBack: () -> Unit
-) {
-    Surface(
-        color = MedproBlue,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
-                }
-                Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 48.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                val stepIcons = listOf(
-                    Icons.Default.MedicalServices,
-                    Icons.Default.Person,
-                    Icons.Default.Check,
-                    Icons.Default.AccountBalanceWallet
-                )
-
-                for (i in 1..4) {
-                    val isDone = i < currentStep
-                    val isActive = i == currentStep
-
-                    Box(
-                        modifier = Modifier
-                            .size(if (isActive) 44.dp else 36.dp)
-                            .background(
-                                color = if (isActive || isDone) Color.White else Color(0x33FFFFFF),
-                                shape = CircleShape
-                            )
-                            .then(
-                                if (isActive) Modifier.clip(CircleShape) else Modifier
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = stepIcons[i - 1],
-                            contentDescription = null,
-                            tint = if (isActive || isDone) MedproBlue else Color.White,
-                            modifier = Modifier.size(if (isActive) 24.dp else 20.dp)
-                        )
-                    }
-
-                    if (i < 4) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(2.dp)
-                                .padding(horizontal = 4.dp)
-                                .background(
-                                    color = if (i < currentStep) Color.White else Color(0x55FFFFFF)
-                                )
-                        )
-                    }
-                }
+    LaunchedEffect(appliedInitial, specialties, initialSpecialtyId) {
+        if (appliedInitial && !appliedSuggestion && initialSpecialtyId != null) {
+            (specialties as? NetworkState.Success)?.data?.find { it.id == initialSpecialtyId }?.let {
+                bookingViewModel.selectSpecialty(it)
+                bookingViewModel.setDetails(initialReason.orEmpty(), "")
+                appliedSuggestion = true
             }
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DoctorBookingStepSelectInfo(
-    uiState: BookingUiState,
-    bookingViewModel: BookingViewModel,
-    doctorViewModel: DoctorViewModel,
-    onBack: () -> Unit,
-    onNext: () -> Unit
-) {
-    val context = LocalContext.current
-    var showDoctorModal by remember { mutableStateOf(false) }
-
-    val hospital = uiState.hospital
-    val selectedDoctor = uiState.doctor
-
-    val dateChips = remember {
-        val list = mutableListOf<BookingDateChipData>()
-        val cal = Calendar.getInstance()
-        val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val sdfDisplayDate = SimpleDateFormat("(dd/MM)", Locale.getDefault())
-        val sdfDayName = SimpleDateFormat("EEE", Locale("vi", "VN"))
-
-        for (i in 0..2) {
-            val dStr = sdfDate.format(cal.time)
-            val dispDate = sdfDisplayDate.format(cal.time)
-            var dayName = sdfDayName.format(cal.time)
-            if (dayName.equals("Thu", ignoreCase = true) || dayName.equals("Th 2", ignoreCase = true)) dayName = "Thứ 2"
-            if (dayName.equals("Fri", ignoreCase = true) || dayName.equals("Th 6", ignoreCase = true)) dayName = "Thứ 6"
-            if (dayName.equals("Sat", ignoreCase = true) || dayName.equals("Th 7", ignoreCase = true)) dayName = "Thứ 7"
-            if (dayName.equals("Sun", ignoreCase = true) || dayName.equals("CN", ignoreCase = true)) dayName = "Chủ Nhật"
-
-            list.add(BookingDateChipData(dStr, dispDate, dayName))
-            cal.add(Calendar.DAY_OF_YEAR, 1)
-        }
-        list
-    }
-
-    var currentSelectedDateStr by remember { mutableStateOf(uiState.selectedDate ?: dateChips.firstOrNull()?.dateStr ?: "") }
-    var currentSelectedSlot by remember { mutableStateOf<String?>(uiState.selectedSlot?.startTime) }
-
-    val morningSlots = listOf("07:30 - 08:30", "08:30 - 09:30", "09:30 - 10:30", "10:30 - 11:30")
-    val afternoonSlots = listOf("13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00", "16:00 - 16:30")
-
-    Scaffold(
-        topBar = {
-            MedproStepperHeader(
-                currentStep = 1,
-                title = "Chọn thông tin khám",
-                onBack = onBack
-            )
-        },
-        bottomBar = {
-            Surface(
-                color = Color.White,
-                shadowElevation = 8.dp
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    val isFormComplete = selectedDoctor != null && currentSelectedDateStr.isNotBlank() && currentSelectedSlot != null
-
-                    Button(
-                        onClick = {
-                            if (isFormComplete) {
-                                val slot = AppointmentSlot(
-                                    id = "slot-${currentSelectedDateStr}-${currentSelectedSlot}",
-                                    workplaceId = uiState.workplace?.id ?: selectedDoctor!!.id,
-                                    doctorWorkplaceId = uiState.workplace?.id ?: selectedDoctor!!.id,
-                                    startTime = "${currentSelectedDateStr}T${currentSelectedSlot?.substringBefore(" - ") ?: "08:00"}:00Z",
-                                    endTime = "${currentSelectedDateStr}T${currentSelectedSlot?.substringAfter(" - ") ?: "09:00"}:00Z",
-                                    capacity = 10,
-                                    bookedCount = 2
-                                )
-                                bookingViewModel.selectDateTime(currentSelectedDateStr, slot)
-                                onNext()
-                            }
-                        },
-                        enabled = isFormComplete,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MedproBlue,
-                            disabledContainerColor = Color(0xFFE2E8F0)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            "TIẾP TỤC",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (isFormComplete) Color.White else Color(0xFF94A3B8)
-                        )
-                    }
-                }
-            }
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* Hotline */ },
-                containerColor = Color(0xFFF97316),
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.padding(bottom = 60.dp)
-            ) {
-                Icon(Icons.Default.Phone, contentDescription = "Hotline")
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(Color(0xFFF8FAFC))
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // 1. HOSPITAL INFO CARD
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFF38BDF8)),
-                colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = hospital?.name ?: "Bệnh viện Quốc tế City - CIH",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MedproTextDark
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = hospital?.displayAddress ?: "03 Đường 17A, phường An Lạc, TP. Hồ Chí Minh (Địa chỉ cũ: Số 3, Đường 17A, P.Bình Trị Đông B, Q. Bình Tân, TP. Hồ Chí Minh)",
-                        fontSize = 12.5.sp,
-                        color = MedproSubText,
-                        lineHeight = 18.sp
-                    )
-                }
-            }
-
-            // 2. FIELD: BÁC SĨ
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Bác sĩ", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MedproTextDark)
-
-                OutlinedCard(
-                    onClick = { showDoctorModal = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color(0xFF0F172A)),
-                    colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(Color(0xFFF1F5F9), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Text(
-                            text = selectedDoctor?.displayFullNameWithTitle ?: "Chọn bác sĩ",
-                            fontWeight = if (selectedDoctor != null) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 15.sp,
-                            color = if (selectedDoctor != null) MedproTextDark else Color(0xFF64748B),
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = Color.Black,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-
-            // Pre-filled Specialty / Service card if doctor is chosen
-            if (selectedDoctor != null) {
-                OutlinedCard(
-                    onClick = { showDoctorModal = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color(0xFF0F172A)),
-                    colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.MedicalServices,
-                            contentDescription = null,
-                            tint = MedproBlue,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "${selectedDoctor.displaySpecialty} - ${NumberFormat.getCurrencyInstance(Locale("vi", "VN")).format(selectedDoctor.displayPrice)}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.5.sp,
-                            color = MedproTextDark,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Black)
-                    }
-                }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Chuyên khoa ", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MedproTextDark)
-                        Text("*", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Red)
-                    }
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFFF1F5F9),
-                        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.MedicalServices, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Chọn chuyên khoa", fontSize = 15.sp, color = Color(0xFF94A3B8), modifier = Modifier.weight(1f))
-                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF94A3B8))
-                        }
-                    }
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Dịch vụ ", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MedproTextDark)
-                        Text("*", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Red)
-                    }
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFFF1F5F9),
-                        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.HealthAndSafety, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Chọn dịch vụ", fontSize = 15.sp, color = Color(0xFF94A3B8), modifier = Modifier.weight(1f))
-                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF94A3B8))
-                        }
-                    }
-                }
-            }
-
-            // 3. FIELD: NGÀY KHÁM *
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Ngày khám ", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MedproTextDark)
-                    Text("*", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Red)
-                }
-
-                if (selectedDoctor == null) {
-                    Text("Chọn thông tin trên để hiển thị ngày giờ khám", fontSize = 13.sp, color = Color(0xFF64748B))
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        dateChips.forEach { chip ->
-                            val isSelected = currentSelectedDateStr == chip.dateStr
-
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { currentSelectedDateStr = chip.dateStr },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) MedproBlueLight else Color.White
-                                ),
-                                border = BorderStroke(
-                                    width = if (isSelected) 1.5.dp else 1.dp,
-                                    color = if (isSelected) MedproBlue else Color(0xFFCBD5E1)
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 10.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        chip.displayDate,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = if (isSelected) MedproBlue else MedproTextDark
-                                    )
-                                    Text(
-                                        chip.displayDayOfWeek,
-                                        fontSize = 12.sp,
-                                        color = if (isSelected) MedproBlue else MedproSubText
-                                    )
-                                }
-                            }
-                        }
-
-                        Card(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    val calendar = Calendar.getInstance()
-                                    DatePickerDialog(
-                                        context,
-                                        { _, yr, mo, dy ->
-                                            val cal = Calendar.getInstance().apply { set(yr, mo, dy) }
-                                            currentSelectedDateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
-                                        },
-                                        calendar.get(Calendar.YEAR),
-                                        calendar.get(Calendar.MONTH),
-                                        calendar.get(Calendar.DAY_OF_MONTH)
-                                    ).show()
-                                },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            border = BorderStroke(1.dp, Color(0xFFCBD5E1))
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 10.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(Icons.Default.DateRange, contentDescription = null, tint = MedproBlue, modifier = Modifier.size(18.dp))
-                                Text("Ngày khác", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MedproTextDark)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 4. FIELD: GIỜ KHÁM *
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Giờ khám ", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MedproTextDark)
-                    Text("*", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Red)
-                }
-
-                if (selectedDoctor == null) {
-                    Text("Chọn thông tin trên để hiển thị ngày giờ khám", fontSize = 13.sp, color = Color(0xFF64748B))
-                } else {
-                    Text("Buổi sáng", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MedproTextDark)
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        morningSlots.take(3).forEach { slotStr ->
-                            val isSelected = currentSelectedSlot == slotStr
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { currentSelectedSlot = slotStr },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) MedproBlueLight else Color.White
-                                ),
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isSelected) MedproBlue else Color(0xFFCBD5E1)
-                                )
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        slotStr,
-                                        fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) MedproBlue else MedproTextDark
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val slot4 = morningSlots.getOrNull(3) ?: "10:30 - 11:30"
-                        val isSelected = currentSelectedSlot == slot4
-                        Card(
-                            modifier = Modifier
-                                .width(110.dp)
-                                .clickable { currentSelectedSlot = slot4 },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MedproBlueLight else Color.White
-                            ),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isSelected) MedproBlue else Color(0xFFCBD5E1)
-                            )
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    slot4,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) MedproBlue else MedproTextDark
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text("Buổi chiều", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MedproTextDark)
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        afternoonSlots.take(3).forEach { slotStr ->
-                            val isSelected = currentSelectedSlot == slotStr
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { currentSelectedSlot = slotStr },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) MedproBlueLight else Color.White
-                                ),
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isSelected) MedproBlue else Color(0xFFCBD5E1)
-                                )
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        slotStr,
-                                        fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) MedproBlue else MedproTextDark
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val slot4 = afternoonSlots.getOrNull(3) ?: "16:00 - 16:30"
-                        val isSelected = currentSelectedSlot == slot4
-                        Card(
-                            modifier = Modifier
-                                .width(110.dp)
-                                .clickable { currentSelectedSlot = slot4 },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MedproBlueLight else Color.White
-                            ),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isSelected) MedproBlue else Color(0xFFCBD5E1)
-                            )
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    slot4,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) MedproBlue else MedproTextDark
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        "Tất cả thời gian theo múi giờ Việt Nam GMT +7",
-                        fontSize = 12.sp,
-                        color = Color(0xFFF59E0B),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+    LaunchedEffect(hospitals, initialHospitalId) {
+        if (!appliedInitial && initialHospitalId != null) {
+            (hospitals as? NetworkState.Success)?.data?.find { it.id == initialHospitalId }?.let {
+                bookingViewModel.selectHospital(it)
+                appliedInitial = true
+                choosingHospital = false
             }
         }
     }
-
-    if (showDoctorModal) {
-        DoctorSelectionModal(
-            hospital = hospital,
-            doctorViewModel = doctorViewModel,
-            onDismiss = { showDoctorModal = false },
-            onDoctorSelected = { doctor, workplace ->
-                bookingViewModel.selectDoctor(doctor, workplace)
-                showDoctorModal = false
+    if (choosingHospital) {
+        Scaffold(topBar = { TopAppBar(title = { Text("Đặt khám theo cơ sở") },
+            navigationIcon = { IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
+            } }) }) { padding ->
+            Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)) {
+                StepSelectHospital(doctorViewModel) { hospital, mode ->
+                    bookingViewModel.selectHospital(hospital)
+                    bookingViewModel.setBookingType(mode)
+                    choosingHospital = false
+                }
             }
-        )
+        }
+    } else if (initialSpecialtyId != null && !appliedSuggestion) {
+        Scaffold(topBar = { TopAppBar(title = { Text("Kiểm tra chuyên khoa gợi ý") }) }) { padding ->
+            Column(Modifier.padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (specialties) {
+                    is NetworkState.Loading, is NetworkState.Idle -> CircularProgressIndicator()
+                    else -> {
+                        Text("Chưa xác nhận được chuyên khoa gợi ý trong danh mục hiện tại. Bạn có thể thử lại hoặc tự chọn khi đặt khám.")
+                        Button(onClick = { doctorViewModel.loadSpecialties() }) { Text("Thử lại") }
+                        TextButton(onClick = { appliedSuggestion = true }) { Text("Tự chọn thông tin khám") }
+                    }
+                }
+            }
+        }
+    } else {
+        BookingJourney(bookingViewModel, patientViewModel, navController, onBackFromInfo = { choosingHospital = true }) {
+            BookingInfoContent(bookingViewModel, doctorViewModel, allowDoctorSelection = true)
+        }
     }
 }
 
@@ -827,13 +195,14 @@ fun DoctorSelectionModal(
     hospital: Hospital?,
     doctorViewModel: DoctorViewModel,
     onDismiss: () -> Unit,
-    onDoctorSelected: (Doctor, DoctorWorkplace) -> Unit
+    onDoctorSelected: (Doctor, DoctorWorkplace) -> Unit,
+    specialtyId: String? = null
 ) {
     val doctorsState by doctorViewModel.doctors.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
-    LaunchedEffect(hospital?.id) {
-        doctorViewModel.searchDoctors(hospitalId = hospital?.id)
+    LaunchedEffect(hospital?.id, specialtyId) {
+        doctorViewModel.searchDoctors(hospitalId = hospital?.id, specialtyId = specialtyId)
     }
 
     Dialog(
@@ -932,11 +301,12 @@ fun DoctorSelectionModal(
                     }
                     is NetworkState.Success -> {
                         val doctors = (doctorsState as NetworkState.Success<List<Doctor>>).data
-                        val filteredDoctors = remember(doctors, searchQuery) {
+                        val filteredDoctors = remember(doctors, searchQuery, hospital?.id, specialtyId) {
                             doctors.filter { doc ->
-                                searchQuery.isBlank() ||
+                                doc.workPlaces.orEmpty().any { (hospital == null || it.hospitalId == hospital.id) && (specialtyId == null || (it.specialtyId ?: it.specialty?.id) == specialtyId) } &&
+                                        (searchQuery.isBlank() ||
                                         doc.displayFullNameWithTitle.contains(searchQuery, ignoreCase = true) ||
-                                        doc.displaySpecialty.contains(searchQuery, ignoreCase = true)
+                                        doc.displaySpecialty.contains(searchQuery, ignoreCase = true))
                             }
                         }
 
@@ -950,18 +320,9 @@ fun DoctorSelectionModal(
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(filteredDoctors) { doc ->
-                                    val workplace = doc.workPlaces?.firstOrNull { it.hospitalId == hospital?.id }
-                                        ?: doc.workPlaces?.firstOrNull()
-                                        ?: DoctorWorkplace(
-                                            id = "wp-${doc.id}",
-                                            doctorId = doc.id,
-                                            hospitalId = hospital?.id ?: "hosp-1",
-                                            specialtyId = doc.specialties?.firstOrNull()?.id ?: "spec-1",
-                                            consultationFee = doc.displayPrice,
-                                            price = doc.displayPrice,
-                                            hospital = hospital,
-                                            specialty = doc.specialties?.firstOrNull()
-                                        )
+                                    val workplace = doc.workPlaces?.firstOrNull {
+                                        (hospital == null || it.hospitalId == hospital.id) && (specialtyId == null || (it.specialtyId ?: it.specialty?.id) == specialtyId)
+                                    } ?: return@items
 
                                     OutlinedCard(
                                         onClick = { onDoctorSelected(doc, workplace) },
@@ -1006,7 +367,7 @@ fun DoctorSelectionModal(
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                                 Text(
-                                                    text = "Lịch khám: Thứ 2, 3, 4, 5, 6, 7",
+                                                    text = "Chọn bác sĩ để xem lịch còn trống",
                                                     fontSize = 12.sp,
                                                     color = MedproSubText
                                                 )
@@ -1037,319 +398,21 @@ fun DoctorSelectionModal(
 }
 
 @Composable
-fun DoctorBookingStepSelectProfile(
-    uiState: BookingUiState,
-    patientViewModel: PatientViewModel,
-    bookingViewModel: BookingViewModel,
-    navController: NavController,
-    onBack: () -> Unit,
-    onNext: () -> Unit
-) {
-    val profilesState by patientViewModel.profiles.collectAsState()
-    var selectedProfile by remember { mutableStateOf<PatientProfile?>(uiState.selectedProfile) }
-    var showCreateProfileModal by remember { mutableStateOf(false) }
-
-    Scaffold(
-        topBar = {
-            MedproStepperHeader(
-                currentStep = 2,
-                title = "Chọn hồ sơ",
-                onBack = onBack
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* Hotline */ },
-                containerColor = Color(0xFFF97316),
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Phone, contentDescription = "Hotline")
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(Color.White)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Spacer(modifier = Modifier.height(30.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(130.dp)
-                    .background(Color(0xFFE0F2FE), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .background(MedproBlue, RoundedCornerShape(20.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Folder,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(44.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Bạn được phép tạo tối đa 10 hồ sơ\n(cá nhân và người thân trong gia đình)",
-                fontSize = 14.5.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF334155),
-                textAlign = TextAlign.Center,
-                lineHeight = 20.sp
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Button(
-                onClick = { showCreateProfileModal = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MedproBlue),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text(
-                    "CHƯA TỪNG KHÁM ĐĂNG KÝ MỚI",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 14.sp,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text("Hoặc", fontSize = 13.sp, color = MedproSubText)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable {
-                    navController.navigate(Screen.Login.route)
-                }
-            ) {
-                Text(
-                    "Đăng Nhập ",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 14.5.sp,
-                    color = MedproBlue
-                )
-                Text(
-                    "để lấy danh sách hồ sơ của bạn",
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.5.sp,
-                    color = MedproTextDark
-                )
-            }
-
-            if (profilesState is NetworkState.Success) {
-                val profilesList = (profilesState as NetworkState.Success<List<PatientProfile>>).data
-                if (profilesList.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    Text(
-                        "Danh sách hồ sơ bệnh nhân của bạn:",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = MedproTextDark,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    profilesList.forEach { profile ->
-                        val isSelected = selectedProfile?.id == profile.id
-                        OutlinedCard(
-                            onClick = {
-                                selectedProfile = profile
-                                bookingViewModel.selectProfile(profile)
-                                onNext()
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.5.dp, if (isSelected) MedproBlue else Color(0xFFCBD5E1)),
-                            colors = CardDefaults.outlinedCardColors(containerColor = if (isSelected) MedproBlueLight else Color.White)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = {
-                                        selectedProfile = profile
-                                        bookingViewModel.selectProfile(profile)
-                                        onNext()
-                                    },
-                                    colors = RadioButtonDefaults.colors(selectedColor = MedproBlue)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(profile.fullName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MedproTextDark)
-                                    Text("SĐT: ${profile.phone} - Ngày sinh: ${profile.dateOfBirth}", fontSize = 12.sp, color = MedproSubText)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showCreateProfileModal) {
-        CreatePatientProfileModal(
-            patientViewModel = patientViewModel,
-            onDismiss = { showCreateProfileModal = false },
-            onCreated = { profile ->
-                selectedProfile = profile
-                bookingViewModel.selectProfile(profile)
-                showCreateProfileModal = false
-                onNext()
-            }
-        )
-    }
-}
-
-@Composable
 fun CreatePatientProfileModal(
     patientViewModel: PatientViewModel,
     onDismiss: () -> Unit,
     onCreated: (PatientProfile) -> Unit
 ) {
-    var fullName by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var dateOfBirth by remember { mutableStateOf("2000-01-01") }
-    var gender by remember { mutableStateOf("NAM") }
-    var identityCard by remember { mutableStateOf("") }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text("Tạo hồ sơ bệnh nhân mới", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MedproTextDark)
-
-                OutlinedTextField(
-                    value = fullName,
-                    onValueChange = { fullName = it },
-                    label = { Text("Họ và tên *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
-
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    label = { Text("Số điện thoại *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
-
-                OutlinedTextField(
-                    value = dateOfBirth,
-                    onValueChange = { dateOfBirth = it },
-                    label = { Text("Ngày sinh (yyyy-MM-dd) *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
-
-                OutlinedTextField(
-                    value = identityCard,
-                    onValueChange = { identityCard = it },
-                    label = { Text("CCCD / CMND") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = gender == "NAM",
-                        onClick = { gender = "NAM" },
-                        label = { Text("Nam") }
-                    )
-                    FilterChip(
-                        selected = gender == "NU",
-                        onClick = { gender = "NU" },
-                        label = { Text("Nữ") }
-                    )
-                }
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Hủy", color = MedproSubText)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            if (fullName.isNotBlank() && phone.isNotBlank()) {
-                                val req = CreatePatientProfileRequest(
-                                    fullName = fullName,
-                                    phone = phone,
-                                    email = null,
-                                    dateOfBirth = dateOfBirth,
-                                    gender = gender,
-                                    identityCard = identityCard.ifBlank { null },
-                                    healthInsurance = null,
-                                    address = null,
-                                    relationship = "BAN_THAN"
-                                )
-                                patientViewModel.createProfile(req) {
-                                    onCreated(
-                                        PatientProfile(
-                                            id = "prof-${System.currentTimeMillis()}",
-                                            userId = "user-1",
-                                            fullName = fullName,
-                                            phone = phone,
-                                            email = null,
-                                            dateOfBirth = dateOfBirth,
-                                            gender = gender,
-                                            identityCard = identityCard.ifBlank { null },
-                                            healthInsurance = null,
-                                            address = null,
-                                            relationship = "BAN_THAN",
-                                            isDefault = false
-                                        )
-                                    )
-                                }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MedproBlue),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Tạo hồ sơ", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-    }
+    val operation by patientViewModel.profileOperation.collectAsState()
+    LaunchedEffect(Unit) { patientViewModel.resetOperation() }
+    com.example.kltn_novacare.ui.screens.profile.FullProfileFormDialog(
+        title = "Tạo hồ sơ bệnh nhân mới",
+        subtitle = "Hồ sơ được lưu để sử dụng trên cả mobile và web",
+        isSaving = operation is NetworkState.Loading,
+        error = (operation as? NetworkState.Error)?.message,
+        onDismiss = onDismiss,
+        onSubmit = { request -> patientViewModel.createProfile(request, onCreated) }
+    )
 }
 
 @Composable

@@ -15,12 +15,14 @@ export class HospitalDataAdapter implements IHospitalDataAdapter {
   async getPatientEncounters(
     patientProfileId: string,
     hospitalId: string,
+    encounterIds?: string[],
   ): Promise<any[]> {
     return this.prisma.medicalEncounter.findMany({
       where: {
         patientProfileId,
         hospitalId,
         status: EncounterStatus.PUBLISHED,
+        ...(encounterIds !== undefined ? { id: { in: encounterIds } } : {}),
       },
       include: {
         diagnoses: {

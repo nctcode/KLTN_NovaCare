@@ -216,6 +216,34 @@ export class DoctorsService {
       },
     });
 
+    const [schedStartH, schedStartM] = scheduleTemplate.startTime.split(':').map(Number);
+    const [schedEndH, schedEndM] = scheduleTemplate.endTime.split(':').map(Number);
+    const schedStartMins = schedStartH * 60 + schedStartM;
+    const schedEndMins = schedEndH * 60 + schedEndM;
+
+    let breakStartMins = -1;
+    let breakEndMins = -1;
+    if (scheduleTemplate.breakStart && scheduleTemplate.breakEnd) {
+      const [bsH, bsM] = scheduleTemplate.breakStart.split(':').map(Number);
+      const [beH, beM] = scheduleTemplate.breakEnd.split(':').map(Number);
+      breakStartMins = bsH * 60 + bsM;
+      breakEndMins = beH * 60 + beM;
+    }
+
+    // Lọc dứt khoát chỉ giữ lại các slot nằm trong ca làm việc và KHÔNG trùng giờ nghỉ trưa
+    slots = slots.filter((slot) => {
+      const s = new Date(slot.startTime);
+      const e = new Date(slot.endTime);
+      const sMins = this.vietnamMinutes(s);
+      const eMins = this.vietnamMinutes(e);
+
+      if (sMins < schedStartMins || eMins > schedEndMins) return false;
+      if (breakStartMins !== -1 && breakEndMins !== -1) {
+        if (sMins < breakEndMins && eMins > breakStartMins) return false;
+      }
+      return true;
+    });
+
     // 4. Nếu chưa có slot thực tế trong DB, sinh slot ĐÚNG THEO THỜI GIAN TRONG DoctorSchedule
     if (slots.length === 0) {
       const [startHour, startMin] = scheduleTemplate.startTime.split(':').map(Number);
@@ -258,6 +286,7 @@ export class DoctorsService {
 
           newSlotsData.push({
             doctorWorkplaceId,
+            date: new Date(`${dateStr}T00:00:00+07:00`),
             startTime,
             endTime,
             capacity: 1,
@@ -273,6 +302,7 @@ export class DoctorsService {
       if (newSlotsData.length > 0) {
         await this.prisma.appointmentSlot.createMany({
           data: newSlotsData,
+          skipDuplicates: true,
         });
 
         slots = await this.prisma.appointmentSlot.findMany({
@@ -298,7 +328,7 @@ export class DoctorsService {
     // Gắn metadata sessionType (MORNING / AFTERNOON / EVENING)
     return slots.map((slot) => {
       const start = new Date(slot.startTime);
-      const hour = start.getHours();
+      const hour = Math.floor(this.vietnamMinutes(start) / 60);
       let sessionType = 'MORNING';
       if (hour >= 12 && hour < 17) sessionType = 'AFTERNOON';
       else if (hour >= 17) sessionType = 'EVENING';
@@ -308,6 +338,17 @@ export class DoctorsService {
         sessionType,
       };
     });
+  }
+
+  private vietnamMinutes(value: Date): number {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(value);
+    const part = (type: string) => Number(parts.find((item) => item.type === type)?.value || 0);
+    return part('hour') * 60 + part('minute');
   }
 
   // Lấy danh sách trạng thái khả dụng cho khoảng ngày (Ví dụ: 14 ngày tới)

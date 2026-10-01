@@ -81,7 +81,7 @@ export class AppointmentSlotsService {
         },
         _count: {
           select: {
-            appointments: {
+            primaryAppointments: {
               where: { status: { notIn: ['CANCELLED', 'EXPIRED'] } },
             },
           },
@@ -330,7 +330,7 @@ export class AppointmentSlotsService {
             specialty: true,
           },
         },
-        appointments: {
+        primaryAppointments: {
           where: { status: { notIn: ['CANCELLED', 'EXPIRED'] } },
         },
       },

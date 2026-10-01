@@ -11,6 +11,7 @@ import { PatientProfile } from '@/types/profile.types';
 import { Stethoscope, Users, CheckCircle2, CreditCard, ChevronRight, FileCheck } from 'lucide-react';
 import { ClinicRoom } from './RoomSelectModal';
 import { BookingType, BOOKING_TYPES_CONFIG } from '@/config/bookingTypes';
+import { MedicalRecordShareDraft } from './MedicalRecordShareConsent';
 
 interface DoctorBookingWizardProps {
   hospital: Hospital;
@@ -32,6 +33,7 @@ export function DoctorBookingWizard({ hospital, bookingMode = 'DOCTOR' }: Doctor
   const [selectedProfile, setSelectedProfile] = useState<PatientProfile | null>(null);
   const [selectedEncounter, setSelectedEncounter] = useState<any | null>(null);
   const [reason, setReason] = useState<string>('');
+  const [medicalRecordShare, setMedicalRecordShare] = useState<MedicalRecordShareDraft | null>(null);
 
   const currentConfig = bookingMode ? BOOKING_TYPES_CONFIG[bookingMode] : null;
   const isInpatientMode = bookingMode === 'INPATIENT_FOLLOWUP';
@@ -160,6 +162,8 @@ export function DoctorBookingWizard({ hospital, bookingMode = 'DOCTOR' }: Doctor
             patientProfile={selectedProfile}
             reason={reason}
             setReason={setReason}
+            medicalRecordShare={medicalRecordShare}
+            setMedicalRecordShare={setMedicalRecordShare}
             onNext={() => {
               const requiresPayment = currentConfig?.requiresPayment !== false;
               if (requiresPayment) {
@@ -184,6 +188,7 @@ export function DoctorBookingWizard({ hospital, bookingMode = 'DOCTOR' }: Doctor
             selectedSlotId={selectedSlotId}
             patientProfile={selectedProfile}
             reason={reason}
+            medicalRecordShare={medicalRecordShare}
             onBack={() => setStep(isInpatientMode ? 4 : 3)}
           />
         )}

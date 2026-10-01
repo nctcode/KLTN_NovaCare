@@ -59,6 +59,20 @@ data class DoctorItem(
 )
 
 interface PreExamApiService {
+    @GET("pre-exam-v2/screening-catalog")
+    suspend fun screeningCatalog(): Response<com.google.gson.JsonObject>
+
+    @GET("hospitals")
+    suspend fun screeningHospitals(): Response<com.example.kltn_novacare.data.model.ApiResponse<List<com.example.kltn_novacare.data.model.Hospital>>>
+
+    @Multipart
+    @POST("pre-exam-v2/analyze-smartphone")
+    suspend fun analyzeV3(@PartMap fields: Map<String, @JvmSuppressWildcards RequestBody>,
+        @Part images: List<MultipartBody.Part>): Response<com.google.gson.JsonObject>
+
+    @Multipart
+    @POST("pre-exam-v2/transcribe")
+    suspend fun transcribe(@Part file: MultipartBody.Part, @Part("consent") consent: RequestBody): Response<com.google.gson.JsonObject>
 
     @POST("api/v1/pre-exam-v2/start")
     suspend fun startSession(

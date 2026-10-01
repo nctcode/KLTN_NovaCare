@@ -41,16 +41,51 @@ data class PatientProfile(
     val id: String,
     val userId: String,
     val fullName: String,
-    val phone: String,
-    val email: String?,
-    val dateOfBirth: String, // yyyy-MM-dd
-    val gender: String,      // NAM, NU, KHAC
-    val identityCard: String?,
-    val healthInsurance: String?,
-    val address: String?,
-    val relationship: String, // BAN_THAN, CHA_ME, VO_CHONG, CON_CAI, HO_HANG, KHAC
+    val phone: String? = null,
+    val email: String? = null,
+    val dateOfBirth: String? = null, // yyyy-MM-dd or ISO string
+    val gender: String? = null,      // NAM, NU, KHAC, MALE, FEMALE, OTHER
+    @SerializedName("identityNumber", alternate = ["identityCard"]) val identityCard: String? = null,
+    val healthInsurance: String? = null,
+    val address: String? = null,
+    @SerializedName("relation", alternate = ["relationship"]) val relationship: String? = "Bản thân",
+    val medicalHistory: String? = null,
+    val allergies: String? = null,
+    val emergencyContact: String? = null,
+    val emergencyPhone: String? = null,
+    val ethnicity: String? = null,
+    val occupation: String? = null,
     val isDefault: Boolean = false
-)
+) {
+    val displayGender: String
+        get() = when {
+            gender.isNullOrBlank() -> "Chưa cung cấp"
+            normalizedProfileGender(gender) == "MALE" -> "Nam"
+            normalizedProfileGender(gender) == "FEMALE" -> "Nữ"
+            else -> "Khác"
+        }
+
+    val displayRelationship: String
+        get() = when (relationship?.uppercase()) {
+            "BAN_THAN", "BẢN THÂN" -> "Bản thân"
+            "CHA_ME", "BỐ MẸ", "BO_ME" -> "Bố mẹ"
+            "VO_CHONG", "VỢ CHỒNG", "VỢ/CHỒNG" -> "Vợ/Chồng"
+            "CON_CAI", "CON CÁI" -> "Con cái"
+            "HO_HANG", "HỌ HÀNG" -> "Họ hàng"
+            "KHAC" -> "Khác"
+            else -> relationship?.takeIf { it.isNotBlank() } ?: "Bản thân"
+        }
+
+    val formattedDateOfBirth: String
+        get() {
+            if (dateOfBirth.isNullOrBlank()) return "Chưa cung cấp"
+            val date = dateOfBirth.substringBefore("T")
+            return runCatching {
+                java.time.LocalDate.parse(date)
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+            }.getOrDefault(date)
+        }
+}
 
 data class Hospital(
     val id: String,
@@ -111,6 +146,7 @@ data class Doctor(
 
 data class DoctorWorkplace(
     val id: String,
+    val doctor: Doctor? = null,
     val doctorId: String? = null,
     val hospitalId: String? = null,
     val branchId: String? = null,
@@ -269,6 +305,10 @@ data class AppointmentSlot(
     val endTime: String,
     val capacity: Int = 1,
     val bookedCount: Int = 0,
+    val status: String? = null,
+    val isActive: Boolean? = null,
+    val isAvailable: Boolean? = null,
+    val doctorWorkplace: DoctorWorkplace? = null,
     @SerializedName("price") val rawPrice: JsonElement? = null,
     val version: Int = 0
 ) {
@@ -285,6 +325,8 @@ data class AppointmentStatusHistory(
     val createdAt: String
 )
 
+data class AppointmentPayment(val status: String?, val paymentMethod: String?)
+
 data class Appointment(
     val id: String,
     val userId: String,
@@ -294,6 +336,7 @@ data class Appointment(
     val status: String, // PENDING, CONFIRMED, PAID...
     val paymentStatus: String? = null, // UNPAID, PAID, REFUNDED...
     val paymentMethod: String? = null, // VNPAY, CASH...
+    val payment: AppointmentPayment? = null,
     val reason: String? = null,
     val symptoms: String? = null,
     val notes: String? = null,
@@ -301,6 +344,7 @@ data class Appointment(
     @SerializedName("totalAmount") val rawTotalAmount: JsonElement? = null,
     val createdAt: String,
     val slot: AppointmentSlot? = null,
+    val expiresAt: String? = null,
     val patientProfile: PatientProfile? = null,
     val workplace: DoctorWorkplace? = null,
     val statusHistory: List<AppointmentStatusHistory>? = null

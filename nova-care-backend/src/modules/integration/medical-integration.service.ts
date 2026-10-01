@@ -26,6 +26,7 @@ export class MedicalIntegrationService {
     identityNumber: string,
     sourceHospitalId: string,
     targetHospitalId: string,
+    access?: { userId: string; ipAddress?: string; userAgent?: string },
   ): Promise<UnifiedMedicalRecordDto> {
     // Step 1: Validate parameters
     if (!identityNumber || !identityNumber.trim()) {
@@ -104,6 +105,7 @@ export class MedicalIntegrationService {
     const rawEncounters = await this.hospitalDataAdapter.getPatientEncounters(
       patientProfile.id,
       sourceHospitalId,
+      ((consentCheck.scope as { encounterIds?: string[] } | null)?.encounterIds) || [],
     );
 
     // Step 8: Normalize data using MedicalDataNormalizer
@@ -112,12 +114,32 @@ export class MedicalIntegrationService {
       sourceHospital,
       targetHospital,
       rawEncounters,
+      ((consentCheck.scope as { allowedSections?: string[] } | null)?.allowedSections) || [],
     );
 
     // Step 9: Audit Log entry
     this.logger.log(
       `[MEDICAL_HISTORY_ACCESSED] Patient: ${patientProfile.fullName} (${patientProfile.id}) | Source: ${sourceHospital.name} | Target: ${targetHospital.name} | Encounters: ${rawEncounters.length}`
     );
+
+    if (access) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId: access.userId,
+          action: 'INTEROPERABILITY_RECORD_VIEWED',
+          entityType: 'PatientProfile',
+          entityId: patientProfile.id,
+          newValue: {
+            consentId: consentCheck.consentId,
+            sourceHospitalId,
+            targetHospitalId,
+            encounterIds: ((consentCheck.scope as { encounterIds?: string[] } | null)?.encounterIds) || [],
+          },
+          ipAddress: access.ipAddress || null,
+          userAgent: access.userAgent || null,
+        },
+      });
+    }
 
     return normalizedRecord;
   }

@@ -191,7 +191,7 @@ fun AppointmentItem(appointment: Appointment, onClick: () -> Unit) {
             Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF1F5F9))
 
             Text(
-                text = appointment.workplace?.specialty?.name ?: "Chuyên khoa Ngoại",
+                text = (appointment.workplace ?: appointment.slot?.doctorWorkplace)?.specialty?.name ?: "Lịch khám",
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = Secondary
@@ -204,8 +204,8 @@ fun AppointmentItem(appointment: Appointment, onClick: () -> Unit) {
                 modifier = Modifier.padding(top = 4.dp)
             )
 
-            val time = appointment.slot?.startTime?.substringBeforeLast(":")?.substringAfter("T") ?: "08:00"
-            val date = appointment.slot?.startTime?.substringBefore("T") ?: "2026-07-20"
+            val time = appointment.slot?.startTime?.let { com.example.kltn_novacare.ui.screens.booking.bookingTime(it) } ?: "Chưa cập nhật"
+            val date = appointment.slot?.startTime?.substringBefore("T") ?: ""
             Text(
                 text = "Thời gian: $time ngày $date",
                 fontSize = 12.sp,

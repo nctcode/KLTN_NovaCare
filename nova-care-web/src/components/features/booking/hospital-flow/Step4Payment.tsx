@@ -36,6 +36,8 @@ import { paymentService } from '@/services/payment.service';
 import { formatPrice } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { interoperabilityService } from '@/services/interoperability.service';
+import { MedicalRecordShareDraft } from './MedicalRecordShareConsent';
 
 interface Step4PaymentProps {
   hospital: Hospital;
@@ -47,6 +49,7 @@ interface Step4PaymentProps {
   selectedSlotId: string | null;
   patientProfile: PatientProfile | null;
   reason: string;
+  medicalRecordShare: MedicalRecordShareDraft | null;
   onBack: () => void;
 }
 
@@ -60,6 +63,7 @@ export function Step4Payment({
   selectedSlotId,
   patientProfile,
   reason,
+  medicalRecordShare,
   onBack,
 }: Step4PaymentProps) {
   const router = useRouter();
@@ -116,6 +120,20 @@ export function Step4Payment({
         } as any);
 
         setCreatedAppointment(appointment);
+      }
+
+      if (medicalRecordShare) {
+        const consent = await interoperabilityService.createConsent({
+          patientProfileId: patientProfile.id,
+          sourceHospitalId: medicalRecordShare.sourceHospitalId,
+          targetHospitalId: hospital.id,
+          encounterIds: medicalRecordShare.encounterIds,
+          allowedSections: medicalRecordShare.allowedSections,
+          expiresAt: medicalRecordShare.expiresAt,
+          purpose: 'TREATMENT',
+        });
+        await interoperabilityService.grantConsent(consent.id);
+        toast.success('Đã cấp quyền chia sẻ hồ sơ theo phạm vi bạn đã chọn.');
       }
 
       // 2. Handle Payment Method

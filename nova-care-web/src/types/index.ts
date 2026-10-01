@@ -46,6 +46,8 @@ export interface Hospital {
   longitude?: number;
   createdAt?: string;
   updatedAt?: string;
+  source?: string;
+  externalId?: string;
   branches?: HospitalBranch[];
   services?: any[];
   hospitalSpecialties?: HospitalSpecialty[];

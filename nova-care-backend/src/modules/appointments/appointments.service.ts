@@ -8,15 +8,20 @@ import {
 import { PrismaService } from '@/database/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CancelAppointmentDto } from './dto/cancel-appointment.dto';
-import { Appointment, AppointmentStatus, EncounterStatus, ObservationCategory, MatchingStatus } from '@prisma/client';
+import { Appointment, AppointmentStatus, SlotStatus, EncounterStatus, ObservationCategory, MatchingStatus } from '@prisma/client';
 import { getSpecialtyEMRTemplate } from './data/specialty-emr-mock.data';
+import { SlotStatusService } from '../schedules/slot-status.service';
+import { contiguousSlotWindow } from '../schedules/contiguous-slot-window';
 
 @Injectable()
 export class AppointmentsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private slotStatusService: SlotStatusService,
+  ) { }
 
   // ============================================
-  // 1. TẠO LỊCH KHÁM (VỚI TRANSACTION + LOCK)
+  // 1. TẠO LỊCH KHÁM (VỚI TRANSACTION + LOCK MULTI-SLOT)
   // ============================================
   async create(userId: string, createDto: CreateAppointmentDto): Promise<Appointment> {
     const { patientProfileId, slotId, medicalServiceId, reason, symptoms, idempotencyKey } = createDto;
@@ -44,47 +49,74 @@ export class AppointmentsService {
     // 3. Sử dụng transaction với row locking
     try {
       return await this.prisma.$transaction(async (tx) => {
-        // 3.1 Lấy slot với khóa dòng (SELECT FOR UPDATE)
-        let slot = await tx.$queryRawUnsafe<any[]>(
+        // 3.1 Lấy primary slot với khóa dòng (SELECT FOR UPDATE)
+        let primarySlots = await tx.$queryRawUnsafe<any[]>(
           `SELECT * FROM "appointment_slots" WHERE id = $1 FOR UPDATE`,
           slotId
         );
 
-        if (!slot || slot.length === 0) {
-          const fallbackSlot = await tx.appointmentSlot.findFirst({
-            where: { isAvailable: true, isActive: true },
+        if (!primarySlots || primarySlots.length === 0) {
+          throw new NotFoundException('Khung giờ khám không tồn tại');
+        }
+        const primarySlotData = primarySlots[0];
+        const doctorWorkplaceId = primarySlotData.doctorWorkplaceId ?? primarySlotData.doctor_workplace_id;
+        const primaryStartTime = new Date(primarySlotData.startTime ?? primarySlotData.start_time);
+        const slotDate = primarySlotData.date ? new Date(primarySlotData.date) : new Date(primaryStartTime.toISOString().split('T')[0]);
+
+        // 3.2 Xác định thời lượng service (mặc định 30 phút)
+        let serviceDuration = 30;
+        if (medicalServiceId) {
+          const service = await tx.medicalService.findUnique({
+            where: { id: medicalServiceId },
           });
-          if (fallbackSlot) {
-            slot = [fallbackSlot];
-          } else {
-            throw new NotFoundException('Khung giờ khám không tồn tại');
+          if (service && service.duration) {
+            serviceDuration = service.duration;
           }
         }
-        const slotData = slot[0];
 
-        // Hỗ trợ cả camelCase và snake_case để tránh lỗi ánh xạ thuộc tính DB
-        const isAvailable = slotData.isAvailable ?? slotData.is_available;
-        const bookedCount = slotData.bookedCount ?? slotData.booked_count;
-        const capacity = slotData.capacity;
-        const isActive = slotData.isActive ?? slotData.is_active;
-        const startTime = new Date(slotData.startTime ?? slotData.start_time);
-        const endTime = new Date(slotData.endTime ?? slotData.end_time);
-        const doctorWorkplaceId = slotData.doctorWorkplaceId ?? slotData.doctor_workplace_id;
+        // 3.3 Tìm và khóa N slots cơ sở 15 phút liên tiếp
+        const slotsFromStart = await tx.appointmentSlot.findMany({
+          where: {
+            doctorWorkplaceId,
+            startTime: { gte: primaryStartTime },
+          },
+          orderBy: { startTime: 'asc' },
+          take: 96,
+        });
 
-        // 3.2 Kiểm tra slot còn trống
-        if (!isAvailable || bookedCount >= capacity) {
-          const alternativeSlots = await this.findAlternativeSlots(tx, slotData);
-          throw new ConflictException({
-            statusCode: 409,
-            message: 'Khung giờ này vừa được đặt bởi bệnh nhân khác. Vui lòng chọn khung giờ khác.',
-            alternativeSlots,
-          });
-        }
-        if (!isActive) {
-          throw new BadRequestException('Khung giờ này đã bị vô hiệu hóa');
+        const candidateSlots = contiguousSlotWindow(slotsFromStart, serviceDuration);
+        if (!candidateSlots.length) {
+          throw new ConflictException('Không đủ khung giờ trống liên tiếp cho dịch vụ này');
         }
 
-        // 3.3 Kiểm tra bệnh nhân không có lịch trùng thời gian
+        // Khóa tất cả các candidate slots
+        const requiredSlotIds = candidateSlots.map((s) => s.id);
+        await tx.$queryRawUnsafe(
+          `SELECT * FROM "appointment_slots" WHERE id = ANY($1::text[]) FOR UPDATE`,
+          requiredSlotIds
+        );
+
+        // Kiểm tra hợp lệ từng slot
+        for (let i = 0; i < candidateSlots.length; i++) {
+          const slotItem = candidateSlots[i];
+          if (slotItem.status !== SlotStatus.AVAILABLE || slotItem.bookedCount >= slotItem.capacity) {
+            throw new ConflictException({
+              statusCode: 409,
+              message: 'Khung giờ này vừa được đặt bởi bệnh nhân khác. Vui lòng chọn khung giờ khác.',
+            });
+          }
+          if (i > 0) {
+            const prevEnd = new Date(candidateSlots[i - 1].endTime).getTime();
+            const currStart = new Date(slotItem.startTime).getTime();
+            if (prevEnd !== currStart) {
+              throw new ConflictException('Khung giờ không liên tiếp');
+            }
+          }
+        }
+
+        const overallEndTime = new Date(candidateSlots[candidateSlots.length - 1].endTime);
+
+        // 3.4 Kiểm tra bệnh nhân không có lịch trùng thời gian
         const overlapping = await tx.appointment.findFirst({
           where: {
             patientProfileId,
@@ -92,8 +124,8 @@ export class AppointmentsService {
               notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.EXPIRED, AppointmentStatus.COMPLETED],
             },
             slot: {
-              startTime: { lt: endTime },
-              endTime: { gt: startTime },
+              startTime: { lt: overallEndTime },
+              endTime: { gt: primaryStartTime },
             },
           },
         });
@@ -101,7 +133,7 @@ export class AppointmentsService {
           throw new ConflictException('Bạn đã có lịch khám trùng thời gian này');
         }
 
-        // 3.4 Lấy thông tin workplace để tính phí
+        // 3.5 Lấy thông tin workplace để tính phí
         const workplace = await tx.doctorWorkplace.findUnique({
           where: { id: doctorWorkplaceId },
           include: {
@@ -114,7 +146,7 @@ export class AppointmentsService {
           throw new NotFoundException('Nơi làm việc của bác sĩ không tồn tại');
         }
 
-        // 3.5 Tính tổng tiền
+        // 3.6 Tính tổng tiền
         let serviceFee = 0;
         if (medicalServiceId) {
           const service = await tx.medicalService.findUnique({
@@ -127,10 +159,10 @@ export class AppointmentsService {
         const consultationFee = Number(workplace.consultationFee);
         const totalPrice = consultationFee + serviceFee;
 
-        // 3.6 Tạo mã lịch khám
+        // 3.7 Tạo mã lịch khám
         const bookingCode = await this.generateBookingCode();
 
-        // 3.7 Tạo lịch khám
+        // 3.8 Tạo lịch khám
         const appointment = await tx.appointment.create({
           data: {
             bookingCode,
@@ -164,17 +196,35 @@ export class AppointmentsService {
           },
         });
 
-        // 3.8 Tăng booked_count của slot
-        await tx.appointmentSlot.update({
-          where: { id: slotId },
-          data: {
-            bookedCount: { increment: 1 },
-            isAvailable: (bookedCount + 1 < capacity),
-            version: { increment: 1 },
-          },
-        });
+        // 3.9 Tạo các bản ghi AppointmentSlotBooking junction
+        for (const reqSlotId of requiredSlotIds) {
+          await tx.appointmentSlotBooking.create({
+            data: {
+              appointmentId: appointment.id,
+              slotId: reqSlotId,
+            },
+          });
 
-        // 3.9 Tạo bản ghi lịch sử trạng thái
+          // Tăng bookedCount và cập nhật status
+          const updatedSlot = await tx.appointmentSlot.update({
+            where: { id: reqSlotId },
+            data: {
+              bookedCount: { increment: 1 },
+              version: { increment: 1 },
+            },
+          });
+
+          const newStatus = await this.slotStatusService.resolveStatus(tx, updatedSlot);
+          await tx.appointmentSlot.update({
+            where: { id: reqSlotId },
+            data: {
+              status: newStatus,
+              isAvailable: newStatus === SlotStatus.AVAILABLE,
+            },
+          });
+        }
+
+        // 3.10 Tạo bản ghi lịch sử trạng thái
         await tx.appointmentStatusHistory.create({
           data: {
             appointmentId: appointment.id,
@@ -512,7 +562,7 @@ export class AppointmentsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // Cập nhật status
+      // Cập nhật status appointment
       const updated = await tx.appointment.update({
         where: { id },
         data: {
@@ -521,18 +571,32 @@ export class AppointmentsService {
         },
       });
 
-      // Giảm booked_count của slot
-      const slot = await tx.appointmentSlot.findUnique({
-        where: { id: appointment.slotId },
+      // Lấy tất cả các slot đã được chiếm bởi lịch hẹn này
+      const slotBookings = await tx.appointmentSlotBooking.findMany({
+        where: { appointmentId: id },
       });
-      if (slot) {
-        await tx.appointmentSlot.update({
-          where: { id: appointment.slotId },
-          data: {
-            bookedCount: { decrement: 1 },
-            isAvailable: true,
-          },
+
+      const slotIdsToRelease = slotBookings.length > 0
+        ? slotBookings.map((b) => b.slotId)
+        : [appointment.slotId];
+
+      for (const targetSlotId of slotIdsToRelease) {
+        const slot = await tx.appointmentSlot.findUnique({
+          where: { id: targetSlotId },
         });
+
+        if (slot) {
+          const newBookedCount = Math.max(0, slot.bookedCount - 1);
+          await tx.appointmentSlot.update({
+            where: { id: targetSlotId },
+            data: {
+              bookedCount: newBookedCount,
+            },
+          });
+
+          // Re-evaluate canonical status via SlotStatusService (retains BLOCKED if manually blocked by admin)
+          await this.slotStatusService.updateAndSyncSlotStatus(tx, targetSlotId);
+        }
       }
 
       // Ghi lịch sử

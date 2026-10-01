@@ -6,22 +6,21 @@ import com.example.kltn_novacare.data.remote.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class AppointmentRepository {
-    private val apiService = ApiClient.getService()
-
-    suspend fun createAppointment(request: CreateAppointmentRequest): Result<Appointment> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.createAppointment(request).execute()
-            val body = response.body()
-            if (response.isSuccessful && body != null && body.success && body.data != null) {
-                Result.success(body.data)
-            } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Đặt lịch khám thất bại"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+class AppointmentRepository(private val apiService: ApiService = ApiClient.getService()) {
+    suspend fun confirmAppointment(id: String): Result<Appointment> =
+        healthApiResult("Không thể xác nhận thanh toán tại viện", { apiService.confirmAppointment(id) }) {
+            requireNotNull(it.data) { "Máy chủ chưa trả về lịch khám đã xác nhận" }
         }
-    }
+
+    suspend fun simulatePayment(id: String, method: String): Result<SimulatedPayment> =
+        healthApiResult("Thanh toán mô phỏng thất bại", { apiService.simulatePayment(SimulatePaymentRequest(id, method)) }) {
+            requireNotNull(it.data) { "Máy chủ chưa trả về kết quả thanh toán" }
+        }
+
+    suspend fun createAppointment(request: CreateAppointmentRequest): Result<Appointment> =
+        healthApiResult("Đặt lịch khám thất bại", { apiService.createAppointment(request) }) {
+            requireNotNull(it.data) { "Máy chủ chưa trả về lịch khám" }
+        }
 
     suspend fun getAppointments(): Result<List<Appointment>> = withContext(Dispatchers.IO) {
         try {

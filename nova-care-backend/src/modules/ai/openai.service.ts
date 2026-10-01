@@ -47,10 +47,9 @@ export class OpenAIService {
   private readonly temperature: number;
 
   constructor(private configService: ConfigService) {
-    const apiKey = process.env.OPENAI_API_KEY || this.configService.get<string>('OPENAI_API_KEY') || 'sk-bee-24090705ac27bb4c3fb277e4263409a982db7568a3feb77029cc287a5578d9be';
+    const apiKey = process.env.OPENAI_API_KEY || this.configService.get<string>('OPENAI_API_KEY') || 'unconfigured';
     const baseUrl = process.env.OPENAI_BASE_URL || this.configService.get<string>('OPENAI_BASE_URL') || 'https://platform.beeknoee.com/api/v1';
 
-    this.logger.log(`Khởi tạo OpenAI Client với Beeknoee API Key (${apiKey.slice(0, 10)}...) | BaseURL: ${baseUrl}`);
 
     this.client = new OpenAI({
       apiKey: apiKey,
@@ -66,7 +65,7 @@ export class OpenAIService {
   }
 
   private hasApiKey(): boolean {
-    return true;
+    return Boolean(process.env.OPENAI_API_KEY || this.configService.get<string>('OPENAI_API_KEY'));
   }
 
   /**
@@ -267,82 +266,94 @@ Trả về JSON:
     }
 
     try {
-      const prompt = `Bạn là hệ thống AI Chẩn Đoán Sàng Lọc & Phân Tầng Triage Cấp Cứu Y Khoa NovaCare (Yêu cầu phân tích sâu sắc, có căn cứ y học chứng cứ, tuyệt đối không đưa ra kết luận sơ sài).
-
-DỮ LIỆU ĐA PHƯƠNG THỨC THU THẬP TỪ BỆNH NHÂN (100% SMARTPHONE):
+      const prompt = `DỮ LIỆU ĐA PHƯƠNG THỨC THU THẬP TỪ BỆNH NHÂN (100% SMARTPHONE):
 1. VÙNG CƠ THỂ BẤT THƯỜNG (Body Map): ${inputs.bodyAreas?.join(', ') || 'Khảo sát toàn thân'}
 2. KHẢO SÁT LÂM SÀNG & TIỀN SỬ:
    - Triệu chứng đặc thù: ${inputs.questionnaire?.specificSymptoms?.join('; ') || inputs.symptoms || 'Không chọn chi tiết'}
    - Thời gian khởi phát: ${inputs.questionnaire?.duration || 'Chưa rõ'}
    - Mức độ đau/khó chịu: ${inputs.questionnaire?.painLevel || 0} / 10
    - Dấu hiệu cảnh báo đỏ (Red Flags): ${inputs.questionnaire?.warningSigns?.join('; ') || 'Không có dấu hiệu cảnh báo đỏ'}
-   - 🔑 TIỀN SỬ BỆNH LÝ & YẾU TỐ NGUY CƠ: ${inputs.questionnaire?.medicalHistory?.join('; ') || 'Chưa ghi nhận tiền sử mạn tính'}
+   - TIỀN SỬ BỆNH LÝ & YẾU TỐ NGUY CƠ: ${inputs.questionnaire?.medicalHistory?.join('; ') || 'Chưa ghi nhận tiền sử mạn tính'}
    - Mô tả thêm của người bệnh: "${inputs.symptoms || inputs.voiceTranscript || 'Không có'}"
 3. SINH HIỆU & THỂ TRẠNG:
    - Nhịp tim đo qua Camera PPG: ${heartRate ? `${heartRate} BPM` : '75 BPM (Nghỉ ngơi)'}
    - Chiều cao / Cân nặng: ${inputs.heightCm || '?'} cm, ${inputs.weightKg || '?'} kg (BMI: ${bmiVal ? bmiVal.toFixed(1) : '22.0'} kg/m²)
-4. ÂM SINH HỌC GIỌNG NÓI / TIẾNG HO (Acoustic Biomarker):
-   - ${inputs.questionnaire?.voiceBiomarkers?.clinicalEvaluation || inputs.voiceTranscript || 'Âm sắc trong giới hạn bình thường'}
-5. ẢNH SOI LÂM SÀNG / XÉT NGHIỆM (Computer Vision):
+4. ÂM SINH HỌC GIỌNG NÓI / TIẾNG HO (Whisper STT):
+   - ${inputs.voiceTranscript || 'Không có ghi âm giọng nói'}
+5. ẢNH SOI LÂM SÀNG (Computer Vision):
    - ${inputs.imageAnalysisFindings?.join('; ') || 'Không có ảnh chụp tổn thương'}
-6. CƠ SỞ Y TẾ & DANH MỤC CHUYÊN KHOA SẴN CÓ:
-   - Cơ sở: ${inputs.hospitalName || 'Bệnh viện Đa khoa NovaCare'}
-   - Chuyên khoa sẵn có: ${inputs.availableSpecialties?.join(', ') || 'Nội tổng quát, Tim mạch, Thần kinh, Da liễu, Tai Mũi Họng, Tiêu hóa, Cơ xương khớp, Mắt, Nhi khoa, Hô hấp'}
 
-QUY TẮC PHÂN TÍCH Y KHOA CHUYÊN SÂU:
-1. Phải LIÊN KẾT CHẶT CHẼ TIỀN SỬ BỆNH với triệu chứng hiện tại (Ví dụ: Tiền sử Tăng huyết áp/Tim mạch + Đau tức ngực/Hồi hộp $\rightarrow$ Cảnh báo Hội chứng vành cấp hoặc Thiếu máu cơ tim; Tiền sử Hen suyễn/Dị ứng + Tiếng ho/rít $\rightarrow$ Cơn hen cấp).
-2. TỔNG HỢP TƯƠNG QUAN ĐA PHƯƠNG THỨC: Phân tích đồng thời Nhịp tim PPG (nhanh/chậm), Thể trạng BMI (thừa cân/béo phì), Âm sinh học thanh quản, Mức đau và Vùng tổn thương.
-3. PHÂN TẦNG NGUY CƠ (TRIAGE 3 CẤP CHUẨN BỘ Y TẾ):
-   - EMERGENCY: Cấp cứu khẩn cấp (Đau ngực > 15p, khó thở cấp, nghi ngờ đột quỵ, nhịp tim > 130 hoặc < 45 BPM, mức đau >= 8/10 kèm Red Flag).
-   - CONSULT: Cần khám bác sĩ chuyên khoa sớm trong ngày (Có triệu chứng rõ rệt, đau dai dẳng, cần cận lâm sàng).
-   - MONITOR: Triệu chứng nhẹ, có thể tư vấn theo dõi hoặc tự chăm sóc ban đầu.
-4. ĐỀ XUẤT CHUYÊN KHOA PHÙ HỢP NHẤT tại Bệnh viện đã chọn.
-5. ĐƯA RA 2 - 3 CHẨN ĐOÁN SƠ BỘ PHÂN BIỆT KÈM MÃ ICD-10 ĐỂ BÁC SĨ ĐỐI CHIẾU.
+NHIỆM VỤ:
+1. Tổng hợp dữ liệu đã cung cấp thành đoạn tóm tắt sàng lọc lâm sàng.
+2. Không tự thêm triệu chứng.Không suy diễn dữ liệu thiếu thành dữ liệu âm tính.
+3. Xác định các pattern lâm sàng khả dĩ (MUSCULOSKELETAL, RESPIRATORY, CARDIOVASCULAR, GASTROINTESTINAL, NEUROLOGICAL, DERMATOLOGICAL, ENDOCRINE...).
+4. Liệt kê bằng chứng ủng hộ và bằng chứng chống lại.
+5. Đề xuất các candidate condition (tên khả năng y tế) để backend đối chiếu.
+6. KHÔNG đưa ra mã ICD-10 tự sinh và KHÔNG tự quyết định tên chuyên khoa.
 
-TRẢ VỀ DUY NHẤT ĐỊNH DẠNG JSON:
+TRẢ VỀ DUY NHẤT ĐỊNH DẠNG JSON STRICT:
 {
-  "riskLevel": "MONITOR" | "CONSULT" | "EMERGENCY",
-  "riskLabel": "Có thể theo dõi tại nhà" | "Nên khám bác sĩ chuyên khoa" | "CẦN ĐẾN CẤP CỨU NGAY",
-  "riskColor": "emerald" | "amber" | "rose",
-  "recommendedSpecialtyName": "Tên chuyên khoa phù hợp nhất",
-  "summary": "Tóm tắt phân tích lâm sàng tổng hợp, nêu rõ mối liên hệ giữa tiền sử bệnh và triệu chứng cấp tính",
-  "vitalSignsAssessment": "Đánh giá chi tiết nhịp tim PPG, chỉ số BMI và âm sinh học giọng nói",
-  "historyCorrelation": "Nhận định chuyên sâu về yếu tố nguy cơ từ tiền sử bệnh nhân",
-  "differentialDiagnoses": [
-    { "diseaseName": "Tên bệnh nghi ngờ 1", "icdCode": "Mã ICD-10", "probability": "Cao" | "Trung bình" },
-    { "diseaseName": "Tên bệnh nghi ngờ 2", "icdCode": "Mã ICD-10", "probability": "Trung bình" | "Thấp" }
+  "clinicalSummary": "Tóm tắt kết quả sàng lọc tổng hợp từ dữ liệu thu được",
+  "vitalSignsAssessment": "Đánh giá nhịp tim PPG và BMI",
+  "historyCorrelation": "Nhận định về yếu tố tiền sử nền nếu có",
+  "clinicalPatterns": [
+    {
+      "pattern": "MUSCULOSKELETAL",
+      "confidence": 0.8,
+      "supportingEvidence": ["Ấn vào đau thành ngực", "Đau tăng khi hít sâu/xoay người"],
+      "contradictingEvidence": ["Không có đau kiểu đè nặng lan tay/hàm"]
+    }
   ],
-  "triageDetails": {
-    "urgencyReason": "Lý do chuyên môn phân loại mức độ khẩn cấp",
-    "actionAdvice": "Hướng dẫn hành động và xử trí cụ thể cho bệnh nhân",
-    "keyObservations": [
-      "Quan sát bất thường 1 (kèm liên hệ tiền sử)",
-      "Quan sát bất thường 2 (sinh hiệu / triệu chứng)",
-      "Quan sát bất thường 3 (khuyến nghị chuyên môn)"
-    ]
-  }
+  "candidateConditions": [
+    {
+      "term": "Theo dõi viêm sụn sườn / Đau thành ngực",
+      "confidence": 0.8,
+      "supportingEvidence": ["Đau tái tạo khi ấn thành ngực", "Đau tăng khi hít sâu"],
+      "contradictingEvidence": []
+    }
+  ],
+  "missingInformation": ["Thông tin tiền sử chi tiết"],
+  "reasoningSummary": "Biện giải lâm sàng dựa trên các bằng chứng thu được",
+  "safetyNotes": []
 }`;
 
       const response = await this.client.chat.completions.create({
         model: this.modelChat,
         messages: [
-          { role: 'system', content: 'Bạn là chuyên gia Bác sĩ Trưởng ban Sàng lọc & Phân tầng Triage Y tế NovaCare. Phân tích lâm sàng đa phương thức sâu sắc, chính xác, có tính biện giải khoa học cao.' },
+          {
+            role: 'system',
+            content:
+              'Bạn là thành phần hỗ trợ sàng lọc lâm sàng của hệ thống NovaCare. Bạn KHÔNG phải bác sĩ điều trị. Bạn KHÔNG đưa ra chẩn đoán xác định. Bạn KHÔNG tự quyết định chuyên khoa cuối cùng.',
+          },
           { role: 'user', content: prompt },
         ],
         max_tokens: this.maxTokens,
-        temperature: 0.2,
+        temperature: 0.1,
         response_format: { type: 'json_object' },
       });
 
       const content = response.choices[0]?.message?.content;
       if (!content) return this.fallbackSmartphoneTriage(inputs, heartRate, bmiVal);
       const res = JSON.parse(content);
-      this.logger.log(`OpenAI Smartphone Triage: riskLevel=${res.riskLevel}, specialty=${res.recommendedSpecialtyName}`);
+      this.logger.log(`OpenAI Clinical Extraction Completed: summary=${res.clinicalSummary?.slice(0, 40)}`);
       return {
-        ...res,
+        riskLevel: 'CONSULT',
+        riskLabel: 'Nên khám bác sĩ chuyên khoa',
+        riskColor: 'amber',
+        recommendedSpecialtyName: '', // Left blank so Backend Engine calculates it deterministically!
+        summary: res.clinicalSummary || res.reasoningSummary || 'Đã tổng hợp kết quả sàng lọc y tế',
+        vitalSignsAssessment: res.vitalSignsAssessment || 'Chỉ số sinh hiệu ổn định.',
+        historyCorrelation: res.historyCorrelation || 'Chưa ghi nhận tiền sử mạn tính đặc biệt.',
+        clinicalPatterns: res.clinicalPatterns || [],
+        candidateConditions: res.candidateConditions || [],
+        triageDetails: {
+          urgencyReason: 'Cần bác sĩ chuyên khoa kiểm tra lâm sàng trực tiếp.',
+          actionAdvice: 'Đăng ký đặt lịch khám với chuyên khoa phù hợp.',
+          keyObservations: (res.candidateConditions || []).map((c: any) => c.term),
+        },
         imageAnalysisFindings: inputs.imageAnalysisFindings || [],
         transcript: inputs.voiceTranscript || '',
-      };
+      } as any;
     } catch (error) {
       this.logger.error(`Lỗi Smartphone Triage: ${error.message}`);
       return this.fallbackSmartphoneTriage(inputs, heartRate, bmiVal);
@@ -365,22 +376,25 @@ TRẢ VỀ DUY NHẤT ĐỊNH DẠNG JSON:
     }
 
     const lower = (inputs.symptoms || inputs.voiceTranscript || '').toLowerCase();
+    const areas = (inputs.bodyAreas || []).map((a: string) => a.toUpperCase());
     let specialty = 'Nội tổng quát';
-    if (lower.includes('da') || lower.includes('ngứa') || lower.includes('phát ban')) specialty = 'Da liễu';
+    if (areas.includes('HEAD') || lower.includes('đầu') || lower.includes('chóng mặt')) specialty = 'Thần kinh';
+    else if (areas.includes('LEG') || lower.includes('bàn chân') || lower.includes('chân')) specialty = 'Cơ xương khớp';
+    else if (lower.includes('da') || lower.includes('ngứa') || lower.includes('phát ban')) specialty = 'Da liễu';
     else if (lower.includes('tim') || lower.includes('ngực') || (heartRate && heartRate > 100)) specialty = 'Tim mạch';
     else if (lower.includes('ho') || lower.includes('họng') || lower.includes('tai')) specialty = 'Tai Mũi Họng';
 
     const historyItems = inputs.questionnaire?.medicalHistory || [];
     const historyText = historyItems.length > 0
-      ? `Người bệnh có tiền sử: ${historyItems.join(', ')}. Đây là yếu tố nguy cơ nền cần được bác sĩ chuyên khoa lưu ý khi thăm khám và chỉ định thuốc.`
+      ? `Người bệnh có tiền sử: ${historyItems.join(', ')}. Đây là yếu tố nguy cơ nền cần được bác sĩ chuyên khoa lưu ý khi thăm khám.`
       : 'Chưa ghi nhận tiền sử bệnh mạn tính đặc biệt.';
 
     return {
       riskLevel,
       riskLabel,
       riskColor,
-      recommendedSpecialtyName: specialty,
-      summary: `Tình trạng ghi nhận: ${inputs.symptoms || inputs.voiceTranscript || 'Cần kiểm tra sức khỏe chuyên khoa'}. Nhịp tim PPG: ${heartRate || 75} BPM. Thể trạng BMI: ${bmiVal ? bmiVal.toFixed(1) : '22.0'} kg/m².`,
+      recommendedSpecialtyName: '', // Backend Engine calculates deterministically
+      summary: `Tóm tắt sàng lọc lâm sàng (${inputs.bodyAreas?.join(', ') || 'Vùng đã chọn'}): ${inputs.symptoms || inputs.voiceTranscript || 'Ghi nhận dấu hiệu cần thăm khám lâm sàng chuyên khoa'}.`,
       vitalSignsAssessment: `Nhịp tim PPG ${heartRate || 75} BPM (${heartRate && heartRate > 100 ? 'Nhịp nhanh' : 'Ổn định'}), Chỉ số BMI: ${bmiVal ? bmiVal.toFixed(1) : '22.0'} kg/m² (Cân đối).`,
       historyCorrelation: historyText,
       differentialDiagnoses: [

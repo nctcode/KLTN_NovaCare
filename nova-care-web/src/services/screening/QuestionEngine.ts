@@ -40,8 +40,9 @@ export class QuestionEngine {
 
     for (const q of eligibleQuestions) {
       // Check Question Budget cap (max 10 questions)
-      if (resultQuestions.length >= RISK_CONFIG.questionBudget.maxQuestions) {
-        break;
+      const safetyQuestion = q.category === 'red_flag' || q.riskImpact?.redFlagSeverity;
+      if (resultQuestions.length >= RISK_CONFIG.questionBudget.maxQuestions && !safetyQuestion) {
+        continue;
       }
 
       // Check conditional dependency (dependsOn / showWhen)
@@ -65,7 +66,7 @@ export class QuestionEngine {
 
       // Budget check for region-specific questions
       if (q.category === 'region_specific' || q.category === 'red_flag') {
-        if (regionCount >= RISK_CONFIG.questionBudget.maxRegionQuestions) {
+        if (regionCount >= RISK_CONFIG.questionBudget.maxRegionQuestions && !safetyQuestion) {
           continue;
         }
         regionCount++;

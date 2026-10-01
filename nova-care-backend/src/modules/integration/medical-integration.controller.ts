@@ -4,10 +4,15 @@ import {
   Query,
   UseGuards,
   HttpStatus,
+  ForbiddenException,
+  Headers,
+  Ip,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { MedicalIntegrationService } from './medical-integration.service';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { Role, User } from '@prisma/client';
 
 @ApiTags('Liên thông y tế - Truy xuất lịch sử khám chia sẻ (Interoperability)')
 @ApiBearerAuth('access-token')
@@ -26,14 +31,21 @@ export class MedicalIntegrationController {
   @ApiResponse({ status: 403, description: 'Từ chối truy cập: Chưa cấp Consent hoặc Consent đã hết hạn/thu hồi' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy bệnh nhân hoặc bệnh viện liên kết' })
   async getSharedMedicalHistory(
+    @CurrentUser() user: User,
     @Query('identityNumber') identityNumber: string,
     @Query('sourceHospitalId') sourceHospitalId: string,
     @Query('targetHospitalId') targetHospitalId: string,
+    @Ip() ipAddress: string,
+    @Headers('user-agent') userAgent: string,
   ) {
+    if (user.role !== Role.HOSPITAL_ADMIN || user.hospitalId !== targetHospitalId) {
+      throw new ForbiddenException('Tài khoản này không thuộc cơ sở y tế đích được cấp quyền');
+    }
     const data = await this.service.getSharedMedicalHistory(
       identityNumber,
       sourceHospitalId,
       targetHospitalId,
+      { userId: user.id, ipAddress, userAgent },
     );
     return {
       statusCode: HttpStatus.OK,

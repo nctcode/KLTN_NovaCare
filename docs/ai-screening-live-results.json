@@ -1,0 +1,88 @@
+{
+  "at": "2026-09-30T03:57:25.671Z",
+  "synthetic": true,
+  "clinicalValidation": false,
+  "model": "gpt-5.4",
+  "ragConfigured": false,
+  "cases": [
+    {
+      "id": "head",
+      "region": "head",
+      "text": "Tôi bị đau đầu một bên tái diễn, khó chịu với ánh sáng. Cơn đau xuất hiện từ từ. Không yếu liệt, không sốt, không cứng cổ.",
+      "expected": "neurology",
+      "passed": false,
+      "aiCalls": [
+        {
+          "ok": false,
+          "ms": 859,
+          "name": "SyntaxError",
+          "status": null,
+          "code": null
+        }
+      ],
+      "actual": null,
+      "action": "ASK_MORE",
+      "aiStatus": "EXTRACTION_UNAVAILABLE",
+      "retrieval": {
+        "status": "EMPTY",
+        "mode": "NONE",
+        "version": null
+      },
+      "source": "NONE",
+      "summary": "Các thông tin hiện tại chưa phân biệt được chuyên khoa phù hợp. Hãy bổ sung diễn tiến, triệu chứng đi kèm hoặc nhờ cơ sở y tế hỗ trợ."
+    }
+  ],
+  "catalogSource": "DATABASE",
+  "specialtyCatalog": [
+    {
+      "id": "f0321dc5-d5e7-46e4-a8a4-84e5de1f0ed3",
+      "name": "Tim mạch"
+    },
+    {
+      "id": "846f3b11-c268-40a6-99c4-8d92da54fd1f",
+      "name": "Thần kinh"
+    },
+    {
+      "id": "f3a2deb9-e2e0-4fac-833b-c7484436ddb1",
+      "name": "Nội tiết"
+    },
+    {
+      "id": "2d91764f-f849-49dc-a1dc-eefaba0e4f0e",
+      "name": "Nhi khoa"
+    },
+    {
+      "id": "a9ddeca0-a624-46a4-b7b7-2a54c3783c99",
+      "name": "Sản phụ khoa"
+    },
+    {
+      "id": "5b979f44-a784-436e-8128-9b26c3ab9197",
+      "name": "Cơ xương khớp"
+    },
+    {
+      "id": "24ef5d7f-81b4-44b7-a6a4-88e7f6394a31",
+      "name": "Tai Mũi Họng"
+    },
+    {
+      "id": "d38ed665-f9e5-46e4-885e-203e69d037b0",
+      "name": "Mắt"
+    },
+    {
+      "id": "67e8395c-54d9-44ee-a6a5-34a670028a2d",
+      "name": "Răng Hàm Mặt"
+    },
+    {
+      "id": "ea274c1d-bfb5-4de4-b2f4-85a3e23258a3",
+      "name": "Da liễu"
+    },
+    {
+      "id": "21ec6cb6-31a5-4289-8555-1cc6eaceddac",
+      "name": "Tiêu hóa"
+    },
+    {
+      "id": "ea43252c-ee70-4985-9ac3-140d3c461260",
+      "name": "Hô hấp"
+    }
+  ],
+  "providerBlocked": true,
+  "passed": 0
+}

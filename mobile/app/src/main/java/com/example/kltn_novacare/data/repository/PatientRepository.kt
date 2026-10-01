@@ -1,95 +1,48 @@
 package com.example.kltn_novacare.data.repository
 
 import com.example.kltn_novacare.data.model.PatientProfile
-import com.example.kltn_novacare.data.remote.ApiClient
-import com.example.kltn_novacare.data.remote.CreatePatientProfileRequest
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.example.kltn_novacare.data.remote.*
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
-class PatientRepository {
-    private val apiService = ApiClient.getService()
-
-    suspend fun getPatientProfiles(): Result<List<PatientProfile>> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.getPatientProfiles().execute()
-            val body = response.body()
-            if (response.isSuccessful && body != null && body.success) {
-                Result.success(body.data ?: emptyList())
-            } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tải hồ sơ"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+// Explicit nulls on PUT allow optional fields (including unique CCCD) to be cleared.
+internal fun profileUpdateBody(request: CreatePatientProfileRequest): JsonObject =
+    GsonBuilder().serializeNulls().create().toJsonTree(request).asJsonObject.apply {
+        if (request.isDefault == null) remove("isDefault")
     }
 
-    suspend fun getPatientProfileById(id: String): Result<PatientProfile> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.getPatientProfileById(id).execute()
-            val body = response.body()
-            if (response.isSuccessful && body != null && body.success && body.data != null) {
-                Result.success(body.data)
-            } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Không tìm thấy hồ sơ"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+class PatientRepository(private val apiService: ApiService = ApiClient.getService()) {
+    suspend fun getPatientProfiles(): Result<List<PatientProfile>> =
+        healthApiResult("Không thể tải hồ sơ", { apiService.getPatientProfiles() }) {
+            requireNotNull(it.data) { "Máy chủ chưa trả về danh sách hồ sơ" }
         }
-    }
 
-    suspend fun createPatientProfile(request: CreatePatientProfileRequest): Result<PatientProfile> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.createPatientProfile(request).execute()
-            val body = response.body()
-            if (response.isSuccessful && body != null && body.success && body.data != null) {
-                Result.success(body.data)
-            } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Tạo hồ sơ thất bại"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+    suspend fun getPatientProfileById(id: String): Result<PatientProfile> =
+        healthApiResult("Không tìm thấy hồ sơ", { apiService.getPatientProfileById(id) }) {
+            requireNotNull(it.data) { "Không tìm thấy hồ sơ" }
         }
-    }
 
-    suspend fun updatePatientProfile(id: String, request: CreatePatientProfileRequest): Result<PatientProfile> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.updatePatientProfile(id, request).execute()
-            val body = response.body()
-            if (response.isSuccessful && body != null && body.success && body.data != null) {
-                Result.success(body.data)
-            } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Cập nhật hồ sơ thất bại"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+    suspend fun createPatientProfile(request: CreatePatientProfileRequest): Result<PatientProfile> =
+        healthApiResult("Tạo hồ sơ thất bại", { apiService.createPatientProfile(request) }) {
+            requireNotNull(it.data) { "Máy chủ chưa trả về hồ sơ đã tạo" }
         }
-    }
 
-    suspend fun deletePatientProfile(id: String): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.deletePatientProfile(id).execute()
-            val body = response.body()
-            if (response.isSuccessful && body != null && body.success) {
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Xóa hồ sơ thất bại"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+    suspend fun updatePatientProfile(id: String, request: CreatePatientProfileRequest): Result<PatientProfile> =
+        healthApiResult("Cập nhật hồ sơ thất bại", {
+            // Use a raw JSON body so Retrofit's default Gson does not drop explicit nulls again.
+            apiService.updatePatientProfile(id, profileUpdateBody(request).toString()
+                .toRequestBody("application/json; charset=utf-8".toMediaType()))
+        }) {
+            requireNotNull(it.data) { "Máy chủ chưa trả về hồ sơ đã cập nhật" }
         }
-    }
 
-    suspend fun setDefaultPatientProfile(id: String): Result<PatientProfile> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.setDefaultPatientProfile(id).execute()
-            val body = response.body()
-            if (response.isSuccessful && body != null && body.success && body.data != null) {
-                Result.success(body.data)
-            } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Đặt mặc định thất bại"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+    suspend fun deletePatientProfile(id: String): Result<Unit> =
+        healthApiResult("Xóa hồ sơ thất bại", { apiService.deletePatientProfile(id) }) { Unit }
+
+    suspend fun setDefaultPatientProfile(id: String): Result<PatientProfile> =
+        healthApiResult("Đặt mặc định thất bại", { apiService.setDefaultPatientProfile(id) }) {
+            requireNotNull(it.data) { "Máy chủ chưa trả về hồ sơ mặc định" }
         }
-    }
 }

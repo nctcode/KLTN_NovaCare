@@ -94,4 +94,27 @@ export const preExamV2Service = {
     });
     return response?.data !== undefined ? response.data : response;
   },
+
+  async uploadMedia(
+    sessionId: string,
+    file: Blob | File,
+    metadata?: { durationMs?: number; scriptId?: string; type?: string },
+  ) {
+    const formData = new FormData();
+    const mediaFile = file instanceof File ? file : new File([file], 'recording.webm', { type: file.type || 'video/webm' });
+    formData.append('file', mediaFile);
+    if (metadata?.durationMs) formData.append('durationMs', metadata.durationMs.toString());
+    if (metadata?.scriptId) formData.append('scriptId', metadata.scriptId);
+    if (metadata?.type) formData.append('type', metadata.type);
+
+    const response = await apiClient.post<any>(`/pre-exam-v2/sessions/${sessionId}/media`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response?.data !== undefined ? response.data : response;
+  },
+
+  async deleteMedia(sessionId: string, mediaId: string) {
+    const response = await apiClient.delete<any>(`/pre-exam-v2/sessions/${sessionId}/media/${mediaId}`);
+    return response?.data !== undefined ? response.data : response;
+  },
 };

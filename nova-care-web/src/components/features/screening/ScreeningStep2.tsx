@@ -14,12 +14,15 @@ import { ScreeningSummary } from './ScreeningSummary';
 import { findBodyRegionById } from '@/constants/bodyRegions';
 import { Button } from '@/components/ui/button';
 import { Sparkles, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react';
+import { SCREENING_CATALOG_VERSION } from '@/config/screening/catalogVersion';
 
 interface ScreeningStep2Props {
   selectedRegions: string[];
   patientContext?: PatientContext;
   onCompleted: (result: ScreeningStep2Result) => void;
   onBack: () => void;
+  initialAnswers?: QuestionAnswer[];
+  onAnswersChange?: (answers: QuestionAnswer[]) => void;
 }
 
 export function ScreeningStep2({
@@ -27,8 +30,10 @@ export function ScreeningStep2({
   patientContext,
   onCompleted,
   onBack,
+  initialAnswers = [],
+  onAnswersChange,
 }: ScreeningStep2Props) {
-  const [answersMap, setAnswersMap] = useState<Map<string, QuestionAnswer>>(new Map());
+  const [answersMap, setAnswersMap] = useState<Map<string, QuestionAnswer>>(() => new Map(initialAnswers.map(a => [a.questionId, a])));
   const [isFinished, setIsFinished] = useState(false);
   const [stepResult, setStepResult] = useState<ScreeningStep2Result | null>(null);
 
@@ -45,15 +50,14 @@ export function ScreeningStep2({
 
   // Auto-regenerate questionnaire when selectedRegions change
   useEffect(() => {
-    setAnswersMap(new Map());
+    setAnswersMap(new Map(initialAnswers.map(a => [a.questionId, a])));
     setIsFinished(false);
     setStepResult(null);
   }, [selectedRegions]);
 
   const handleAnswerQuestion = useCallback(
     (questionId: string, questionText: string, answer: any, label?: string) => {
-      setAnswersMap((prev) => {
-        const next = new Map(prev);
+        const next = new Map(answersMap);
         next.set(questionId, {
           questionId,
           questionText,
@@ -61,10 +65,11 @@ export function ScreeningStep2({
           answerLabel: label || (typeof answer === 'string' ? answer : String(answer)),
           timestamp: new Date().toISOString(),
         });
-        return next;
-      });
+        setAnswersMap(next);
+        setIsFinished(false);
+        onAnswersChange?.(Array.from(next.values()));
     },
-    []
+    [answersMap, onAnswersChange]
   );
 
   // Evaluate triggered Red Flags in real-time
@@ -92,7 +97,7 @@ export function ScreeningStep2({
     );
 
     const fullResult: ScreeningStep2Result = {
-      screeningVersion: '1.0.0',
+      screeningVersion: SCREENING_CATALOG_VERSION,
       selectedRegions,
       answers: answersList,
       triage: {

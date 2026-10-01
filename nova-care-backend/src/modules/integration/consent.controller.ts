@@ -73,6 +73,28 @@ export class ConsentController {
     };
   }
 
+  @Get('patients/:patientProfileId/shareable-records')
+  @ApiOperation({ summary: 'Lấy bệnh án đã công bố mà người bệnh có thể chọn để chia sẻ khi đặt khám' })
+  @ApiQuery({ name: 'targetHospitalId', required: true })
+  async getShareableRecords(
+    @CurrentUser() user: User,
+    @Param('patientProfileId') patientProfileId: string,
+    @Query('targetHospitalId') targetHospitalId: string,
+  ) {
+    const data = await this.service.getShareableRecords(user.id, patientProfileId, targetHospitalId);
+    return { statusCode: HttpStatus.OK, message: 'Lấy hồ sơ có thể chia sẻ thành công', data };
+  }
+
+  @Get('patients/:patientProfileId/shared-access-logs')
+  @ApiOperation({ summary: 'Người bệnh xem nhật ký cơ sở y tế đã truy xuất hồ sơ được chia sẻ' })
+  async getSharedAccessLogs(
+    @CurrentUser() user: User,
+    @Param('patientProfileId') patientProfileId: string,
+  ) {
+    const data = await this.service.getSharedAccessLogs(user.id, patientProfileId);
+    return { statusCode: HttpStatus.OK, message: 'Lấy nhật ký truy xuất hồ sơ thành công', data };
+  }
+
   @Patch('consents/:id/grant')
   @ApiOperation({ summary: 'Chấp thuận chia sẻ hồ sơ (PENDING -> GRANTED)' })
   @ApiResponse({ status: 200, description: 'Cấp quyền thành công' })

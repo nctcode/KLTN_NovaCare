@@ -28,6 +28,8 @@ import { ClinicalModule } from '@/modules/clinical/clinical.module';
 import { IntegrationModule } from '@/modules/integration/integration.module';
 import { HospitalAdminModule } from '@/modules/hospital-admin/hospital-admin.module';
 
+import { SchedulesModule } from '@/modules/schedules/schedules.module';
+
 @Module({
   imports: [
     ConfigModule,
@@ -54,6 +56,7 @@ import { HospitalAdminModule } from '@/modules/hospital-admin/hospital-admin.mod
     DoctorSchedulesModule,
     AppointmentSlotsModule,
     AppointmentsModule,
+    SchedulesModule,
     PaymentsModule,
     PreExamModule,
     AIModule,
