@@ -26,8 +26,12 @@ import {
   ChevronRight,
   MapPin,
   FileCheck2,
+  ShieldCheck,
+  CheckCircle2,
+  History,
+  BadgeCheck,
 } from 'lucide-react';
-import { LookupResponseData, EncounterItem, HospitalGroup } from '@/services/novacare-api.service';
+import { LookupResponseData, EncounterItem, HospitalGroup, AuditLogEntry } from '@/services/novacare-api.service';
 import { VietnamEMRModal, MedicalEncounterData } from './VietnamEMRModal';
 import { Qd4750ExtractionModal } from './Qd4750ExtractionModal';
 import { format } from 'date-fns';
@@ -258,6 +262,40 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
     return groupedHospitals.slice(start, start + pageSize);
   }, [groupedHospitals, currentPage, pageSize]);
 
+  // Quản lý Tab hiển thị: Bệnh án liên viện hoặc Nhật ký truy xuất (Audit Trail)
+  const [activeTab, setActiveTab] = useState<'ENCOUNTERS' | 'AUDIT_LOGS'>('ENCOUNTERS');
+  const [auditLogPage, setAuditLogPage] = useState(1);
+  const auditLogPageSize = 8;
+
+  const auditLogsList: AuditLogEntry[] = useMemo(() => {
+    if (data.auditLogs && Array.isArray(data.auditLogs) && data.auditLogs.length > 0) {
+      return data.auditLogs;
+    }
+    if (data.latestAuditLog) {
+      return [
+        {
+          id: data.latestAuditLog.id,
+          accessedAt: data.latestAuditLog.accessedAt,
+          hospitalName: data.queriedBy?.hospitalName || 'Bệnh viện Đa khoa NovaCare Sài Gòn',
+          doctorName: data.queriedBy?.doctorName || 'BS. Tiếp nhận điều trị',
+          purpose: data.queriedBy?.purpose || 'Tra cứu hồ sơ liên thông y tế',
+          ipAddress: data.latestAuditLog.ipAddress || '127.0.0.1',
+          status: 'SUCCESS',
+          method: data.lookupType || 'CCCD',
+          patientName: data.patient?.fullName || 'Nguyễn Văn An',
+          accessedData: 'Lịch sử khám, Chẩn đoán, Đơn thuốc, Cận lâm sàng',
+        },
+      ];
+    }
+    return [];
+  }, [data.auditLogs, data.latestAuditLog, data.queriedBy, data.lookupType, data.patient]);
+
+  const totalAuditLogPages = Math.max(1, Math.ceil(auditLogsList.length / auditLogPageSize));
+  const paginatedAuditLogs = useMemo(() => {
+    const start = (auditLogPage - 1) * auditLogPageSize;
+    return auditLogsList.slice(start, start + auditLogPageSize);
+  }, [auditLogsList, auditLogPage, auditLogPageSize]);
+
   const handleOpenEMR = (enc: EncounterItem, group: HospitalGroup) => {
     setSelectedEncounter({
       id: enc.id,
@@ -459,13 +497,52 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
         </div>
       </div>
 
-      {/* 3. DANH SÁCH BỆNH VIỆN & CÁC LẦN KHÁM LIÊN THÔNG */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-base text-slate-800 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-blue-600" />
-            LỊCH SỬ KHÁM BỆNH LIÊN VIỆN
-          </h3>
+      {/* 3. THANH ĐIỀU HƯỚNG TABS: LỊCH SỬ KHÁM BỆNH & NHẬT KÝ TRUY CẬP (AUDIT TRAIL) */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab('ENCOUNTERS')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+            activeTab === 'ENCOUNTERS'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+          }`}
+        >
+          <Activity className="w-4 h-4" />
+          <span>Lịch Sử Khám Bệnh Liên Viện ({allEncounters.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('AUDIT_LOGS')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+            activeTab === 'AUDIT_LOGS'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>Nhật Ký Truy Cập Hồ Sơ ({auditLogsList.length})</span>
+          {auditLogsList.length > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold ${
+              activeTab === 'AUDIT_LOGS' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              Minh bạch
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ========================================================= */}
+      {/* TAB 1: DANH SÁCH BỆNH VIỆN & CÁC LẦN KHÁM LIÊN THÔNG */}
+      {/* ========================================================= */}
+      {activeTab === 'ENCOUNTERS' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-base text-slate-800 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-600" />
+              LỊCH SỬ KHÁM BỆNH LIÊN VIỆN
+            </h3>
           <span className="text-xs text-slate-500">
             Nhấn vào từng đợt khám để xem Hồ sơ Bệnh án điện tử A4 chuẩn Bộ Y Tế
           </span>
@@ -749,6 +826,118 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
           />
         </div>
       </div>
+    )}
+
+      {/* ========================================================= */}
+      {/* TAB 2: NHẬT KÝ TRUY CẬP HỒ SƠ (AUDIT TRAIL) */}
+      {/* ========================================================= */}
+      {activeTab === 'AUDIT_LOGS' && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-base text-slate-900">
+                  Nhật Ký Truy Cập Hồ Sơ Y Tế Minh Bạch (Access Audit Trail)
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Hệ thống tự động ghi nhận bất biến mọi lượt tiếp nhận & tra cứu hồ sơ bệnh án liên viện từ bác sĩ & cơ sở y tế theo thời gian thực.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{auditLogsList.length} lượt tra cứu được xác thực</span>
+              </span>
+            </div>
+          </div>
+
+          {auditLogsList.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+                  <thead>
+                    <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 text-[11px] uppercase tracking-wider">
+                      <th className="py-3 px-3.5 w-[50px] text-center align-middle">STT</th>
+                      <th className="py-3 px-3.5 w-[160px] align-middle">Thời gian</th>
+                      <th className="py-3 px-3.5 align-middle">Cơ sở KCB yêu cầu</th>
+                      <th className="py-3 px-3.5 align-middle">Bác sĩ tiếp nhận</th>
+                      <th className="py-3 px-3.5 align-middle">Mục đích tra cứu</th>
+                      <th className="py-3 px-3.5 w-[120px] text-center align-middle">Phương thức</th>
+                      <th className="py-3 px-3.5 w-[130px] text-center align-middle">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedAuditLogs.map((log, idx) => {
+                      const itemIndex = (auditLogPage - 1) * auditLogPageSize + idx + 1;
+                      const formattedTime = log.accessedAt
+                        ? format(new Date(log.accessedAt), 'dd/MM/yyyy HH:mm:ss', { locale: vi })
+                        : 'Vừa xong';
+
+                      return (
+                        <tr key={log.id || idx} className="hover:bg-slate-50/80 transition">
+                          <td className="py-3.5 px-3.5 text-center align-middle font-medium text-slate-500">
+                            {itemIndex}
+                          </td>
+                          <td className="py-3.5 px-3.5 align-middle font-mono font-bold text-slate-800 whitespace-nowrap">
+                            {formattedTime}
+                          </td>
+                          <td className="py-3.5 px-3.5 align-middle font-semibold text-slate-900">
+                            <div className="flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              <span>{log.hospitalName}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3.5 align-middle font-medium text-slate-800">
+                            <div className="flex items-center gap-1.5">
+                              <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              <span>{log.doctorName}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3.5 align-middle text-slate-600">
+                            {log.purpose}
+                          </td>
+                          <td className="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                            <span className="font-mono text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                              {log.method || 'CCCD'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Hợp lệ</span>
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Phân trang Audit Logs */}
+              <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50">
+                <TablePagination
+                  currentPage={auditLogPage}
+                  totalPages={totalAuditLogPages}
+                  totalItems={auditLogsList.length}
+                  pageSize={auditLogPageSize}
+                  onPageChange={(p) => setAuditLogPage(p)}
+                  itemName="lượt tra cứu liên thông"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="p-12 text-center text-slate-500 space-y-2">
+              <ShieldCheck className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="font-semibold text-slate-700 text-sm">Chưa có nhật ký truy cập nào</p>
+              <p className="text-xs text-slate-400">Các lượt tra cứu hồ sơ sẽ tự động xuất hiện tại đây theo thời gian thực.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* MODAL BỆNH ÁN ĐIỆN TỬ CHUẨN BỘ Y TẾ (A4 FORMAT) */}
       <VietnamEMRModal

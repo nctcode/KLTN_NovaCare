@@ -14,6 +14,7 @@ import {
   Calendar,
   ClipboardList,
   ExternalLink,
+  Share2,
 } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -72,6 +73,12 @@ const ADMIN_MENU_ITEMS: MenuItem[] = [
     label: 'Tích hợp HIS',
     href: '/admin/his-sync',
     icon: Network,
+  },
+  {
+    id: 'interoperability',
+    label: 'Giám sát liên thông',
+    href: '/admin/interoperability',
+    icon: Share2,
   },
   {
     id: 'audit-logs',

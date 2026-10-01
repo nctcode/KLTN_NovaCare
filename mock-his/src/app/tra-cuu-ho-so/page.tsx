@@ -56,7 +56,7 @@ export default function TraCuuHoSoPage() {
                 Tiếp Nhận & Tra Cứu Hồ Sơ Bệnh Nhân Đa Cơ Sở
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 max-w-3xl">
-                Cơ sở khám bệnh tiếp nhận Mã định danh y tế (NOVA-PAT-...) hoặc Số CCCD cùng Mã PIN bảo mật cá nhân do người bệnh cung cấp,
+                Cơ sở khám bệnh tiếp nhận Mã định danh y tế (NOVA-...) hoặc Số CCCD 12 số cùng Mã PIN bảo mật cá nhân do người bệnh cung cấp,
                 truy xuất tức thì toàn bộ lịch sử bệnh án, đơn thuốc và cận lâm sàng liên thông đa viện.
               </p>
             </div>
@@ -105,7 +105,7 @@ export default function TraCuuHoSoPage() {
             <Building className="w-10 h-10 text-slate-300 mx-auto" />
             <h4 className="font-semibold text-slate-700 text-sm">Chưa có dữ liệu tra cứu</h4>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Vui lòng nhập Mã định danh y tế (ví dụ: <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-600 font-mono">NOVA-PAT-8255</code>) hoặc Số CCCD cùng Mã PIN bảo mật để mở khóa hồ sơ bệnh án liên thông.
+              Vui lòng nhập Mã định danh y tế (ví dụ: <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-600 font-mono">NOVA-079088012345</code>) hoặc Số CCCD cùng Mã PIN bảo mật để mở khóa hồ sơ bệnh án liên thông.
             </p>
           </div>
         )}

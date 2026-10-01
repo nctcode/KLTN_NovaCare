@@ -163,6 +163,7 @@ model RefreshToken {
 
 model PatientProfile {
   id                   String    @id @default(uuid())
+  patientCode          String?   @unique @map("patient_code")
   userId               String
   fullName             String
   gender               Gender?

@@ -278,10 +278,16 @@ async function main() {
   ];
 
   for (const p of profilesData) {
-    const created = await prisma.patientProfile.create({ data: p });
+    const patientCode = p.identityNumber ? `NOVA-${p.identityNumber}` : `NOVA-PAT-${Math.floor(100000 + Math.random() * 900000)}`;
+    const created = await prisma.patientProfile.create({
+      data: {
+        ...p,
+        patientCode,
+      },
+    });
     profiles.push(created);
   }
-  console.log(`✅ Created ${profiles.length} Patient Profiles`);
+  console.log(`✅ Created ${profiles.length} Patient Profiles with unique patientCode`);
 
   // ==========================================
   // 3. Specialties (12 Chuyên khoa)

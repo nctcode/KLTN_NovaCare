@@ -165,7 +165,7 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
                   ) : (
                     <>
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-                      Tôi đã khám xong
+                      Mô phỏng kết quả khám (Demo)
                     </>
                   )}
                 </Button>

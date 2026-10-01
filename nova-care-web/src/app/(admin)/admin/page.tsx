@@ -9,24 +9,29 @@ import {
   UserCheck,
   Building2,
   CalendarCheck,
-  DollarSign,
-  TrendingUp,
   Activity,
   History,
   Loader2,
   Award,
   ShieldCheck,
+  PieChart as PieChartIcon,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  CreditCard,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
 
 export default function AdminDashboardPage() {
@@ -51,9 +56,9 @@ export default function AdminDashboardPage() {
     queryFn: adminService.getAppointmentsByDay,
   });
 
-  const { data: revChart, isLoading: loadingRevChart } = useQuery({
-    queryKey: ['admin-rev-chart'],
-    queryFn: adminService.getRevenueByMonth,
+  const { data: statusDist, isLoading: loadingStatusDist } = useQuery({
+    queryKey: ['admin-status-dist'],
+    queryFn: adminService.getAppointmentStatusDistribution,
   });
 
   const { data: topDoctors } = useQuery({
@@ -71,6 +76,42 @@ export default function AdminDashboardPage() {
     queryFn: () => adminService.getAuditLogs({ limit: 5 }),
   });
 
+  const totalApptCount = overview?.totalAppointments || 0;
+
+  // Custom Tooltip for 7-day Stacked Bar Chart
+  const CustomBarTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const dayData = payload[0]?.payload;
+      return (
+        <div
+          className={`p-3 rounded-xl shadow-xl border text-xs space-y-1.5 min-w-[190px] ${
+            isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+          }`}
+        >
+          <div className="flex items-center justify-between border-b pb-1.5 font-bold">
+            <span>Ngày {label}</span>
+            <span className="text-emerald-500 font-mono font-black">{dayData?.total || 0} lịch</span>
+          </div>
+          <div className="space-y-1 pt-0.5">
+            {payload.map((entry: any, index: number) => {
+              if (!entry.value || entry.value === 0) return null;
+              return (
+                <div key={`item-${index}`} className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                    <span className="text-[11px] text-slate-400">{entry.name}:</span>
+                  </div>
+                  <span className="font-bold text-[11px]">{entry.value}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
@@ -82,56 +123,26 @@ export default function AdminDashboardPage() {
           </div>
           <h1 className="text-2xl font-black tracking-tight">Bảng Điều Khiển Quản Trị Viên</h1>
           <p className="text-xs text-slate-300 mt-1">
-            Theo dõi tổng quan chỉ số phát triển hệ thống, doanh thu và các hoạt động đặt khám đa cơ sở.
+            Theo dõi tổng quan số lượng người dùng, bác sĩ, cơ sở y tế và trạng thái lịch hẹn toàn hệ thống.
           </p>
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards: Tổng user, Tổng lịch hẹn, Cơ sở y tế (Bệnh viện), Bác sĩ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1. Tổng User */}
         <Card className={cardStyle}>
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-1">
-              <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Tổng Doanh Thu</p>
-              <p className="text-2xl font-black text-emerald-600 dark:text-[#66FF33]">
-                {loadingOverview ? '...' : (overview?.totalRevenue || 0).toLocaleString()}đ
+              <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Tổng Người Dùng
               </p>
-              <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                Hôm nay: {(overview?.todayRevenue || 0).toLocaleString()}đ
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold">
-              <DollarSign className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={cardStyle}>
-          <CardContent className="p-5 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Tổng Lịch Khám</p>
-              <p className={`text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                {loadingOverview ? '...' : overview?.totalAppointments || 0}
-              </p>
-              <p className={`text-[11px] font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Hôm nay: <strong>{overview?.todayAppointments || 0}</strong> lượt
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold">
-              <CalendarCheck className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={cardStyle}>
-          <CardContent className="p-5 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Bệnh Nhân Đăng Ký</p>
               <p className={`text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 {loadingOverview ? '...' : overview?.totalUsers || 0}
               </p>
-              <p className={`text-[11px] font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Tài khoản hoạt động</p>
+              <p className={`text-[11px] font-semibold ${isLight ? 'text-purple-600' : 'text-purple-400'}`}>
+                {overview?.totalPatients || 0} bệnh nhân đăng ký
+              </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-500 flex items-center justify-center font-bold">
               <Users className="w-6 h-6" />
@@ -139,56 +150,113 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
+        {/* 2. Tổng Lịch Hẹn */}
         <Card className={cardStyle}>
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-1">
-              <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Bác Sĩ & Cơ Sở</p>
-              <p className={`text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                {loadingOverview ? '...' : `${overview?.totalDoctors || 0} BS / ${overview?.totalHospitals || 0} BV`}
+              <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Tổng Lịch Khám
               </p>
-              <p className={`text-[11px] font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Mạng lưới NovaCare</p>
+              <p className="text-2xl font-black text-emerald-600 dark:text-[#66FF33]">
+                {loadingOverview ? '...' : overview?.totalAppointments || 0}
+              </p>
+              <p className={`text-[11px] font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Hôm nay: <strong className="text-emerald-600">{overview?.todayAppointments || 0}</strong> lượt hẹn
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold">
+              <CalendarCheck className="w-6 h-6" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 3. Tổng Bệnh Viện */}
+        <Card className={cardStyle}>
+          <CardContent className="p-5 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Cơ Sở Y Tế
+              </p>
+              <p className={`text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                {loadingOverview ? '...' : overview?.totalHospitals || 0}
+              </p>
+              <p className={`text-[11px] font-semibold ${isLight ? 'text-blue-600' : 'text-blue-400'}`}>
+                Bệnh viện & phòng khám
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold">
+              <Building2 className="w-6 h-6" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Tổng Bác Sĩ */}
+        <Card className={cardStyle}>
+          <CardContent className="p-5 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Đội Ngũ Bác Sĩ
+              </p>
+              <p className={`text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                {loadingOverview ? '...' : overview?.totalDoctors || 0}
+              </p>
+              <p className={`text-[11px] font-semibold ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>
+                Bác sĩ đang hoạt động
+              </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center font-bold">
-              <Building2 className="w-6 h-6" />
+              <UserCheck className="w-6 h-6" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Appointments by Day */}
-        <Card className={cardStyle}>
+      {/* Charts Row: Biểu đồ trạng thái lịch hẹn 7 ngày qua + Phân bổ trạng thái lịch hẹn */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Biểu đồ trạng thái lịch hẹn 7 ngày qua */}
+        <Card className={`${cardStyle} lg:col-span-7 xl:col-span-8`}>
           <CardHeader className={`border-b pb-4 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Activity className="w-5 h-5 text-emerald-600" />
-              Số Lượng Đặt Lịch (7 Ngày Gần Nhất)
-            </CardTitle>
-            <CardDescription className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-              Thống kê lượng bệnh nhân đăng ký khám hàng ngày
-            </CardDescription>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-emerald-500" />
+                  Trạng Thái Lịch Hẹn 7 Ngày Qua
+                </CardTitle>
+                <CardDescription className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Biến động số lượng và phân loại trạng thái đặt khám theo từng ngày
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg">
+                <Clock className="w-3.5 h-3.5 text-emerald-500" />
+                <span>7 ngày gần nhất</span>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="pt-6">
             {loadingApptChart ? (
-              <div className="h-64 flex items-center justify-center">
+              <div className="h-72 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
               </div>
             ) : (
-              <div className="h-64 w-full">
+              <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={apptChart || []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#334155'} />
-                    <XAxis dataKey="label" stroke={isLight ? '#64748b' : '#94a3b8'} />
-                    <YAxis stroke={isLight ? '#64748b' : '#94a3b8'} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: isLight ? '#ffffff' : '#0f172a',
-                        borderColor: isLight ? '#cbd5e1' : '#334155',
-                        borderRadius: '12px',
-                        color: isLight ? '#0f172a' : '#ffffff',
-                      }}
+                  <BarChart data={apptChart || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#334155'} vertical={false} />
+                    <XAxis dataKey="label" stroke={isLight ? '#64748b' : '#94a3b8'} tickLine={false} />
+                    <YAxis stroke={isLight ? '#64748b' : '#94a3b8'} allowDecimals={false} tickLine={false} />
+                    <Tooltip content={<CustomBarTooltip />} />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      iconType="circle"
+                      formatter={(val) => <span className={`text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{val}</span>}
                     />
-                    <Bar dataKey="count" fill="#10b981" radius={[6, 6, 0, 0]} name="Số lượt hẹn" />
+                    <Bar dataKey="completed" name="Đã hoàn thành" stackId="a" fill="#10b981" />
+                    <Bar dataKey="confirmed" name="Đã xác nhận" stackId="a" fill="#3b82f6" />
+                    <Bar dataKey="pending" name="Chờ duyệt / khám" stackId="a" fill="#f59e0b" />
+                    <Bar dataKey="paid" name="Đã thanh toán" stackId="a" fill="#06b6d4" />
+                    <Bar dataKey="awaitingPayment" name="Chờ thanh toán" stackId="a" fill="#8b5cf6" />
+                    <Bar dataKey="cancelled" name="Đã hủy" stackId="a" fill="#ef4444" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -196,115 +264,255 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Revenue by Month */}
-        <Card className={cardStyle}>
+        {/* Phân bổ trạng thái lịch hẹn (Donut Chart & List) */}
+        <Card className={`${cardStyle} lg:col-span-5 xl:col-span-4`}>
           <CardHeader className={`border-b pb-4 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-              Doanh Thu Hệ Thống (6 Tháng Gần Nhất)
+              <PieChartIcon className="w-5 h-5 text-blue-500" />
+              Trạng Thái Lịch Hẹn
             </CardTitle>
             <CardDescription className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-              Tổng doanh thu từ các giao dịch thanh toán thành công
+              Phân bổ tỷ lệ trạng thái lịch hẹn trên toàn hệ thống ({totalApptCount} lượt)
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-6">
-            {loadingRevChart ? (
+          <CardContent className="pt-4 space-y-4">
+            {loadingStatusDist ? (
               <div className="h-64 flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
               </div>
             ) : (
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={revChart || []}>
-                    <defs>
-                      <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#334155'} />
-                    <XAxis dataKey="label" stroke={isLight ? '#64748b' : '#94a3b8'} />
-                    <YAxis stroke={isLight ? '#64748b' : '#94a3b8'} />
-                    <Tooltip
-                      formatter={(val: any) => [`${Number(val).toLocaleString()}đ`, 'Doanh thu']}
-                      contentStyle={{
-                        backgroundColor: isLight ? '#ffffff' : '#0f172a',
-                        borderColor: isLight ? '#cbd5e1' : '#334155',
-                        borderRadius: '12px',
-                        color: isLight ? '#0f172a' : '#ffffff',
-                      }}
-                    />
-                    <Area type="monotone" dataKey="revenue" stroke="#10b981" fillOpacity={1} fill="url(#colorRev)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <>
+                {/* Donut Chart */}
+                <div className="h-44 w-full relative flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusDist || []}
+                        dataKey="count"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={75}
+                        paddingAngle={3}
+                      >
+                        {(statusDist || []).map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} stroke={isLight ? '#ffffff' : '#0f172a'} strokeWidth={2} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(val: any, name: any, item: any) => [
+                          `${val} lượt (${item?.payload?.percentage || 0}%)`,
+                          name,
+                        ]}
+                        contentStyle={{
+                          backgroundColor: isLight ? '#ffffff' : '#0f172a',
+                          borderColor: isLight ? '#cbd5e1' : '#334155',
+                          borderRadius: '12px',
+                          color: isLight ? '#0f172a' : '#ffffff',
+                          fontSize: '12px',
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Center Text */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-xs text-slate-400 font-medium">Tổng lịch</span>
+                    <span className={`text-xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      {totalApptCount}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status Breakdown Legend List */}
+                <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  {(statusDist || []).map((item: any) => (
+                    <div key={item.status} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className={isLight ? 'text-slate-700 font-medium' : 'text-slate-300 font-medium'}>
+                          {item.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          {item.count}
+                        </span>
+                        <span className="text-[11px] text-slate-400 w-11 text-right">
+                          ({item.percentage}%)
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Top 5 Doctors & Top 5 Hospitals */}
+      {/* Top Bệnh Viện & Top Bác Sĩ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Doctors */}
+        {/* Top Cơ Sở Y Tế / Bệnh Viện */}
         <Card className={cardStyle}>
           <CardHeader className={`border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-500" />
-              Top Bác Sĩ Được Đặt Lịch Nhiều Nhất
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-3">
-            {topDoctors?.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">Chưa có dữ liệu thống kê bác sĩ</p>
-            ) : (
-              topDoctors?.map((doc: any, index: number) => (
-                <div key={doc.id || index} className={`flex items-center justify-between p-3 rounded-xl border text-xs ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full font-extrabold flex items-center justify-center shrink-0 ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-slate-800 text-amber-400'}`}>
-                      {index + 1}
-                    </span>
-                    <div>
-                      <p className={`font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>{doc.title} {doc.fullName}</p>
-                      <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{doc.qualification || 'Bác sĩ chuyên khoa'}</p>
-                    </div>
-                  </div>
-                  <span className={`font-bold px-2.5 py-1 rounded-lg border ${isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-950 text-[#66FF33] border-emerald-800'}`}>
-                    {doc.appointmentCount} lượt khám
-                  </span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Hospitals */}
-        <Card className={cardStyle}>
-          <CardHeader className={`border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-blue-500" />
-              Top Cơ Sở Y Tế Hot Nhất
+            <CardTitle className="text-sm font-bold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-blue-500" />
+                Top Bệnh Viện Được Đặt Lịch Nhiều Nhất
+              </span>
+              <span className="text-xs font-normal text-slate-400">
+                Xếp hạng theo lượt khám
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-3">
             {topHospitals?.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">Chưa có dữ liệu thống kê bệnh viện</p>
+              <p className="text-xs text-slate-500 text-center py-6">Chưa có dữ liệu thống kê bệnh viện</p>
             ) : (
-              topHospitals?.map((hosp: any, index: number) => (
-                <div key={hosp.id || index} className={`flex items-center justify-between p-3 rounded-xl border text-xs ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full font-extrabold flex items-center justify-center shrink-0 ${isLight ? 'bg-blue-100 text-blue-700' : 'bg-slate-800 text-blue-400'}`}>
-                      {index + 1}
-                    </span>
-                    <div>
-                      <p className={`font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>{hosp.name}</p>
-                      <p className={`text-[11px] truncate max-w-[200px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{hosp.address || 'Chưa cập nhật địa chỉ'}</p>
+              topHospitals?.map((hosp: any, index: number) => {
+                const badgeColor =
+                  index === 0
+                    ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                    : index === 1
+                    ? 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'
+                    : index === 2
+                    ? 'bg-amber-700/10 text-amber-700 border-amber-600/30 dark:bg-amber-900/30 dark:text-amber-400'
+                    : isLight
+                    ? 'bg-slate-100 text-slate-600 border-slate-200'
+                    : 'bg-slate-900 text-slate-400 border-slate-800';
+
+                return (
+                  <div
+                    key={hosp.id || index}
+                    className={`p-3.5 rounded-2xl border transition-all text-xs ${
+                      isLight ? 'bg-slate-50/80 border-slate-200 hover:bg-slate-100/70' : 'bg-slate-900/70 border-slate-800 hover:bg-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center shrink-0 border ${badgeColor}`}
+                        >
+                          #{index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className={`font-black truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                            {hosp.name}
+                          </p>
+                          <p className={`text-[11px] truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {hosp.address || hosp.city || 'Cơ sở khám chữa bệnh liên kết'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`font-black px-2.5 py-1 rounded-lg border text-xs inline-block ${
+                            isLight
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-blue-950 text-blue-400 border-blue-800'
+                          }`}
+                        >
+                          {hosp.appointmentCount} lượt đặt
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Progress indicator */}
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-blue-500 h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.max(
+                                4,
+                                totalApptCount > 0 ? (hosp.appointmentCount / totalApptCount) * 100 : 0
+                              )
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                        {hosp.percentage || (totalApptCount > 0 ? Math.round((hosp.appointmentCount / totalApptCount) * 100) : 0)}%
+                      </span>
                     </div>
                   </div>
-                  <span className={`font-bold px-2.5 py-1 rounded-lg border ${isLight ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-blue-950 text-blue-400 border-blue-800'}`}>
-                    {hosp.appointmentCount} lượt đặt
-                  </span>
-                </div>
-              ))
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Bác Sĩ Được Đặt Lịch */}
+        <Card className={cardStyle}>
+          <CardHeader className={`border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+            <CardTitle className="text-sm font-bold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-500" />
+                Top Bác Sĩ Được Đặt Lịch Nhiều Nhất
+              </span>
+              <span className="text-xs font-normal text-slate-400">
+                Xếp hạng theo lượt khám
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            {topDoctors?.length === 0 ? (
+              <p className="text-xs text-slate-500 text-center py-6">Chưa có dữ liệu thống kê bác sĩ</p>
+            ) : (
+              topDoctors?.map((doc: any, index: number) => {
+                const badgeColor =
+                  index === 0
+                    ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                    : index === 1
+                    ? 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'
+                    : index === 2
+                    ? 'bg-amber-700/10 text-amber-700 border-amber-600/30 dark:bg-amber-900/30 dark:text-amber-400'
+                    : isLight
+                    ? 'bg-slate-100 text-slate-600 border-slate-200'
+                    : 'bg-slate-900 text-slate-400 border-slate-800';
+
+                return (
+                  <div
+                    key={doc.id || index}
+                    className={`p-3.5 rounded-2xl border transition-all text-xs ${
+                      isLight ? 'bg-slate-50/80 border-slate-200 hover:bg-slate-100/70' : 'bg-slate-900/70 border-slate-800 hover:bg-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center shrink-0 border ${badgeColor}`}
+                        >
+                          #{index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className={`font-black truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                            {doc.title ? `${doc.title} ` : ''}{doc.fullName}
+                          </p>
+                          <p className={`text-[11px] truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {doc.specialties || doc.qualification || 'Bác sĩ chuyên khoa'}
+                            {doc.hospitals ? ` • ${doc.hospitals}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`font-black px-2.5 py-1 rounded-lg border text-xs inline-block ${
+                            isLight
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-emerald-950 text-[#66FF33] border-emerald-800'
+                          }`}
+                        >
+                          {doc.appointmentCount} lượt khám
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </CardContent>
         </Card>

@@ -60,6 +60,7 @@ import { appointmentService } from '@/services/appointment.service';
 import { PatientProfile } from '@/types/profile.types';
 import { toast } from 'sonner';
 import { VietnamEMRModal, MedicalEncounterData } from '@/components/emr/VietnamEMRModal';
+import { VitalsTrendSection } from '@/components/features/VitalsTrendSection';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import Link from 'next/link';
@@ -332,11 +333,10 @@ function TablePagination({
               key={pageNum}
               type="button"
               onClick={() => onPageChange(pageNum)}
-              className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                isActive
+              className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${isActive
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
+                }`}
             >
               {pageNum}
             </button>
@@ -362,8 +362,8 @@ export default function ElectronicHealthRecordPage() {
   const [profiles, setProfiles] = useState<PatientProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<PatientProfile | null>(null);
 
-  // Active Tab: 'HISTORY' | 'HOSPITALS' | 'PASSPORT'
-  const [activeTab, setActiveTab] = useState<'HISTORY' | 'HOSPITALS' | 'PASSPORT'>('HISTORY');
+  // Active Tab: 'HISTORY' | 'HOSPITALS' | 'TRENDS' | 'PASSPORT'
+  const [activeTab, setActiveTab] = useState<'HISTORY' | 'HOSPITALS' | 'TRENDS' | 'PASSPORT'>('HISTORY');
 
   // Pagination States for all 3 tabs
   const [pageHistory, setPageHistory] = useState(1);
@@ -939,10 +939,10 @@ export default function ElectronicHealthRecordPage() {
   const activeCodesCount = shareCodes.filter((c) => c.status === 'ACTIVE' && c.secondsLeft > 0).length;
   const currentActiveCode = shareCodes.find((c) => c.status === 'ACTIVE' && c.secondsLeft > 0);
 
-  // Dynamic Master Identity Code
+  // Dynamic Master Identity Code (Chuẩn MPI: NOVA-{12_CCCD} hoặc patientCode duy nhất)
   const masterPatientId = selectedProfile
-    ? `NOVA-PAT-${selectedProfile.identityNumber ? selectedProfile.identityNumber.slice(-4) : selectedProfile.id.slice(0, 4).toUpperCase()}`
-    : 'NOVA-PAT-CHUA-TAO';
+    ? (selectedProfile.patientCode || (selectedProfile.identityNumber ? `NOVA-${selectedProfile.identityNumber}` : `NOVA-${selectedProfile.id.slice(0, 8).toUpperCase()}`))
+    : 'NOVA-CHUA-TAO';
 
   // Compute dynamic linked hospitals from actual database appointments
   const dynamicLinkedHospitalsMap = new Map<string, {
@@ -960,12 +960,12 @@ export default function ElectronicHealthRecordPage() {
     const hospId = hosp.id || hosp.name;
     if (!dynamicLinkedHospitalsMap.has(hospId)) {
       const prefix = hosp.name?.substring(0, 4)?.toUpperCase() || 'HOSP';
-      const patientIdCode = apt.patientProfile?.identityNumber || '0001';
+      const patientIdCode = apt.patientProfile?.identityNumber || apt.patientProfile?.id?.slice(0, 6) || '0001';
       dynamicLinkedHospitalsMap.set(hospId, {
         id: hospId,
         name: hosp.name,
         address: hosp.address || 'TP. Hồ Chí Minh',
-        pid: `PAT-${prefix}-${patientIdCode.slice(-4)}`,
+        pid: `PAT-${prefix}-${patientIdCode}`,
         visits: 1,
         status: 'Đang liên thông',
       });
@@ -1410,11 +1410,10 @@ export default function ElectronicHealthRecordPage() {
                     setSelectedProfile(prof);
                     setPageHistory(1);
                   }}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    isSelected
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${isSelected
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
-                  }`}
+                    }`}
                 >
                   <span>{prof.fullName}</span>
                   <span className={`text-[10px] px-1 py-0.5 rounded ${isSelected ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-500'}`}>
@@ -1581,12 +1580,18 @@ export default function ElectronicHealthRecordPage() {
         </div>
 
         <div
-          onClick={() => setActiveTab('HISTORY')}
-          className="rounded-lg border border-slate-200 bg-white p-3 hover:bg-slate-50 transition cursor-pointer"
+          onClick={() => setActiveTab('TRENDS')}
+          className="rounded-lg border border-emerald-200/80 bg-emerald-50/40 p-3 hover:bg-emerald-50 transition cursor-pointer"
         >
-          <div className="text-slate-500 font-medium">Đơn thuốc điện tử</div>
-          <div className="text-xl font-bold text-slate-900 mt-1">{totalPrescriptionsCount}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Chuẩn TT 27/BYT</div>
+          <div className="text-emerald-800 font-medium flex items-center justify-between">
+            <span>Diễn tiến sinh hiệu</span>
+            <Activity className="w-3.5 h-3.5 text-emerald-600" />
+          </div>
+          <div className="text-xl font-extrabold text-emerald-950 mt-1">Huyết áp & Tim</div>
+          <div className="text-[11px] text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
+            <span>Biểu đồ xu hướng</span>
+            <ArrowRight className="w-3 h-3" />
+          </div>
         </div>
 
         <div
@@ -1615,11 +1620,10 @@ export default function ElectronicHealthRecordPage() {
             setActiveTab('HISTORY');
             setPageHistory(1);
           }}
-          className={`px-4 py-2.5 border-b-2 transition cursor-pointer ${
-            activeTab === 'HISTORY'
+          className={`px-4 py-2.5 border-b-2 transition cursor-pointer ${activeTab === 'HISTORY'
               ? 'border-slate-900 text-slate-900 font-bold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+            }`}
         >
           Lịch sử khám bệnh ({filteredAppointments.length})
         </button>
@@ -1629,13 +1633,28 @@ export default function ElectronicHealthRecordPage() {
             setActiveTab('HOSPITALS');
             setPageHospitals(1);
           }}
-          className={`px-4 py-2.5 border-b-2 transition cursor-pointer ${
-            activeTab === 'HOSPITALS'
+          className={`px-4 py-2.5 border-b-2 transition cursor-pointer ${activeTab === 'HOSPITALS'
               ? 'border-slate-900 text-slate-900 font-bold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+            }`}
         >
           Cơ sở KCB liên thông ({dynamicLinkedHospitals.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('TRENDS');
+          }}
+          className={`px-4 py-2.5 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'TRENDS'
+              ? 'border-emerald-700 text-emerald-950 font-bold'
+              : 'border-transparent text-slate-500 hover:text-emerald-800'
+            }`}
+        >
+          <Activity className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Diễn tiến & Sinh hiệu</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+            Xu hướng
+          </span>
         </button>
         <button
           type="button"
@@ -1643,11 +1662,10 @@ export default function ElectronicHealthRecordPage() {
             setActiveTab('PASSPORT');
             setPageAuditLogs(1);
           }}
-          className={`px-4 py-2.5 border-b-2 transition cursor-pointer ${
-            activeTab === 'PASSPORT'
+          className={`px-4 py-2.5 border-b-2 transition cursor-pointer ${activeTab === 'PASSPORT'
               ? 'border-slate-900 text-slate-900 font-bold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+            }`}
         >
           Nhật ký Bác sĩ tra cứu ({auditLogs.length})
         </button>
@@ -1756,11 +1774,10 @@ export default function ElectronicHealthRecordPage() {
                   setFilterHospital('ALL');
                   setPageHistory(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                  filterHospital === 'ALL'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${filterHospital === 'ALL'
                     ? 'bg-slate-900 text-white shadow-2xs font-bold'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
-                }`}
+                  }`}
               >
                 Tất cả cơ sở KCB ({completedAppointments.length})
               </button>
@@ -1775,11 +1792,10 @@ export default function ElectronicHealthRecordPage() {
                       setFilterHospital(hosp);
                       setPageHistory(1);
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
-                      isSelected
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${isSelected
                         ? 'bg-slate-900 text-white shadow-2xs font-bold'
                         : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
-                    }`}
+                      }`}
                   >
                     <Building2 className="w-3.5 h-3.5 opacity-70" />
                     <span>{hosp}</span>
@@ -2109,6 +2125,17 @@ export default function ElectronicHealthRecordPage() {
       )}
 
       {/* ========================================================= */}
+      {/* TAB 4: DIỄN TIẾN & SINH HIỆU (VITALS & HEALTH TRENDS) */}
+      {/* ========================================================= */}
+      {activeTab === 'TRENDS' && (
+        <VitalsTrendSection
+          mode="PATIENT"
+          appointments={completedAppointments}
+          patientProfile={selectedProfile}
+        />
+      )}
+
+      {/* ========================================================= */}
       {/* MODAL: OFFICIAL VIETNAM EMR FULL VIEW */}
       {/* ========================================================= */}
       <VietnamEMRModal
@@ -2187,26 +2214,23 @@ export default function ElectronicHealthRecordPage() {
                       key={sec.id}
                       type="button"
                       onClick={() => toggleSection(sec.id)}
-                      className={`w-full p-2.5 sm:p-3 rounded-xl border text-left flex items-start gap-3 transition cursor-pointer ${
-                        isChecked
+                      className={`w-full p-2.5 sm:p-3 rounded-xl border text-left flex items-start gap-3 transition cursor-pointer ${isChecked
                           ? 'bg-emerald-50/70 border-emerald-500 shadow-2xs'
                           : 'border-slate-200 bg-white hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       {/* Checkbox */}
                       <div
-                        className={`w-4 h-4 rounded mt-0.5 shrink-0 flex items-center justify-center transition ${
-                          isChecked ? 'bg-emerald-600 text-white' : 'border border-slate-300 bg-white'
-                        }`}
+                        className={`w-4 h-4 rounded mt-0.5 shrink-0 flex items-center justify-center transition ${isChecked ? 'bg-emerald-600 text-white' : 'border border-slate-300 bg-white'
+                          }`}
                       >
                         {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
                       </div>
 
                       {/* Icon */}
                       <div
-                        className={`p-1.5 rounded-lg shrink-0 ${
-                          isChecked ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
-                        }`}
+                        className={`p-1.5 rounded-lg shrink-0 ${isChecked ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                          }`}
                       >
                         <IconComp className="w-4 h-4" />
                       </div>

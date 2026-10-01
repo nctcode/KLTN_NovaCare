@@ -13,6 +13,22 @@ import { PatientProfile } from '@prisma/client';
 export class PatientProfilesService {
   constructor(private prisma: PrismaService) { }
 
+  public generatePatientCode(identityNumber?: string | null): string {
+    if (identityNumber && identityNumber.trim().length >= 9) {
+      const cleanId = identityNumber.trim().replace(/\D/g, '');
+      return `NOVA-${cleanId}`;
+    }
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let randomStr = '';
+    for (let i = 0; i < 6; i++) {
+      randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `NOVA-${yy}${mm}-${randomStr}`;
+  }
+
   async create(userId: string, createDto: CreatePatientProfileDto): Promise<PatientProfile> {
     // Nếu đặt isDefault = true, cập nhật các hồ sơ khác thành false
     if (createDto.isDefault) {
@@ -27,10 +43,13 @@ export class PatientProfilesService {
       where: { userId, deletedAt: null },
     });
 
+    const patientCode = this.generatePatientCode(createDto.identityNumber);
+
     try {
       const profile = await this.prisma.patientProfile.create({
         data: {
           ...createDto,
+          patientCode,
           userId,
           isDefault: createDto.isDefault ?? count === 0,
           dateOfBirth: createDto.dateOfBirth ? new Date(createDto.dateOfBirth) : null,
@@ -51,10 +70,24 @@ export class PatientProfilesService {
   }
 
   async findAll(userId: string): Promise<PatientProfile[]> {
-    return this.prisma.patientProfile.findMany({
+    const profiles = await this.prisma.patientProfile.findMany({
       where: { userId, deletedAt: null },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
     });
+
+    // Auto-heal missing patientCode for legacy records
+    for (const p of profiles) {
+      if (!p.patientCode) {
+        const healedCode = this.generatePatientCode(p.identityNumber);
+        await this.prisma.patientProfile.update({
+          where: { id: p.id },
+          data: { patientCode: healedCode },
+        }).catch(() => null);
+        p.patientCode = healedCode;
+      }
+    }
+
+    return profiles;
   }
 
   async findOne(id: string, userId: string): Promise<PatientProfile> {
@@ -71,6 +104,16 @@ export class PatientProfilesService {
       throw new ForbiddenException('Bạn không có quyền xem hồ sơ này');
     }
 
+    // Auto-heal missing patientCode
+    if (!profile.patientCode) {
+      const healedCode = this.generatePatientCode(profile.identityNumber);
+      await this.prisma.patientProfile.update({
+        where: { id: profile.id },
+        data: { patientCode: healedCode },
+      }).catch(() => null);
+      profile.patientCode = healedCode;
+    }
+
     return profile;
   }
 
@@ -80,7 +123,7 @@ export class PatientProfilesService {
     updateDto: UpdatePatientProfileDto
   ): Promise<PatientProfile> {
     // Kiểm tra quyền sở hữu
-    await this.findOne(id, userId);
+    const existing = await this.findOne(id, userId);
 
     // Nếu đặt isDefault = true, cập nhật các hồ sơ khác
     if (updateDto.isDefault) {
@@ -90,10 +133,16 @@ export class PatientProfilesService {
       });
     }
 
+    let updatedPatientCode: string | undefined = undefined;
+    if (updateDto.identityNumber && updateDto.identityNumber !== existing.identityNumber) {
+      updatedPatientCode = this.generatePatientCode(updateDto.identityNumber);
+    }
+
     const profile = await this.prisma.patientProfile.update({
       where: { id },
       data: {
         ...updateDto,
+        ...(updatedPatientCode ? { patientCode: updatedPatientCode } : {}),
         dateOfBirth: updateDto.dateOfBirth ? new Date(updateDto.dateOfBirth) : undefined,
       },
     });

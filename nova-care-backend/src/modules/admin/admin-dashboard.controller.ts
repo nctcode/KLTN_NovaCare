@@ -20,9 +20,15 @@ export class AdminDashboardController {
   }
 
   @Get('appointments-by-day')
-  @ApiOperation({ summary: 'Thống kê lịch hẹn theo ngày (7 ngày gần nhất)' })
+  @ApiOperation({ summary: 'Thống kê lịch hẹn theo ngày (7 ngày gần nhất) kèm trạng thái' })
   getAppointmentsByDay() {
     return this.service.getAppointmentsByDay();
+  }
+
+  @Get('appointment-status-distribution')
+  @ApiOperation({ summary: 'Phân bổ trạng thái lịch hẹn toàn hệ thống' })
+  getAppointmentStatusDistribution() {
+    return this.service.getAppointmentStatusDistribution();
   }
 
   @Get('revenue-by-month')

@@ -1,8 +1,10 @@
 export interface InteroperabilityLookupPayload {
   query: string;
   pin?: string;
-  doctorName?: string;
+  hospitalId?: string;
   hospitalName?: string;
+  doctorId?: string;
+  doctorName?: string;
   purpose?: string;
 }
 
@@ -78,6 +80,19 @@ export interface HospitalGroup {
   encounters: EncounterItem[];
 }
 
+export interface AuditLogEntry {
+  id: string;
+  accessedAt: string;
+  hospitalName: string;
+  doctorName: string;
+  purpose: string;
+  ipAddress?: string;
+  status?: string;
+  method?: string;
+  patientName?: string;
+  accessedData?: string;
+}
+
 export interface LookupResponseData {
   success: boolean;
   lookupType: string;
@@ -102,6 +117,7 @@ export interface LookupResponseData {
     queriedBy: string;
     ipAddress: string;
   };
+  auditLogs?: AuditLogEntry[];
 }
 
 const CANDIDATE_URLS = [
@@ -273,4 +289,36 @@ export async function getQd4750Extraction(encounterCodeOrId: string): Promise<Qd
 
   return (result.data || result) as Qd4750ExportPackage;
 }
+
+export async function fetchHospitals(): Promise<Array<{ id: string; name: string; address?: string; city?: string }>> {
+  for (const baseUrl of CANDIDATE_URLS) {
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/hospitals`);
+      if (res.ok) {
+        const json = await res.json();
+        const items = json.data?.items || json.data || json;
+        if (Array.isArray(items)) return items;
+      }
+    } catch {}
+  }
+  return [];
+}
+
+export async function fetchDoctors(hospitalId?: string): Promise<Array<{ id: string; fullName: string; title?: string; qualification?: string }>> {
+  for (const baseUrl of CANDIDATE_URLS) {
+    try {
+      const url = hospitalId
+        ? `${baseUrl}/api/v1/doctors?hospitalId=${encodeURIComponent(hospitalId)}`
+        : `${baseUrl}/api/v1/doctors`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        const items = json.data?.items || json.data || json;
+        if (Array.isArray(items)) return items;
+      }
+    } catch {}
+  }
+  return [];
+}
+
 

@@ -72,7 +72,7 @@ const statusConfig: Record<string, { label: string; style: string; icon: React.R
     icon: <CheckCircle2 className="h-3.5 w-3.5" />
   },
   COMPLETED: {
-    label: 'Đã khám xong',
+    label: 'Mô phỏng kết quả khám (Demo)',
     style: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
     icon: <CheckCircle2 className="h-3.5 w-3.5" />
   },

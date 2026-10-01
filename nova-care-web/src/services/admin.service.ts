@@ -31,6 +31,11 @@ export const adminService = {
     return extractData(response);
   },
 
+  async getAppointmentStatusDistribution(): Promise<any> {
+    const response = await apiClient.get<any>('/admin/dashboard/appointment-status-distribution');
+    return extractData(response);
+  },
+
   async getRevenueByMonth(): Promise<any> {
     const response = await apiClient.get<any>('/admin/dashboard/revenue-by-month');
     return extractData(response);
@@ -477,6 +482,48 @@ export const adminService = {
     hospitalId: string;
   }): Promise<any> {
     const response = await apiClient.post<any>('/admin/users/hospital-admin', data);
+    return extractData(response);
+  },
+
+  // Interoperability Supervision & Monitoring (HIE)
+  async getInteroperabilityOverview(): Promise<any> {
+    const response = await apiClient.get<any>('/admin/interoperability/overview');
+    return extractData(response);
+  },
+
+  async getInteroperabilityTrafficChart(): Promise<any> {
+    const response = await apiClient.get<any>('/admin/interoperability/traffic-chart');
+    return extractData(response);
+  },
+
+  async getInteroperabilityHospitalMatrix(): Promise<any> {
+    const response = await apiClient.get<any>('/admin/interoperability/hospital-matrix');
+    return extractData(response);
+  },
+
+  async getInteroperabilityLiveAuditStream(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }): Promise<any> {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    if (params?.search) query.append('search', params.search);
+    if (params?.status) query.append('status', params.status);
+
+    const response = await apiClient.get<any>(`/admin/interoperability/live-audit-stream?${query.toString()}`);
+    return extractData(response);
+  },
+
+  async getInteroperabilityGateways(): Promise<any> {
+    const response = await apiClient.get<any>('/admin/interoperability/gateways');
+    return extractData(response);
+  },
+
+  async simulateInteroperabilityTraffic(): Promise<any> {
+    const response = await apiClient.post<any>('/admin/interoperability/simulate-traffic', {});
     return extractData(response);
   },
 };

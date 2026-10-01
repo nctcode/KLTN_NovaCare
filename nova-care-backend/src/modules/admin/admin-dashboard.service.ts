@@ -18,6 +18,7 @@ export class AdminDashboardService {
 
     const [
       totalUsers,
+      totalPatients,
       totalDoctors,
       totalHospitals,
       todayAppointments,
@@ -25,6 +26,7 @@ export class AdminDashboardService {
       todayRevenueRaw,
       totalRevenueRaw,
     ] = await Promise.all([
+      this.prisma.user.count({ where: { deletedAt: null } }),
       this.prisma.user.count({ where: { deletedAt: null, role: 'PATIENT' } }),
       this.prisma.doctor.count({ where: { deletedAt: null } }),
       this.prisma.hospital.count({ where: { deletedAt: null } }),
@@ -47,6 +49,7 @@ export class AdminDashboardService {
 
     return {
       totalUsers,
+      totalPatients,
       totalDoctors,
       totalHospitals,
       todayAppointments,
@@ -57,7 +60,18 @@ export class AdminDashboardService {
   }
 
   async getAppointmentsByDay() {
-    const result: { date: string; label: string; count: number }[] = [];
+    const result: {
+      date: string;
+      label: string;
+      count: number;
+      total: number;
+      completed: number;
+      confirmed: number;
+      pending: number;
+      cancelled: number;
+      awaitingPayment: number;
+      paid: number;
+    }[] = [];
 
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -70,14 +84,80 @@ export class AdminDashboardService {
       const end = new Date(d);
       end.setHours(23, 59, 59, 999);
 
-      const count = await this.prisma.appointment.count({
+      const appts = await this.prisma.appointment.findMany({
         where: { createdAt: { gte: start, lte: end } },
+        select: { status: true },
       });
 
-      result.push({ date: dateStr, label: dayLabel, count });
+      let completed = 0;
+      let confirmed = 0;
+      let pending = 0;
+      let cancelled = 0;
+      let awaitingPayment = 0;
+      let paid = 0;
+
+      for (const a of appts) {
+        if (a.status === 'COMPLETED') completed++;
+        else if (a.status === 'CONFIRMED') confirmed++;
+        else if (a.status === 'PENDING') pending++;
+        else if (a.status === 'CANCELLED') cancelled++;
+        else if (a.status === 'AWAITING_PAYMENT') awaitingPayment++;
+        else if (a.status === 'PAID') paid++;
+      }
+
+      result.push({
+        date: dateStr,
+        label: dayLabel,
+        count: appts.length,
+        total: appts.length,
+        completed,
+        confirmed,
+        pending,
+        cancelled,
+        awaitingPayment,
+        paid,
+      });
     }
 
     return result;
+  }
+
+  async getAppointmentStatusDistribution() {
+    const statusGroups = await this.prisma.appointment.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    });
+
+    const labelMap: Record<string, { label: string; color: string }> = {
+      COMPLETED: { label: 'Đã hoàn thành', color: '#10b981' },
+      CONFIRMED: { label: 'Đã xác nhận', color: '#3b82f6' },
+      PENDING: { label: 'Chờ duyệt / khám', color: '#f59e0b' },
+      AWAITING_PAYMENT: { label: 'Chờ thanh toán', color: '#8b5cf6' },
+      PAID: { label: 'Đã thanh toán', color: '#06b6d4' },
+      CANCELLED: { label: 'Đã hủy', color: '#ef4444' },
+    };
+
+    const total = statusGroups.reduce((acc, cur) => acc + cur._count.id, 0);
+
+    return statusGroups
+      .map((item) => {
+        const config = labelMap[item.status] || {
+          label: item.status,
+          color: '#94a3b8',
+        };
+        const count = item._count.id;
+        const percentage =
+          total > 0 ? Number(((count / total) * 100).toFixed(1)) : 0;
+
+        return {
+          status: item.status,
+          label: config.label,
+          count,
+          percentage,
+          color: config.color,
+        };
+      })
+      .sort((a, b) => b.count - a.count);
   }
 
   async getRevenueByMonth() {
@@ -108,11 +188,11 @@ export class AdminDashboardService {
   async getTopDoctors() {
     const doctors = await this.prisma.doctor.findMany({
       where: { deletedAt: null },
-      take: 5,
       include: {
         workPlaces: {
           include: {
             specialty: true,
+            hospital: { select: { name: true } },
             slots: {
               include: {
                 appointments: true,
@@ -127,9 +207,11 @@ export class AdminDashboardService {
       .map((doc) => {
         let appointmentCount = 0;
         const specialtyNames = new Set<string>();
+        const hospitalNames = new Set<string>();
 
         doc.workPlaces.forEach((wp) => {
           if (wp.specialty) specialtyNames.add(wp.specialty.name);
+          if (wp.hospital) hospitalNames.add(wp.hospital.name);
           wp.slots.forEach((slot) => {
             appointmentCount += slot.appointments.length;
           });
@@ -141,47 +223,74 @@ export class AdminDashboardService {
           avatarUrl: doc.avatarUrl,
           qualification: doc.qualification,
           specialties: Array.from(specialtyNames).join(', '),
+          hospitals: Array.from(hospitalNames).join(', '),
           appointmentCount,
         };
       })
-      .sort((a, b) => b.appointmentCount - a.appointmentCount);
+      .sort((a, b) => b.appointmentCount - a.appointmentCount)
+      .slice(0, 5);
   }
 
   async getTopHospitals() {
     const hospitals = await this.prisma.hospital.findMany({
       where: { deletedAt: null },
-      take: 5,
       include: {
         workPlaces: {
           include: {
             slots: {
               include: {
-                appointments: true,
+                appointments: {
+                  select: { id: true, status: true },
+                },
               },
+            },
+          },
+        },
+        services: {
+          include: {
+            appointments: {
+              select: { id: true, status: true },
             },
           },
         },
       },
     });
 
-    return hospitals
-      .map((hosp) => {
-        let appointmentCount = 0;
-        hosp.workPlaces.forEach((wp) => {
-          wp.slots.forEach((slot) => {
-            appointmentCount += slot.appointments.length;
-          });
-        });
+    const totalAllAppointments = await this.prisma.appointment.count();
 
-        return {
-          id: hosp.id,
-          name: hosp.name,
-          address: hosp.address,
-          logoUrl: hosp.logoUrl,
-          appointmentCount,
-        };
-      })
-      .sort((a, b) => b.appointmentCount - a.appointmentCount);
+    const list = hospitals.map((hosp) => {
+      const appointmentIds = new Set<string>();
+
+      hosp.workPlaces.forEach((wp) => {
+        wp.slots.forEach((slot) => {
+          slot.appointments.forEach((apt) => appointmentIds.add(apt.id));
+        });
+      });
+
+      hosp.services.forEach((srv) => {
+        srv.appointments.forEach((apt) => appointmentIds.add(apt.id));
+      });
+
+      const appointmentCount = appointmentIds.size;
+      const percentage =
+        totalAllAppointments > 0
+          ? Number(((appointmentCount / totalAllAppointments) * 100).toFixed(1))
+          : 0;
+
+      return {
+        id: hosp.id,
+        name: hosp.name,
+        address: hosp.address,
+        city: hosp.city,
+        logoUrl: hosp.logoUrl,
+        type: hosp.type,
+        appointmentCount,
+        percentage,
+      };
+    });
+
+    list.sort((a, b) => b.appointmentCount - a.appointmentCount);
+    return list.slice(0, 5);
   }
 
   async getAuditLogs(page = 1, limit = 20, search?: string) {
