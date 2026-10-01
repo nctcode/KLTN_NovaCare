@@ -122,8 +122,8 @@ export interface LookupResponseData {
 
 const CANDIDATE_URLS = [
   process.env.NEXT_PUBLIC_NOVACARE_API_URL,
-  'http://localhost:5000',
   'http://localhost:3000',
+  'http://localhost:5000',
 ].filter(Boolean) as string[];
 
 export async function lookupPatientRecord(payload: InteroperabilityLookupPayload): Promise<LookupResponseData> {
