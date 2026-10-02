@@ -176,9 +176,15 @@ export function VietnamEMRModal({
 
   const cleanDoctorNotes = (notes?: string | null) => {
     if (!notes) return 'Uống thuốc đúng liều và thời gian theo đơn. Ăn uống điều độ, tránh các yếu tố khởi phát dị ứng. Tái khám theo lịch hẹn.';
+    if (notes.includes('không chia sẻ')) return '🔒 Người bệnh không cấp quyền chia sẻ lời dặn của bác sĩ.';
     const cleaned = notes.replace(/\[MOCK HIS\]/gi, '').replace(/\[.*?\]/g, '').trim();
     return cleaned || 'Uống thuốc đúng liều và thời gian theo đơn. Ăn uống điều độ, tránh các yếu tố khởi phát dị ứng. Tái khám theo lịch hẹn.';
   };
+
+  const isSummaryShared = !encounter.clinicalSummary?.includes('không chia sẻ') && !encounter.chiefComplaint?.includes('không chia sẻ');
+  const isDiagnosesShared = diagnoses.length > 0 && !encounter.initialDiagnosis?.includes('không chia sẻ');
+  const isObservationsShared = observations && observations.length > 0;
+  const isPrescriptionShared = encounter.prescription !== null && rxItems.length > 0;
 
   const specNameLower = (encounter.specialtyName || '').toLowerCase();
   const isCardiology = specNameLower.includes('tim') || specNameLower.includes('mạch');
@@ -194,11 +200,11 @@ export function VietnamEMRModal({
   const isEndocrinology = specNameLower.includes('nội tiết') || specNameLower.includes('đường huyết');
   const isObstetrics = specNameLower.includes('sản') || specNameLower.includes('phụ');
 
-  const bpVal = vitalSigns.find((v) => v.name.toLowerCase().includes('huyết'))?.value || '120/80';
-  const hrVal = vitalSigns.find((v) => v.name.toLowerCase().includes('tim') || v.name.toLowerCase().includes('mạch'))?.value || '76';
-  const tempVal = vitalSigns.find((v) => v.name.toLowerCase().includes('nhiệt'))?.value || '36.8';
-  const spo2Val = vitalSigns.find((v) => v.name.toLowerCase().includes('spo2'))?.value || '98';
-  const bmiVal = vitalSigns.find((v) => v.name.toLowerCase().includes('bmi'))?.value || '22.0';
+  const bpVal = isObservationsShared ? (vitalSigns.find((v) => v.name.toLowerCase().includes('huyết'))?.value || '120/80') : '---';
+  const hrVal = isObservationsShared ? (vitalSigns.find((v) => v.name.toLowerCase().includes('tim') || v.name.toLowerCase().includes('mạch'))?.value || '76') : '---';
+  const tempVal = isObservationsShared ? (vitalSigns.find((v) => v.name.toLowerCase().includes('nhiệt'))?.value || '36.8') : '---';
+  const spo2Val = isObservationsShared ? (vitalSigns.find((v) => v.name.toLowerCase().includes('spo2'))?.value || '98') : '---';
+  const bmiVal = isObservationsShared ? (vitalSigns.find((v) => v.name.toLowerCase().includes('bmi'))?.value || '22.0') : '---';
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white">
@@ -440,15 +446,21 @@ export function VietnamEMRModal({
                   <tbody className="divide-y divide-slate-200">
                     <tr>
                       <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">1. Lý do vào khám:</td>
-                      <td className="p-2 font-medium text-slate-950 leading-relaxed">{encounter.chiefComplaint || 'Khám kiểm tra chuyên khoa theo lịch hẹn'}</td>
+                      <td className="p-2 font-medium text-slate-950 leading-relaxed">
+                        {isSummaryShared ? (encounter.chiefComplaint || 'Khám kiểm tra chuyên khoa theo lịch hẹn') : '🔒 Người bệnh không cấp quyền chia sẻ lý do khám'}
+                      </td>
                     </tr>
                     <tr>
                       <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">2. Khởi phát bệnh:</td>
-                      <td className="p-2 text-slate-900">Ngày thứ 2 - 3 của bệnh (Diễn tiến tăng dần)</td>
+                      <td className="p-2 text-slate-900">
+                        {isSummaryShared ? 'Ngày thứ 2 - 3 của bệnh (Diễn tiến tăng dần)' : '🔒 Không chia sẻ'}
+                      </td>
                     </tr>
                     <tr>
                       <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200 align-top">3. Quá trình bệnh lý:</td>
-                      <td className="p-2 text-slate-900 leading-relaxed">{encounter.clinicalSummary || 'Bệnh nhân đến khám theo lịch hẹn, sinh hiệu ổn định, tiếp xúc tốt.'}</td>
+                      <td className="p-2 text-slate-900 leading-relaxed">
+                        {isSummaryShared ? (encounter.clinicalSummary || 'Bệnh nhân đến khám theo lịch hẹn, sinh hiệu ổn định, tiếp xúc tốt.') : '🔒 Người bệnh không cấp quyền chia sẻ tóm tắt diễn biến bệnh'}
+                      </td>
                     </tr>
                     <tr>
                       <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">4. Tiền sử bản thân:</td>
@@ -484,7 +496,7 @@ export function VietnamEMRModal({
                     <tr>
                       <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">1. Tri giác & Toàn trạng:</td>
                       <td className="p-2 text-slate-900">
-                        Bệnh nhân tỉnh táo, tiếp xúc tốt (Glasgow: 15 điểm). Da niêm hồng, không phù, không xuất huyết dưới da, tuyến giáp không to, hạch ngoại vi không sờ chạm.
+                        {isSummaryShared ? 'Bệnh nhân tỉnh táo, tiếp xúc tốt (Glasgow: 15 điểm). Da niêm hồng, không phù, không xuất huyết dưới da, tuyến giáp không to, hạch ngoại vi không sờ chạm.' : '🔒 Người bệnh không cấp quyền chia sẻ mục này'}
                       </td>
                     </tr>
                     <tr>
@@ -492,28 +504,34 @@ export function VietnamEMRModal({
                         2. Dấu hiệu sinh tồn:
                       </td>
                       <td className="p-2">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
-                            <span className="text-slate-500 block text-[10px]">Huyết áp (HA)</span>
-                            <strong className="text-slate-950 text-xs sm:text-sm">{bpVal} mmHg</strong>
+                        {isObservationsShared ? (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                            <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                              <span className="text-slate-500 block text-[10px]">Huyết áp (HA)</span>
+                              <strong className="text-slate-950 text-xs sm:text-sm">{bpVal} mmHg</strong>
+                            </div>
+                            <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                              <span className="text-slate-500 block text-[10px]">Mạch / Nhịp tim</span>
+                              <strong className="text-slate-950 text-xs sm:text-sm">{hrVal} lần/phút</strong>
+                            </div>
+                            <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                              <span className="text-slate-500 block text-[10px]">Thân nhiệt</span>
+                              <strong className="text-slate-950 text-xs sm:text-sm">{tempVal} °C</strong>
+                            </div>
+                            <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                              <span className="text-slate-500 block text-[10px]">SpO2</span>
+                              <strong className="text-slate-950 text-xs sm:text-sm">{spo2Val} %</strong>
+                            </div>
+                            <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                              <span className="text-slate-500 block text-[10px]">Chỉ số BMI</span>
+                              <strong className="text-emerald-800 text-xs sm:text-sm">{bmiVal} kg/m²</strong>
+                            </div>
                           </div>
-                          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
-                            <span className="text-slate-500 block text-[10px]">Mạch / Nhịp tim</span>
-                            <strong className="text-slate-950 text-xs sm:text-sm">{hrVal} lần/phút</strong>
+                        ) : (
+                          <div className="p-2.5 text-xs italic text-slate-600 bg-slate-50 rounded border border-slate-200">
+                            🔒 Người bệnh không cấp quyền chia sẻ dấu hiệu sinh tồn và cận lâm sàng trong phạm vi đợt khám này.
                           </div>
-                          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
-                            <span className="text-slate-500 block text-[10px]">Thân nhiệt</span>
-                            <strong className="text-slate-950 text-xs sm:text-sm">{tempVal} °C</strong>
-                          </div>
-                          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
-                            <span className="text-slate-500 block text-[10px]">SpO2</span>
-                            <strong className="text-slate-950 text-xs sm:text-sm">{spo2Val} %</strong>
-                          </div>
-                          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
-                            <span className="text-slate-500 block text-[10px]">Chỉ số BMI</span>
-                            <strong className="text-emerald-800 text-xs sm:text-sm">{bmiVal} kg/m²</strong>
-                          </div>
-                        </div>
+                        )}
                       </td>
                     </tr>
                   </tbody>
@@ -528,32 +546,38 @@ export function VietnamEMRModal({
                 <span>III. KHÁM CÁC HỆ CƠ QUAN CHUNG</span>
               </h3>
 
-              <div className="border border-slate-300 rounded overflow-hidden text-xs">
-                <table className="w-full table-fixed border-collapse">
-                  <colgroup>
-                    <col className="w-[24%]" />
-                    <col className="w-[76%]" />
-                  </colgroup>
-                  <tbody className="divide-y divide-slate-200">
-                    <tr>
-                      <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">1. Tuần hoàn:</td>
-                      <td className="p-2 text-slate-900">Tim đều, T1 T2 rõ, không âm thổi bệnh lý.</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">2. Hô hấp:</td>
-                      <td className="p-2 text-slate-900">Lồng ngực cân đối, phế nang êm dịu 2 phế trường, không rale.</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">3. Tiêu hóa:</td>
-                      <td className="p-2 text-slate-900">Bụng mềm, không chướng, gan lách không to.</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">4. Thần kinh - Cơ khớp:</td>
-                      <td className="p-2 text-slate-900">Cơ lực tứ chi 5/5, các khớp vận động bình thường, không yếu liệt.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {isSummaryShared ? (
+                <div className="border border-slate-300 rounded overflow-hidden text-xs">
+                  <table className="w-full table-fixed border-collapse">
+                    <colgroup>
+                      <col className="w-[24%]" />
+                      <col className="w-[76%]" />
+                    </colgroup>
+                    <tbody className="divide-y divide-slate-200">
+                      <tr>
+                        <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">1. Tuần hoàn:</td>
+                        <td className="p-2 text-slate-900">Tim đều, T1 T2 rõ, không âm thổi bệnh lý.</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">2. Hô hấp:</td>
+                        <td className="p-2 text-slate-900">Lồng ngực cân đối, phế nang êm dịu 2 phế trường, không rale.</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">3. Tiêu hóa:</td>
+                        <td className="p-2 text-slate-900">Bụng mềm, không chướng, gan lách không to.</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">4. Thần kinh - Cơ khớp:</td>
+                        <td className="p-2 text-slate-900">Cơ lực tứ chi 5/5, các khớp vận động bình thường, không yếu liệt.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-2.5 text-xs italic text-slate-600 bg-slate-50 rounded border border-slate-200">
+                  🔒 Người bệnh không cấp quyền chia sẻ phần khám các hệ cơ quan chung trong đợt khám này.
+                </div>
+              )}
             </div>
 
             {/* IV. KHÁM CHUYÊN KHOA ĐẶC THÙ */}
@@ -565,60 +589,66 @@ export function VietnamEMRModal({
                 </h3>
               </div>
 
-              <div className="border-2 border-emerald-300 rounded-lg overflow-hidden bg-emerald-50/30 text-xs">
-                <table className="w-full table-fixed border-collapse">
-                  <colgroup>
-                    <col className="w-[28%]" />
-                    <col className="w-[72%]" />
-                  </colgroup>
-                  <tbody className="divide-y divide-emerald-200/80">
-                    {isCardiology && (
-                      <>
+              {isSummaryShared ? (
+                <div className="border-2 border-emerald-300 rounded-lg overflow-hidden bg-emerald-50/30 text-xs">
+                  <table className="w-full table-fixed border-collapse">
+                    <colgroup>
+                      <col className="w-[28%]" />
+                      <col className="w-[72%]" />
+                    </colgroup>
+                    <tbody className="divide-y divide-emerald-200/80">
+                      {isCardiology && (
+                        <>
+                          <tr>
+                            <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Phân độ chức năng tim (NYHA):</td>
+                            <td className="p-2.5 text-slate-900 font-medium">NYHA I (Không hạn chế hoạt động thể lực thông thường)</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Khám mỏm tim & Tiếng tim:</td>
+                            <td className="p-2.5 text-slate-900">Mỏm tim đập ở khoang liên sườn V đường trung đòn trái, diện đập 1.5cm. Tiếng T1 T2 đanh gọn, không có tiếng T3 T4.</td>
+                          </tr>
+                        </>
+                      )}
+                      {isPediatrics && (
+                        <>
+                          <tr>
+                            <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Tiêm chủng mở rộng:</td>
+                            <td className="p-2.5 text-slate-900">Đã tiêm phòng đầy đủ các mũi cơ bản theo lịch tiêm chủng quốc gia.</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Khám thóp & Vận động:</td>
+                            <td className="p-2.5 text-slate-900">Thóp trước phẳng, không phồng. Vận động tinh và thô phát triển phù hợp lứa tuổi.</td>
+                          </tr>
+                        </>
+                      )}
+                      {isDermatology && (
+                        <>
+                          <tr>
+                            <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Thương tổn da cơ bản:</td>
+                            <td className="p-2.5 text-slate-900 font-medium">Tổn thương dát đỏ kèm sẩn phù mề đay, kích thước 0.5 - 2cm, bờ rõ.</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Cảm giác cơ năng:</td>
+                            <td className="p-2.5 text-slate-900">Ngứa nhiều từng cơn đặc biệt về chiều tối và khi thay đổi thời tiết.</td>
+                          </tr>
+                        </>
+                      )}
+                      {!isCardiology && !isPediatrics && !isDermatology && (
                         <tr>
-                          <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Phân độ chức năng tim (NYHA):</td>
-                          <td className="p-2.5 text-slate-900 font-medium">NYHA I (Không hạn chế hoạt động thể lực thông thường)</td>
+                          <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Khám thực thể chuyên khoa:</td>
+                          <td className="p-2.5 text-slate-900">
+                            {encounter.physicalExamination || 'Khám cơ quan chuyên khoa ghi nhận tình trạng ổn định, các nghiệm pháp lâm sàng trong giới hạn bình thường.'}
+                          </td>
                         </tr>
-                        <tr>
-                          <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Khám mỏm tim & Tiếng tim:</td>
-                          <td className="p-2.5 text-slate-900">Mỏm tim đập ở khoang liên sườn V đường trung đòn trái, diện đập 1.5cm. Tiếng T1 T2 đanh gọn, không có tiếng T3 T4.</td>
-                        </tr>
-                      </>
-                    )}
-                    {isPediatrics && (
-                      <>
-                        <tr>
-                          <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Tiêm chủng mở rộng:</td>
-                          <td className="p-2.5 text-slate-900">Đã tiêm phòng đầy đủ các mũi cơ bản theo lịch tiêm chủng quốc gia.</td>
-                        </tr>
-                        <tr>
-                          <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Khám thóp & Vận động:</td>
-                          <td className="p-2.5 text-slate-900">Thóp trước phẳng, không phồng. Vận động tinh và thô phát triển phù hợp lứa tuổi.</td>
-                        </tr>
-                      </>
-                    )}
-                    {isDermatology && (
-                      <>
-                        <tr>
-                          <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Thương tổn da cơ bản:</td>
-                          <td className="p-2.5 text-slate-900 font-medium">Tổn thương dát đỏ kèm sẩn phù mề đay, kích thước 0.5 - 2cm, bờ rõ.</td>
-                        </tr>
-                        <tr>
-                          <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Cảm giác cơ năng:</td>
-                          <td className="p-2.5 text-slate-900">Ngứa nhiều từng cơn đặc biệt về chiều tối và khi thay đổi thời tiết.</td>
-                        </tr>
-                      </>
-                    )}
-                    {!isCardiology && !isPediatrics && !isDermatology && (
-                      <tr>
-                        <td className="p-2.5 bg-emerald-100/60 font-bold text-emerald-950 border-r border-emerald-200">Khám thực thể chuyên khoa:</td>
-                        <td className="p-2.5 text-slate-900">
-                          {encounter.physicalExamination || 'Khám cơ quan chuyên khoa ghi nhận tình trạng ổn định, các nghiệm pháp lâm sàng trong giới hạn bình thường.'}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-2.5 text-xs italic text-slate-600 bg-slate-50 rounded border border-slate-200">
+                  🔒 Người bệnh không cấp quyền chia sẻ phần khám chuyên khoa đặc thù trong đợt khám này.
+                </div>
+              )}
             </div>
 
             {/* V. CHẨN ĐOÁN XÁC ĐỊNH (CHUẨN ICD-10) */}
@@ -659,9 +689,11 @@ export function VietnamEMRModal({
                       ))
                     ) : (
                       <tr>
-                        <td className="p-2 font-bold">• Bệnh chính:</td>
-                        <td className="p-2 font-bold text-slate-950">Khám & chẩn đoán chuyên khoa {encounter.specialtyName}</td>
-                        <td className="p-2 text-center font-mono font-bold">R69</td>
+                        <td colSpan={3} className="p-3 text-center text-slate-600 italic bg-slate-50">
+                          {encounter.initialDiagnosis === '[Người bệnh không chia sẻ mục này]'
+                            ? '🔒 Người bệnh không cấp quyền chia sẻ danh mục chẩn đoán trong phạm vi liên thông.'
+                            : `Khám & chẩn đoán chuyên khoa ${encounter.specialtyName}`}
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -685,7 +717,11 @@ export function VietnamEMRModal({
                   <tbody className="divide-y divide-slate-200">
                     <tr>
                       <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">1. Hướng điều trị:</td>
-                      <td className="p-2 text-slate-900 font-medium leading-relaxed">{encounter.treatmentPlan || 'Điều trị nội khoa ngoại trú kết hợp chế độ ăn uống, sinh hoạt và tuân thủ đơn thuốc.'}</td>
+                      <td className="p-2 text-slate-900 font-medium leading-relaxed">
+                        {isSummaryShared
+                          ? (encounter.treatmentPlan || 'Điều trị nội khoa ngoại trú kết hợp chế độ ăn uống, sinh hoạt và tuân thủ đơn thuốc.')
+                          : '🔒 Người bệnh không cấp quyền chia sẻ hướng điều trị'}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -731,7 +767,11 @@ export function VietnamEMRModal({
                     </tbody>
                   </table>
                 ) : (
-                  <div className="p-2.5 text-slate-500 italic border-b border-slate-200">Không kê đơn thuốc đặc trị / Tư vấn chế độ dinh dưỡng và sinh hoạt.</div>
+                  <div className="p-3 text-center text-slate-600 italic border-b border-slate-200 bg-slate-50">
+                    {encounter.prescription === null
+                      ? '🔒 Người bệnh không cấp quyền chia sẻ đơn thuốc trong phạm vi liên thông của đợt khám này.'
+                      : 'Không kê đơn thuốc đặc trị / Tư vấn chế độ dinh dưỡng và sinh hoạt.'}
+                  </div>
                 )}
 
                 <table className="w-full table-fixed border-collapse">
@@ -771,12 +811,18 @@ export function VietnamEMRModal({
                   <tr>
                     <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">1. Kết quả điều trị:</td>
                     <td className="p-2 text-slate-900 font-bold text-emerald-800">
-                      ✓ {encounter.treatmentResult || 'Khỏi / Thuyên giảm tốt (Bệnh nhân ổn định, đáp ứng phác đồ ngoại trú)'}
+                      {isSummaryShared
+                        ? (encounter.treatmentResult ? `✓ ${encounter.treatmentResult}` : '✓ Khỏi / Thuyên giảm tốt (Bệnh nhân ổn định, đáp ứng phác đồ ngoại trú)')
+                        : '🔒 Người bệnh không cấp quyền chia sẻ kết quả điều trị'}
                     </td>
                   </tr>
                   <tr>
                     <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">2. Tình trạng ra về:</td>
-                    <td className="p-2 text-slate-900 font-medium">{encounter.conclusion || 'Tình trạng người bệnh ổn định sau khi thăm khám và hoàn tất thủ tục.'}</td>
+                    <td className="p-2 text-slate-900 font-medium">
+                      {isSummaryShared
+                        ? (encounter.conclusion || 'Tình trạng người bệnh ổn định sau khi thăm khám và hoàn tất thủ tục.')
+                        : '🔒 Người bệnh không cấp quyền chia sẻ tình trạng ra về'}
+                    </td>
                   </tr>
                   <tr>
                     <td className="p-2 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">3. Hẹn ngày tái khám:</td>

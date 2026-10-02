@@ -3,6 +3,9 @@ export class UnifiedPatientDto {
   fullName: string;
   gender: string;
   dateOfBirth: Date | string;
+  allergies?: string;
+  bloodType?: string;
+  medicalHistory?: string;
 }
 
 export class UnifiedHospitalDto {
@@ -53,6 +56,10 @@ export class UnifiedEncounterDto {
   specialty: string;
   chiefComplaint?: string;
   clinicalSummary?: string;
+  physicalExamination?: string;
+  treatmentPlan?: string;
+  doctorNotes?: string;
+  conclusion?: string;
   diagnoses: UnifiedDiagnosisDto[];
   observations: UnifiedObservationDto[];
   prescription?: UnifiedPrescriptionDto | null;

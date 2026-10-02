@@ -458,6 +458,67 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
         )}
       </div>
 
+      {/* BANNER XÁC THỰC QUYỀN CHIA SẺ HỒ SƠ LIÊN THÔNG (CONSENT SCOPE) */}
+      {data.consentScope && (
+        <div className="bg-white rounded-xl border border-blue-200 p-4 shadow-2xs space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0" />
+              <div className="text-xs sm:text-sm font-extrabold text-slate-800">
+                {data.consentScope.hasConsent ? (
+                  <span>Xác thực quyền liên thông: Đã được người bệnh cấp quyền chia sẻ hồ sơ</span>
+                ) : (
+                  <span>Hồ sơ y tế nội bộ tại cơ sở khám chữa bệnh</span>
+                )}
+              </div>
+            </div>
+            {data.consentScope.hasConsent && (
+              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 self-start sm:self-auto">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                Hợp lệ theo Đơn đồng thuận khi đặt khám
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-0.5 text-slate-700">
+            <div>
+              <span className="text-slate-500 font-medium block">Cơ sở y tế nguồn được cấp phép:</span>
+              <span className="font-semibold text-slate-900">
+                {data.consentScope.grantedSourceHospitals && data.consentScope.grantedSourceHospitals.length > 0
+                  ? data.consentScope.grantedSourceHospitals.map((h) => h.name).join(', ')
+                  : 'Hồ sơ nội bộ tại cơ sở'}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-slate-500 font-medium block mb-1">Các nhóm dữ liệu trong phạm vi được chia sẻ:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {data.consentScope.allowedSections && data.consentScope.allowedSections.length > 0 ? (
+                  data.consentScope.allowedSections.map((sec) => {
+                    const labelMap: Record<string, string> = {
+                      SUMMARY: 'Khám lâm sàng & Tóm tắt',
+                      DIAGNOSES: 'Chẩn đoán bệnh',
+                      OBSERVATIONS: 'Xét nghiệm & Cận lâm sàng',
+                      PRESCRIPTIONS: 'Đơn thuốc & Điều trị',
+                    };
+                    return (
+                      <span
+                        key={sec}
+                        className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200"
+                      >
+                        ✓ {labelMap[sec] || sec}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span className="text-slate-500 italic">Toàn bộ dữ liệu hồ sơ nội bộ</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 2. TỔNG QUAN HỒ SƠ */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
@@ -718,6 +779,20 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
                           {hGroup.encounters.length} lượt khám
                         </span>
+                        {(() => {
+                          const isCrossHospital = data.consentScope?.grantedSourceHospitals?.some(
+                            (s) => s.id === hGroup.hospitalId
+                          );
+                          return isCrossHospital ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                              🔗 Cơ sở liên thông (Giới hạn theo phạm vi chia sẻ)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              🏥 Cơ sở nội bộ (Toàn quyền quản lý)
+                            </span>
+                          );
+                        })()}
                       </div>
                       <p className="text-xs text-slate-500 flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -760,6 +835,7 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
                         const timeFormatted = format(dateObj, 'HH:mm', { locale: vi });
                         const timeStr = timeFormatted !== '00:00' ? timeFormatted : '14:30';
 
+                        const isDiagRestricted = enc.initialDiagnosis?.includes('không chia sẻ') || (!enc.diagnoses?.length && enc.initialDiagnosis?.includes('không chia sẻ'));
                         const diagText = enc.diagnoses && enc.diagnoses.length > 0
                           ? `${enc.diagnoses[0].diseaseName} (${enc.diagnoses[0].icdCode || 'ICD-10'})`
                           : enc.initialDiagnosis || enc.clinicalSummary || 'Khám tổng quát';
@@ -779,7 +855,14 @@ export function PatientRecordDisplay({ data }: PatientRecordDisplayProps) {
                                 <span>{enc.specialtyName || 'Khoa Khám Bệnh'} · {enc.doctorName || 'Bác sĩ chuyên khoa'}</span>
                               </div>
                               <div className="text-xs text-slate-600 font-medium">
-                                Chẩn đoán: <span className="text-slate-800 font-semibold">{diagText}</span>
+                                Chẩn đoán:{' '}
+                                {isDiagRestricted ? (
+                                  <span className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1">
+                                    🔒 Người bệnh không chia sẻ mục này
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-800 font-semibold">{diagText}</span>
+                                )}
                               </div>
                             </div>
 

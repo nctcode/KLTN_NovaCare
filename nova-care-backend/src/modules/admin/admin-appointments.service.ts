@@ -239,6 +239,21 @@ export class AdminAppointmentsService {
         },
       });
 
+      // Xóa bệnh án mồ côi nếu có
+      const orphanedEncounter = await tx.medicalEncounter.findUnique({
+        where: { appointmentId: id },
+        include: { prescription: true },
+      });
+      if (orphanedEncounter) {
+        await tx.diagnosis.deleteMany({ where: { encounterId: orphanedEncounter.id } });
+        await tx.observation.deleteMany({ where: { encounterId: orphanedEncounter.id } });
+        if (orphanedEncounter.prescription) {
+          await tx.prescriptionItem.deleteMany({ where: { prescriptionId: orphanedEncounter.prescription.id } });
+          await tx.prescription.delete({ where: { id: orphanedEncounter.prescription.id } });
+        }
+        await tx.medicalEncounter.delete({ where: { id: orphanedEncounter.id } });
+      }
+
       return appt;
     });
 

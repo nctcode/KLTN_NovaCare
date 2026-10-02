@@ -599,6 +599,21 @@ export class AppointmentsService {
         }
       }
 
+      // Xóa bệnh án mồ côi nếu có (được tạo trước khi hủy)
+      const orphanedEncounter = await tx.medicalEncounter.findUnique({
+        where: { appointmentId: id },
+        include: { prescription: true },
+      });
+      if (orphanedEncounter) {
+        await tx.diagnosis.deleteMany({ where: { encounterId: orphanedEncounter.id } });
+        await tx.observation.deleteMany({ where: { encounterId: orphanedEncounter.id } });
+        if (orphanedEncounter.prescription) {
+          await tx.prescriptionItem.deleteMany({ where: { prescriptionId: orphanedEncounter.prescription.id } });
+          await tx.prescription.delete({ where: { id: orphanedEncounter.prescription.id } });
+        }
+        await tx.medicalEncounter.delete({ where: { id: orphanedEncounter.id } });
+      }
+
       // Ghi lịch sử
       await tx.appointmentStatusHistory.create({
         data: {
@@ -823,6 +838,16 @@ export class AppointmentsService {
 
     if (appointment.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException('Lịch khám đã ở trạng thái hoàn thành (COMPLETED)');
+    }
+
+    // Không cho hoàn thành lịch đã bị hủy, hết hạn hoặc vắng mặt
+    const nonCompletableStatuses: AppointmentStatus[] = [
+      AppointmentStatus.CANCELLED,
+      AppointmentStatus.EXPIRED,
+      AppointmentStatus.NO_SHOW,
+    ];
+    if (nonCompletableStatuses.includes(appointment.status)) {
+      throw new BadRequestException(`Không thể hoàn thành lịch khám ở trạng thái ${appointment.status}`);
     }
 
     const encounterDate = new Date();
@@ -1178,6 +1203,12 @@ export class AppointmentsService {
 
     if (!appointment) {
       throw new NotFoundException('Lịch khám không tồn tại');
+    }
+
+    // Không cho tạo bệnh án mock cho lịch đã bị hủy/hết hạn
+    const blockedStatuses = ['CANCELLED', 'EXPIRED', 'NO_SHOW'];
+    if (blockedStatuses.includes(appointment.status)) {
+      throw new BadRequestException(`Không thể tạo bệnh án cho lịch khám ở trạng thái ${appointment.status}`);
     }
 
     const workplace = appointment.slot?.doctorWorkplace;

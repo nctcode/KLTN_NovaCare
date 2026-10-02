@@ -93,6 +93,22 @@ export interface AuditLogEntry {
   accessedData?: string;
 }
 
+export interface ConsentScopeInfo {
+  hasConsent: boolean;
+  isInternalHospital: boolean;
+  grantedSourceHospitals: Array<{ id: string; name: string }>;
+  allowedSections: string[];
+  totalAllowedEncounters: number;
+  activeConsents?: Array<{
+    id: string;
+    sourceHospitalName?: string;
+    targetHospitalId?: string;
+    grantedAt?: string;
+    expiresAt?: string;
+    scope?: any;
+  }>;
+}
+
 export interface LookupResponseData {
   success: boolean;
   lookupType: string;
@@ -110,6 +126,7 @@ export interface LookupResponseData {
     totalEncounters: number;
     lastEncounterDate: string | null;
   };
+  consentScope?: ConsentScopeInfo;
   hospitalGroups: HospitalGroup[];
   latestAuditLog?: {
     id: string;

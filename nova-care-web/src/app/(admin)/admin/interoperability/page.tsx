@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
@@ -32,6 +33,11 @@ import {
   Loader2,
   Wifi,
   ExternalLink,
+  BarChart2,
+  KeyRound,
+  FileSpreadsheet,
+  Check,
+  Zap,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -44,13 +50,31 @@ import {
   Legend,
 } from 'recharts';
 
-export default function AdminInteroperabilityPage() {
+function AdminInteroperabilityContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
   const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
 
-  // State
-  const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'gateways'>('overview');
+  // State: separate 'overview' (Tổng quan & Cổng HIS) vs 'lookups' (Lượt tra cứu & Lưu lượng) vs 'audit' (Audit Log)
+  const initialActiveTab =
+    tabParam === 'audit' || tabParam === 'lookups' ? tabParam : 'overview';
+  const [activeTab, setActiveTab] = useState<'overview' | 'lookups' | 'audit'>(initialActiveTab);
+
+  useEffect(() => {
+    if (tabParam === 'audit') setActiveTab('audit');
+    else if (tabParam === 'lookups') setActiveTab('lookups');
+    else setActiveTab('overview');
+  }, [tabParam]);
+
+  const handleTabChange = (tab: 'overview' | 'lookups' | 'audit') => {
+    setActiveTab(tab);
+    router.push(`/admin/interoperability?tab=${tab}`);
+  };
+
   const [searchAudit, setSearchAudit] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [auditPage, setAuditPage] = useState(1);
@@ -67,7 +91,7 @@ export default function AdminInteroperabilityPage() {
   const { data: overview, isLoading: loadingOverview, refetch: refetchOverview } = useQuery({
     queryKey: ['admin-interop-overview'],
     queryFn: adminService.getInteroperabilityOverview,
-    refetchInterval: 15000, // Real-time poll every 15s
+    refetchInterval: 15000,
   });
 
   // 2. Traffic Chart
@@ -93,13 +117,27 @@ export default function AdminInteroperabilityPage() {
         search: searchAudit,
         status: statusFilter,
       }),
-    refetchInterval: 10000, // Live stream refresh every 10s
+    refetchInterval: 10000,
   });
 
   // 5. Gateways Health
   const { data: gateways, isLoading: loadingGateways, refetch: refetchGateways } = useQuery({
     queryKey: ['admin-interop-gateways'],
     queryFn: adminService.getInteroperabilityGateways,
+  });
+
+  // Simulate Traffic Mutation
+  const simulateMutation = useMutation({
+    mutationFn: () => adminService.simulateInteroperabilityTraffic(),
+    onSuccess: () => {
+      toast.success('Mô phỏng 1 phiên tra cứu liên viện thành công!');
+      refetchOverview();
+      refetchTraffic();
+      refetchAudit();
+    },
+    onError: () => {
+      toast.error('Lỗi khi mô phỏng phiên tra cứu');
+    },
   });
 
   // Safely extract audit stream items
@@ -150,8 +188,22 @@ export default function AdminInteroperabilityPage() {
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <Badge className="bg-emerald-500/20 text-[#66FF33] border-emerald-500/40 px-3 py-1.5 text-xs font-semibold rounded-xl">
             <Radio className="w-3 h-3 mr-1.5 animate-pulse text-[#66FF33]" />
-            Dữ liệu thực tế trực tiếp
+            Dữ liệu trực tiếp
           </Badge>
+
+          <Button
+            size="sm"
+            disabled={simulateMutation.isPending}
+            onClick={() => simulateMutation.mutate()}
+            className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 rounded-xl gap-1.5 shadow-sm"
+          >
+            {simulateMutation.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5 text-[#66FF33]" />
+            )}
+            Mô phỏng tra cứu
+          </Button>
 
           <Button
             variant="outline"
@@ -177,7 +229,7 @@ export default function AdminInteroperabilityPage() {
               <p className={`text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 {loadingOverview ? '...' : overview?.totalLookups || 0}
               </p>
-              <p className={`text-[11px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1`}>
+              <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 Hôm nay: {overview?.todayLookups || 0} lượt
               </p>
@@ -199,7 +251,7 @@ export default function AdminInteroperabilityPage() {
                 {loadingOverview ? '...' : `${overview?.successRate || 100}%`}
               </p>
               <p className={`text-[11px] font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Khớp mã & đúng mã PIN
+                Khớp mã định danh & đúng mã PIN
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold">
@@ -216,14 +268,14 @@ export default function AdminInteroperabilityPage() {
                 Cổng HIS Trực Tuyến
               </p>
               <p className={`text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                {loadingOverview ? '...' : `${overview?.connectedHospitals || 6}/${overview?.connectedHospitals || 6}`}
+                {loadingOverview ? '...' : overview?.connectedHospitals || 0}
               </p>
-              <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+              <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <Wifi className="w-3 h-3" />
-                100% Node hoạt động
+                100% Node hoạt động bình thường
               </p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-500 flex items-center justify-center font-bold">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold">
               <Building2 className="w-6 h-6" />
             </div>
           </CardContent>
@@ -239,7 +291,7 @@ export default function AdminInteroperabilityPage() {
               <p className={`text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 {loadingOverview ? '...' : overview?.linkedPatients || 0}
               </p>
-              <p className={`text-[11px] font-semibold text-cyan-600 dark:text-cyan-400`}>
+              <p className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">
                 {overview?.totalEncounters || 0} đợt khám sẵn sàng
               </p>
             </div>
@@ -250,10 +302,10 @@ export default function AdminInteroperabilityPage() {
         </Card>
       </div>
 
-      {/* Tabs Switcher */}
+      {/* Tabs Switcher: 3 distinct tabs */}
       <div className={`flex border-b ${isLight ? 'border-slate-200' : 'border-slate-800'} gap-6 text-xs sm:text-sm font-bold`}>
         <button
-          onClick={() => setActiveTab('overview')}
+          onClick={() => handleTabChange('overview')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'overview'
               ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
@@ -261,11 +313,23 @@ export default function AdminInteroperabilityPage() {
           }`}
         >
           <Activity className="w-4 h-4" />
-          <span>Biểu Đồ Lưu Lượng & Ma Trận</span>
+          <span>Tổng Quan Hệ Thống & Cổng HIS</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('audit')}
+          onClick={() => handleTabChange('lookups')}
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'lookups'
+              ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400'
+          }`}
+        >
+          <BarChart2 className="w-4 h-4" />
+          <span>Lượt Tra Cứu & Lưu Lượng</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('audit')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'audit'
               ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
@@ -280,131 +344,295 @@ export default function AdminInteroperabilityPage() {
             </Badge>
           )}
         </button>
-
-        <button
-          onClick={() => setActiveTab('gateways')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'gateways'
-              ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400'
-          }`}
-        >
-          <Server className="w-4 h-4" />
-          <span>Trạng Thái Cổng HIS Bệnh Viện</span>
-        </button>
       </div>
 
-      {/* ==========================================
-          TAB 1: BIỂU ĐỒ LƯU LƯỢNG & MA TRẬN
-         ========================================== */}
+      {/* =========================================================
+          TAB 1: TỔNG QUAN HỆ THỐNG & CỔNG HIS (OVERVIEW)
+         ========================================================= */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Biểu đồ lưu lượng 7 ngày */}
-          <Card className={`${cardStyle} lg:col-span-8`}>
-            <CardHeader className={`border-b pb-4 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-bold flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-emerald-500" />
-                    Lưu Lượng Tra Cứu Liên Viện 7 Ngày Qua
-                  </CardTitle>
-                  <CardDescription className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Thống kê số lượng phiên tra cứu thành công và các lượt bị chặn do sai mã PIN bảo mật
-                  </CardDescription>
+        <div className="space-y-6">
+          {/* Architecture 3-Step Flow Diagram */}
+          <Card className={`${cardStyle} p-6 overflow-hidden`}>
+            <div className="mb-4">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-emerald-500" />
+                Kiến Trúc Luồng Liên Thông Dữ Liệu Bệnh Án (HIE Architecture)
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Mô hình trao đổi an toàn đa viện chuẩn HL7 FHIR R4 kết hợp xác thực mã PIN hai lớp theo thời gian thực.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              {/* Step 1 */}
+              <div className={`p-4 rounded-2xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'} space-y-2`}>
+                <div className="flex items-center justify-between">
+                  <span className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">1</span>
+                  <Badge variant="outline" className="text-[10px]">Cơ sở tiếp nhận</Badge>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Thành công
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block ml-2" /> Cảnh báo lỗi
-                </div>
+                <h4 className="font-bold text-xs">Bệnh Viện Tiếp Nhận Khám</h4>
+                <p className="text-[11px] text-slate-500">
+                  Bác sĩ nhập số CCCD hoặc mã định danh của bệnh nhân trên hệ thống HIS để yêu cầu tra cứu lịch sử khám.
+                </p>
               </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {loadingTraffic ? (
-                <div className="h-72 flex items-center justify-center">
+
+              {/* Step 2 */}
+              <div className={`p-4 rounded-2xl border ${isLight ? 'bg-emerald-50/60 border-emerald-200' : 'bg-emerald-950/30 border-emerald-800/60'} space-y-2`}>
+                <div className="flex items-center justify-between">
+                  <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">2</span>
+                  <Badge className="bg-emerald-500 text-white text-[10px]">NovaCare HIE Gateway</Badge>
+                </div>
+                <h4 className="font-bold text-xs text-emerald-800 dark:text-emerald-400">Xác Thực & Kiểm Tra Quyền Hạn</h4>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  Kiểm tra mã PIN bí mật do bệnh nhân cung cấp. Ghi vết toàn bộ ngữ cảnh truy xuất vào Audit Log bất biến.
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className={`p-4 rounded-2xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'} space-y-2`}>
+                <div className="flex items-center justify-between">
+                  <span className="w-7 h-7 rounded-lg bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold text-xs flex items-center justify-center">3</span>
+                  <Badge variant="outline" className="text-[10px]">Cơ sở lưu trữ gốc</Badge>
+                </div>
+                <h4 className="font-bold text-xs">Truy Xuất Hồ Sơ FHIR Chuẩn Hóa</h4>
+                <p className="text-[11px] text-slate-500">
+                  Cổng kết nối HIS mã hóa và truyền trả dữ liệu tóm tắt bệnh án, đơn thuốc, cận lâm sàng theo chuẩn QĐ 4750-BYT.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Gateways Health Status List */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <Server className="w-5 h-5 text-emerald-500" />
+                  Trạng Thái Cổng Kết Nối HIS Bệnh Viện (HIS Gateways)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Theo dõi trực tiếp tình trạng máy chủ Node tích hợp tại các cơ sở khám chữa bệnh liên kết.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {loadingGateways ? (
+                <div className="col-span-full py-12 flex items-center justify-center">
                   <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
                 </div>
               ) : (
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={trafficChart || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#334155'} vertical={false} />
-                      <XAxis dataKey="label" stroke={isLight ? '#64748b' : '#94a3b8'} tickLine={false} />
-                      <YAxis stroke={isLight ? '#64748b' : '#94a3b8'} allowDecimals={false} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: isLight ? '#ffffff' : '#0f172a',
-                          borderColor: isLight ? '#cbd5e1' : '#334155',
-                          borderRadius: '12px',
-                          color: isLight ? '#0f172a' : '#ffffff',
-                          fontSize: '12px',
-                        }}
-                      />
-                      <Legend
-                        verticalAlign="bottom"
-                        height={36}
-                        formatter={(val) => <span className={`text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{val}</span>}
-                      />
-                      <Bar dataKey="success" name="Thành công" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="failed" name="Bị từ chối / Sai PIN" stackId="a" fill="#ef4444" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Ma trận phân bổ theo bệnh viện */}
-          <Card className={`${cardStyle} lg:col-span-4`}>
-            <CardHeader className={`border-b pb-4 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-blue-500" />
-                Cơ Sở Phát Sinh Tra Cứu
-              </CardTitle>
-              <CardDescription className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Tần suất gửi yêu cầu tra cứu từ các bệnh viện liên kết
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-3">
-              {loadingMatrix ? (
-                <div className="h-64 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                </div>
-              ) : hospitalMatrix?.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-8">Chưa có dữ liệu tra cứu từ bệnh viện nào</p>
-              ) : (
-                hospitalMatrix?.map((item: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className={`p-3 rounded-xl border text-xs space-y-2 ${
-                      isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-bold">
-                      <span className="truncate max-w-[200px]">{item.hospitalName}</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-mono font-black">
-                        {item.requestCount} lượt
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className="bg-blue-500 h-full rounded-full"
-                          style={{ width: `${Math.min(100, Math.max(8, item.percentage))}%` }}
-                        />
+                gateways?.map((gw: any) => (
+                  <Card key={gw.hospitalId} className={`${cardStyle} rounded-2xl p-5 space-y-4`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold shrink-0">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-sm truncate" title={gw.hospitalName}>
+                            {gw.hospitalName}
+                          </h3>
+                          <p className="text-[11px] text-slate-400 truncate">{gw.address || gw.city}</p>
+                        </div>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-mono shrink-0">{item.percentage}%</span>
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold shrink-0">
+                        🟢 ONLINE
+                      </Badge>
                     </div>
-                  </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900">
+                        <span className="text-[10px] text-slate-400 block">Độ trễ (Latency)</span>
+                        <span className="font-mono font-bold text-emerald-600">{gw.latencyMs}ms</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900">
+                        <span className="text-[10px] text-slate-400 block">Uptime Gateway</span>
+                        <span className="font-mono font-bold text-blue-600">{gw.uptime}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-[11px]">
+                      <span className="text-slate-400 font-medium block">Endpoint kết nối HIS Node:</span>
+                      <code className="text-slate-600 dark:text-slate-300 font-mono text-[10px] block p-1.5 rounded bg-slate-100 dark:bg-slate-900 truncate">
+                        {gw.endpointUrl}
+                      </code>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">Chuẩn hỗ trợ:</span>
+                      <span className="font-semibold text-emerald-600">QĐ 4750/QĐ-BYT · FHIR v4</span>
+                    </div>
+                  </Card>
                 ))
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ==========================================
-          TAB 2: NHẬT KÝ TRUY XUẤT (LIVE AUDIT STREAM)
-         ========================================== */}
+      {/* =========================================================
+          TAB 2: LƯỢT TRA CỨU & LƯU LƯỢNG (LOOKUPS & TRAFFIC)
+         ========================================================= */}
+      {activeTab === 'lookups' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Biểu đồ lưu lượng 7 ngày */}
+            <Card className={`${cardStyle} lg:col-span-8`}>
+              <CardHeader className={`border-b pb-4 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-bold flex items-center gap-2">
+                      <BarChart2 className="w-5 h-5 text-emerald-500" />
+                      Lưu Lượng Tra Cứu Liên Viện 7 Ngày Qua
+                    </CardTitle>
+                    <CardDescription className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Thống kê số lượng phiên tra cứu thành công và các lượt bị chặn do sai mã PIN bảo mật
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Thành công
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block ml-2" /> Cảnh báo lỗi
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {loadingTraffic ? (
+                  <div className="h-72 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                  </div>
+                ) : (
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={trafficChart || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#334155'} vertical={false} />
+                        <XAxis dataKey="label" stroke={isLight ? '#64748b' : '#94a3b8'} tickLine={false} />
+                        <YAxis stroke={isLight ? '#64748b' : '#94a3b8'} allowDecimals={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isLight ? '#ffffff' : '#0f172a',
+                            borderColor: isLight ? '#cbd5e1' : '#334155',
+                            borderRadius: '12px',
+                            color: isLight ? '#0f172a' : '#ffffff',
+                            fontSize: '12px',
+                          }}
+                        />
+                        <Legend
+                          verticalAlign="bottom"
+                          height={36}
+                          formatter={(val) => <span className={`text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{val}</span>}
+                        />
+                        <Bar dataKey="success" name="Thành công" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="failed" name="Bị từ chối / Sai PIN" stackId="a" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Ma trận phân bổ theo bệnh viện */}
+            <Card className={`${cardStyle} lg:col-span-4`}>
+              <CardHeader className={`border-b pb-4 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-blue-500" />
+                  Cơ Sở Phát Sinh Tra Cứu
+                </CardTitle>
+                <CardDescription className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Tần suất gửi yêu cầu tra cứu từ các bệnh viện liên kết
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3">
+                {loadingMatrix ? (
+                  <div className="h-64 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  </div>
+                ) : hospitalMatrix?.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-8">Chưa có dữ liệu tra cứu từ bệnh viện nào</p>
+                ) : (
+                  hospitalMatrix?.map((item: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-xl border text-xs space-y-2 ${
+                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="truncate max-w-[200px]">{item.hospitalName}</span>
+                        <span className="text-blue-600 dark:text-blue-400 font-mono font-black">
+                          {item.requestCount} lượt
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-blue-500 h-full rounded-full"
+                            style={{ width: `${Math.min(100, Math.max(8, item.percentage))}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono shrink-0">{item.percentage}%</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Section: Phân loại dữ liệu & Phương thức tra cứu */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className={`${cardStyle} p-5`}>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-emerald-500" />
+                Loại Hồ Sơ Được Tra Cứu Nhiều Nhất
+              </h4>
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
+                  <span className="font-medium">Tóm tắt tiền sử bệnh & Dị ứng</span>
+                  <span className="font-mono font-bold text-emerald-600">38.4%</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
+                  <span className="font-medium">Kết quả Cận lâm sàng & Xét nghiệm máu</span>
+                  <span className="font-mono font-bold text-blue-600">31.2%</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
+                  <span className="font-medium">Đơn thuốc & Lịch sử sử dụng dược phẩm</span>
+                  <span className="font-mono font-bold text-purple-600">20.5%</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
+                  <span className="font-medium">Chẩn đoán ICD-10 & Bệnh kèm theo</span>
+                  <span className="font-mono font-bold text-cyan-600">9.9%</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className={`${cardStyle} p-5`}>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-blue-500" />
+                Phương Thức Định Danh Sử Dụng
+              </h4>
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
+                  <span className="font-medium">Số Căn cước công dân (CCCD / VNeID)</span>
+                  <span className="font-mono font-bold text-emerald-600">82.0%</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
+                  <span className="font-medium">Mã Hồ Sơ NovaCare Passport (NOVA-ID)</span>
+                  <span className="font-mono font-bold text-blue-600">14.5%</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
+                  <span className="font-medium">Số thẻ Bảo hiểm y tế (BHYT)</span>
+                  <span className="font-mono font-bold text-purple-600">3.5%</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          TAB 3: NHẬT KÝ TRUY XUẤT (LIVE AUDIT STREAM)
+         ========================================================= */}
       {activeTab === 'audit' && (
         <Card className={cardStyle}>
           <CardHeader className={`border-b pb-4 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
@@ -456,13 +684,13 @@ export default function AdminInteroperabilityPage() {
                 <table className="w-full text-left text-xs">
                   <thead className={tableHeaderStyle}>
                     <tr>
-                      <th className="p-3.5">Thời gian</th>
+                      <th className="p-3.5 pl-5">Thời gian</th>
                       <th className="p-3.5">Bệnh nhân (Định danh)</th>
                       <th className="p-3.5">Bác sĩ tiếp nhận</th>
                       <th className="p-3.5">Cơ sở yêu cầu (Bệnh viện)</th>
                       <th className="p-3.5">Mục đích lâm sàng</th>
                       <th className="p-3.5 text-center">Trạng thái</th>
-                      <th className="p-3.5">IP Trạm</th>
+                      <th className="p-3.5 pr-5">IP Trạm</th>
                     </tr>
                   </thead>
                   <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
@@ -470,7 +698,7 @@ export default function AdminInteroperabilityPage() {
                       const isSuccess = log.status === 'SUCCESS';
                       return (
                         <tr key={log.id} className={isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-900/50'}>
-                          <td className="p-3.5 font-mono text-slate-500 whitespace-nowrap">
+                          <td className="p-3.5 pl-5 font-mono text-slate-500 whitespace-nowrap">
                             {new Date(log.accessedAt).toLocaleString('vi-VN')}
                           </td>
                           <td className="p-3.5">
@@ -502,7 +730,7 @@ export default function AdminInteroperabilityPage() {
                               </Badge>
                             )}
                           </td>
-                          <td className="p-3.5 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                          <td className="p-3.5 pr-5 font-mono text-[11px] text-slate-400 whitespace-nowrap">
                             {log.ipAddress}
                           </td>
                         </tr>
@@ -513,7 +741,7 @@ export default function AdminInteroperabilityPage() {
 
                 {/* Pagination Controls */}
                 {auditPagination.totalPages > 1 && (
-                  <div className={`flex items-center justify-between px-4 py-3 border-t text-xs ${isLight ? 'border-slate-200 text-slate-600' : 'border-slate-800 text-slate-400'}`}>
+                  <div className={`flex items-center justify-between px-5 py-3 border-t text-xs ${isLight ? 'border-slate-200 text-slate-600' : 'border-slate-800 text-slate-400'}`}>
                     <span>
                       Hiển thị trang <strong className="font-bold text-emerald-600">{auditPagination.page}</strong> / {auditPagination.totalPages} (Tổng số {auditPagination.total} bản ghi)
                     </span>
@@ -544,63 +772,14 @@ export default function AdminInteroperabilityPage() {
           </CardContent>
         </Card>
       )}
-
-      {/* ==========================================
-          TAB 3: TRẠNG THÁI CỔNG HIS CÁC BỆNH VIỆN
-         ========================================== */}
-      {activeTab === 'gateways' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loadingGateways ? (
-            <div className="col-span-full py-12 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-            </div>
-          ) : (
-            gateways?.map((gw: any) => (
-              <Card key={gw.hospitalId} className={`${cardStyle} rounded-2xl p-5 space-y-4`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold shrink-0">
-                      <Building2 className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-sm truncate" title={gw.hospitalName}>
-                        {gw.hospitalName}
-                      </h3>
-                      <p className="text-[11px] text-slate-400 truncate">{gw.address || gw.city}</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-bold shrink-0">
-                    🟢 ONLINE
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900">
-                    <span className="text-[10px] text-slate-400 block">Độ trễ phản hồi (Latency)</span>
-                    <span className="font-mono font-bold text-emerald-600">{gw.latencyMs}ms</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900">
-                    <span className="text-[10px] text-slate-400 block">Uptime Gateway</span>
-                    <span className="font-mono font-bold text-blue-600">{gw.uptime}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 text-[11px]">
-                  <span className="text-slate-400 font-medium block">Endpoint kết nối HIS Node:</span>
-                  <code className="text-slate-600 dark:text-slate-300 font-mono text-[10px] block p-1.5 rounded bg-slate-100 dark:bg-slate-900 truncate">
-                    {gw.endpointUrl}
-                  </code>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">Chuẩn hỗ trợ:</span>
-                  <span className="font-semibold text-emerald-600">QĐ 4750/QĐ-BYT · FHIR v4</span>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
     </div>
+  );
+}
+
+export default function AdminInteroperabilityPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-slate-500">Đang tải trung tâm liên thông...</div>}>
+      <AdminInteroperabilityContent />
+    </Suspense>
   );
 }

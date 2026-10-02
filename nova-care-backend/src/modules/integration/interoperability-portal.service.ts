@@ -193,7 +193,78 @@ export class InteroperabilityPortalService {
       }
     }
 
-    // 6. Ghi nhận Nhật ký truy cập (Audit Log) minh bạch
+    // 6. KIỂM TRA QUYỀN CHIA SẺ (PATIENT CONSENT) & PHẠM VI TRUY CẬP (ACCESS CONTROL)
+    if (!dto.hospitalId) {
+      throw new BadRequestException('Vui lòng cung cấp mã Cơ sở khám chữa bệnh (hospitalId) thực hiện tra cứu');
+    }
+
+    // 6.1. Kiểm tra danh sách Consent hợp lệ được người bệnh cấp cho Cơ sở y tế này (targetHospitalId)
+    const validConsents = await this.prisma.patientConsent.findMany({
+      where: {
+        patientProfileId: patientProfile.id,
+        targetHospitalId: dto.hospitalId,
+        status: 'GRANTED',
+        revokedAt: null,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
+      },
+      include: {
+        sourceHospital: { select: { id: true, name: true } },
+      },
+    });
+
+    // 6.2. Kiểm tra xem người bệnh có hồ sơ bệnh án nội bộ tại chính cơ sở này không
+    const internalEncounterCount = await this.prisma.medicalEncounter.count({
+      where: {
+        patientProfileId: patientProfile.id,
+        hospitalId: dto.hospitalId,
+      },
+    });
+
+    // NẾU NGƯỜI BỆNH CHƯA CẤP QUYỀN VÀ KHÔNG CÓ HỒ SƠ NỘI BỘ -> CHẶN TRUY CẬP THEO QUY ĐỊNH BẢO MẬT
+    if (validConsents.length === 0 && internalEncounterCount === 0) {
+      throw new ForbiddenException(
+        `Người bệnh chưa cấp quyền chia sẻ hồ sơ bệnh án cho ${hospitalName} khi đặt khám, hoặc quyền chia sẻ đã hết hiệu lực / bị thu hồi.`
+      );
+    }
+
+    // 6.3. Xác định danh sách lần khám (encounterIds) và nhóm dữ liệu (allowedSections) được phép truy xuất
+    const allowedEncounterIds = new Set<string>();
+    const allowedSections = new Set<string>();
+    const grantedSourceHospitals: Array<{ id: string; name: string }> = [];
+
+    // Nạp phạm vi từ các Consent hợp lệ
+    validConsents.forEach((consent) => {
+      if (consent.sourceHospital) {
+        grantedSourceHospitals.push({
+          id: consent.sourceHospital.id,
+          name: consent.sourceHospital.name,
+        });
+      }
+      const scope = consent.scope as { encounterIds?: string[]; allowedSections?: string[] } | null;
+      if (scope) {
+        if (Array.isArray(scope.encounterIds)) {
+          scope.encounterIds.forEach((id) => allowedEncounterIds.add(id));
+        }
+        if (Array.isArray(scope.allowedSections)) {
+          scope.allowedSections.forEach((sec) => allowedSections.add(String(sec).trim().toUpperCase()));
+        }
+      }
+    });
+
+    // Nạp thêm các lần khám nội bộ của chính cơ sở y tế tra cứu (nếu có)
+    const internalEncounters = await this.prisma.medicalEncounter.findMany({
+      where: {
+        patientProfileId: patientProfile.id,
+        hospitalId: dto.hospitalId,
+      },
+      select: { id: true },
+    });
+    internalEncounters.forEach((e) => allowedEncounterIds.add(e.id));
+
+    // 7. Ghi nhận Nhật ký truy cập (Audit Log) minh bạch
     let passport = await this.prisma.medicalPassport.findUnique({
       where: { userId: patientProfile.userId },
       include: { shares: true },
@@ -253,14 +324,28 @@ export class InteroperabilityPortalService {
           patientName: patientProfile.fullName,
           patientCode: patientProfile.patientCode,
           identityNumber: patientProfile.identityNumber,
+          scopeEncounterIdsCount: allowedEncounterIds.size,
+          scopeSections: Array.from(allowedSections),
+          grantedSourceHospitals: grantedSourceHospitals.map((h) => h.name),
         }),
       },
     });
 
-    // Lấy toàn bộ lịch sử khám từ bảng MedicalEncounter
-    const encounters = await this.prisma.medicalEncounter.findMany({
+    // 8. Lấy toàn bộ lịch sử khám từ bảng MedicalEncounter — CHỈ LẤY CÁC LẦN KHÁM ĐƯỢC CẤP PHÉP HOẶC NỘI BỘ
+    const rawEncounters = await this.prisma.medicalEncounter.findMany({
       where: {
         patientProfileId: patientProfile.id,
+        id: { in: Array.from(allowedEncounterIds) },
+        OR: [
+          { appointment: null },  // Encounter không liên kết appointment (nhập từ HIS)
+          {
+            appointment: {
+              status: {
+                notIn: ['CANCELLED', 'EXPIRED'],
+              },
+            },
+          },
+        ],
       },
       include: {
         hospital: true,
@@ -290,10 +375,57 @@ export class InteroperabilityPortalService {
       orderBy: { encounterDate: 'desc' },
     });
 
+    // 9. Áp dụng Mặt nạ bảo mật (Data Masking) theo allowedSections đối với hồ sơ từ bệnh viện khác
+    const encounters = rawEncounters.map((encItem: any) => {
+      const enc = { ...encItem };
+      const isInternal = enc.hospitalId === dto.hospitalId;
+
+      if (!isInternal) {
+        const canViewSummary = allowedSections.has('SUMMARY');
+        const canViewDiagnoses = allowedSections.has('DIAGNOSES');
+        const canViewObservations = allowedSections.has('OBSERVATIONS');
+        const canViewPrescriptions = allowedSections.has('PRESCRIPTIONS');
+
+        if (!canViewSummary) {
+          enc.chiefComplaint = '[Người bệnh không chia sẻ mục này]';
+          enc.clinicalSummary = '[Người bệnh không chia sẻ mục này]';
+          enc.physicalExamination = '[Người bệnh không chia sẻ mục này]';
+          enc.treatmentPlan = '[Người bệnh không chia sẻ mục này]';
+          enc.doctorNotes = '[Người bệnh không chia sẻ mục này]';
+          enc.conclusion = '[Người bệnh không chia sẻ mục này]';
+          enc.treatmentResult = '[Người bệnh không chia sẻ mục này]';
+          enc.admissionSource = '[Người bệnh không chia sẻ mục này]';
+          enc.dischargeType = '[Người bệnh không chia sẻ mục này]';
+          enc.prognosisNear = null;
+          enc.prognosisFar = null;
+        }
+
+        if (!canViewDiagnoses) {
+          enc.initialDiagnosis = '[Người bệnh không chia sẻ mục này]';
+          enc.differentialDiagnosis = null;
+          enc.diagnoses = [];
+        }
+
+        if (!canViewObservations) {
+          enc.observations = [];
+        }
+
+        if (!canViewPrescriptions) {
+          enc.prescription = null;
+        }
+      }
+
+      return enc;
+    });
+
     // Lấy thêm các cuộc hẹn khám thực tế từ bảng Appointment của bệnh nhân
+    // Chỉ lấy lịch khám thuộc cơ sở y tế này hoặc đã được cấp phép trong allowedEncounterIds
     const appointments: any[] = await (this.prisma.appointment as any).findMany({
       where: {
         patientProfileId: patientProfile.id,
+        status: {
+          in: ['COMPLETED'],
+        },
       },
       include: {
         slot: {
@@ -323,7 +455,7 @@ export class InteroperabilityPortalService {
     const hospitalMap: Record<string, any> = {};
     const processedEncounterIds = new Set<string>();
 
-    // 1. Nạp từ encounters
+    // 1. Nạp từ encounters đã qua kiểm tra quyền và mặt nạ bảo mật
     encounters.forEach((enc: any) => {
       processedEncounterIds.add(enc.id);
       const hId = enc.hospitalId || enc.hospital?.id || 'default-hospital';
@@ -344,7 +476,7 @@ export class InteroperabilityPortalService {
       hospitalMap[hId].encounters.push(enc);
     });
 
-    // 2. Nạp thêm từ appointments thực tế nếu chưa có trong encounters
+    // 2. Nạp thêm từ appointments thực tế nếu thuộc cơ sở này hoặc đã được cho phép
     appointments.forEach((apt: any) => {
       if (apt.medicalEncounter && processedEncounterIds.has(apt.medicalEncounter.id)) {
         return;
@@ -353,6 +485,12 @@ export class InteroperabilityPortalService {
       const workplace = apt.slot?.doctorWorkplace;
       const hospital = workplace?.hospital || apt.medicalEncounter?.hospital;
       const hId = hospital?.id || workplace?.hospitalId || 'hosp-default';
+
+      // Chỉ hiển thị appointment nếu là của chính cơ sở tra cứu hoặc được phép
+      if (hId !== dto.hospitalId && !allowedEncounterIds.has(apt.medicalEncounter?.id)) {
+        return;
+      }
+
       const hName = hospital?.name || 'Bệnh viện Đa khoa NovaCare';
       const hAddress = hospital?.address || 'TP. Hồ Chí Minh';
 
@@ -558,6 +696,21 @@ export class InteroperabilityPortalService {
         totalHospitals: hospitalGroups.length,
         totalEncounters: hospitalGroups.reduce((acc: number, g: any) => acc + (g.encounters?.length || 0), 0),
         lastEncounterDate: encounters.length > 0 ? encounters[0].encounterDate : null,
+      },
+      consentScope: {
+        hasConsent: validConsents.length > 0,
+        isInternalHospital: internalEncounterCount > 0,
+        grantedSourceHospitals,
+        allowedSections: Array.from(allowedSections),
+        totalAllowedEncounters: allowedEncounterIds.size,
+        activeConsents: validConsents.map((c) => ({
+          id: c.id,
+          sourceHospitalName: c.sourceHospital?.name,
+          targetHospitalId: c.targetHospitalId,
+          grantedAt: c.grantedAt,
+          expiresAt: c.expiresAt,
+          scope: c.scope,
+        })),
       },
       hospitalGroups,
       latestAuditLog: latestLogRecord ? {

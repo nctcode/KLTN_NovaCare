@@ -78,7 +78,18 @@ export class ConsentService {
     if (!targetHospitalId) throw new BadRequestException('Thiếu cơ sở y tế đích');
     return this.prisma.medicalEncounter.findMany({
       where: { patientProfileId, hospitalId: { not: targetHospitalId }, status: 'PUBLISHED' },
-      select: { id: true, encounterCode: true, encounterDate: true, specialtyName: true, clinicalSummary: true, hospital: { select: { id: true, name: true } } },
+      select: {
+        id: true,
+        encounterCode: true,
+        encounterDate: true,
+        specialtyName: true,
+        clinicalSummary: true,
+        chiefComplaint: true,
+        initialDiagnosis: true,
+        doctorName: true,
+        hospital: { select: { id: true, name: true, logoUrl: true, address: true } },
+        diagnoses: { select: { icdCode: true, diseaseName: true, isPrimary: true } },
+      },
       orderBy: { encounterDate: 'desc' },
     });
   }

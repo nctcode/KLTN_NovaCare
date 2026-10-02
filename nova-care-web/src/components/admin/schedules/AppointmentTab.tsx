@@ -42,7 +42,21 @@ const STATUS_MAP: Record<string, { label: string; styleDark: string; styleLight:
   REFUNDED: { label: 'Đã hoàn tiền', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800/60', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
 };
 
-export function AppointmentTab() {
+export interface AppointmentTabProps {
+  initialMode?: 'all' | 'today' | 'history';
+  pageTitle?: string;
+  pageSubtitle?: string;
+}
+
+const getTodayStr = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }: AppointmentTabProps) {
   const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
@@ -54,8 +68,8 @@ export function AppointmentTab() {
   const [doctorId, setDoctorId] = useState('');
   const [specialtyId, setSpecialtyId] = useState('');
   const [medicalServiceId, setMedicalServiceId] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(initialMode === 'history' ? 'COMPLETED' : '');
+  const [dateFilter, setDateFilter] = useState(initialMode === 'today' ? getTodayStr() : '');
 
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
 
@@ -148,12 +162,12 @@ export function AppointmentTab() {
     setDoctorId('');
     setSpecialtyId('');
     setMedicalServiceId('');
-    setStatusFilter('');
-    setDateFilter('');
+    setStatusFilter(initialMode === 'history' ? 'COMPLETED' : '');
+    setDateFilter(initialMode === 'today' ? getTodayStr() : '');
     setPage(1);
   };
 
-  const hasActiveFilter = !!(search || hospitalId || doctorId || specialtyId || medicalServiceId || statusFilter || dateFilter);
+  const hasActiveFilter = !!(search || hospitalId || doctorId || specialtyId || medicalServiceId || (initialMode === 'all' && statusFilter) || (initialMode === 'all' && dateFilter));
 
   return (
     <div className="space-y-6">
@@ -162,10 +176,14 @@ export function AppointmentTab() {
         <div>
           <h2 className={`text-lg font-black flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
             <CalendarCheck className="w-5 h-5 text-emerald-600 dark:text-[#66FF33]" />
-            Quản lý lịch khám
+            {pageTitle || (initialMode === 'today' ? 'Lịch Hẹn Hôm Nay' : initialMode === 'history' ? 'Lịch Sử Khám Bệnh' : 'Danh Sách Lịch Hẹn')}
           </h2>
           <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-            Theo dõi và quản lý các lịch hẹn khám được đặt trên nền tảng NovaCare.
+            {pageSubtitle || (initialMode === 'today'
+              ? 'Theo dõi và quản lý danh sách bệnh nhân có lịch hẹn khám trong ngày hôm nay.'
+              : initialMode === 'history'
+              ? 'Tra cứu và kiểm tra lịch sử các lượt khám bệnh đã hoàn tất trên hệ thống.'
+              : 'Theo dõi và quản lý các lịch hẹn khám được đặt trên nền tảng NovaCare.')}
           </p>
         </div>
 

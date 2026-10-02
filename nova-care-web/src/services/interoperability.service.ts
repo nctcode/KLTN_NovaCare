@@ -54,7 +54,11 @@ export interface ShareableMedicalRecord {
   encounterDate: string;
   specialtyName: string;
   clinicalSummary?: string | null;
-  hospital: { id: string; name: string };
+  chiefComplaint?: string | null;
+  initialDiagnosis?: string | null;
+  doctorName?: string | null;
+  hospital: { id: string; name: string; logoUrl?: string | null; address?: string | null };
+  diagnoses?: Array<{ icdCode: string; diseaseName: string; isPrimary: boolean }>;
 }
 
 export interface SharedRecordAccessLog {
