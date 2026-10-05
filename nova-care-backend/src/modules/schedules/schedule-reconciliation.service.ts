@@ -12,9 +12,26 @@ export class ScheduleReconciliationService {
    * Reconciles DoctorSchedule shifts into 15-minute base AppointmentSlots for a workplace and target date.
    * Preserves existing booked slots and sets SlotStatus appropriately.
    */
-  async reconcileWorkplaceSlotsForDate(doctorWorkplaceId: string, targetDate: Date): Promise<void> {
-    const dateOnly = new Date(targetDate.toISOString().split('T')[0]);
-    const dayOfWeek = dateOnly.getDay(); // 0: Sunday, 1: Monday, ...
+  async reconcileWorkplaceSlotsForDate(doctorWorkplaceId: string, targetDate: Date | string): Promise<void> {
+    let dateStr: string;
+    if (typeof targetDate === 'string') {
+      dateStr = targetDate.split('T')[0];
+    } else {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(targetDate);
+      const y = parts.find((p) => p.type === 'year')?.value;
+      const m = parts.find((p) => p.type === 'month')?.value;
+      const d = parts.find((p) => p.type === 'day')?.value;
+      dateStr = `${y}-${m}-${d}`;
+    }
+
+    const targetNoon = new Date(`${dateStr}T12:00:00+07:00`);
+    const dayOfWeek = targetNoon.getDay(); // 0: Sunday, 1: Monday, ..., 6: Saturday
+    const dateOnly = new Date(`${dateStr}T00:00:00+07:00`);
 
     // 1. Fetch active schedules valid for targetDate
     const schedules = await this.prisma.doctorSchedule.findMany({
@@ -38,7 +55,7 @@ export class ScheduleReconciliationService {
       return;
     }
 
-    const baseSlotMinutes = 15;
+    const baseSlotMinutes = 30; // 30 phút, bỏ các khung 15 phút
 
     for (const schedule of activeSchedules) {
       const startMinutes = this.timeToMinutes(schedule.startTime);
@@ -54,11 +71,13 @@ export class ScheduleReconciliationService {
           }
         }
 
-        const slotStartTime = new Date(dateOnly);
-        slotStartTime.setHours(Math.floor(m / 60), m % 60, 0, 0);
+        const sH = String(Math.floor(m / 60)).padStart(2, '0');
+        const sM = String(m % 60).padStart(2, '0');
+        const eH = String(Math.floor((m + baseSlotMinutes) / 60)).padStart(2, '0');
+        const eM = String((m + baseSlotMinutes) % 60).padStart(2, '0');
 
-        const slotEndTime = new Date(dateOnly);
-        slotEndTime.setHours(Math.floor((m + baseSlotMinutes) / 60), (m + baseSlotMinutes) % 60, 0, 0);
+        const slotStartTime = new Date(`${dateStr}T${sH}:${sM}:00+07:00`);
+        const slotEndTime = new Date(`${dateStr}T${eH}:${eM}:00+07:00`);
 
         await this.prisma.appointmentSlot.upsert({
           where: {

@@ -43,6 +43,7 @@ export class AppointmentsService {
       where: { idempotencyKey },
     });
     if (existingAppointment) {
+      if (existingAppointment.userId !== userId) throw new ForbiddenException();
       return existingAppointment;
     }
 
@@ -61,6 +62,15 @@ export class AppointmentsService {
         const primarySlotData = primarySlots[0];
         const doctorWorkplaceId = primarySlotData.doctorWorkplaceId ?? primarySlotData.doctor_workplace_id;
         const primaryStartTime = new Date(primarySlotData.startTime ?? primarySlotData.start_time);
+        const roomSession = await tx.clinicRoomSession.findUnique({ where: { slotId }, include: { room: true, service: true } });
+        if (roomSession || createDto.clinicRoomId || createDto.serviceBookingMode) {
+          if (!roomSession || roomSession.roomId !== createDto.clinicRoomId || roomSession.mode !== createDto.serviceBookingMode || roomSession.medicalServiceId !== medicalServiceId || !roomSession.room.isActive || !roomSession.service.isActive) {
+            throw new BadRequestException('Phòng khám, dịch vụ hoặc hình thức khám không hợp lệ');
+          }
+          if (primaryStartTime <= new Date() || (roomSession.mode === 'AFTER_HOURS' && ![0, 6].includes(new Date(primaryStartTime.getTime() + 25200000).getUTCDay()))) {
+            throw new BadRequestException('Ngày khám không còn hợp lệ');
+          }
+        }
         const slotDate = primarySlotData.date ? new Date(primarySlotData.date) : new Date(primaryStartTime.toISOString().split('T')[0]);
 
         // 3.2 Xác định thời lượng service (mặc định 30 phút)
@@ -84,7 +94,7 @@ export class AppointmentsService {
           take: 96,
         });
 
-        const candidateSlots = contiguousSlotWindow(slotsFromStart, serviceDuration);
+        let candidateSlots = contiguousSlotWindow(slotsFromStart, serviceDuration);
         if (!candidateSlots.length) {
           throw new ConflictException('Không đủ khung giờ trống liên tiếp cho dịch vụ này');
         }
@@ -95,6 +105,11 @@ export class AppointmentsService {
           `SELECT * FROM "appointment_slots" WHERE id = ANY($1::text[]) FOR UPDATE`,
           requiredSlotIds
         );
+        candidateSlots = await tx.appointmentSlot.findMany({ where: { id: { in: requiredSlotIds } }, orderBy: { startTime: 'asc' } });
+        const mappedRooms = await tx.clinicRoomSession.findMany({ where: { slotId: { in: requiredSlotIds } } });
+        if (mappedRooms.some(mapping => mapping.id !== roomSession?.id) || (roomSession && candidateSlots.length !== 1)) {
+          throw new BadRequestException('Khung giờ dành riêng cho dịch vụ tại phòng khám');
+        }
 
         // Kiểm tra hợp lệ từng slot
         for (let i = 0; i < candidateSlots.length; i++) {
@@ -156,7 +171,7 @@ export class AppointmentsService {
             serviceFee = Number(service.price);
           }
         }
-        const consultationFee = Number(workplace.consultationFee);
+        const consultationFee = roomSession ? 0 : Number(workplace.consultationFee);
         const totalPrice = consultationFee + serviceFee;
 
         // 3.7 Tạo mã lịch khám
@@ -169,6 +184,8 @@ export class AppointmentsService {
             patientProfileId,
             slotId,
             medicalServiceId,
+            clinicRoomId: roomSession?.roomId,
+            serviceBookingMode: roomSession?.mode,
             userId,
             status: AppointmentStatus.AWAITING_PAYMENT,
             reason,
@@ -320,12 +337,12 @@ export class AppointmentsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Auto-heal completed appointments without rich diagnoses
+    // Legacy demo backfill is opt-in; reading history must not create clinical records.
     let healedAny = false;
     for (const apt of appointments) {
       if (
-        apt.status === AppointmentStatus.COMPLETED &&
-        (!apt.medicalEncounter || !apt.medicalEncounter.diagnoses || apt.medicalEncounter.diagnoses.length === 0)
+        process.env.ENABLE_LEGACY_DEMO_BACKFILL === 'true' &&
+        apt.status === AppointmentStatus.COMPLETED && !apt.medicalEncounter
       ) {
         try {
           await this.mockFulfill(apt.id);
@@ -533,7 +550,7 @@ export class AppointmentsService {
   ): Promise<Appointment> {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
-      include: { slot: true },
+      include: { slot: true, medicalEncounter: { select: { status: true } } },
     });
     if (!appointment) {
       throw new NotFoundException('Lịch khám không tồn tại');
@@ -553,12 +570,16 @@ export class AppointmentsService {
       throw new BadRequestException(`Không thể hủy lịch ở trạng thái ${appointment.status}`);
     }
 
+    if (appointment.medicalEncounter && appointment.medicalEncounter.status !== 'CANCELLED') {
+      throw new BadRequestException('Lịch đã được tiếp nhận. Vui lòng liên hệ cơ sở để được hỗ trợ.');
+    }
+
     // Kiểm tra thời gian hủy (ít nhất 2 giờ trước giờ khám)
     const slotStartTime = appointment.slot.startTime;
     const now = new Date();
     const hoursDiff = (slotStartTime.getTime() - now.getTime()) / (1000 * 60 * 60);
     if (hoursDiff < 2 && appointment.status !== AppointmentStatus.AWAITING_PAYMENT) {
-      throw new BadRequestException('Chỉ có thể hủy lịch trước ít nhất 2 giờ');
+      throw new BadRequestException('Đã hết thời hạn tự hủy lịch. Chỉ có thể hủy trước giờ khám ít nhất 2 giờ. Vui lòng liên hệ cơ sở để được hỗ trợ.');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -622,6 +643,14 @@ export class AppointmentsService {
           note: cancelDto.reason || 'Bệnh nhân hủy lịch',
         },
       });
+
+      await tx.notification.create({ data: {
+        userId,
+        type: 'CANCELLED',
+        title: 'Đã hủy lịch khám',
+        content: `Lịch khám ${appointment.bookingCode} đã được hủy. Nếu đã thanh toán, vui lòng liên hệ cơ sở để kiểm tra việc hoàn tiền.`,
+        data: { appointmentId: id },
+      } });
 
       return updated;
     });
@@ -1206,7 +1235,14 @@ export class AppointmentsService {
     }
 
     // Không cho tạo bệnh án mock cho lịch đã bị hủy/hết hạn
-    const blockedStatuses = ['CANCELLED', 'EXPIRED', 'NO_SHOW'];
+    if (appointment.medicalEncounter) return {
+      appointmentId: id, encounterId: appointment.medicalEncounter.id,
+      encounterCode: appointment.medicalEncounter.encounterCode,
+      medicalEncounter: appointment.medicalEncounter, patientProfile: appointment.patientProfile,
+      slot: appointment.slot, hospital: appointment.slot?.doctorWorkplace?.hospital,
+      specialty: appointment.medicalEncounter.specialtyName, status: appointment.medicalEncounter.status,
+    };
+    const blockedStatuses = ['CANCELLED', 'EXPIRED', 'NO_SHOW', 'FAILED', 'REFUNDED', 'PENDING', 'AWAITING_PAYMENT'];
     if (blockedStatuses.includes(appointment.status)) {
       throw new BadRequestException(`Không thể tạo bệnh án cho lịch khám ở trạng thái ${appointment.status}`);
     }
@@ -1230,11 +1266,22 @@ export class AppointmentsService {
       appointment.symptoms,
       appointment.patientProfile
     );
-    const encounterCode = appointment.medicalEncounter?.encounterCode || this.generateEncounterCode();
+    const encounterCode = this.generateEncounterCode();
     const encounterDate = appointment.slot?.startTime || new Date();
+    mockData.clinicalSummary = '[DỮ LIỆU MÔ PHỎNG — KHÔNG PHẢI KẾT QUẢ KHÁM THỰC TẾ] ' + mockData.clinicalSummary;
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM appointments WHERE id = ${id} FOR UPDATE`;
+      const current = await tx.appointment.findUnique({ where: { id }, select: { status: true } });
+      if (!current || blockedStatuses.includes(current.status)) throw new BadRequestException('Trạng thái lịch vừa thay đổi; không thể mô phỏng');
+      const existingEncounter = await tx.medicalEncounter.findUnique({ where: { appointmentId: id },
+        include: { diagnoses: true, observations: true, prescription: { include: { items: true } } } });
+      if (existingEncounter) return {
+        appointmentId: id, encounterId: existingEncounter.id, encounterCode: existingEncounter.encounterCode,
+        medicalEncounter: existingEncounter, patientProfile: appointment.patientProfile,
+        slot: appointment.slot, hospital: workplace?.hospital, specialty: existingEncounter.specialtyName, status: existingEncounter.status,
+      };
       // 1. PatientHospitalLink Check / Creation
       const existingLink = await tx.patientHospitalLink.findFirst({
         where: {

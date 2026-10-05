@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { AppointmentStatus, Prisma } from '@prisma/client';
@@ -177,7 +178,7 @@ export class HospitalAdminService {
     params?: {
       page?: number;
       limit?: number;
-      status?: AppointmentStatus;
+      status?: AppointmentStatus | 'OVERDUE';
       search?: string;
     }
   ) {
@@ -191,7 +192,11 @@ export class HospitalAdminService {
           hospitalId,
         },
       },
-      ...(params?.status ? { status: params.status } : {}),
+      ...(params?.status === 'OVERDUE' ? {
+        status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.PAID] },
+        medicalEncounter: { is: null },
+        AND: [{ slot: { startTime: { lt: new Date() } } }],
+      } : params?.status ? { status: params.status } : {}),
       ...(params?.search
         ? {
             OR: [
@@ -284,6 +289,7 @@ export class HospitalAdminService {
         id: appointmentId,
         slot: { doctorWorkplace: { hospitalId } },
       },
+      include: { slot: true, medicalEncounter: true },
     });
 
     if (!appointment) {
@@ -292,7 +298,13 @@ export class HospitalAdminService {
       );
     }
 
-    const updated = await this.prisma.appointment.update({
+    if (newStatus === 'NO_SHOW' && (
+      !['PENDING', 'CONFIRMED', 'PAID'].includes(appointment.status) ||
+      appointment.slot.startTime > new Date() || appointment.medicalEncounter
+    )) throw new BadRequestException('Chỉ xác nhận không đến khám khi đã qua giờ hẹn và chưa tiếp nhận.');
+
+    return this.prisma.$transaction(async (tx) => {
+    const updated = await tx.appointment.update({
       where: { id: appointmentId },
       data: {
         status: newStatus,
@@ -306,7 +318,7 @@ export class HospitalAdminService {
     });
 
     // Lưu vết lịch sử trạng thái
-    await this.prisma.appointmentStatusHistory.create({
+    await tx.appointmentStatusHistory.create({
       data: {
         appointmentId,
         status: newStatus,
@@ -314,7 +326,17 @@ export class HospitalAdminService {
       },
     });
 
+    if (newStatus !== appointment.status) await tx.notification.create({ data: {
+      userId: appointment.userId,
+      type: newStatus === 'CANCELLED' ? 'CANCELLED' : 'SYSTEM',
+      title: 'Cơ sở cập nhật lịch khám',
+      content: newStatus === 'NO_SHOW'
+        ? `Cơ sở xác nhận bạn không đến khám lịch ${appointment.bookingCode}. Nếu thông tin chưa đúng, vui lòng liên hệ cơ sở. Việc thanh toán được xử lý riêng.`
+        : `Lịch ${appointment.bookingCode} đã được cập nhật: ${note || newStatus}.`,
+      data: { appointmentId },
+    } });
     return updated;
+    });
   }
 
   /**

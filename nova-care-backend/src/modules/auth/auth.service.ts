@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -29,6 +30,8 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -181,13 +184,26 @@ export class AuthService {
     });
   }
 
-  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string; otpCode?: string; maskedPhone?: string }> {
+    const identifier = dto.phone || dto.email;
+    if (!identifier) {
+      throw new BadRequestException('Vui lòng cung cấp số điện thoại hoặc email');
+    }
+
     const user = await this.prisma.user.findFirst({
-      where: { email: dto.email, deletedAt: null },
+      where: {
+        OR: [
+          ...(dto.phone ? [{ phone: dto.phone }] : []),
+          ...(dto.email ? [{ email: dto.email }] : []),
+          { phone: identifier },
+          { email: identifier },
+        ],
+        deletedAt: null,
+      },
     });
 
     if (!user) {
-      throw new BadRequestException('Email không tồn tại trong hệ thống');
+      throw new BadRequestException('Tài khoản không tồn tại trong hệ thống');
     }
 
     // Generate 6-digit random OTP
@@ -203,18 +219,45 @@ export class AuthService {
       },
     });
 
-    await this.emailService.sendForgotPasswordOtp(user.email!, user.fullName, otpCode, user.id);
+    const isPhone = !!dto.phone || (!dto.email && !!user.phone);
+    if (user.phone) {
+      this.logger.log(`[SMS OTP SIMULATED] Gửi mã OTP ${otpCode} đến số điện thoại ${user.phone} (${user.fullName})`);
+    }
+    if (user.email) {
+      await this.emailService.sendForgotPasswordOtp(user.email, user.fullName, otpCode, user.id);
+    }
 
-    return { message: 'Mã OTP đã được gửi thành công đến email của bạn' };
+    const masked = user.phone
+      ? user.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')
+      : user.email?.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+
+    return {
+      message: `Mã OTP đã được gửi đến ${isPhone && user.phone ? 'số điện thoại ' + masked : 'email của bạn'}`,
+      maskedPhone: masked,
+      otpCode, // Returned for dev/demo transparency
+    };
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    const identifier = dto.phone || dto.email;
+    if (!identifier) {
+      throw new BadRequestException('Vui lòng cung cấp số điện thoại hoặc email');
+    }
+
     const user = await this.prisma.user.findFirst({
-      where: { email: dto.email, deletedAt: null },
+      where: {
+        OR: [
+          ...(dto.phone ? [{ phone: dto.phone }] : []),
+          ...(dto.email ? [{ email: dto.email }] : []),
+          { phone: identifier },
+          { email: identifier },
+        ],
+        deletedAt: null,
+      },
     });
 
     if (!user) {
-      throw new BadRequestException('Email không tồn tại trong hệ thống');
+      throw new BadRequestException('Tài khoản không tồn tại trong hệ thống');
     }
 
     if (!user.otpCode || user.otpCode !== dto.otpCode) {

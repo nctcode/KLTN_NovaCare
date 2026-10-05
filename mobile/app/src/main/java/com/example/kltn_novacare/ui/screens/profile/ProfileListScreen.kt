@@ -50,6 +50,8 @@ fun ProfileListScreen(
     var editingProfile by remember { mutableStateOf<PatientProfile?>(null) }
     var profileToDelete by remember { mutableStateOf<PatientProfile?>(null) }
     var showPassportShareDialog by remember { mutableStateOf(false) }
+    var recordProfile by remember { mutableStateOf<com.example.kltn_novacare.data.model.PatientProfile?>(null) }
+    recordProfile?.let { PatientRecordBook(it.id, it.fullName, onDismiss = { recordProfile = null }) }
 
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var relationFilter by rememberSaveable { mutableStateOf("ALL") }
@@ -89,12 +91,12 @@ fun ProfileListScreen(
                     }
                 },
                 actions = {
-                    FilledTonalButton(
+                    Button(
                         onClick = { patientViewModel.resetOperation(); showAddDialog = true },
                         enabled = !busy,
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = Color(0xFFDCFCE7),
-                            contentColor = Color(0xFF15803D)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Primary,
+                            contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -161,7 +163,65 @@ fun ProfileListScreen(
                             )
                         }
 
-                        // 2. STATS OVERVIEW STRIP (3 Thống kê như bản Web)
+                        // 2. SỔ SỨC KHỎE ĐIỆN TỬ
+                        if (allList.isNotEmpty()) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Outlined.FolderShared,
+                                                contentDescription = null,
+                                                tint = PrimaryDark,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                "Sổ sức khỏe điện tử & Bệnh án",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF0F172A)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            items(allList) { patient ->
+                                                Surface(
+                                                    onClick = { recordProfile = patient },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = Color(0xFFF1F5F9),
+                                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.Description,
+                                                            contentDescription = null,
+                                                            tint = PrimaryDark,
+                                                            modifier = Modifier.size(14.dp)
+                                                        )
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Text(
+                                                            patient.fullName,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = Color(0xFF0F172A)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         item {
                             StatsOverviewStrip(
                                 totalCount = allList.size,
@@ -346,9 +406,9 @@ fun EhrPassportShareBanner(onOpenShare: () -> Unit) {
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
+                            Color(0xFF064E3B),
                             Color(0xFF0F172A),
-                            Color(0xFF1E293B),
-                            Color(0xFF1E1B4B)
+                            Color(0xFF065F46)
                         )
                     )
                 )
@@ -360,19 +420,19 @@ fun EhrPassportShareBanner(onOpenShare: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Surface(
-                        color = Color(0xFF3B82F6).copy(alpha = 0.2f),
+                        color = Color(0xFF047857).copy(alpha = 0.4f),
                         shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Color(0xFF60A5FA).copy(alpha = 0.4f))
+                        border = BorderStroke(1.dp, Color(0xFF6EE7B7).copy(alpha = 0.4f))
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFF34D399), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFF6EE7B7), modifier = Modifier.size(14.dp))
                             Text(
                                 "LIÊN THÔNG Y TẾ & PASSPORT",
-                                color = Color(0xFF93C5FD),
+                                color = Color(0xFFA7F3D0),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
@@ -396,7 +456,7 @@ fun EhrPassportShareBanner(onOpenShare: () -> Unit) {
 
                 Button(
                     onClick = onOpenShare,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                     modifier = Modifier.padding(top = 4.dp)
@@ -518,10 +578,10 @@ fun SearchAndFilterToolbar(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF0F172A),
-                    unfocusedBorderColor = Color(0xFFE2E8F0),
-                    focusedContainerColor = Color(0xFFF8FAFC),
-                    unfocusedContainerColor = Color(0xFFF8FAFC)
+                    focusedBorderColor = Primary,
+                    unfocusedBorderColor = Border,
+                    focusedContainerColor = Background,
+                    unfocusedContainerColor = Background
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -534,9 +594,10 @@ fun SearchAndFilterToolbar(
                         onClick = { onFilterChange("ALL") },
                         label = { Text("Tất cả ($totalCount)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF0F172A),
-                            selectedLabelColor = Color.White
-                        )
+                            selectedContainerColor = PrimaryLight,
+                            selectedLabelColor = PrimaryDark
+                        ),
+                        border = BorderStroke(1.dp, if (relationFilter == "ALL") PrimaryBorder else Border)
                     )
                 }
                 item {
@@ -545,9 +606,10 @@ fun SearchAndFilterToolbar(
                         onClick = { onFilterChange("SELF") },
                         label = { Text("Bản thân", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF0F172A),
-                            selectedLabelColor = Color.White
-                        )
+                            selectedContainerColor = PrimaryLight,
+                            selectedLabelColor = PrimaryDark
+                        ),
+                        border = BorderStroke(1.dp, if (relationFilter == "SELF") PrimaryBorder else Border)
                     )
                 }
                 item {
@@ -556,9 +618,10 @@ fun SearchAndFilterToolbar(
                         onClick = { onFilterChange("RELATIVE") },
                         label = { Text("Người thân", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF0F172A),
-                            selectedLabelColor = Color.White
-                        )
+                            selectedContainerColor = PrimaryLight,
+                            selectedLabelColor = PrimaryDark
+                        ),
+                        border = BorderStroke(1.dp, if (relationFilter == "RELATIVE") PrimaryBorder else Border)
                     )
                 }
             }
@@ -785,34 +848,34 @@ fun DetailedProfileCard(
                     if (!profile.isDefault) {
                         OutlinedButton(
                             onClick = onSetDefault,
-                    enabled = enabled,
+                            enabled = enabled,
                             shape = RoundedCornerShape(10.dp),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                            border = BorderStroke(1.dp, Color(0xFFCBD5E1))
+                            border = BorderStroke(1.dp, PrimaryBorder)
                         ) {
-                            Text("Đặt làm mặc định", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                            Text("Đặt làm mặc định", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = PrimaryDark)
                         }
                     }
 
                     OutlinedButton(
                         onClick = onEdit,
-                    enabled = enabled,
+                        enabled = enabled,
                         shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                        border = BorderStroke(1.dp, Color(0xFFCBD5E1))
+                        border = BorderStroke(1.dp, Border)
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF0F172A))
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = TextPrimary)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Sửa", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                        Text("Sửa", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
                 }
 
                 Button(
                     onClick = onBookAppointment,
                     enabled = enabled,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Text("Đặt khám", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Spacer(modifier = Modifier.width(4.dp))

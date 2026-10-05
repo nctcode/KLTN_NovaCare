@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { AdminDoctorsService } from './admin-doctors.service';
+import { CreateDoctorAccountDto } from './dto/create-doctor-account.dto';
 
 @ApiTags('Admin - Quản lý Bác sĩ')
 @ApiBearerAuth('access-token')
@@ -106,6 +107,18 @@ export class AdminDoctorsController {
   @ApiOperation({ summary: 'Thêm nơi công tác cho bác sĩ' })
   createWorkplace(@Param('id') doctorId: string, @Body() body: any) {
     return this.service.createWorkplace(doctorId, body);
+  }
+
+  @Post(':id/account')
+  @ApiOperation({ summary: 'Tạo tài khoản đăng nhập chuyên biệt và liên kết với bác sĩ' })
+  createAccount(
+    @Param('id') doctorId: string,
+    @Body() body: CreateDoctorAccountDto,
+    @Req() req: any,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ) {
+    return this.service.createAccount(doctorId, body, req.user?.id, ip, ua);
   }
 
   @Patch('workplaces/:workplaceId')

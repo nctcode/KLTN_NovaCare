@@ -1,6 +1,7 @@
 package com.example.kltn_novacare.data.remote
 
 import android.content.Context
+import android.os.Build
 import okhttp3.Authenticator
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -13,8 +14,32 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    // 10.0.2.2 is Android Emulator's loopback alias to host PC localhost:3000
-    private const val BASE_URL = "http://10.0.2.2:3000/api/v1/"
+    /**
+     * Tự động nhận diện thiết bị đang chạy:
+     * - Máy ảo Android Emulator -> dùng 10.0.2.2 (alias trỏ về máy tính host)
+     * - Điện thoại thật (Physical Device) -> dùng IP mạng Wi-Fi của máy tính (192.168.1.6)
+     */
+    private fun isEmulator(): Boolean {
+        return (Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.startsWith("unknown")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.MANUFACTURER.contains("Genymotion")
+                || Build.PRODUCT.contains("sdk_gphone")
+                || Build.HARDWARE.contains("goldfish")
+                || Build.HARDWARE.contains("ranchu"))
+    }
+
+    private val BASE_URL: String by lazy {
+        if (isEmulator()) {
+            "http://10.0.2.2:3000/api/v1/"
+        } else {
+            // Dùng 127.0.0.1 khi cắm cáp USB (kèm adb reverse tcp:3000 tcp:3000) - miễn nhiễm với wifi quán cafe
+            "http://127.0.0.1:3000/api/v1/"
+            // Nếu dùng Wi-Fi (phát 4G từ điện thoại): "http://192.168.8.43:3000/api/v1/"
+        }
+    }
     
     private var retrofit: Retrofit? = null
     private var apiService: ApiService? = null
@@ -128,4 +153,6 @@ object ApiClient {
     fun getTokenManager(): TokenManager {
         return tokenManager
     }
+
+    fun getRealtimeBaseUrl(): String = BASE_URL.removeSuffix("api/v1/").removeSuffix("/")
 }

@@ -9,6 +9,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nova_care
       PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Asia/Ho_Chi_Minh
     ports:
       - '5432:5432'
     volumes:
@@ -32,6 +33,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/nova_care?schema=public
       NODE_ENV: development
+      TZ: Asia/Ho_Chi_Minh
       REDIS_HOST: redis
       REDIS_PORT: 6379
       OPENAI_BASE_URL: https://platform.beeknoee.com/api/v1

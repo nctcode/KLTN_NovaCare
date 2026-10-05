@@ -85,6 +85,12 @@ export class AiScreeningOrchestratorService {
       missingInformation: [...input.missingQuestionIds],
       triageDetails: { keyObservations: [] as string[] },
       imageAnalysisFindings: [] as string[],
+      imageAssessments: [] as { imageIndex: number; status: string; observations: string[] }[],
+      ppgExplanation: input.ppgQuality !== 'GOOD'
+        ? 'Chưa có số đo đủ chất lượng để bổ sung đánh giá.'
+        : rules.matchedRules.some(r => r.id === 'CRITICAL_VITAL_ARRHYTHMIA_RED_FLAG')
+          ? 'Số đo nhịp tim đã kích hoạt cảnh báo cần đánh giá y tế. Đây là ước lượng camera, không phải chẩn đoán.'
+          : 'Số đo không kích hoạt cảnh báo nhịp tim theo quy tắc hiện tại. Không dùng số đo này để loại trừ bệnh hoặc giảm cảnh báo từ triệu chứng khác.',
       modalityStatuses: {
         image: 'NOT_PROVIDED',
         voice: input.voiceTranscript ? 'CONFIRMED_TEXT' : 'NOT_PROVIDED',
@@ -192,7 +198,7 @@ export class AiScreeningOrchestratorService {
       throw new BadRequestException(
         'Vui lòng chuyển giọng nói thành văn bản và xác nhận trước khi phân tích.'
       );
-    for (const file of files) {
+    for (const [imageIndex, file] of files.entries()) {
       if (
         !Buffer.isBuffer(file.buffer) ||
         file.buffer.length > 5 * 1024 * 1024 ||
@@ -201,6 +207,10 @@ export class AiScreeningOrchestratorService {
         throw new BadRequestException('Ảnh phải là JPEG, PNG hoặc WebP, tối đa 5 MB.');
       try {
         const image = await this.llm.inspectImage(file, input.regions);
+        base.imageAssessments.push({ imageIndex,
+          status: image.quality === 'GOOD' && image.relevant ? 'ANALYZED' : 'LOW_QUALITY_OR_UNRELATED',
+          observations: image.quality === 'GOOD' && image.relevant ? image.observations : [],
+        });
         if (image.quality === 'GOOD' && image.relevant) {
           base.imageAnalysisFindings.push(...image.observations);
           base.modalityStatuses.image = 'ANALYZED';
@@ -222,6 +232,7 @@ export class AiScreeningOrchestratorService {
           base.modalityStatuses.image = 'LOW_QUALITY_OR_UNRELATED';
       } catch (error) {
         base.modalityStatuses.image = 'PARTIAL_OR_FAILED';
+        base.imageAssessments.push({ imageIndex, status: 'FAILED', observations: [] });
         base.providerErrors.push({ stage: 'IMAGE', code: providerErrorCode(error) });
       }
     }

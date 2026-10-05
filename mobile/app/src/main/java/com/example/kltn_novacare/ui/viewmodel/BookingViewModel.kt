@@ -20,6 +20,7 @@ data class BookingUiState(
     val doctor: Doctor? = null,
     val workplace: DoctorWorkplace? = null,
     val selectedService: MedicalService? = null,
+    val selectedRoom: ClinicRoom? = null,
     val selectedSpecialty: Specialty? = null,
     val selectedDate: String? = null,
     val selectedSlot: AppointmentSlot? = null,
@@ -35,6 +36,7 @@ data class BookingUiState(
 ) {
     val busy get() = checkoutState is NetworkState.Loading
     val locked get() = busy || createdAppointment != null
+    val estimatedPrice get() = (if (selectedRoom != null) 0.0 else workplace?.consultationFee ?: 0.0) + (selectedService?.price ?: 0.0)
 }
 
 class BookingViewModel(
@@ -43,6 +45,22 @@ class BookingViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BookingUiState())
     val uiState = _uiState.asStateFlow()
+    private val _roomCatalog = MutableStateFlow<NetworkState<List<ClinicRoomSession>>>(NetworkState.Idle)
+    val roomCatalog = _roomCatalog.asStateFlow()
+    fun loadRoomCatalog() {
+        val state = _uiState.value
+        val hospitalId = state.hospital?.id ?: return
+        _roomCatalog.value = NetworkState.Loading
+        viewModelScope.launch {
+            val result = appointmentRepository.getClinicRoomCatalog(hospitalId, state.bookingType)
+            if (_uiState.value.hospital?.id == hospitalId && _uiState.value.bookingType == state.bookingType)
+                _roomCatalog.value = result.fold({ NetworkState.Success(it) }, { NetworkState.Error(it.message ?: "Không thể tải lịch") })
+        }
+    }
+    fun selectRoomSpecialty(specialty: Specialty) = draft { it.copy(selectedSpecialty = specialty, selectedService = null, selectedRoom = null, selectedDate = null, selectedSlot = null, workplace = null, doctor = null) }
+    fun selectRoomService(service: MedicalService) = draft { it.copy(selectedService = service, selectedRoom = null, selectedDate = null, selectedSlot = null, workplace = null) }
+    fun selectRoom(room: ClinicRoom) = draft { it.copy(selectedRoom = room, selectedDate = null, selectedSlot = null, workplace = null) }
+    fun selectRoomTime(date: String, session: ClinicRoomSession) = draft { it.copy(selectedDate = date, selectedSlot = session.slot, workplace = session.slot.doctorWorkplace, doctor = null) }
 
     fun resetBooking() {
         if (!_uiState.value.busy) _uiState.value = BookingUiState()
@@ -71,7 +89,7 @@ class BookingViewModel(
         if (it.hospital?.id == hospital.id) it else it.copy(hospital = hospital, doctor = null,
             workplace = null, selectedSlot = null, selectedService = null, selectedSpecialty = null)
     }
-    fun setBookingType(type: String) = draft { it.copy(bookingType = type) }
+    fun setBookingType(type: String) = draft { it.copy(bookingType = type, selectedRoom = null, selectedSlot = null, selectedDate = null, selectedService = null, selectedSpecialty = null, workplace = null, doctor = null) }
     fun selectDoctor(doctor: Doctor, workplace: DoctorWorkplace) = draft {
         if (it.workplace?.id == workplace.id) it.copy(doctor = doctor, workplace = workplace)
         else it.copy(doctor = doctor, workplace = workplace, hospital = workplace.hospital ?: it.hospital,
@@ -116,7 +134,8 @@ class BookingViewModel(
                 val result = appointmentRepository.createAppointment(CreateAppointmentRequest(
                     slotId = initial.selectedSlot!!.id, patientProfileId = initial.selectedProfile!!.id,
                     reason = initial.reason.trim().ifBlank { null }, symptoms = initial.symptoms.trim().ifBlank { null },
-                    idempotencyKey = initial.idempotencyKey, medicalServiceId = initial.selectedService?.id
+                    idempotencyKey = initial.idempotencyKey, medicalServiceId = initial.selectedService?.id,
+                    clinicRoomId = initial.selectedRoom?.id, serviceBookingMode = initial.bookingType.takeIf { initial.selectedRoom != null }
                 ))
                 appointment = result.getOrElse { fail(it.message ?: "Không thể đặt lịch"); return@launch }
                 _uiState.value = _uiState.value.copy(createdAppointment = appointment)

@@ -4,193 +4,548 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.kltn_novacare.ui.viewmodel.PreExamViewModel
 import com.example.kltn_novacare.ui.screens.screening.*
+import com.example.kltn_novacare.ui.theme.*
+import com.example.kltn_novacare.ui.viewmodel.PreExamViewModel
 
-private val ScreeningGreen = Color(0xFF0C4B39)
 @Composable
-fun ScreeningPanel(title: String, subtitle: String? = null, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            content()
-        }
-    }
-}
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PreExamScreeningScreen(onSkipScreening: () -> Unit,
+fun PreExamScreeningScreen(
+    onSkipScreening: () -> Unit,
     onCompletedToBooking: (String?, String?, String?, String) -> Unit,
-    viewModel: PreExamViewModel = viewModel()) {
+    viewModel: PreExamViewModel = viewModel()
+) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val stepsScroll = rememberScrollState()
+
     var leaving by remember { mutableStateOf(false) }
     var applied by remember(state.result) { mutableStateOf(false) }
     val locked = state.busy || state.transcribing || state.importing
-    val titles = listOf("Vùng đau", "Trắc nghiệm", "Ảnh", "Nhịp tim", "Giọng nói", "Kết quả")
-    BackHandler { if (state.step > 0 && !locked) viewModel.step(state.step - 1) else leaving = true }
-    if (leaving) AlertDialog(onDismissRequest = { leaving = false }, title = { Text("Rời phiên sàng lọc?") },
-        text = { Text("Thông tin và dữ liệu thu thập của phiên này sẽ được xóa khi rời màn hình.") },
-        confirmButton = { TextButton(onClick = { leaving = false; onSkipScreening() }) { Text("Rời phiên") } },
-        dismissButton = { TextButton(onClick = { leaving = false }) { Text("Tiếp tục") } })
-    Scaffold(topBar = { TopAppBar(title = { Text("AI gợi ý chuyên khoa", fontWeight = FontWeight.Bold) },
-        navigationIcon = { IconButton(onClick = { if (state.step > 0 && !locked) viewModel.step(state.step - 1) else leaving = true }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Quay lại") } },
-        actions = { TextButton(onClick = { leaving = true }) { Text("Đóng") } }) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f))) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(stepsScroll).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                titles.forEachIndexed { index, label -> FilterChip(selected = state.step == index,
-                    enabled = !locked && (index == 0 || state.regions.isNotEmpty()) && (index < 5 || state.result != null),
-                    onClick = { viewModel.step(index) }, label = { Text("${index + 1}. $label") }) }
+
+    // Step titles for steps 0 to 4 (Step 1 to 5)
+    val stepTitles = listOf(
+        "Vùng bất thường",
+        "Trắc nghiệm",
+        "Ảnh tổn thương",
+        "Nhịp tim qua camera",
+        "Giọng nói triệu chứng"
+    )
+
+    // Back handler: if step > 0, go back one step; if step 0, prompt exit dialog
+    BackHandler {
+        if (state.step > 0 && !locked) {
+            viewModel.step(state.step - 1)
+        } else {
+            leaving = true
+        }
+    }
+
+    if (leaving) {
+        ScreeningExitDialog(
+            onConfirmExit = {
+                leaving = false
+                onSkipScreening()
+            },
+            onDismiss = { leaving = false }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            if (state.step < 5) {
+                Column {
+                    ScreeningHeaderBar(
+                        title = "Sàng lọc AI",
+                        onBack = {
+                            if (state.step > 0 && !locked) viewModel.step(state.step - 1) else leaving = true
+                        },
+                        onClose = { leaving = true }
+                    )
+                    ScreeningProgressBar(
+                        currentStep = state.step,
+                        totalSteps = 5,
+                        stepTitle = stepTitles.getOrElse(state.step) { "Sàng lọc" }
+                    )
+                }
+            } else {
+                // Result Screen Header (Strictly NO "Bước 6/6")
+                ScreeningHeaderBar(
+                    title = "Kết quả sàng lọc",
+                    onBack = {
+                        if (!locked) viewModel.step(4)
+                    },
+                    onClose = { leaving = true }
+                )
             }
-            val scroll = rememberScrollState()
-            LaunchedEffect(state.step) { focus.clearFocus(); keyboard?.hide(); scroll.scrollTo(0); stepsScroll.animateScrollTo((stepsScroll.maxValue * state.step / 5f).toInt()) }
-            Column(Modifier.weight(1f).verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("5 bước thu thập • Kết quả hỗ trợ chọn nơi khám, không thay thế chẩn đoán.", style = MaterialTheme.typography.bodySmall)
-                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.fillMaxWidth()) }
-                if (state.error?.contains("Bộ câu hỏi") == true) TextButton(onClick = viewModel::load, enabled = !state.loading) { Text("Tải lại bộ câu hỏi") }
-                if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (state.catalog == null && !state.loading) Button(onClick = viewModel::load) { Text("Tải lại dữ liệu") }
-                if (state.catalog != null) {
-                    if (state.hasWarning && state.step != 5) ScreeningPanel("Câu trả lời cần được đánh giá y tế sớm") {
-                        Text("Không cần chờ chụp ảnh, đo nhịp tim hay ghi âm.")
-                        Button(onClick = { viewModel.analyze(true) }, enabled = !locked) { Text("Xem hướng dẫn ngay") }
+        },
+        bottomBar = {
+            if (state.catalog != null) {
+                when (state.step) {
+                    0 -> {
+                        ScreeningBottomAction(
+                            primaryText = "Tiếp tục",
+                            onPrimary = { viewModel.step(1) },
+                            primaryEnabled = state.regions.isNotEmpty() && !locked,
+                            helperText = if (state.regions.isEmpty()) "Vui lòng chọn ít nhất 1 vùng khó chịu để tiếp tục" else null
+                        )
                     }
-                    when (state.step) {
-                        0 -> {
-                            ScreeningPanel("Thông tin người cần khám", "Dùng tuổi của người có triệu chứng, kể cả khi đặt cho người thân.") {
-                                OutlinedTextField(state.age, viewModel::age, label = { Text("Tuổi") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                                var hospitalsOpen by remember { mutableStateOf(false) }
-                                OutlinedButton(onClick = { hospitalsOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(state.hospitals.find { it.id == state.hospitalId }?.name ?: "Chọn cơ sở y tế (tùy chọn)") }
-                                DropdownMenu(expanded = hospitalsOpen, onDismissRequest = { hospitalsOpen = false }) {
-                                    DropdownMenuItem(text = { Text("Chọn cơ sở sau") }, onClick = { viewModel.hospital(null); hospitalsOpen = false })
-                                    state.hospitals.forEach { h -> DropdownMenuItem(text = { Text(h.name) }, onClick = { viewModel.hospital(h.id); hospitalsOpen = false }) }
+                    1 -> {
+                        ScreeningBottomAction(
+                            primaryText = "Tiếp tục",
+                            onPrimary = { viewModel.step(2) },
+                            primaryEnabled = !locked
+                        )
+                    }
+                    2 -> {
+                        ScreeningBottomAction(
+                            primaryText = "Tiếp tục",
+                            onPrimary = { viewModel.step(3) },
+                            primaryEnabled = !locked && (!state.images.isNotEmpty() || state.consent),
+                            secondaryText = "Bỏ qua bước này",
+                            onSecondary = {
+                                state.images.forEach(viewModel::removeImage)
+                                viewModel.step(3)
+                            },
+                            helperText = if (state.images.isNotEmpty() && !state.consent) "Cần đồng ý xử lý ảnh hoặc bỏ qua bước này" else null
+                        )
+                    }
+                    3 -> {
+                        ScreeningBottomAction(
+                            primaryText = "Tiếp tục",
+                            onPrimary = { viewModel.step(4) },
+                            primaryEnabled = !locked,
+                            secondaryText = "Bỏ qua bước này",
+                            onSecondary = {
+                                viewModel.ppg(null)
+                                viewModel.step(4)
+                            }
+                        )
+                    }
+                    4 -> {
+                        val canAnalyze = !locked && state.regions.isNotEmpty() &&
+                                (state.transcript.isBlank() || state.confirmed)
+                        ScreeningBottomAction(
+                            primaryText = "Phân tích và xem gợi ý",
+                            onPrimary = { viewModel.analyze() },
+                            primaryEnabled = canAnalyze,
+                            isLoading = state.busy,
+                            loadingText = "NovaCare AI đang tổng hợp thông tin...",
+                            secondaryText = "Bỏ qua bước ghi âm & Phân tích ngay",
+                            onSecondary = {
+                                viewModel.transcript("")
+                                viewModel.analyze()
+                            },
+                            helperText = if (state.transcript.isNotBlank() && !state.confirmed)
+                                "Vui lòng đánh dấu xác nhận lời kể trước khi phân tích" else null
+                        )
+                    }
+                    5 -> {
+                        // Result Screen Bottom Action
+                        state.result?.let { res ->
+                            Surface(
+                                color = Color.White,
+                                shadowElevation = 8.dp,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (state.canApply) {
+                                        Button(
+                                            onClick = {
+                                                if (!applied && viewModel.uiState.value.canApply) {
+                                                    applied = true
+                                                    onCompletedToBooking(
+                                                        null,
+                                                        res.recommendedSpecialtyId,
+                                                        state.hospitalId,
+                                                        res.summary.orEmpty()
+                                                    )
+                                                }
+                                            },
+                                            enabled = !applied,
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(50.dp)
+                                        ) {
+                                            Text(
+                                                text = "Đặt khám ${res.recommendedSpecialtyName ?: "chuyên khoa"}",
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        TextButton(
+                                            onClick = {
+                                                viewModel.step(if (res.decisionReason == "REGION_CONFLICT") 0 else 1)
+                                            }
+                                        ) {
+                                            Text(
+                                                text = "Kiểm tra lại thông tin đã nhập",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = TextSecondary
+                                            )
+                                        }
+
+                                        if (res.nextAction == "CHOOSE_FACILITY") {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            TextButton(onClick = { viewModel.step(0) }) {
+                                                Text(
+                                                    text = "Chọn cơ sở y tế",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = PrimaryDark
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                            ScreeningPanel("1. Chọn vùng bất thường", "Có thể chọn nhiều vị trí; trái/phải tính theo cơ thể của bạn.") {
-                                var query by remember { mutableStateOf("") }
-                                OutlinedTextField(query, { query = it }, label = { Text("Tìm vùng, ví dụ: gối, tay, đầu") }, modifier = Modifier.fillMaxWidth())
-                                val regions = state.catalog!!.regions.filter { it.name.contains(query, true) }
-                                regions.chunked(2).forEach { row -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    row.forEach { region -> FilterChip(selected = region.id in state.regions, onClick = { viewModel.region(region.id) }, label = { Text(region.name) }, modifier = Modifier.weight(1f)) }
-                                    if (row.size == 1) Spacer(Modifier.weight(1f))
-                                } }
-                                Text("Đã chọn: " + state.catalog!!.regions.filter { it.id in state.regions }.joinToString { it.name })
-                                OutlinedTextField(state.symptoms, viewModel::symptoms, label = { Text("Mô tả triệu chứng thực tế") }, minLines = 3, modifier = Modifier.fillMaxWidth())
-                                TextButton(onClick = { viewModel.analyze(true) }, enabled = state.regions.isNotEmpty()) { Text("Kiểm tra lời kể / cảnh báo ngay") }
-                            }
                         }
-                        1 -> {
-                            ScreeningPanel("2. Trắc nghiệm theo vùng", "${state.questions.count { state.answers.containsKey(it.id) }}/${state.questions.size} câu đã trả lời. Không rõ không được xem là Không.") {
-                                OutlinedTextField(state.pain, viewModel::pain, label = { Text("Mức đau 0–10 (có thể để trống)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-                                OutlinedTextField(state.duration, viewModel::duration, label = { Text("Triệu chứng bắt đầu khi nào?") }, modifier = Modifier.fillMaxWidth())
-                            }
-                            state.questions.forEachIndexed { index, q -> ScreeningPanel("${index + 1}. " + q.question.replace("{regionName}", state.catalog!!.regions.filter { it.id in state.regions && it.id in q.regionIds }.joinToString { it.name }), if (q.safety) "Câu hỏi cảnh báo • cần xác nhận" else null) {
-                                val choices = if (q.type == "boolean") listOf("yes" to "Có", "no" to "Không", "unknown" to "Không rõ") else q.options.orEmpty().map { it.value to it.label } + ("unknown" to "Không rõ")
-                                choices.forEach { (value, label) -> OutlinedButton(onClick = { viewModel.answer(q.id, value) }, modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.outlinedButtonColors(containerColor = if (state.answers[q.id] == value) ScreeningGreen.copy(alpha = .12f) else Color.Transparent)) {
-                                    if (state.answers[q.id] == value) Icon(Icons.Default.Check, null, Modifier.size(18.dp)); Text(label, Modifier.padding(start = 6.dp))
-                                } }
-                            } }
-                            if (state.unansweredSafety.isNotEmpty()) Text("Còn ${state.unansweredSafety.size} câu cảnh báo chưa được xác nhận. Hệ thống có thể cần hỏi thêm trước khi gợi ý.", color = MaterialTheme.colorScheme.error)
-                        }
-                        2 -> ScreeningPanel("3. Ảnh tổn thương", "Tùy chọn • Tối đa 3 ảnh JPEG/PNG/WebP, mỗi ảnh không quá 5 MB. Chỉ dùng cho tổn thương nhìn thấy bên ngoài.") {
-                            ScreeningConsent(state.consent, viewModel::consent)
-                            ScreeningImages(state.images, !locked, { uri, file -> viewModel.addImage(context.applicationContext, uri, file) }, viewModel::removeImage, viewModel::error)
-                        }
-                        3 -> ScreeningPanel("4. Nhịp tim qua camera", "Tùy chọn • Chỉ ghi nhận số đo khi tín hiệu đủ chất lượng. Không dùng để loại trừ tình trạng khẩn cấp.") {
-                            state.ppg?.let { Text("${it.bpm} BPM • Ước lượng", style = MaterialTheme.typography.headlineSmall, color = ScreeningGreen) }
-                            ScreeningPpgCapture(onResult = viewModel::ppg, onError = viewModel::error)
-                        }
-                        4 -> ScreeningPanel("5. Giọng nói", "Tùy chọn • Kể triệu chứng thật; hệ thống chuyển thành văn bản, không chẩn đoán qua âm sắc.") {
-                            ScreeningConsent(state.consent, viewModel::consent)
-                            if (state.consent) ScreeningVoiceCapture(state.transcribing, viewModel::transcribe, viewModel::error)
-                            if (state.transcribing) LinearProgressIndicator(Modifier.fillMaxWidth())
-                            OutlinedTextField(state.transcript, viewModel::transcript, label = { Text("Lời kể đã chuyển / nhập trực tiếp") }, minLines = 3, modifier = Modifier.fillMaxWidth(), enabled = !state.transcribing)
-                            Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(state.confirmed, viewModel::confirm, enabled = state.transcript.isNotBlank() && !state.transcribing); Text("Tôi xác nhận nội dung đúng với triệu chứng của mình.", style = MaterialTheme.typography.bodySmall) }
-                        }
-                        5 -> {
-                            if (state.busy) ScreeningPanel("Đang kiểm tra thông tin") { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Vui lòng chờ. Ảnh và lời kể có thể cần thêm thời gian xử lý.") }
-                            state.result?.let { result -> ScreeningPanel(result.riskLabel ?: "Kết quả sàng lọc") {
-                                Text(result.summary.orEmpty())
-                                result.recommendedSpecialtyName?.let { Text(it, color = ScreeningGreen, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
-                                result.triageDetails?.keyObservations.orEmpty().forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
-                                val hasProviderFailure = result.providerErrors.orEmpty().isNotEmpty()
-                                val hasRulesRecommendation = result.recommendationSource == "QUESTIONNAIRE_RULES" &&
-                                    !result.recommendedSpecialtyId.isNullOrBlank()
-                                if (hasRulesRecommendation) {
-                                    Text(
-                                        "Định hướng sàng lọc đã hoàn tất bằng thông tin đã xác nhận và quy tắc sàng lọc.",
-                                        color = ScreeningGreen,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                    if (hasProviderFailure) Text(
-                                        "Phần đối chiếu RAG/LLM hiện chưa khả dụng; gợi ý này không phải chẩn đoán.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                } else if (hasProviderFailure) {
-                                    Text(
-                                        if (result.providerErrors.orEmpty().any { it.code == "INSUFFICIENT_BALANCE" })
-                                            "Không thể hoàn tất phân tích RAG/LLM vì tài khoản nhà cung cấp đã hết số dư."
-                                        else "Không thể hoàn tất phân tích RAG/LLM. Vui lòng thử lại sau.",
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                                if (result.recommendationSource == "RAG_LLM") Text("Gợi ý có đối chiếu tài liệu tham khảo.", style = MaterialTheme.typography.bodySmall)
-                                Text(result.ppg?.bpm?.let { "Nhịp tim: $it BPM (ước lượng)" } ?: "Chưa có số đo nhịp tim đủ chất lượng.")
-                                if (result.modalityStatuses?.get("image") in listOf("PARTIAL_OR_FAILED", "LOW_QUALITY_OR_UNRELATED")) Text("Ảnh chưa đủ rõ hoặc chưa phân tích được.")
-                                result.imageAnalysisFindings.orEmpty().forEach { Text("Quan sát ảnh: $it") }
-                                result.citations.orEmpty().forEach { citation -> TextButton(onClick = { if (citation.sourceUrl.startsWith("https://")) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(citation.sourceUrl))) } }) { Text(citation.title) } }
-                                if (result.nextAction == "EMERGENCY_GUIDANCE") Button(onClick = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:115"))) }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Gọi 115 / tìm hỗ trợ cấp cứu") }
-                                if (state.canApply) Button(onClick = {
-                                    if (!applied && viewModel.uiState.value.canApply) { applied = true; onCompletedToBooking(null, result.recommendedSpecialtyId, state.hospitalId, result.summary.orEmpty()) }
-                                }, enabled = !applied, modifier = Modifier.fillMaxWidth()) { Text("Áp dụng chuyên khoa vào đặt khám") }
-                                if (result.nextAction == "CHOOSE_FACILITY") TextButton(onClick = { viewModel.step(0) }) { Text("Chọn cơ sở và kiểm tra lại") }
-                                TextButton(onClick = { viewModel.step(if (result.decisionReason == "REGION_CONFLICT") 0 else 1) }) { Text("Kiểm tra lại thông tin") }
-                            } }
-                            if (!state.busy) OutlinedButton(onClick = { viewModel.analyze() }) { Text("${if (state.result == null) "Thử" else "Phân tích"} lại") }
-                        }
-                    }
-                    if (state.step < 5) {
-                        Button(onClick = { if (state.step == 4) viewModel.analyze() else viewModel.step(state.step + 1) }, enabled = !locked && state.regions.isNotEmpty(), modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), colors = ButtonDefaults.buttonColors(containerColor = ScreeningGreen), shape = RoundedCornerShape(14.dp)) {
-                            Text(if (state.step == 4) "Phân tích và xem gợi ý" else "Tiếp tục")
-                        }
-                        if (state.step in 2..4) TextButton(onClick = {
-                            when (state.step) { 2 -> state.images.forEach(viewModel::removeImage); 3 -> viewModel.ppg(null); 4 -> viewModel.transcript("") }
-                            if (state.step == 4) viewModel.analyze() else viewModel.step(state.step + 1)
-                        }, enabled = !locked, modifier = Modifier.fillMaxWidth()) { Text("Bỏ qua bước này") }
                     }
                 }
             }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+    ) { padding ->
+        val scrollState = rememberScrollState()
+
+        // Clear focus and scroll to top when step changes
+        LaunchedEffect(state.step) {
+            focus.clearFocus()
+            keyboard?.hide()
+            scrollState.scrollTo(0)
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // General Medical Disclaimer at top of collection steps
+            if (state.step < 5) {
+                MedicalDisclaimerBanner()
+            }
+
+            // Error banner
+            state.error?.let { err ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECACA))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = err,
+                            color = Color(0xFFDC2626),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        if (err.contains("Bộ câu hỏi") || err.contains("kết nối")) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            TextButton(
+                                onClick = viewModel::load,
+                                enabled = !state.loading,
+                                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFDC2626))
+                            ) {
+                                Text("Tải lại dữ liệu", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Loading catalog state
+            if (state.loading) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CircularProgressIndicator(color = Primary)
+                    Text(
+                        text = "Đang tải bộ câu hỏi và danh mục sàng lọc...",
+                        fontSize = 13.sp,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            if (state.catalog == null && !state.loading) {
+                Button(
+                    onClick = viewModel::load,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text("Tải lại dữ liệu", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Content when catalog is ready
+            if (state.catalog != null) {
+                val catalog = state.catalog!!
+
+                // Persistent urgent red-flag warning if user answered "yes" to safety question (across steps 0..4)
+                if (state.hasWarning && state.step < 5) {
+                    SafetyAlertWarningCard(
+                        onUrgentAction = { viewModel.analyze(true) }
+                    )
+                }
+
+                when (state.step) {
+                    // STEP 1: VÙNG BẤT THƯỜNG
+                    0 -> {
+                        PatientInfoCard(
+                            age = state.age,
+                            onAgeChange = viewModel::age,
+                            hospitalId = state.hospitalId,
+                            hospitals = state.hospitals,
+                            onSelectHospital = viewModel::hospital
+                        )
+
+                        BodyRegionSelectorCard(
+                            catalogRegions = catalog.regions,
+                            selectedRegions = state.regions,
+                            onToggleRegion = viewModel::region
+                        )
+
+                        SymptomDescriptionCard(
+                            symptoms = state.symptoms,
+                            onSymptomsChange = viewModel::symptoms,
+                            onUrgentCheck = { viewModel.analyze(true) },
+                            hasSelectedRegions = state.regions.isNotEmpty()
+                        )
+                    }
+
+                    // STEP 2: TRẮC NGHIỆM THEO VÙNG
+                    1 -> {
+                        PainAndDurationCard(
+                            pain = state.pain,
+                            onPainChange = viewModel::pain,
+                            duration = state.duration,
+                            onDurationChange = viewModel::duration
+                        )
+
+                        val questions = state.questions
+                        val answeredCount = questions.count { state.answers.containsKey(it.id) }
+
+                        Surface(
+                            color = Color.White,
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Tiến độ câu hỏi:",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "$answeredCount / ${questions.size} đã trả lời",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = PrimaryDark
+                                )
+                            }
+                        }
+
+                        questions.forEachIndexed { index, q ->
+                            CompactQuestionCard(
+                                questionIndex = index,
+                                totalQuestions = questions.size,
+                                question = q,
+                                catalogRegions = catalog.regions,
+                                selectedRegions = state.regions,
+                                currentAnswer = state.answers[q.id],
+                                onAnswerSelected = { value -> viewModel.answer(q.id, value) }
+                            )
+                        }
+
+                        if (state.unansweredSafety.isNotEmpty()) {
+                            Surface(
+                                color = Color(0xFFFFFBEB),
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Còn ${state.unansweredSafety.size} câu hỏi cảnh báo chưa được xác nhận. Vui lòng kiểm tra kỹ để AI hỗ trợ chính xác nhất.",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF92400E),
+                                    lineHeight = 16.sp,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // STEP 3: ẢNH TỔN THƯƠNG
+                    2 -> {
+                        ScreeningImageSection(
+                            images = state.images,
+                            enabled = !locked,
+                            isImporting = state.importing,
+                            consent = state.consent,
+                            onConsentChange = viewModel::consent,
+                            onAddImage = { uri, file ->
+                                viewModel.addImage(context.applicationContext, uri, file)
+                            },
+                            onRemoveImage = viewModel::removeImage,
+                            onError = viewModel::error
+                        )
+                    }
+
+                    // STEP 4: NHỊP TIM CAMERA (PPG)
+                    3 -> {
+                        ScreeningPpgCapture(
+                            currentPpg = state.ppg,
+                            onResult = viewModel::ppg,
+                            onError = viewModel::error
+                        )
+                    }
+
+                    // STEP 5: GIỌNG NÓI TRIỆU CHỨNG
+                    4 -> {
+                        ScreeningVoiceSection(
+                            consent = state.consent,
+                            onConsentChange = viewModel::consent,
+                            isTranscribing = state.transcribing,
+                            transcript = state.transcript,
+                            onTranscriptChange = viewModel::transcript,
+                            confirmed = state.confirmed,
+                            onConfirmChange = viewModel::confirm,
+                            onSendVoice = viewModel::transcribe,
+                            onError = viewModel::error
+                        )
+                    }
+
+                    // STEP 5: KẾT QUẢ SÀNG LỌC
+                    5 -> {
+                        if (state.busy) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    CircularProgressIndicator(color = Primary)
+                                    Text(
+                                        text = "NovaCare AI đang tổng hợp thông tin...",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryDark
+                                    )
+                                    Text(
+                                        text = "Đang đối chiếu triệu chứng, câu trả lời lâm sàng và dữ liệu tham khảo.",
+                                        fontSize = 12.sp,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        state.result?.let { result ->
+                            // Emergency Guidance Box
+                            if (result.nextAction == "EMERGENCY_GUIDANCE") {
+                                EmergencyGuidanceCard(
+                                    onCall115 = {
+                                        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:115")))
+                                    }
+                                )
+                            }
+
+                            // 1. Gợi ý phù hợp nhất (Specialty & summary)
+                            ResultHeroCard(result = result)
+
+                            // 2. Vì sao gợi ý? (Key observations from rule engine / AI)
+                            RecommendationReasonsCard(result = result)
+
+                            // 3. Tóm tắt dữ liệu
+                            val selectedRegionNames = catalog.regions
+                                .filter { it.id in state.regions }
+                                .map { it.name }
+                            ScreeningDataSummaryCard(
+                                regionNames = selectedRegionNames,
+                                pain = state.pain,
+                                duration = state.duration,
+                                bpm = result.ppg?.bpm ?: state.ppg?.bpm,
+                                hasImages = state.images.isNotEmpty(),
+                                hasVoice = state.transcript.isNotBlank()
+                            )
+
+                            // 4. Phân tích ảnh
+                            ResultImageAssessmentsCard(
+                                images = state.images,
+                                assessments = result.imageAssessments,
+                                findings = result.imageAnalysisFindings
+                            )
+
+                            // 5. Lưu ý y tế & Tài liệu tham khảo
+                            MedicalNotesAndCitationsCard(result = result)
+                        }
+
+                        if (!state.busy && state.result == null) {
+                            Button(
+                                onClick = { viewModel.analyze() },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                            ) {
+                                Text("Phân tích lại", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
-}
-
-@Composable
-private fun ScreeningConsent(checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.Top) { Checkbox(checked, onChange); Text("Tôi đồng ý gửi ảnh/bản ghi đã chọn đến nhà cung cấp AI được NovaCare cấu hình để xử lý. File của phiên này không được lưu vào hồ sơ; có thể bỏ qua các bước này.", style = MaterialTheme.typography.bodySmall) }
 }

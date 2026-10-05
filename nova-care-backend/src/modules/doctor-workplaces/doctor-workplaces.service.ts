@@ -182,18 +182,17 @@ export class DoctorWorkplacesService {
         { start: '15:30', end: '16:00' },
       ];
 
-      const baseDate = new Date(dateStr);
+      const dateOnlyStr = typeof dateStr === 'string' ? dateStr.split('T')[0] : new Date(dateStr).toISOString().split('T')[0];
       const newSlotsData: any[] = [];
 
       for (const t of times) {
-        const [sH, sM] = t.start.split(':').map(Number);
-        const [eH, eM] = t.end.split(':').map(Number);
-
-        const startTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), sH, sM);
-        const endTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), eH, eM);
+        const startTime = new Date(`${dateOnlyStr}T${t.start}:00+07:00`);
+        const endTime = new Date(`${dateOnlyStr}T${t.end}:00+07:00`);
+        const slotDate = new Date(`${dateOnlyStr}T00:00:00+07:00`);
 
         newSlotsData.push({
           doctorWorkplaceId: workplaceId,
+          date: slotDate,
           startTime,
           endTime,
           capacity: 1,

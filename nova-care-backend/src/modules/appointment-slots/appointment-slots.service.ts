@@ -188,10 +188,14 @@ export class AppointmentSlotsService {
           const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
           const [endHour, endMinute] = schedule.endTime.split(':').map(Number);
 
-          let slotStart = new Date(currentDate);
-          slotStart.setHours(startHour, startMinute, 0, 0);
-          const slotEnd = new Date(currentDate);
-          slotEnd.setHours(endHour, endMinute, 0, 0);
+          const dateStr = currentDate.toISOString().split('T')[0];
+          const sH = String(startHour).padStart(2, '0');
+          const sM = String(startMinute).padStart(2, '0');
+          const eH = String(endHour).padStart(2, '0');
+          const eM = String(endMinute).padStart(2, '0');
+
+          let slotStart = new Date(`${dateStr}T${sH}:${sM}:00+07:00`);
+          const slotEnd = new Date(`${dateStr}T${eH}:${eM}:00+07:00`);
 
           while (slotStart < slotEnd) {
             const slotEndTime = new Date(slotStart.getTime() + slotDuration * 60000);
@@ -202,10 +206,13 @@ export class AppointmentSlotsService {
               const [breakStartHour, breakStartMinute] = schedule.breakStart.split(':').map(Number);
               const [breakEndHour, breakEndMinute] = schedule.breakEnd.split(':').map(Number);
 
-              const breakStart = new Date(slotStart);
-              breakStart.setHours(breakStartHour, breakStartMinute, 0, 0);
-              const breakEnd = new Date(slotStart);
-              breakEnd.setHours(breakEndHour, breakEndMinute, 0, 0);
+              const bsH = String(breakStartHour).padStart(2, '0');
+              const bsM = String(breakStartMinute).padStart(2, '0');
+              const beH = String(breakEndHour).padStart(2, '0');
+              const beM = String(breakEndMinute).padStart(2, '0');
+
+              const breakStart = new Date(`${dateStr}T${bsH}:${bsM}:00+07:00`);
+              const breakEnd = new Date(`${dateStr}T${beH}:${beM}:00+07:00`);
 
               if (slotStart >= breakStart && slotStart < breakEnd) {
                 isBreak = true;

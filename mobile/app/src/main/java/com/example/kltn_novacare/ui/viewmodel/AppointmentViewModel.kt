@@ -62,7 +62,13 @@ class AppointmentViewModel(
         }
     }
 
+    fun resetCancelState() {
+        if (_cancelState.value !is NetworkState.Loading) _cancelState.value = NetworkState.Idle
+    }
+
     fun cancelAppointment(appointmentId: String, reason: String, onSuccess: () -> Unit) {
+        if (_cancelState.value is NetworkState.Loading) return
+        _cancelState.value = NetworkState.Loading
         viewModelScope.launch {
             _cancelState.value = NetworkState.Loading
             appointmentRepository.cancelAppointment(appointmentId, reason).fold(
@@ -70,6 +76,8 @@ class AppointmentViewModel(
                     _cancelState.value = NetworkState.Success(it)
                     loadDetails(appointmentId)
                     loadUpcoming()
+                    loadHistory()
+                    loadNotifications()
                     onSuccess()
                 },
                 onFailure = {

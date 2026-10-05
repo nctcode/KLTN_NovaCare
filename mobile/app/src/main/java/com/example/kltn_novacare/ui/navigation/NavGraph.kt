@@ -18,6 +18,9 @@ import com.example.kltn_novacare.ui.screens.appointment.AppointmentListScreen
 import com.example.kltn_novacare.ui.screens.appointment.AppointmentDetailScreen
 import com.example.kltn_novacare.ui.screens.payment.PaymentScreen
 import com.example.kltn_novacare.ui.screens.notification.NotificationScreen
+import com.example.kltn_novacare.ui.screens.consultation.ConsultationChatScreen
+import com.example.kltn_novacare.ui.screens.consultation.ConsultationHomeScreen
+import com.example.kltn_novacare.ui.screens.consultation.ConsultationPrecheckScreen
 import com.example.kltn_novacare.ui.screens.settings.SettingsScreen
 import com.example.kltn_novacare.ui.viewmodel.*
 
@@ -28,7 +31,8 @@ fun NavGraph(
     doctorViewModel: DoctorViewModel = viewModel(),
     patientViewModel: PatientViewModel = viewModel(),
     bookingViewModel: BookingViewModel = viewModel(),
-    appointmentViewModel: AppointmentViewModel = viewModel()
+    appointmentViewModel: AppointmentViewModel = viewModel(),
+    consultationViewModel: ConsultationViewModel = viewModel()
 ) {
     // Check initial start destination based on login status
     val isUserLoggedIn = authViewModel.getCurrentUser() != null
@@ -50,7 +54,8 @@ fun NavGraph(
             HomeScreen(
                 navController = navController,
                 doctorViewModel = doctorViewModel,
-                appointmentViewModel = appointmentViewModel
+                appointmentViewModel = appointmentViewModel,
+                authViewModel = authViewModel
             )
         }
         
@@ -81,9 +86,17 @@ fun NavGraph(
         
         // Search route fallback (without parameters)
         composable(Screen.Search.route) {
-            DoctorListScreen(
-                navController = navController,
-                doctorViewModel = doctorViewModel
+            com.example.kltn_novacare.ui.screens.search.SearchScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDoctor = { doctorId ->
+                    navController.navigate(Screen.DoctorDetail.createRoute(doctorId))
+                },
+                onNavigateToBooking = { doctorId ->
+                    navController.navigate(Screen.DoctorDetail.createRoute(doctorId))
+                },
+                onNavigateToFacility = { facilityId ->
+                    navController.navigate(Screen.HospitalBooking.createRoute(hospitalId = facilityId))
+                }
             )
         }
         
@@ -147,7 +160,36 @@ fun NavGraph(
                 onPay = { appointment ->
                     bookingViewModel.resumePayment(appointment)
                     navController.navigate(Screen.BookingCheckout.route)
+                },
+                onConsult = { appointment ->
+                    navController.navigate(Screen.ConsultationPrecheck.createRoute(appointment.id))
                 }
+            )
+        }
+
+        composable(Screen.Consultations.route) {
+            ConsultationHomeScreen(navController, consultationViewModel)
+        }
+
+        composable(
+            route = Screen.ConsultationPrecheck.route,
+            arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
+        ) { entry ->
+            ConsultationPrecheckScreen(
+                appointmentId = entry.arguments?.getString("appointmentId").orEmpty(),
+                navController = navController,
+                viewModel = consultationViewModel
+            )
+        }
+
+        composable(
+            route = Screen.ConsultationChat.route,
+            arguments = listOf(navArgument("consultationId") { type = NavType.StringType })
+        ) { entry ->
+            ConsultationChatScreen(
+                consultationId = entry.arguments?.getString("consultationId").orEmpty(),
+                navController = navController,
+                viewModel = consultationViewModel
             )
         }
         

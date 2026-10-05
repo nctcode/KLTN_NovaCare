@@ -533,8 +533,19 @@ async function main() {
             ? `Trưởng khoa ${spec.name} - ${branch.name}`
             : `Bác sĩ Chuyên khoa ${spec.name} - ${branch.name}`;
 
+          const doctorUser = await prisma.user.create({
+            data: {
+              email: `doctor${nameCounter}@novacare.vn`,
+              passwordHash: hashedPassword,
+              fullName,
+              role: Role.DOCTOR,
+              isActive: true,
+            },
+          });
+
           const doctor = await prisma.doctor.create({
             data: {
+              userId: doctorUser.id,
               fullName,
               title: titleObj.title,
               qualification: titleObj.qualification,
@@ -734,16 +745,19 @@ async function main() {
       { start: '15:30', end: '16:00' },
     ];
 
+    const y = slotDate.getFullYear();
+    const m = String(slotDate.getMonth() + 1).padStart(2, '0');
+    const d = String(slotDate.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+
     for (const wp of createdWorkplaces) {
       for (const t of times) {
-        const [sH, sM] = t.start.split(':').map(Number);
-        const [eH, eM] = t.end.split(':').map(Number);
-
-        const startTime = new Date(slotDate.getFullYear(), slotDate.getMonth(), slotDate.getDate(), sH, sM);
-        const endTime = new Date(slotDate.getFullYear(), slotDate.getMonth(), slotDate.getDate(), eH, eM);
+        const startTime = new Date(`${dateStr}T${t.start}:00+07:00`);
+        const endTime = new Date(`${dateStr}T${t.end}:00+07:00`);
 
         slotList.push({
           doctorWorkplaceId: wp.id,
+          date: new Date(`${dateStr}T00:00:00+07:00`),
           startTime,
           endTime,
           capacity: 1,

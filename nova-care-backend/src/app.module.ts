@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ClinicRoomsModule } from './modules/schedules/clinic-rooms.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule } from '@/config/config.module';
 import { PrismaModule } from '@/database/prisma.module';
@@ -29,6 +30,8 @@ import { IntegrationModule } from '@/modules/integration/integration.module';
 import { HospitalAdminModule } from '@/modules/hospital-admin/hospital-admin.module';
 
 import { SchedulesModule } from '@/modules/schedules/schedules.module';
+import { ConsultationsModule } from '@/modules/consultations/consultations.module';
+import { SearchModule } from '@/modules/search/search.module';
 
 @Module({
   imports: [
@@ -66,6 +69,9 @@ import { SchedulesModule } from '@/modules/schedules/schedules.module';
     ClinicalModule,
     IntegrationModule,
     HospitalAdminModule,
+    ConsultationsModule,
+    SearchModule,
+    ClinicRoomsModule,
   ],
 })
 export class AppModule {}

@@ -129,6 +129,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
   });
 
   const updateStatusMutation = useMutation({
+    onError: (error: Error) => toast.error(error.message || 'Không thể cập nhật trạng thái'),
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       adminService.updateAppointmentStatus(id, status),
     onSuccess: () => {
@@ -394,6 +395,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
             <option value="CANCELLED">Đã hủy</option>
             <option value="EXPIRED">Quá hạn</option>
             <option value="NO_SHOW">Vắng mặt</option>
+            <option value="OVERDUE">Quá giờ — chưa tiếp nhận</option>
           </select>
 
           {/* Date Picker Filter */}
@@ -531,6 +533,13 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
 
                           {/* Actions */}
                           <td className="py-2.5 px-3 text-right align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            {slotStart && slotStart.getTime() < Date.now() && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                              <Button variant="outline" disabled={updateStatusMutation.isPending} onClick={() => {
+                                if (window.confirm('Xác nhận bệnh nhân không đến khám? Chỉ thực hiện sau khi kiểm tra tại cơ sở.')) {
+                                  updateStatusMutation.mutate({ id: appt.id, status: 'NO_SHOW' });
+                                }
+                              }}>Không đến khám</Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"

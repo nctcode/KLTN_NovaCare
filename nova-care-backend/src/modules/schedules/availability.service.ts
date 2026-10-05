@@ -33,8 +33,10 @@ export class AvailabilityService {
     medicalServiceId?: string;
   }): Promise<{ options: BookingOption[]; totalCandidates: number; serviceDuration: number }> {
     const { doctorWorkplaceId, date, medicalServiceId } = params;
-    const targetDate = new Date(date);
-    const dateOnly = new Date(targetDate.toISOString().split('T')[0]);
+    const dateStr = date.split('T')[0];
+    const targetNoon = new Date(`${dateStr}T12:00:00+07:00`);
+    const dayOfWeek = targetNoon.getDay();
+    const dateOnly = new Date(`${dateStr}T00:00:00+07:00`);
 
     // 1. Fetch DoctorWorkplace & HospitalConfig
     const workplace = await this.prisma.doctorWorkplace.findUnique({
@@ -47,7 +49,7 @@ export class AvailabilityService {
 
     const hospitalConfig = await this.hospitalConfigService.resolveConfig(workplace.hospitalId);
 
-    // 2. Fetch service duration
+    // 2. Fetch service duration (mặc định 30 phút)
     let serviceDuration = hospitalConfig.defaultSlotDuration || 30;
     if (medicalServiceId) {
       const service = await this.prisma.medicalService.findUnique({
@@ -58,32 +60,33 @@ export class AvailabilityService {
       }
     }
 
-    // 3. Reconcile slots if missing
+    // 3. Reconcile slots if missing (sinh khung giờ 30 phút theo múi giờ VN)
     await this.reconciliationService.reconcileWorkplaceSlotsForDate(doctorWorkplaceId, dateOnly);
 
-    // 4. Query 15-min base slots for date & filter strictly by active DoctorSchedule shifts
+    // 4. Query base slots for date & filter strictly by active DoctorSchedule shifts
     const schedules = await this.prisma.doctorSchedule.findMany({
       where: {
         doctorWorkplaceId,
-        dayOfWeek: dateOnly.getDay(),
+        dayOfWeek,
         isActive: true,
       },
     });
 
+    const startOfDay = new Date(`${dateStr}T00:00:00+07:00`);
+    const endOfDay = new Date(`${dateStr}T23:59:59+07:00`);
+
     let baseSlots = await this.prisma.appointmentSlot.findMany({
       where: {
         doctorWorkplaceId,
-        date: dateOnly,
+        startTime: { gte: startOfDay, lte: endOfDay },
       },
       orderBy: { startTime: 'asc' },
     });
 
-    // Keep baseSlots strictly within active schedule shifts and outside break times
+    // Keep baseSlots strictly within active schedule shifts and outside break times (dùng giờ Việt Nam)
     baseSlots = baseSlots.filter((slot) => {
-      const s = new Date(slot.startTime);
-      const e = new Date(slot.endTime);
-      const sMins = s.getHours() * 60 + s.getMinutes();
-      const eMins = e.getHours() * 60 + e.getMinutes();
+      const sMins = this.getVietnamMinutes(slot.startTime);
+      const eMins = this.getVietnamMinutes(slot.endTime);
 
       return schedules.some((sched) => {
         const [sh, sm] = sched.startTime.split(':').map(Number);
@@ -145,10 +148,8 @@ export class AvailabilityService {
         const startSlot = candidateWindow[0];
         const endSlot = candidateWindow[candidateWindow.length - 1];
 
-        const s = new Date(startSlot.startTime);
-        const e = new Date(endSlot.endTime);
-        const startTimeStr = `${String(s.getHours()).padStart(2, '0')}:${String(s.getMinutes()).padStart(2, '0')}`;
-        const endTimeStr = `${String(e.getHours()).padStart(2, '0')}:${String(e.getMinutes()).padStart(2, '0')}`;
+        const startTimeStr = this.getVietnamTimeStr(startSlot.startTime);
+        const endTimeStr = this.getVietnamTimeStr(endSlot.endTime);
 
         options.push({
           id: startSlot.id,
@@ -168,5 +169,29 @@ export class AvailabilityService {
       totalCandidates: options.length,
       serviceDuration,
     };
+  }
+
+  private getVietnamTimeStr(date: Date): string {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(date));
+    const h = parts.find((p) => p.type === 'hour')?.value || '00';
+    const m = parts.find((p) => p.type === 'minute')?.value || '00';
+    return `${h}:${m}`;
+  }
+
+  private getVietnamMinutes(date: Date): number {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(date));
+    const h = Number(parts.find((p) => p.type === 'hour')?.value || 0);
+    const m = Number(parts.find((p) => p.type === 'minute')?.value || 0);
+    return h * 60 + m;
   }
 }

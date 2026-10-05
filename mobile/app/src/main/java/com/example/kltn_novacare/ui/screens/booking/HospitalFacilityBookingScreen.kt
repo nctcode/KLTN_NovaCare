@@ -33,15 +33,14 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.kltn_novacare.data.model.*
 import com.example.kltn_novacare.ui.navigation.Screen
-import com.example.kltn_novacare.ui.theme.Primary
-import com.example.kltn_novacare.ui.theme.TextSecondary
+import com.example.kltn_novacare.ui.theme.*
 import com.example.kltn_novacare.ui.viewmodel.*
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
-val MedproBlue = Color(0xFF0090DA)
-val MedproBlueLight = Color(0xFFE0F2FE)
+val MedproBlue = NovaCareGreen
+val MedproBlueLight = NovaCareGreenLight
 val MedproTextDark = Color(0xFF0F172A)
 val MedproSubText = Color(0xFF475569)
 
@@ -79,12 +78,23 @@ fun getAvailableBookingModesForHospital(hospital: Hospital): List<HospitalBookin
     modes.add(
         HospitalBookingMode(
             id = "SERVICE",
-            title = "Khám Dịch Vụ / Xét Nghiệm",
-            description = "Đăng ký siêu âm, xét nghiệm máu, nội soi, chẩn đoán hình ảnh kỹ thuật cao.",
+            title = "Khám dịch vụ",
+            description = "Chọn chuyên khoa, dịch vụ, phòng khám và thời gian phù hợp.",
             icon = Icons.Default.MedicalServices,
             iconBgColor = Color(0xFFEFF6FF),
             iconTint = Color(0xFF2563EB),
-            badge = "Kết quả nhanh"
+            badge = null
+        )
+    )
+
+    modes.add(
+        HospitalBookingMode(
+            id = "AFTER_HOURS",
+            title = "Khám ngoài giờ",
+            description = "Chọn phòng khám và lịch cuối tuần còn chỗ.",
+            icon = Icons.Default.MedicalServices,
+            iconBgColor = Color(0xFFEAF8F2),
+            iconTint = Color(0xFF075E47)
         )
     )
 

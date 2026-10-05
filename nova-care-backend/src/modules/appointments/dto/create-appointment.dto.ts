@@ -1,7 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateAppointmentDto {
+  @IsOptional() @IsUUID()
+  clinicRoomId?: string;
+
+  @IsOptional() @IsIn(['SERVICE', 'AFTER_HOURS'])
+  serviceBookingMode?: string;
   @ApiProperty({
     example: 'uuid-of-patient-profile',
     description: 'ID hồ sơ người đi khám',

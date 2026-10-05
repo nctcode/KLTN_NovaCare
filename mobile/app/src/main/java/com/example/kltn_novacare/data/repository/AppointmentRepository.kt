@@ -7,6 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class AppointmentRepository(private val apiService: ApiService = ApiClient.getService()) {
+    suspend fun getClinicRoomCatalog(hospitalId: String, mode: String) =
+        healthApiResult("Không thể tải lịch phòng khám", { apiService.getClinicRoomCatalog(hospitalId, mode) }) {
+            requireNotNull(it.data)
+        }
     suspend fun confirmAppointment(id: String): Result<Appointment> =
         healthApiResult("Không thể xác nhận thanh toán tại viện", { apiService.confirmAppointment(id) }) {
             requireNotNull(it.data) { "Máy chủ chưa trả về lịch khám đã xác nhận" }
@@ -85,7 +89,7 @@ class AppointmentRepository(private val apiService: ApiService = ApiClient.getSe
             if (response.isSuccessful && body != null && body.success && body.data != null) {
                 Result.success(body.data)
             } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Hủy lịch khám thất bại"))
+                Result.failure(Exception(healthErrorMessage(response.errorBody()?.string(), body?.message ?: "Hủy lịch khám thất bại")))
             }
         } catch (e: Exception) {
             Result.failure(e)

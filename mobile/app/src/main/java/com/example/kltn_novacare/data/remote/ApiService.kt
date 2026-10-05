@@ -4,8 +4,78 @@ import com.example.kltn_novacare.data.model.*
 import com.google.gson.annotations.SerializedName
 import retrofit2.Call
 import retrofit2.http.*
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 
 interface ApiService {
+    @GET("clinic-rooms/catalog")
+    fun getClinicRoomCatalog(@Query("hospitalId") hospitalId: String, @Query("mode") mode: String): Call<ApiResponse<List<ClinicRoomSession>>>
+    @GET("consultations")
+    fun getConsultations(
+        @Query("cursor") cursor: String? = null,
+        @Query("limit") limit: Int = 20
+    ): Call<ApiResponse<ConsultationPage<Consultation>>>
+
+    @GET("consultations/{id}")
+    fun getConsultation(@Path("id") id: String): Call<ApiResponse<Consultation>>
+
+    @POST("consultations")
+    fun createConsultation(@Body request: CreateConsultationRequest): Call<ApiResponse<Consultation>>
+
+    @PATCH("consultations/{id}/cancel")
+    fun cancelConsultation(@Path("id") id: String): Call<ApiResponse<Consultation>>
+
+    @PATCH("consultations/{id}/accept")
+    fun acceptConsultation(@Path("id") id: String): Call<ApiResponse<Consultation>>
+
+    @PATCH("consultations/{id}/start")
+    fun startConsultation(@Path("id") id: String): Call<ApiResponse<Consultation>>
+
+    @PATCH("consultations/{id}/complete")
+    fun completeConsultation(@Path("id") id: String): Call<ApiResponse<Consultation>>
+
+    @GET("consultations/{id}/messages")
+    fun getConsultationMessages(
+        @Path("id") id: String,
+        @Query("before") before: String? = null,
+        @Query("limit") limit: Int = 30
+    ): Call<ApiResponse<ConsultationPage<ConsultationMessage>>>
+
+    @POST("consultations/{id}/messages")
+    fun sendConsultationMessage(
+        @Path("id") id: String,
+        @Body request: SendConsultationMessageRequest
+    ): Call<ApiResponse<ConsultationMessage>>
+
+    @Multipart
+    @POST("consultations/{id}/attachments")
+    fun sendConsultationAttachment(
+        @Path("id") id: String,
+        @Part file: MultipartBody.Part,
+        @Part("clientMessageId") clientMessageId: RequestBody,
+        @Part("caption") caption: RequestBody
+    ): Call<ApiResponse<ConsultationMessage>>
+
+    @PATCH("consultations/{id}/read")
+    fun markConsultationRead(
+        @Path("id") id: String,
+        @Body request: ReadConsultationMessagesRequest
+    ): Call<ApiResponse<ReadConsultationMessagesResult>>
+
+    @POST("appointments/{id}/mock-fulfill")
+    fun mockFulfill(@Path("id") id: String): Call<ApiResponse<com.google.gson.JsonObject>>
+    @GET("integration/patients/{id}/shareable-records")
+    fun shareableRecords(@Path("id") id: String, @Query("targetHospitalId") target: String): Call<ApiResponse<List<com.google.gson.JsonObject>>>
+    @GET("integration/patients/{id}/consents")
+    fun consents(@Path("id") id: String): Call<ApiResponse<List<com.google.gson.JsonObject>>>
+    @GET("integration/patients/{id}/shared-access-logs")
+    fun consentLogs(@Path("id") id: String): Call<ApiResponse<List<com.google.gson.JsonObject>>>
+    @POST("integration/consents")
+    fun createConsent(@Body body: com.google.gson.JsonObject): Call<ApiResponse<com.google.gson.JsonObject>>
+    @PATCH("integration/consents/{id}/grant")
+    fun grantConsent(@Path("id") id: String): Call<ApiResponse<com.google.gson.JsonObject>>
+    @PATCH("integration/consents/{id}/revoke")
+    fun revokeConsent(@Path("id") id: String): Call<ApiResponse<com.google.gson.JsonObject>>
 
     // ==========================================
     // AUTHENTICATION
@@ -49,6 +119,71 @@ interface ApiService {
 
     @GET("medical-services/{id}")
     fun getMedicalServiceById(@Path("id") id: String): Call<ApiResponse<MedicalService>>
+
+    // ==========================================
+    // HEALTHCARE UNIVERSAL SEARCH
+    // ==========================================
+    @GET("search")
+    fun universalSearchGrouped(
+        @Query("q") query: String?,
+        @Query("category") category: String = "ALL",
+        @Query("specialtyIds") specialtyIds: String? = null,
+        @Query("facilityType") facilityType: String? = null,
+        @Query("services") services: String? = null,
+        @Query("province") province: String? = null,
+        @Query("district") district: String? = null,
+        @Query("lat") lat: Double? = null,
+        @Query("lng") lng: Double? = null,
+        @Query("sort") sort: String? = null,
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 20
+    ): Call<ApiResponse<UniversalSearchGroupedData>>
+
+    @GET("search")
+    fun universalSearchDoctors(
+        @Query("q") query: String?,
+        @Query("category") category: String = "DOCTOR",
+        @Query("specialtyIds") specialtyIds: String? = null,
+        @Query("facilityType") facilityType: String? = null,
+        @Query("services") services: String? = null,
+        @Query("province") province: String? = null,
+        @Query("district") district: String? = null,
+        @Query("lat") lat: Double? = null,
+        @Query("lng") lng: Double? = null,
+        @Query("sort") sort: String? = null,
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 20
+    ): Call<ApiResponse<UniversalSearchPagedData<SearchDoctorItem>>>
+
+    @GET("search")
+    fun universalSearchFacilities(
+        @Query("q") query: String?,
+        @Query("category") category: String, // "HOSPITAL" or "CLINIC"
+        @Query("specialtyIds") specialtyIds: String? = null,
+        @Query("facilityType") facilityType: String? = null,
+        @Query("services") services: String? = null,
+        @Query("province") province: String? = null,
+        @Query("district") district: String? = null,
+        @Query("lat") lat: Double? = null,
+        @Query("lng") lng: Double? = null,
+        @Query("sort") sort: String? = null,
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 20
+    ): Call<ApiResponse<UniversalSearchPagedData<SearchFacilityItem>>>
+
+    @GET("search")
+    fun universalSearchSpecialties(
+        @Query("q") query: String?,
+        @Query("category") category: String = "SPECIALTY",
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 20
+    ): Call<ApiResponse<UniversalSearchPagedData<Specialty>>>
+
+    @GET("search/popular")
+    fun getPopularSearch(): Call<ApiResponse<PopularSearchData>>
+
+    @GET("search/locations")
+    fun getSearchLocations(): Call<ApiResponse<List<LocationDivision>>>
 
     // ==========================================
     // DOCTORS & WORKPLACES
@@ -205,7 +340,9 @@ data class CreateAppointmentRequest(
     val reason: String?,
     val symptoms: String?,
     val idempotencyKey: String,
-    val medicalServiceId: String? = null
+    val medicalServiceId: String? = null,
+    val clinicRoomId: String? = null,
+    val serviceBookingMode: String? = null
 )
 
 data class SimulatePaymentRequest(val appointmentId: String, val paymentMethod: String)

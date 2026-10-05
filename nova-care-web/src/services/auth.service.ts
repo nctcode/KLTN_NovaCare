@@ -44,11 +44,12 @@ export const authService = {
     return response.data;
   },
 
-  async forgotPassword(email: string): Promise<{ message: string }> {
-    return apiClient.post('/auth/forgot-password', { email });
+  async forgotPassword(data: { phone?: string; email?: string } | string): Promise<{ message: string; otpCode?: string; maskedPhone?: string }> {
+    const payload = typeof data === 'string' ? (data.includes('@') ? { email: data } : { phone: data }) : data;
+    return apiClient.post('/auth/forgot-password', payload);
   },
 
-  async resetPassword(data: { email: string; otpCode: string; newPassword: string }): Promise<{ message: string }> {
+  async resetPassword(data: { phone?: string; email?: string; otpCode: string; newPassword: string }): Promise<{ message: string }> {
     return apiClient.post('/auth/reset-password', data);
   },
 };

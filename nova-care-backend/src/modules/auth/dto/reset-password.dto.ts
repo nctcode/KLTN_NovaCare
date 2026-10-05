@@ -1,11 +1,16 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class ResetPasswordDto {
-  @ApiProperty({ description: 'Email tài khoản', example: 'patient@gmail.com' })
-  @IsEmail({}, { message: 'Email không hợp lệ' })
-  @IsNotEmpty({ message: 'Email không được để trống' })
-  email: string;
+  @ApiPropertyOptional({ description: 'Email tài khoản', example: 'patient@gmail.com' })
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @ApiPropertyOptional({ description: 'Số điện thoại tài khoản', example: '0912345678' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
 
   @ApiProperty({ description: 'Mã OTP 6 chữ số', example: '123456' })
   @IsString()

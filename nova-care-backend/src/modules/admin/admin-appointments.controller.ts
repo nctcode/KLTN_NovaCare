@@ -48,7 +48,7 @@ export class AdminAppointmentsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
-    @Query('status') status?: AppointmentStatus,
+    @Query('status') status?: AppointmentStatus | 'OVERDUE',
     @Query('hospitalId') hospitalId?: string,
     @Query('branchId') branchId?: string,
     @Query('doctorId') doctorId?: string,

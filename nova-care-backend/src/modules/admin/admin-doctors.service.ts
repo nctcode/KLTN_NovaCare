@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { AuditLogService } from '@/common/services/audit-log.service';
+import { Role } from '@prisma/client';
+import * as argon2 from 'argon2';
+import { CreateDoctorAccountDto } from './dto/create-doctor-account.dto';
 
 @Injectable()
 export class AdminDoctorsService {
@@ -212,6 +215,52 @@ export class AdminDoctorsService {
     }
 
     return { message: 'Đã xóa bác sĩ thành công' };
+  }
+
+  async createAccount(
+    doctorId: string,
+    data: CreateDoctorAccountDto,
+    adminUserId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const doctor = await this.prisma.doctor.findUnique({ where: { id: doctorId } });
+    if (!doctor || doctor.deletedAt) throw new NotFoundException('Bác sĩ không tồn tại');
+    if (doctor.userId) throw new ConflictException('Bác sĩ đã có tài khoản đăng nhập');
+    const email = data.email.trim().toLowerCase();
+    const existing = await this.prisma.user.findFirst({
+      where: { OR: [{ email }, ...(data.phone ? [{ phone: data.phone }] : [])] },
+      select: { id: true },
+    });
+    if (existing) throw new ConflictException('Email hoặc số điện thoại đã được sử dụng');
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email,
+          phone: data.phone,
+          passwordHash: await argon2.hash(data.password),
+          fullName: doctor.fullName,
+          role: Role.DOCTOR,
+          isActive: true,
+        },
+        select: { id: true, email: true, phone: true, fullName: true, role: true, isActive: true },
+      });
+      await tx.doctor.update({ where: { id: doctorId }, data: { userId: created.id } });
+      return created;
+    });
+    if (adminUserId) {
+      await this.auditLogService.logAction({
+        userId: adminUserId,
+        action: 'CREATE_DOCTOR_ACCOUNT',
+        entityType: 'Doctor',
+        entityId: doctorId,
+        newValue: { doctorUserId: user.id, role: user.role },
+        ipAddress,
+        userAgent,
+      });
+    }
+    return user;
   }
 
   // Doctor Workplace Methods

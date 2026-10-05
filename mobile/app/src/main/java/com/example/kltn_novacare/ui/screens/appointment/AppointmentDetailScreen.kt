@@ -28,6 +28,8 @@ import com.example.kltn_novacare.ui.viewmodel.AppointmentViewModel
 import com.example.kltn_novacare.ui.viewmodel.NetworkState
 import java.text.NumberFormat
 import java.util.*
+import java.time.Instant
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +37,12 @@ fun AppointmentDetailScreen(
     appointmentId: String,
     navController: NavController,
     appointmentViewModel: AppointmentViewModel,
-    onPay: (Appointment) -> Unit = {}
+    onPay: (Appointment) -> Unit = {},
+    onConsult: (Appointment) -> Unit = {}
 ) {
     val detailState by appointmentViewModel.appointmentDetails.collectAsState()
+    val cancelState by appointmentViewModel.cancelState.collectAsState()
+    val cancelling = cancelState is NetworkState.Loading
     var showCancelDialog by remember { mutableStateOf(false) }
     var cancelReason by remember { mutableStateOf("") }
     
@@ -78,7 +83,12 @@ fun AppointmentDetailScreen(
                         }
                     AppointmentDetailContent(
                         appointment = appointment,
-                        onCancelClick = { showCancelDialog = true }
+                        onRefresh = { appointmentViewModel.loadDetails(appointmentId); appointmentViewModel.loadUpcoming(); appointmentViewModel.loadHistory() },
+                        onConsult = { onConsult(appointment) },
+                        onCancelClick = {
+                            appointmentViewModel.resetCancelState()
+                            showCancelDialog = true
+                        }
                     )
                     }
                 }
@@ -93,19 +103,23 @@ fun AppointmentDetailScreen(
     // Cancel Booking Dialog
     if (showCancelDialog) {
         AlertDialog(
-            onDismissRequest = { showCancelDialog = false },
+            onDismissRequest = { if (!cancelling) showCancelDialog = false },
             title = { Text("Hủy lịch khám", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("Bạn có chắc chắn muốn hủy lịch khám này? Vui lòng nhập lý do hủy lịch khám bên dưới.", fontSize = 13.sp, color = TextSecondary)
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
+                        enabled = !cancelling,
                         value = cancelReason,
                         onValueChange = { cancelReason = it },
                         label = { Text("Lý do hủy lịch") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    (cancelState as? NetworkState.Error)?.let {
+                        Text(it.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 12.dp))
+                    }
                 }
             },
             confirmButton = {
@@ -117,14 +131,14 @@ fun AppointmentDetailScreen(
                             }
                         }
                     },
-                    enabled = cancelReason.isNotBlank(),
+                    enabled = cancelReason.isNotBlank() && !cancelling,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                 ) {
-                    Text("Xác nhận hủy", color = Color.White)
+                    Text(if (cancelling) "Đang hủy…" else "Xác nhận hủy", color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCancelDialog = false }) {
+                TextButton(enabled = !cancelling, onClick = { showCancelDialog = false }) {
                     Text("Hủy bỏ", color = TextSecondary)
                 }
             }
@@ -135,9 +149,25 @@ fun AppointmentDetailScreen(
 @Composable
 fun AppointmentDetailContent(
     appointment: Appointment,
+    onRefresh: () -> Unit = {},
+    onConsult: () -> Unit = {},
     onCancelClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    var now by remember { mutableStateOf(Instant.now()) }
+    LaunchedEffect(appointment.id) {
+        while (true) {
+            now = Instant.now()
+            delay(1000)
+        }
+    }
+    val start = runCatching { Instant.parse(appointment.slot?.startTime) }.getOrNull()
+    val active = appointment.status in listOf("PENDING", "AWAITING_PAYMENT", "CONFIRMED", "PAID")
+    val received = appointment.medicalEncounter?.status in listOf("IN_PROGRESS", "COMPLETED", "PUBLISHED")
+    val overdue = active && !received && start != null && !now.isBefore(start)
+    // Match the server's existing exception for unpaid reservations.
+    val canCancel = active && !received && (appointment.status == "AWAITING_PAYMENT" ||
+        (start != null && !now.isAfter(start.minusSeconds(7200))))
     val formattedPrice = NumberFormat.getCurrencyInstance(Locale("vi", "VN")).format(appointment.totalAmount)
 
     Column(
@@ -147,6 +177,17 @@ fun AppointmentDetailContent(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        AppointmentMedicalActions(appointment, onRefresh)
+        if (appointment.status in listOf("CONFIRMED", "PAID") && appointment.medicalEncounter == null) {
+            OutlinedButton(
+                onClick = onConsult,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
+            ) {
+                Text("Tạo phiên tư vấn với bác sĩ", fontWeight = FontWeight.Bold)
+            }
+        }
         // QR Code Ticket
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -206,6 +247,21 @@ fun AppointmentDetailContent(
                     else -> if (appointment.status == "CONFIRMED") "Thanh toán tại cơ sở y tế" else "Chưa cập nhật"
                 })
                 DetailRow("Tổng chi phí", formattedPrice)
+                DetailRow("Thanh toán", when (appointment.payment?.status ?: appointment.paymentStatus) {
+                    "PAID" -> "Đã thanh toán"
+                    "REFUNDED" -> "Đã hoàn tiền"
+                    else -> if (appointment.status == "PAID") "Đã thanh toán" else "Chưa xác nhận thanh toán"
+                })
+                DetailRow("Tình trạng khám", when {
+                    appointment.status == "CANCELLED" -> "Đã hủy lịch"
+                    appointment.status == "NO_SHOW" -> "Không đến khám"
+                    appointment.status == "COMPLETED" || appointment.medicalEncounter?.status in listOf("COMPLETED", "PUBLISHED") -> "Đã hoàn thành khám"
+                    received -> "Đã tiếp nhận / đang khám"
+                    overdue -> "Đã qua giờ hẹn — chưa xác nhận tiếp nhận"
+                    active -> "Chưa tiếp nhận"
+                    else -> appointment.status
+                })
+                if (overdue) Text("Vui lòng liên hệ cơ sở để xác nhận tình trạng khám. Lịch không tự hoàn thành khi qua giờ hẹn.", color = MaterialTheme.colorScheme.error)
             }
         }
 
@@ -232,6 +288,9 @@ fun AppointmentDetailContent(
                                 "PAID" -> "Đã thanh toán thành công"
                                 "CANCELLED" -> "Đã hủy lịch khám"
                                 "COMPLETED" -> "Đã hoàn thành buổi khám"
+                                "NO_SHOW" -> "Không đến khám"
+                                "EXPIRED" -> "Hết hạn giữ chỗ"
+                                "REFUNDED" -> "Đã hoàn tiền"
                                 else -> item.status
                             },
                             time = item.createdAt.substringBefore(".").replace("T", " "),
@@ -253,8 +312,13 @@ fun AppointmentDetailContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Cancel Button if active
-        val isCancellable = appointment.status == "PENDING" || appointment.status == "AWAITING_PAYMENT" || appointment.status == "CONFIRMED" || appointment.status == "PAID"
-        if (isCancellable) {
+        if (active && !canCancel) {
+            Text(if (received) "Lịch đã được tiếp nhận. Vui lòng liên hệ cơ sở để được hỗ trợ."
+                else if (start == null) "Chưa xác định được thời hạn hủy. Vui lòng tải lại lịch hoặc liên hệ cơ sở."
+                else "Đã hết thời hạn tự hủy lịch. Bạn chỉ có thể hủy trước giờ khám ít nhất 2 giờ. Vui lòng liên hệ cơ sở để được hỗ trợ.",
+                color = MaterialTheme.colorScheme.error)
+        }
+        if (canCancel) {
             Button(
                 onClick = onCancelClick,
                 modifier = Modifier

@@ -15,6 +15,7 @@ data class ScreeningPpg(val bpm: Int, val durationMs: Long, val measuredAt: Stri
 data class ScreeningProviderFailure(val stage: String?, val code: String?)
 data class ScreeningCitation(val id: String, val title: String, val sourceUrl: String)
 data class ScreeningVitals(val bpm: Int? = null, val quality: String? = null)
+data class ScreeningImageAssessment(val imageIndex: Int, val status: String?, val observations: List<String>?)
 data class ScreeningHospitalAvailability(val hospitalId: String?, val available: Boolean = false)
 data class MobileScreeningResult(val schemaVersion: String?, val inputRevision: String?, val riskLevel: String?,
     val riskLabel: String?, val summary: String?, val nextAction: String?, val canApply: Boolean = false,
@@ -22,7 +23,8 @@ data class MobileScreeningResult(val schemaVersion: String?, val inputRevision: 
     val triageDetails: TriageDetails?, val providerErrors: List<ScreeningProviderFailure>?,
     val citations: List<ScreeningCitation>?, val imageAnalysisFindings: List<String>?,
     val recommendationSource: String?, val decisionReason: String?, val ppg: ScreeningVitals?,
-    val hospitalAvailability: ScreeningHospitalAvailability?, val modalityStatuses: Map<String, String>?) {
+    val hospitalAvailability: ScreeningHospitalAvailability?, val modalityStatuses: Map<String, String>?,
+    val imageAssessments: List<ScreeningImageAssessment>? = null, val ppgExplanation: String? = null) {
     fun applicable(revision: Long, hospitalId: String?) = schemaVersion == "3" && inputRevision == revision.toString() &&
         canApply && nextAction == "BOOK_SPECIALTY" && !recommendedSpecialtyId.isNullOrBlank() &&
         !recommendedSpecialtyName.isNullOrBlank() && hospitalId != null && hospitalAvailability?.available == true &&

@@ -7,6 +7,7 @@ import {
   Param,
   UseGuards,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
@@ -138,10 +139,10 @@ export class AppointmentsController {
     };
   }
 
-  @Public()
   @Patch(':id/complete')
   @ApiOperation({ summary: 'Hoàn thành lịch khám' })
-  async complete(@Param('id') id: string) {
+  async complete(@Param('id') id: string, @CurrentUser() user: User) {
+    if (user.role !== 'ADMIN') throw new ForbiddenException('Chỉ quản trị viên được hoàn thành lịch qua API này');
     const data = await this.service.complete(id);
     return {
       statusCode: HttpStatus.OK,
@@ -152,7 +153,10 @@ export class AppointmentsController {
 
   @Post(':id/mock-fulfill')
   @ApiOperation({ summary: 'Mô phỏng Bệnh viện hoàn tất khám và trả hồ sơ y tế' })
-  async mockFulfill(@Param('id') id: string) {
+  async mockFulfill(@Param('id') id: string, @CurrentUser() user: User) {
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEMO_FEATURES !== 'true')
+      throw new ForbiddenException('Mô phỏng chỉ khả dụng trong môi trường demo');
+    await this.service.findOne(id, user.id);
     const data = await this.service.mockFulfill(id);
     return {
       statusCode: HttpStatus.OK,

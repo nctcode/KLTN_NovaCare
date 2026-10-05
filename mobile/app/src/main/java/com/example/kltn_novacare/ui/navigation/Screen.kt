@@ -22,6 +22,13 @@ sealed class Screen(val route: String) {
     }
     
     object Notifications : Screen("notifications")
+    object Consultations : Screen("consultations")
+    object ConsultationPrecheck : Screen("consultations/new/{appointmentId}") {
+        fun createRoute(appointmentId: String) = "consultations/new/$appointmentId"
+    }
+    object ConsultationChat : Screen("consultations/{consultationId}/chat") {
+        fun createRoute(consultationId: String) = "consultations/$consultationId/chat"
+    }
     object BookingCheckout : Screen("booking_checkout")
     object Settings : Screen("settings")
     object Payment : Screen("payment/{url}") {

@@ -119,7 +119,7 @@ export class HospitalAdminController {
   @ApiQuery({ name: 'limit', required: false })
   async getMyAppointments(
     @Req() req: any,
-    @Query('status') status?: AppointmentStatus,
+    @Query('status') status?: AppointmentStatus | 'OVERDUE',
     @Query('search') search?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number

@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.kltn_novacare.data.model.Notification
+import com.example.kltn_novacare.ui.navigation.Screen
 import com.example.kltn_novacare.ui.theme.Primary
 import com.example.kltn_novacare.ui.theme.Secondary
 import com.example.kltn_novacare.ui.theme.TextSecondary
@@ -44,7 +45,7 @@ fun NotificationScreen(
                 title = { Text("Trung tâm thông báo", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -92,7 +93,24 @@ fun NotificationScreen(
                         ) {
                             items(list) { notif ->
                                 NotificationItem(notif) {
-                                    appointmentViewModel.markNotificationAsRead(notif.id)
+                                    if (!notif.isRead) {
+                                        appointmentViewModel.markNotificationAsRead(notif.id)
+                                    }
+                                    val consultationId = notif.data?.get("consultationId") as? String
+                                    if (notif.type == "CONSULTATION_MESSAGE" || notif.type == "CONSULTATION_STATUS" || consultationId != null) {
+                                        if (!consultationId.isNullOrBlank()) {
+                                            navController.navigate(Screen.ConsultationChat.createRoute(consultationId))
+                                        } else {
+                                            navController.navigate(Screen.Consultations.route)
+                                        }
+                                    } else if (notif.type in listOf("BOOKING_CONFIRMED", "REMINDER", "RESCHEDULED", "CANCELLED")) {
+                                        val appointmentId = notif.data?.get("appointmentId") as? String
+                                        if (!appointmentId.isNullOrBlank()) {
+                                            navController.navigate(Screen.AppointmentDetail.createRoute(appointmentId))
+                                        } else {
+                                            navController.navigate(Screen.Appointments.route)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -112,7 +130,7 @@ fun NotificationItem(notification: Notification, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { if (!notification.isRead) onClick() },
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = if (notification.isRead) Color.White else Color(0xFFF0FDF4)
         ),

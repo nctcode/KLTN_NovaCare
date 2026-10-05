@@ -326,6 +326,11 @@ data class AppointmentStatusHistory(
 )
 
 data class AppointmentPayment(val status: String?, val paymentMethod: String?)
+data class AppointmentEncounter(val status: String?, val encounterCode: String? = null,
+    val encounterDate: String? = null, val specialtyName: String? = null, val doctorName: String? = null,
+    val chiefComplaint: String? = null, val clinicalSummary: String? = null, val treatmentPlan: String? = null,
+    val diagnoses: List<com.google.gson.JsonObject>? = null, val observations: List<com.google.gson.JsonObject>? = null,
+    val prescription: com.google.gson.JsonObject? = null)
 
 data class Appointment(
     val id: String,
@@ -337,6 +342,7 @@ data class Appointment(
     val paymentStatus: String? = null, // UNPAID, PAID, REFUNDED...
     val paymentMethod: String? = null, // VNPAY, CASH...
     val payment: AppointmentPayment? = null,
+    val medicalEncounter: AppointmentEncounter? = null,
     val reason: String? = null,
     val symptoms: String? = null,
     val notes: String? = null,
@@ -360,7 +366,8 @@ data class Notification(
     val content: String,
     val type: String,
     val isRead: Boolean,
-    val createdAt: String
+    val createdAt: String,
+    val data: Map<String, Any>? = null
 )
 
 data class MedicalService(

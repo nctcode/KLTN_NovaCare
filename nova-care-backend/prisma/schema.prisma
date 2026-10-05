@@ -18,6 +18,7 @@ enum Gender {
 
 enum Role {
   PATIENT
+  DOCTOR
   ADMIN
   HOSPITAL_ADMIN
 }
@@ -60,6 +61,8 @@ enum NotificationType {
   CANCELLED
   RESCHEDULED
   EXPIRED
+  CONSULTATION_MESSAGE
+  CONSULTATION_STATUS
   SYSTEM
 }
 
@@ -132,22 +135,61 @@ enum BookingType {
   ONLINE
 }
 
+enum ConsultationStatus {
+  SCHEDULED
+  WAITING
+  ACCEPTED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum ConsultationRequestMode {
+  SCHEDULED
+  ON_DEMAND
+}
+
+enum ConsultationChannel {
+  CHAT
+  VIDEO
+}
+
+enum ConsultationSenderType {
+  PATIENT
+  DOCTOR
+  SYSTEM
+}
+
+enum ConsultationMessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  SYSTEM
+}
+
+enum ConsultationAttachmentStatus {
+  PENDING
+  READY
+  FAILED
+  DELETED
+}
 
 // ============================================
 // Core Tables
 // ============================================
 model User {
-  id              String           @id @default(uuid())
-  email           String?          @unique
-  phone           String?          @unique
-  passwordHash    String
-  fullName        String
-  role            Role             @default(PATIENT)
-  isActive        Boolean          @default(true)
-  lastLoginAt     DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  deletedAt       DateTime?
+  id           String    @id @default(uuid())
+  email        String?   @unique
+  phone        String?   @unique
+  passwordHash String
+  fullName     String
+  role         Role      @default(PATIENT)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
   resetPasswordToken     String?   @unique
   resetPasswordExpiresAt DateTime?
@@ -155,16 +197,20 @@ model User {
   otpExpiresAt           DateTime?
   otpVerified            Boolean   @default(false)
 
-  patientProfiles  PatientProfile[]
-  appointments     Appointment[]
-  refreshTokens    RefreshToken[]
-  notifications    Notification[]
-  deviceTokens     DeviceToken[]
-  auditLogs        AuditLog[]
-  preExamSessions  PreExamSession[]
-  medicalPassport  MedicalPassport?
-  hospitalId       String?
-  hospital         Hospital?        @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  patientProfiles         PatientProfile[]
+  appointments            Appointment[]
+  refreshTokens           RefreshToken[]
+  notifications           Notification[]
+  deviceTokens            DeviceToken[]
+  auditLogs               AuditLog[]
+  preExamSessions         PreExamSession[]
+  medicalPassport         MedicalPassport?
+  doctorProfile           Doctor?                  @relation("DoctorUser")
+  consultationsCreated    ConsultationSession[]    @relation("ConsultationCreator")
+  consultationMessages    ConsultationMessage[]
+  consultationAttachments ConsultationAttachment[]
+  hospitalId              String?
+  hospital                Hospital?                @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
@@ -187,52 +233,55 @@ model RefreshToken {
 }
 
 model PatientProfile {
-  id                   String    @id @default(uuid())
-  patientCode          String?   @unique @map("patient_code")
-  userId               String
-  fullName             String
-  gender               Gender?
-  dateOfBirth          DateTime?
-  phone                String?
-  address              String?
-  relation             String?
-  identityNumber       String?   @unique
-  healthInsurance      String?
-  bhytInitialHospitalCode String?  @map("bhyt_initial_hospital_code")
-  bhytValidFrom        DateTime? @map("bhyt_valid_from")
-  bhytValidTo          DateTime? @map("bhyt_valid_to")
-  provinceCode         String?   @map("province_code")
-  districtCode         String?   @map("district_code")
-  wardCode             String?   @map("ward_code")
-  bloodType            String?   @map("blood_type")
-  ethnicity            String?   @default("Kinh")
-  nationality          String?   @default("Việt Nam")
-  occupation           String?
-  guardianName         String?
-  familyMedicalHistory String?
-  lifestyleRiskFactors String?
-  currentMedications   String?
-  medicalHistory       String?
-  allergies            String?
-  emergencyContact     String?
-  emergencyPhone       String?
-  isDefault            Boolean   @default(false)
-  isActive             Boolean   @default(true)
-  securityPin          String?   @map("security_pin")
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  deletedAt            DateTime?
+  id                      String    @id @default(uuid())
+  patientCode             String?   @unique @map("patient_code")
+  userId                  String
+  fullName                String
+  gender                  Gender?
+  dateOfBirth             DateTime?
+  phone                   String?
+  address                 String?
+  relation                String?
+  identityNumber          String?   @unique
+  healthInsurance         String?
+  bhytInitialHospitalCode String?   @map("bhyt_initial_hospital_code")
+  bhytValidFrom           DateTime? @map("bhyt_valid_from")
+  bhytValidTo             DateTime? @map("bhyt_valid_to")
+  provinceCode            String?   @map("province_code")
+  districtCode            String?   @map("district_code")
+  wardCode                String?   @map("ward_code")
+  bloodType               String?   @map("blood_type")
+  ethnicity               String?   @default("Kinh")
+  nationality             String?   @default("Việt Nam")
+  occupation              String?
+  guardianName            String?
+  familyMedicalHistory    String?
+  lifestyleRiskFactors    String?
+  currentMedications      String?
+  medicalHistory          String?
+  allergies               String?
+  emergencyContact        String?
+  emergencyPhone          String?
+  isDefault               Boolean   @default(false)
+  isActive                Boolean   @default(true)
+  securityPin             String?   @map("security_pin")
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  deletedAt               DateTime?
 
   user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments      Appointment[]
   medicalEncounters MedicalEncounter[]
   hospitalLinks     PatientHospitalLink[]
   consents          PatientConsent[]
+  consultations     ConsultationSession[]
 
   @@map("patient_profiles")
 }
 
 model Appointment {
+  clinicRoomId String?
+  serviceBookingMode String?
   id               String            @id @default(uuid())
   bookingCode      String            @unique
   patientProfileId String
@@ -254,32 +303,34 @@ model Appointment {
   reminderSentAt   DateTime?
   reminderCount    Int               @default(0)
 
-  patientProfile   PatientProfile           @relation(fields: [patientProfileId], references: [id])
-  user             User                     @relation(fields: [userId], references: [id])
-  slot             AppointmentSlot          @relation("PrimaryAppointmentSlot", fields: [slotId], references: [id], onDelete: Restrict)
-  medicalService   MedicalService?          @relation(fields: [medicalServiceId], references: [id])
+  patientProfile   PatientProfile             @relation(fields: [patientProfileId], references: [id])
+  user             User                       @relation(fields: [userId], references: [id])
+  slot             AppointmentSlot            @relation("PrimaryAppointmentSlot", fields: [slotId], references: [id], onDelete: Restrict)
+  medicalService   MedicalService?            @relation(fields: [medicalServiceId], references: [id])
   slotBookings     AppointmentSlotBooking[]
   statusHistory    AppointmentStatusHistory[]
   payment          PaymentTransaction?
   medicalEncounter MedicalEncounter?
+  consultation     ConsultationSession?
 
   @@map("appointments")
 }
 
 model AppointmentSlot {
-  id                String          @id @default(uuid())
+  roomSession ClinicRoomSession?
+  id                String     @id @default(uuid())
   doctorWorkplaceId String
-  date              DateTime?       @db.Date
+  date              DateTime?  @db.Date
   startTime         DateTime
   endTime           DateTime
-  capacity          Int             @default(1)
-  bookedCount       Int             @default(0)
-  isAvailable       Boolean         @default(true)
-  isActive          Boolean         @default(true)
-  status            SlotStatus      @default(AVAILABLE)
-  version           Int             @default(0)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  capacity          Int        @default(1)
+  bookedCount       Int        @default(0)
+  isAvailable       Boolean    @default(true)
+  isActive          Boolean    @default(true)
+  status            SlotStatus @default(AVAILABLE)
+  version           Int        @default(0)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   doctorWorkplace     DoctorWorkplace          @relation(fields: [doctorWorkplaceId], references: [id])
   primaryAppointments Appointment[]            @relation("PrimaryAppointmentSlot")
@@ -291,13 +342,13 @@ model AppointmentSlot {
 }
 
 model AppointmentSlotBooking {
-  id            String          @id @default(uuid())
+  id            String   @id @default(uuid())
   appointmentId String
   slotId        String
-  createdAt     DateTime        @default(now())
+  createdAt     DateTime @default(now())
 
-  appointment   Appointment     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  slot          AppointmentSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  appointment Appointment     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  slot        AppointmentSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
 
   @@unique([appointmentId, slotId])
   @@index([slotId])
@@ -317,18 +368,18 @@ model AppointmentStatusHistory {
 }
 
 model PaymentTransaction {
-  id              String        @id @default(uuid())
-  appointmentId   String        @unique
-  amount          Decimal
-  paymentMethod   PaymentMethod
-  transactionCode String        @unique
-  status          PaymentStatus @default(PENDING)
-  vnpResponseCode String?
+  id               String        @id @default(uuid())
+  appointmentId    String        @unique
+  amount           Decimal
+  paymentMethod    PaymentMethod
+  transactionCode  String        @unique
+  status           PaymentStatus @default(PENDING)
+  vnpResponseCode  String?
   vnpTransactionNo String?
-  callbackData    Json?
-  paidAt          DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  callbackData     Json?
+  paidAt           DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
@@ -336,18 +387,18 @@ model PaymentTransaction {
 }
 
 model Notification {
-  id        String           @id @default(uuid())
-  userId    String
-  title     String
-  content   String
-  type      NotificationType
-  isRead    Boolean          @default(false)
-  readAt    DateTime?
-  data      Json?
-  channel   String?
+  id         String           @id @default(uuid())
+  userId     String
+  title      String
+  content    String
+  type       NotificationType
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
+  data       Json?
+  channel    String?
   externalId String?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -462,7 +513,7 @@ model HospitalBookingConfig {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
-  hospital            Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@unique([hospitalId, bookingType])
   @@index([hospitalId])
@@ -470,16 +521,16 @@ model HospitalBookingConfig {
 }
 
 model HospitalBranch {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   hospitalId String
   name       String?
   address    String
   phone      String?
   latitude   Float?
   longitude  Float?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
 
   hospital   Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
@@ -502,17 +553,18 @@ model Specialty {
   hospitalSpecialties HospitalSpecialty[]
   packages            HealthPackage[]
   services            MedicalService[]
+  consultations       ConsultationSession[]
 
   @@map("specialties")
 }
 
 model HospitalSpecialty {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   hospitalId  String
   specialtyId String
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   hospital  Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
@@ -522,50 +574,54 @@ model HospitalSpecialty {
 }
 
 model Doctor {
-  id                String      @id @default(uuid())
+  id                String     @id @default(uuid())
   fullName          String
   title             String?
   avatarUrl         String?
   qualification     String
-  yearsOfExperience Int         @default(0)
+  yearsOfExperience Int        @default(0)
   gender            Gender?
   bio               String?
-  externalId        String?     @unique
-  source            DataSource  @default(MANUAL)
-  rating            Float       @default(0)
-  reviewCount       Int         @default(0)
-  consultationCount Int         @default(0)
-  isActive          Boolean     @default(true)
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  externalId        String?    @unique
+  source            DataSource @default(MANUAL)
+  rating            Float      @default(0)
+  reviewCount       Int        @default(0)
+  consultationCount Int        @default(0)
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
   deletedAt         DateTime?
+  userId            String?    @unique
 
-  workPlaces DoctorWorkplace[]
+  user          User?                 @relation("DoctorUser", fields: [userId], references: [id], onDelete: SetNull)
+  workPlaces    DoctorWorkplace[]
+  consultations ConsultationSession[]
 
   @@map("doctors")
 }
 
 model DoctorWorkplace {
-  id              String            @id @default(uuid())
+  id              String    @id @default(uuid())
   doctorId        String
   hospitalId      String
   branchId        String?
   specialtyId     String
-  consultationFee Decimal           @default(0)
+  consultationFee Decimal   @default(0)
   position        String?
   joinedAt        DateTime?
-  isPrimary       Boolean           @default(false)
-  isActive        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  isPrimary       Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  doctor          Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  hospital        Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  branch          HospitalBranch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  specialty       Specialty         @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
-  schedules       DoctorSchedule[]
-  slots           AppointmentSlot[]
-  exceptions      ScheduleException[]
+  doctor        Doctor                @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital      Hospital              @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  branch        HospitalBranch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  specialty     Specialty             @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  schedules     DoctorSchedule[]
+  slots         AppointmentSlot[]
+  exceptions    ScheduleException[]
+  consultations ConsultationSession[]
 
   @@unique([doctorId, hospitalId, specialtyId])
   @@map("doctor_workplaces")
@@ -582,87 +638,113 @@ model ScheduleException {
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
-  doctorWorkplace   DoctorWorkplace       @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Cascade)
+  doctorWorkplace DoctorWorkplace @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Cascade)
 
   @@index([doctorWorkplaceId, date])
   @@map("schedule_exceptions")
 }
 
 model MedicalService {
-  id                String                  @id @default(uuid())
-  hospitalId        String
-  specialtyId       String?
-  name              String
-  description       String?
-  price             Decimal                 @default(0)
-  duration          Int                     @default(30)
-  isActive          Boolean                 @default(true)
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
+  roomSessions ClinicRoomSession[]
+  id          String   @id @default(uuid())
+  hospitalId  String
+  specialtyId String?
+  name        String
+  description String?
+  price       Decimal  @default(0)
+  duration    Int      @default(30)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  hospital          Hospital                @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  specialty         Specialty?              @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
-  appointments      Appointment[]
-  scheduleServices  DoctorScheduleService[]
+  hospital         Hospital                @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  specialty        Specialty?              @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
+  appointments     Appointment[]
+  scheduleServices DoctorScheduleService[]
 
   @@map("medical_services")
 }
 
+model ClinicRoom {
+  id String @id @default(uuid())
+  hospitalId String
+  specialtyId String
+  code String
+  name String
+  isActive Boolean @default(true)
+  sessions ClinicRoomSession[]
+  @@unique([hospitalId, code])
+  @@map("clinic_rooms")
+}
+
+model ClinicRoomSession {
+  id String @id @default(uuid())
+  roomId String
+  medicalServiceId String
+  slotId String @unique
+  mode String
+  room ClinicRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  service MedicalService @relation(fields: [medicalServiceId], references: [id], onDelete: Restrict)
+  slot AppointmentSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  @@index([roomId, mode])
+  @@map("clinic_room_sessions")
+}
+
 model HealthPackage {
-  id                  String     @id @default(uuid())
+  id                  String   @id @default(uuid())
   hospitalId          String
   specialtyId         String?
   name                String
   thumbnailUrl        String?
-  price               Decimal    @default(0)
+  price               Decimal  @default(0)
   originalPrice       Decimal?
   description         String?
-  duration            Int        @default(60)
+  duration            Int      @default(60)
   services            Json?
   preparationNote     String?
   estimatedResultTime String?
-  isActive            Boolean    @default(true)
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  hospital  Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital  Hospital   @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   specialty Specialty? @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
 
   @@map("health_packages")
 }
 
 model DoctorSchedule {
-  id                String                  @id @default(uuid())
+  id                String      @id @default(uuid())
   doctorWorkplaceId String
-  bookingType       BookingType             @default(ALL)
+  bookingType       BookingType @default(ALL)
   dayOfWeek         Int
   startTime         String
   endTime           String
   breakStart        String?
   breakEnd          String?
   slotDuration      Int?
-  capacity          Int                     @default(1)
-  effectiveFrom     DateTime?               @db.Date @default(now())
-  effectiveTo       DateTime?               @db.Date
-  isActive          Boolean                 @default(true)
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
+  capacity          Int         @default(1)
+  effectiveFrom     DateTime?   @default(now()) @db.Date
+  effectiveTo       DateTime?   @db.Date
+  isActive          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
-  doctorWorkplace   DoctorWorkplace         @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Cascade)
-  scheduleServices  DoctorScheduleService[]
+  doctorWorkplace  DoctorWorkplace         @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Cascade)
+  scheduleServices DoctorScheduleService[]
 
   @@index([doctorWorkplaceId, dayOfWeek])
   @@map("doctor_schedules")
 }
 
 model DoctorScheduleService {
-  id               String         @id @default(uuid())
+  id               String   @id @default(uuid())
   scheduleId       String
   medicalServiceId String
-  createdAt        DateTime       @default(now())
+  createdAt        DateTime @default(now())
 
-  schedule         DoctorSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  medicalService   MedicalService @relation(fields: [medicalServiceId], references: [id], onDelete: Cascade)
+  schedule       DoctorSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  medicalService MedicalService @relation(fields: [medicalServiceId], references: [id], onDelete: Cascade)
 
   @@unique([scheduleId, medicalServiceId])
   @@index([medicalServiceId])
@@ -686,10 +768,10 @@ model PreExamSession {
   uploadedFiles   String[]
   structuredData  Json?
   recommendations Json?
-  riskLevel       String?   // MONITOR, CONSULT, EMERGENCY
+  riskLevel       String? // MONITOR, CONSULT, EMERGENCY
   expiresAt       DateTime
 
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   questions PreExamQuestion[]
   media     ScreeningMedia[]
 
@@ -712,7 +794,7 @@ model PreExamQuestion {
 model ScreeningMedia {
   id               String   @id @default(uuid())
   sessionId        String
-  type             String   // VIDEO_VOICE, SYMPTOM_IMAGE, MEDICAL_DOCUMENT, VOICE_AUDIO
+  type             String // VIDEO_VOICE, SYMPTOM_IMAGE, MEDICAL_DOCUMENT, VOICE_AUDIO
   storageKey       String
   mimeType         String
   sizeBytes        Int
@@ -722,7 +804,7 @@ model ScreeningMedia {
   transcript       String?
   createdAt        DateTime @default(now())
 
-  session          PreExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session PreExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("screening_media")
 }
@@ -741,31 +823,31 @@ model MedicalPassport {
 }
 
 model MedicalPassportShare {
-  id               String    @id @default(uuid())
-  passportId       String
-  shareToken       String    @unique
-  qrCode           String    @unique
-  pinCode          String?
-  allowedSections  String[]
-  validUntil       DateTime
-  isActive         Boolean   @default(true)
-  lastAccessedAt   DateTime?
-  accessCount      Int       @default(0)
-  sharedWith       String?
-  createdAt        DateTime  @default(now())
-  revokedAt        DateTime?
+  id              String    @id @default(uuid())
+  passportId      String
+  shareToken      String    @unique
+  qrCode          String    @unique
+  pinCode         String?
+  allowedSections String[]
+  validUntil      DateTime
+  isActive        Boolean   @default(true)
+  lastAccessedAt  DateTime?
+  accessCount     Int       @default(0)
+  sharedWith      String?
+  createdAt       DateTime  @default(now())
+  revokedAt       DateTime?
 
-  medicalPassport MedicalPassport              @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  medicalPassport MedicalPassport            @relation(fields: [passportId], references: [id], onDelete: Cascade)
   accessLogs      MedicalPassportAccessLog[]
 
   @@map("medical_passport_shares")
 }
 
 model MedicalPassportAccessLog {
-  id        String   @id @default(uuid())
-  shareId   String
-  ipAddress String?
-  userAgent String?
+  id         String   @id @default(uuid())
+  shareId    String
+  ipAddress  String?
+  userAgent  String?
   accessedAt DateTime @default(now())
 
   share MedicalPassportShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
@@ -878,18 +960,18 @@ model Prescription {
 }
 
 model PrescriptionItem {
-  id               String   @id @default(uuid())
-  prescriptionId   String
+  id                   String   @id @default(uuid())
+  prescriptionId       String
   drugName             String
   activeIngredientCode String?  @map("active_ingredient_code")
   dosage               String
-  usageInstruction String
-  quantity         Int
-  unit             String?
-  duration         String?
-  note             String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  usageInstruction     String
+  quantity             Int
+  unit                 String?
+  duration             String?
+  note                 String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
 
@@ -926,9 +1008,9 @@ model PatientConsent {
   // Keeping this as JSON lets the consent remain portable when a partner HIS
   // exposes a different internal document structure.
   scope            Json?
-  purpose          String          @default("TREATMENT")
+  purpose          String        @default("TREATMENT")
   confirmedAt      DateTime?
-  policyVersion    String          @default("novacare-consent-v1")
+  policyVersion    String        @default("novacare-consent-v1")
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -940,3 +1022,94 @@ model PatientConsent {
   @@map("patient_consents")
 }
 
+// ============================================
+// Telemedicine consultations
+// ============================================
+
+model ConsultationSession {
+  id                String                  @id @default(uuid())
+  patientProfileId  String
+  doctorId          String
+  doctorWorkplaceId String
+  specialtyId       String
+  appointmentId     String?                 @unique
+  createdByUserId   String
+  idempotencyKey    String                  @unique
+  requestMode       ConsultationRequestMode @default(SCHEDULED)
+  channel           ConsultationChannel     @default(CHAT)
+  status            ConsultationStatus      @default(SCHEDULED)
+  topic             String
+  description       String
+  scheduledStartAt  DateTime?
+  scheduledEndAt    DateTime?
+  chatOpenAt        DateTime?
+  acceptedAt        DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  expiresAt         DateTime?
+  followUpUntil     DateTime?
+  videoEnabled      Boolean                 @default(false)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  patientProfile  PatientProfile           @relation(fields: [patientProfileId], references: [id], onDelete: Restrict)
+  doctor          Doctor                   @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  doctorWorkplace DoctorWorkplace          @relation(fields: [doctorWorkplaceId], references: [id], onDelete: Restrict)
+  specialty       Specialty                @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
+  appointment     Appointment?             @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  createdBy       User                     @relation("ConsultationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  messages        ConsultationMessage[]
+  attachments     ConsultationAttachment[]
+
+  @@index([createdByUserId, updatedAt])
+  @@index([doctorId, status, scheduledStartAt])
+  @@index([patientProfileId, updatedAt])
+  @@map("consultation_sessions")
+}
+
+model ConsultationMessage {
+  id              String                  @id @default(uuid())
+  consultationId  String
+  senderUserId    String
+  senderType      ConsultationSenderType
+  messageType     ConsultationMessageType @default(TEXT)
+  clientMessageId String
+  text            String?
+  sentAt          DateTime                @default(now())
+  deliveredAt     DateTime?
+  readAt          DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  consultation ConsultationSession      @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  sender       User                     @relation(fields: [senderUserId], references: [id], onDelete: Restrict)
+  attachments  ConsultationAttachment[]
+
+  @@unique([senderUserId, clientMessageId])
+  @@index([consultationId, createdAt])
+  @@map("consultation_messages")
+}
+
+model ConsultationAttachment {
+  id               String                       @id @default(uuid())
+  consultationId   String
+  messageId        String?
+  uploadedByUserId String
+  status           ConsultationAttachmentStatus @default(PENDING)
+  type             ConsultationMessageType
+  fileName         String
+  mimeType         String
+  sizeBytes        Int
+  storageKey       String
+  thumbnailKey     String?
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+
+  consultation ConsultationSession  @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  message      ConsultationMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  uploadedBy   User                 @relation(fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([consultationId, createdAt])
+  @@map("consultation_attachments")
+}

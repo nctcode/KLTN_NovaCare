@@ -46,7 +46,7 @@ export class AdminAppointmentsService {
     page?: number;
     limit?: number;
     search?: string;
-    status?: AppointmentStatus;
+    status?: AppointmentStatus | 'OVERDUE';
     hospitalId?: string;
     branchId?: string;
     doctorId?: string;
@@ -60,7 +60,11 @@ export class AdminAppointmentsService {
 
     const where: any = {};
 
-    if (params.status) {
+    if (params.status === 'OVERDUE') {
+      where.status = { in: ['PENDING', 'CONFIRMED', 'PAID'] };
+      where.medicalEncounter = { is: null };
+      where.AND = [{ slot: { startTime: { lt: new Date() } } }];
+    } else if (params.status) {
       where.status = params.status;
     }
 
@@ -112,6 +116,7 @@ export class AdminAppointmentsService {
           user: { select: { id: true, fullName: true, email: true, phone: true } },
           payment: true,
           medicalService: true,
+          medicalEncounter: { select: { status: true } },
           slot: {
             include: {
               doctorWorkplace: {
@@ -158,8 +163,12 @@ export class AdminAppointmentsService {
     ipAddress?: string,
     userAgent?: string,
   ) {
-    const existing = await this.prisma.appointment.findUnique({ where: { id } });
+    const existing = await this.prisma.appointment.findUnique({ where: { id }, include: { slot: true, medicalEncounter: true } });
     if (!existing) throw new NotFoundException('Lịch khám không tồn tại');
+    if (status === 'NO_SHOW' && (
+      !['PENDING', 'CONFIRMED', 'PAID'].includes(existing.status) ||
+      existing.slot.startTime > new Date() || existing.medicalEncounter
+    )) throw new BadRequestException('Chỉ xác nhận không đến khám khi đã qua giờ hẹn và chưa tiếp nhận.');
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const appt = await tx.appointment.update({
@@ -178,6 +187,15 @@ export class AdminAppointmentsService {
         },
       });
 
+      if (status !== existing.status) await tx.notification.create({ data: {
+        userId: existing.userId,
+        type: status === 'CANCELLED' ? 'CANCELLED' : 'SYSTEM',
+        title: 'Cập nhật lịch khám',
+        content: status === 'NO_SHOW'
+          ? `Cơ sở đã xác nhận bạn không đến khám lịch ${existing.bookingCode}. Nếu thông tin chưa đúng, vui lòng liên hệ cơ sở. Thanh toán được xử lý riêng theo chính sách của cơ sở.`
+          : `Lịch ${existing.bookingCode} đã được cập nhật: ${note || status}.`,
+        data: { appointmentId: id },
+      } });
       return appt;
     });
 

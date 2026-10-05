@@ -84,7 +84,10 @@ export class AuthController {
     return {
       statusCode: HttpStatus.OK,
       message: res.message,
-      data: null,
+      data: {
+        maskedPhone: res.maskedPhone,
+        otpCode: res.otpCode,
+      },
     };
   }
 

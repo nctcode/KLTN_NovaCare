@@ -19,11 +19,48 @@
   --destructive-foreground: #FFFFFF;
   --border: #DEE2E6;
   --input: #CED4DA;
-  --ring: #66FF33;
+  --ring: #10A66A;
   --radius: 12px;
+
+  /* NovaCare Healthcare Design Tokens */
+  --nova-primary: #10A66A;
+  --nova-primary-hover: #0D8F5B;
+  --nova-primary-active: #0A7A4D;
+  --nova-primary-soft: #EAF8F2;
+  --nova-primary-dark: #075E47;
+  --nova-primary-deep: #064E3B;
+  --nova-background: #F7FAF8;
+  --nova-surface: #FFFFFF;
+  --nova-border: #DDE5E1;
+  --nova-border-subtle: #E5EBE8;
+  --nova-text-primary: #1F2937;
+  --nova-text-secondary: #4B5563;
+  --nova-text-muted: #6B7280;
+  --nova-error: #EF4444;
+  --nova-error-soft: #FEF2F2;
+  --nova-warning: #F59E0B;
+  --nova-success: #10A66A;
 }
 
 @theme {
+  --color-nova-primary: #10A66A;
+  --color-nova-primary-hover: #0D8F5B;
+  --color-nova-primary-active: #0A7A4D;
+  --color-nova-primary-soft: #EAF8F2;
+  --color-nova-primary-dark: #075E47;
+  --color-nova-primary-deep: #064E3B;
+  --color-nova-background: #F7FAF8;
+  --color-nova-surface: #FFFFFF;
+  --color-nova-border: #DDE5E1;
+  --color-nova-border-subtle: #E5EBE8;
+  --color-nova-text-primary: #1F2937;
+  --color-nova-text-secondary: #4B5563;
+  --color-nova-text-muted: #6B7280;
+  --color-nova-error: #EF4444;
+  --color-nova-error-soft: #FEF2F2;
+  --color-nova-warning: #F59E0B;
+  --color-nova-success: #10A66A;
+
   --color-primary: #66FF33;
   --color-primary-light: #85FF5C;
   --color-primary-dark: #4CAF50;
@@ -129,4 +166,15 @@ body {
   stroke-dasharray: 300 1100;
   animation: ecgFlow 2.8s linear infinite;
 }
+
+/* Custom NovaCare Autofill Styling - Prevent browser neon/cyan autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #16231F !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 
