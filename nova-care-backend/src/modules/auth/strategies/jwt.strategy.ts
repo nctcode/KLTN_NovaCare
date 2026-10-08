@@ -17,9 +17,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: { sub: string; email: string }) {
+  async validate(payload: { sub: string; email: string; authVersion?: number }) {
     const user = await this.usersService.findById(payload.sub);
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || (payload.authVersion ?? 0) !== user.authVersion) {
       throw new UnauthorizedException('Người dùng không hợp lệ hoặc đã bị khóa');
     }
     return user;

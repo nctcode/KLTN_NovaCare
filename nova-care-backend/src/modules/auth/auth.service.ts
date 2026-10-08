@@ -24,9 +24,11 @@ export interface AuthResponse {
   };
 }
 
-import { EmailService } from '@/modules/email/email.service';
+import { PasswordResetService } from './password-reset.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RegistrationOtpService, normalizePhone, tokenHash } from './registration-otp.service';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @Injectable()
 export class AuthService {
@@ -37,11 +39,13 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private prisma: PrismaService,
-    private emailService: EmailService,
+    private passwordReset: PasswordResetService,
+    private registrationOtp: RegistrationOtpService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    const { email, phone, fullName, password } = registerDto;
+    const { email, fullName, password, verificationToken } = registerDto;
+    const phone = normalizePhone(registerDto.phone || '');
 
     // Kiểm tra ít nhất một trong email hoặc phone
     if (!email && !phone) {
@@ -58,11 +62,18 @@ export class AuthService {
       if (existing) throw new ConflictException('Số điện thoại đã được đăng ký');
     }
 
-    // Tạo user
-    const user = await this.usersService.create({ email, phone, fullName, password });
-
-    // Lấy lại user đầy đủ (có passwordHash để tạo token)
-    const fullUser = await this.prisma.user.findUnique({ where: { id: user.id } });
+    const passwordHash = await argon2.hash(password);
+    const verificationTokenHash = tokenHash(verificationToken);
+    const fullUser = await this.prisma.$transaction(async tx => {
+      const challenge = await tx.registrationOtpChallenge.findUnique({ where: { phone } });
+      if (!challenge?.verificationTokenHash || challenge.verificationTokenHash !== verificationTokenHash || !challenge.verificationExpiresAt || challenge.verificationExpiresAt <= new Date()) {
+        throw new BadRequestException('Vui lòng xác minh số điện thoại trước khi đăng ký');
+      }
+      const created = await tx.user.create({ data: { email: email?.trim().toLowerCase() || null, phone, fullName: fullName.trim(), passwordHash, isActive: true } });
+      await tx.registrationOtpChallenge.delete({ where: { phone } });
+      return created;
+    });
+    const { passwordHash: _, ...user } = fullUser;
     const tokens = await this.generateTokens(fullUser!);
 
     return { ...tokens, user };
@@ -117,7 +128,7 @@ export class AuthService {
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       // Verify refresh token
-      await this.jwtService.verifyAsync(refreshToken, {
+      const claims = await this.jwtService.verifyAsync(refreshToken, {
         secret: this.configService.get<string>('app.jwt.refreshSecret') as string,
       });
 
@@ -149,6 +160,7 @@ export class AuthService {
       }
 
       const user = storedToken.user;
+      if ((claims.authVersion ?? 0) !== user.authVersion) throw new UnauthorizedException();
       if (!user.isActive) {
         throw new UnauthorizedException('Tài khoản đã bị khóa');
       }
@@ -184,104 +196,15 @@ export class AuthService {
     });
   }
 
-  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string; otpCode?: string; maskedPhone?: string }> {
-    const identifier = dto.phone || dto.email;
-    if (!identifier) {
-      throw new BadRequestException('Vui lòng cung cấp số điện thoại hoặc email');
-    }
+  async forgotPassword(dto: ForgotPasswordDto) { return this.passwordReset.request(dto); }
 
-    const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          ...(dto.phone ? [{ phone: dto.phone }] : []),
-          ...(dto.email ? [{ email: dto.email }] : []),
-          { phone: identifier },
-          { email: identifier },
-        ],
-        deletedAt: null,
-      },
-    });
+  async verifyForgotPasswordOtp(dto: VerifyOtpDto) { return this.passwordReset.verify(dto); }
 
-    if (!user) {
-      throw new BadRequestException('Tài khoản không tồn tại trong hệ thống');
-    }
+  async requestRegistrationOtp(phone: string) { return this.registrationOtp.request(phone); }
 
-    // Generate 6-digit random OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
+  async verifyRegistrationOtp(phone: string, otpCode: string) { return this.registrationOtp.verify(phone, otpCode); }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        otpCode,
-        otpExpiresAt,
-        otpVerified: false,
-      },
-    });
-
-    const isPhone = !!dto.phone || (!dto.email && !!user.phone);
-    if (user.phone) {
-      this.logger.log(`[SMS OTP SIMULATED] Gửi mã OTP ${otpCode} đến số điện thoại ${user.phone} (${user.fullName})`);
-    }
-    if (user.email) {
-      await this.emailService.sendForgotPasswordOtp(user.email, user.fullName, otpCode, user.id);
-    }
-
-    const masked = user.phone
-      ? user.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')
-      : user.email?.replace(/(.{2})(.*)(@.*)/, '$1***$3');
-
-    return {
-      message: `Mã OTP đã được gửi đến ${isPhone && user.phone ? 'số điện thoại ' + masked : 'email của bạn'}`,
-      maskedPhone: masked,
-      otpCode, // Returned for dev/demo transparency
-    };
-  }
-
-  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    const identifier = dto.phone || dto.email;
-    if (!identifier) {
-      throw new BadRequestException('Vui lòng cung cấp số điện thoại hoặc email');
-    }
-
-    const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          ...(dto.phone ? [{ phone: dto.phone }] : []),
-          ...(dto.email ? [{ email: dto.email }] : []),
-          { phone: identifier },
-          { email: identifier },
-        ],
-        deletedAt: null,
-      },
-    });
-
-    if (!user) {
-      throw new BadRequestException('Tài khoản không tồn tại trong hệ thống');
-    }
-
-    if (!user.otpCode || user.otpCode !== dto.otpCode) {
-      throw new BadRequestException('Mã OTP không chính xác');
-    }
-
-    if (!user.otpExpiresAt || user.otpExpiresAt < new Date()) {
-      throw new BadRequestException('Mã OTP đã hết hạn (hiệu lực 5 phút)');
-    }
-
-    const passwordHash = await argon2.hash(dto.newPassword);
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash,
-        otpCode: null,
-        otpExpiresAt: null,
-        otpVerified: true,
-      },
-    });
-
-    return { message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.' };
-  }
+  async resetPassword(dto: ResetPasswordDto) { return this.passwordReset.reset(dto); }
 
   private async generateTokens(user: any): Promise<{
     accessToken: string;
@@ -290,6 +213,7 @@ export class AuthService {
   }> {
     const payload = {
       sub: user.id,
+      authVersion: user.authVersion ?? 0,
       email: user.email,
       role: user.role,
       hospitalId: user.hospitalId || null,

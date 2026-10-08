@@ -179,6 +179,7 @@ enum ConsultationAttachmentStatus {
 // Core Tables
 // ============================================
 model User {
+  authVersion Int @default(0)
   id           String    @id @default(uuid())
   email        String?   @unique
   phone        String?   @unique
@@ -213,6 +214,33 @@ model User {
   hospital                Hospital?                @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
 
   @@map("users")
+}
+
+model PasswordResetChallenge {
+  userId String @id
+  otpHash String?
+  destination String
+  expiresAt DateTime
+  requestedAt DateTime
+  attempts Int @default(0)
+  windowStart DateTime
+  sendCount Int @default(0)
+  verificationTokenHash String?
+  verificationExpiresAt DateTime?
+  @@map("password_reset_challenges")
+}
+
+model RegistrationOtpChallenge {
+  phone String @id
+  otpHash String?
+  expiresAt DateTime
+  requestedAt DateTime
+  attempts Int @default(0)
+  windowStart DateTime
+  sendCount Int @default(0)
+  verificationTokenHash String?
+  verificationExpiresAt DateTime?
+  @@map("registration_otp_challenges")
 }
 
 model RefreshToken {

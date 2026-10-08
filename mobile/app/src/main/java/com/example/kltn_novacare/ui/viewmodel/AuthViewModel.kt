@@ -59,10 +59,10 @@ class AuthViewModel(private val authRepository: AuthRepository = AuthRepository(
         }
     }
 
-    fun register(fullName: String, email: String?, phone: String?, password: String, onSuccess: () -> Unit) {
+    fun register(fullName: String, email: String?, phone: String?, password: String, verificationToken: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-            val result = authRepository.register(fullName, email, phone, password)
+            val result = authRepository.register(fullName, email, phone, password, verificationToken)
             result.fold(
                 onSuccess = { authResponse ->
                     _authState.value = AuthState.Authenticated(authResponse.user)

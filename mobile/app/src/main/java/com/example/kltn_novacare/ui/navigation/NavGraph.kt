@@ -42,6 +42,9 @@ fun NavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
+        composable("forgot-password") {
+            com.example.kltn_novacare.ui.screens.auth.ForgotPasswordScreen(onBack = { navController.popBackStack() })
+        }
         composable(Screen.Login.route) {
             LoginScreen(navController = navController, authViewModel = authViewModel)
         }

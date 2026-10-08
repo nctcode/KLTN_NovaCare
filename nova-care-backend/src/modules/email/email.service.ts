@@ -26,6 +26,7 @@ export class EmailService {
   }
 
   async sendMail(to: string, subject: string, html: string, appointmentId?: string, userId?: string, type: string = 'general'): Promise<boolean> {
+    if (type === 'forgot_password_otp' && (!this.configService.get<string>('SMTP_USER') || !this.configService.get<string>('SMTP_PASS') || this.configService.get<string>('SMTP_PASS') === 'novacare-demo-app-pass')) return false;
     const from = this.configService.get<string>('SMTP_FROM') || 'novacare.health@gmail.com';
     try {
       if (this.configService.get<string>('SMTP_USER') && this.configService.get<string>('SMTP_PASS') !== 'novacare-demo-app-pass') {

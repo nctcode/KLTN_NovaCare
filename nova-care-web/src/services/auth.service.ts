@@ -12,6 +12,14 @@ export const authService = {
     return response;
   },
 
+  requestRegistrationOtp(phone: string): Promise<any> {
+    return apiClient.post('/auth/register/request-otp', { phone });
+  },
+
+  verifyRegistrationOtp(phone: string, otpCode: string): Promise<any> {
+    return apiClient.post('/auth/register/verify-otp', { phone, otpCode });
+  },
+
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/auth/refresh', { refreshToken });
     return response;
@@ -44,12 +52,16 @@ export const authService = {
     return response.data;
   },
 
-  async forgotPassword(data: { phone?: string; email?: string } | string): Promise<{ message: string; otpCode?: string; maskedPhone?: string }> {
+  async forgotPassword(data: { phone?: string; email?: string } | string): Promise<{ message: string; maskedPhone?: string }> {
     const payload = typeof data === 'string' ? (data.includes('@') ? { email: data } : { phone: data }) : data;
     return apiClient.post('/auth/forgot-password', payload);
   },
 
-  async resetPassword(data: { phone?: string; email?: string; otpCode: string; newPassword: string }): Promise<{ message: string }> {
+  async verifyPasswordOtp(data: { phone?: string; email?: string; otpCode: string }): Promise<any> {
+    return apiClient.post('/auth/forgot-password/verify-otp', data);
+  },
+
+  async resetPassword(data: { resetToken: string; newPassword: string }): Promise<{ message: string }> {
     return apiClient.post('/auth/reset-password', data);
   },
 };

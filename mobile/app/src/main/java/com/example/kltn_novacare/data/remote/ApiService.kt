@@ -8,6 +8,16 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
 interface ApiService {
+    @POST("auth/forgot-password")
+    fun requestPasswordOtp(@Body request: PasswordOtpRequest): Call<ApiResponse<PasswordOtpResult>>
+    @POST("auth/forgot-password/verify-otp")
+    fun verifyPasswordOtp(@Body request: VerifyOtpRequest): Call<ApiResponse<VerifiedOtpResult>>
+    @POST("auth/reset-password")
+    fun resetPassword(@Body request: PasswordResetRequest): Call<ApiResponse<Unit>>
+    @POST("auth/register/request-otp")
+    fun requestRegistrationOtp(@Body request: PasswordOtpRequest): Call<ApiResponse<PasswordOtpResult>>
+    @POST("auth/register/verify-otp")
+    fun verifyRegistrationOtp(@Body request: VerifyOtpRequest): Call<ApiResponse<VerifiedOtpResult>>
     @GET("clinic-rooms/catalog")
     fun getClinicRoomCatalog(@Query("hospitalId") hospitalId: String, @Query("mode") mode: String): Call<ApiResponse<List<ClinicRoomSession>>>
     @GET("consultations")
@@ -301,6 +311,12 @@ interface ApiService {
     fun getUnreadNotificationsCount(): Call<ApiResponse<Int>>
 }
 
+data class PasswordOtpRequest(val phone: String? = null, val email: String? = null)
+data class PasswordOtpResult(val maskedPhone: String?)
+data class VerifyOtpRequest(val phone: String? = null, val email: String? = null, val otpCode: String)
+data class VerifiedOtpResult(val verificationToken: String? = null, val resetToken: String? = null, val phone: String? = null)
+data class PasswordResetRequest(val resetToken: String, val newPassword: String)
+
 // Request and Response Wrapper classes
 data class LoginRequest(
     val username: String,
@@ -311,7 +327,8 @@ data class RegisterRequest(
     val fullName: String,
     val email: String?,
     val phone: String?,
-    val password: String
+    val password: String,
+    val verificationToken: String
 )
 
 data class RefreshTokenRequest(

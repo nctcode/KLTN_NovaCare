@@ -142,6 +142,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            TextButton(onClick = { navController.navigate("forgot-password") }) { Text("Quên mật khẩu?") }
             // Login Button
             Button(
                 onClick = {

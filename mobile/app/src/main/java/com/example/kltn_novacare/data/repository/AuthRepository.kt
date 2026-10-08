@@ -32,9 +32,9 @@ class AuthRepository {
         }
     }
 
-    suspend fun register(fullName: String, email: String?, phone: String?, password: String): Result<AuthResponse> = withContext(Dispatchers.IO) {
+    suspend fun register(fullName: String, email: String?, phone: String?, password: String, verificationToken: String): Result<AuthResponse> = withContext(Dispatchers.IO) {
         try {
-            val response = apiService.register(RegisterRequest(fullName, email, phone, password)).execute()
+            val response = apiService.register(RegisterRequest(fullName, email, phone, password, verificationToken)).execute()
             val body = response.body()
             if (response.isSuccessful && body != null && body.success) {
                 val data = body.data!!

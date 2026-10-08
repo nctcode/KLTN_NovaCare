@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,11 +25,32 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { Public } from '@/common/decorators/public.decorator';
 import { User } from '@prisma/client';
 import { Request } from 'express';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { RequestRegistrationOtpDto, VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('Xác thực')
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('register/request-otp')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async requestRegistrationOtp(@Body() dto: RequestRegistrationOtpDto) {
+    const data = await this.authService.requestRegistrationOtp(dto.phone);
+    return { statusCode: HttpStatus.OK, message: data.message, data: { maskedPhone: data.maskedPhone } };
+  }
+
+  @Public()
+  @Post('register/verify-otp')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async verifyRegistrationOtp(@Body() dto: VerifyOtpDto) {
+    if (!dto.phone || dto.email) throw new BadRequestException('Số điện thoại không hợp lệ');
+    const data = await this.authService.verifyRegistrationOtp(dto.phone, dto.otpCode);
+    return { statusCode: HttpStatus.OK, message: 'Xác minh số điện thoại thành công', data };
+  }
 
   @Public()
   @Post('register')
@@ -77,6 +99,8 @@ export class AuthController {
 
   @Public()
   @Post('forgot-password')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Yêu cầu gửi mã OTP quên mật khẩu' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -86,13 +110,14 @@ export class AuthController {
       message: res.message,
       data: {
         maskedPhone: res.maskedPhone,
-        otpCode: res.otpCode,
       },
     };
   }
 
   @Public()
   @Post('reset-password')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Xác minh OTP và đặt lại mật khẩu' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
@@ -102,6 +127,15 @@ export class AuthController {
       message: res.message,
       data: null,
     };
+  }
+
+  @Public()
+  @Post('forgot-password/verify-otp')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async verifyForgotPasswordOtp(@Body() dto: VerifyOtpDto) {
+    const data = await this.authService.verifyForgotPasswordOtp(dto);
+    return { statusCode: HttpStatus.OK, message: 'Xác minh OTP thành công', data };
   }
 
   @Post('logout')

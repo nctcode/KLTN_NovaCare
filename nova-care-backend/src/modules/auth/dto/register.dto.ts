@@ -45,4 +45,9 @@ export class RegisterDto {
     message: 'Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
   })
   password: string;
+
+  @ApiProperty({ description: 'Token xác minh số điện thoại nhận được sau khi OTP đúng' })
+  @IsString()
+  @IsNotEmpty({ message: 'Vui lòng xác minh số điện thoại trước khi đăng ký' })
+  verificationToken: string;
 }

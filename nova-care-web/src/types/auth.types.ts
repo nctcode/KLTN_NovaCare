@@ -20,6 +20,7 @@ export interface RegisterData {
   password?: string;
   email?: string;
   phone?: string;
+  verificationToken: string;
 }
 
 export interface AuthResponse {

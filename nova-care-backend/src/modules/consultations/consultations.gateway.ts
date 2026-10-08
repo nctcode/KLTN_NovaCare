@@ -49,11 +49,11 @@ export class ConsultationsGateway implements OnGatewayConnection, OnGatewayInit 
       const rawToken = client.handshake.auth?.token;
       if (typeof rawToken !== 'string' || !rawToken) throw new Error('missing token');
       const token = rawToken.startsWith('Bearer ') ? rawToken.slice(7) : rawToken;
-      const payload = await this.jwt.verifyAsync<{ sub: string }>(token, {
+      const payload = await this.jwt.verifyAsync<{ sub: string; authVersion?: number }>(token, {
         secret: this.config.get<string>('app.jwt.accessSecret'),
       });
       const user = await this.users.findById(payload.sub);
-      if (!user?.isActive) throw new Error('inactive user');
+      if (!user?.isActive || (payload.authVersion ?? 0) !== user.authVersion) throw new Error('inactive user');
       client.data.userId = user.id;
     } catch {
       // Không ghi token hoặc nội dung y tế vào log.
