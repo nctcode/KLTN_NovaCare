@@ -1076,7 +1076,6 @@ model PatientConsent {
   @@map("patient_consents")
 }
 
-<<<<<<< HEAD
 // ============================================
 // Telemedicine consultations
 // ============================================
@@ -1168,7 +1167,7 @@ model ConsultationAttachment {
   @@index([consultationId, createdAt])
   @@map("consultation_attachments")
 }
-=======
+
 enum PartnerRequestStatus {
   PENDING
   CONTACTED
@@ -1201,5 +1200,3 @@ model PartnerRequest {
 
   @@map("partner_requests")
 }
-
->>>>>>> 5d6d7dd (feat: Tich hop lien he hop tac va ket noi API HIS doi tac)
