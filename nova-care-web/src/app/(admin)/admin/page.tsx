@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth.store';
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
@@ -34,9 +37,17 @@ import {
   Cell,
 } from 'recharts';
 
+import { HospitalAdminDashboard } from '@/components/admin/HospitalAdminDashboard';
+
 export default function AdminDashboardPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
+
+  if (user?.role === 'HOSPITAL_ADMIN') {
+    return <HospitalAdminDashboard hospitalId={user.hospitalId || ''} user={user} />;
+  }
 
   const cardStyle = isLight
     ? 'bg-white border-slate-200 text-slate-900 shadow-sm'

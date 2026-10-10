@@ -194,6 +194,8 @@ model User {
 
   resetPasswordToken     String?   @unique
   resetPasswordExpiresAt DateTime?
+  activationToken        String?   @unique
+  activationExpiresAt    DateTime?
   otpCode                String?
   otpExpiresAt           DateTime?
   otpVerified            Boolean   @default(false)
@@ -1074,6 +1076,7 @@ model PatientConsent {
   @@map("patient_consents")
 }
 
+<<<<<<< HEAD
 // ============================================
 // Telemedicine consultations
 // ============================================
@@ -1165,3 +1168,38 @@ model ConsultationAttachment {
   @@index([consultationId, createdAt])
   @@map("consultation_attachments")
 }
+=======
+enum PartnerRequestStatus {
+  PENDING
+  CONTACTED
+  APPROVED
+  REJECTED
+}
+
+enum PartnerType {
+  HOSPITAL
+  DOCTOR
+}
+
+model PartnerRequest {
+  id                 String               @id @default(uuid())
+  type               PartnerType          @default(HOSPITAL)
+  contactName        String
+  titleOrRole        String?
+  phone              String
+  email              String
+  hospitalName       String
+  specialty          String?
+  notes              String?
+  status             PartnerRequestStatus @default(PENDING)
+  adminNote          String?
+  approvedAt         DateTime?
+  createdHospitalId  String?
+  createdUserId      String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@map("partner_requests")
+}
+
+>>>>>>> 5d6d7dd (feat: Tich hop lien he hop tac va ket noi API HIS doi tac)

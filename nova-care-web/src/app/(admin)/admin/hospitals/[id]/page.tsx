@@ -57,7 +57,8 @@ import {
   Eye,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth.store';
 import { getDoctorSpecialtyName } from '@/lib/utils';
 import { DoctorDetailDialog } from '@/components/admin/DoctorDetailDialog';
 
@@ -83,14 +84,46 @@ const formatHospitalStatus = (status?: string) => {
   return status;
 };
 
-export default function AdminHospitalDetailPage({ params }: PageProps) {
+function HospitalDetailPageContent({ id }: { id: string }) {
   const router = useRouter();
-  const { id } = React.use(params);
+  const searchParams = useSearchParams();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const isHospitalAdmin = user?.role === 'HOSPITAL_ADMIN';
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || 'overview');
+
+  // Enforce hospital scoping for HOSPITAL_ADMIN
+  React.useEffect(() => {
+    if (isHospitalAdmin && user?.hospitalId && id !== user.hospitalId) {
+      router.replace(`/admin/hospitals/${user.hospitalId}`);
+    }
+  }, [isHospitalAdmin, user?.hospitalId, id, router]);
+
+  // Sync tab with query param
+  React.useEffect(() => {
+    if (tabParam) {
+      const validTabs = ['overview', 'info', 'branches', 'doctors', 'specialties', 'packages', 'services', 'logs'];
+      if (validTabs.includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (val === 'overview') {
+      newParams.delete('tab');
+    } else {
+      newParams.set('tab', val);
+    }
+    const query = newParams.toString() ? `?${newParams.toString()}` : '';
+    router.replace(`/admin/hospitals/${id}${query}`, { scroll: false });
+  };
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
@@ -603,14 +636,16 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
     queryFn: async () => {
       try {
         const res = await adminService.getMedicalServices({ hospitalId: id, limit: 100 });
-        return res?.items || (Array.isArray(res) ? res : []);
+        return Array.isArray(res) ? res : res?.items || res?.data || [];
       } catch (e) {
         return [];
       }
     },
     enabled: !!id,
   });
-  const hospitalMedicalServices = rawHospitalServices || [];
+  const hospitalMedicalServices = Array.isArray(rawHospitalServices)
+    ? rawHospitalServices
+    : rawHospitalServices?.items || rawHospitalServices?.data || [];
 
   const handleOpenAddService = () => {
     setEditingService(null);
@@ -982,19 +1017,26 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
           1. BREADCRUMB & ACTIONS
          ================================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs">
-          <Button
-            onClick={() => router.push('/admin/hospitals')}
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-            Danh sách Bệnh viện
-          </Button>
-          <span className="text-slate-300 dark:text-slate-700">/</span>
-          <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[240px]">{hospital.name}</span>
-        </div>
+        {isHospitalAdmin ? (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-500 font-medium">Cơ sở y tế:</span>
+            <span className="text-slate-900 dark:text-white font-bold truncate max-w-[320px]">{hospital.name}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-xs">
+            <Button
+              onClick={() => router.push('/admin/hospitals')}
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+              Danh sách Bệnh viện
+            </Button>
+            <span className="text-slate-300 dark:text-slate-700">/</span>
+            <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[240px]">{hospital.name}</span>
+          </div>
+        )}
 
         <Button
           asChild
@@ -1015,9 +1057,9 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
       <Card className={`${cardBg} rounded-xl p-5 border shadow-sm`}>
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white shrink-0 p-1 flex items-center justify-center">
-            {hospital.logoUrl ? (
+            {hospital.logoUrl && hospital.logoUrl.trim() ? (
               <img
-                src={hospital.logoUrl}
+                src={hospital.logoUrl.trim()}
                 alt={hospital.name}
                 className="w-full h-full object-cover rounded-lg"
               />
@@ -1081,7 +1123,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
       {/* ==================================================
           3. TABS NAVIGATION (Giao diện chuẩn Admin)
          ================================================== */}
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className={`flex w-full justify-start border-b ${isLight ? 'border-slate-200' : 'border-slate-800'} bg-transparent p-0 h-auto rounded-none gap-2 sm:gap-6 overflow-x-auto`}>
           <TabsTrigger
             value="overview"
@@ -1777,7 +1819,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {hospitalMedicalServices.map((srv: any) => (
+                    {Array.isArray(hospitalMedicalServices) && hospitalMedicalServices.map((srv: any) => (
                       <tr key={srv.id} className={`transition ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-900/40'}`}>
                         <td className="p-3 max-w-xs">
                           <span className="font-semibold text-slate-900 dark:text-white block">{srv.name}</span>
@@ -2423,6 +2465,7 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
       <DoctorDetailDialog
         doctorId={selectedDoctorForDetail?.id || null}
         initialDoctor={selectedDoctorForDetail}
+        hospitalId={id as string}
         open={isDoctorDetailOpen}
         onOpenChange={setIsDoctorDetailOpen}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['admin-hospital-detail', id] })}
@@ -2776,5 +2819,14 @@ export default function AdminHospitalDetailPage({ params }: PageProps) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminHospitalDetailPage({ params }: PageProps) {
+  const { id } = React.use(params);
+  return (
+    <React.Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Đang tải hồ sơ bệnh viện...</div>}>
+      <HospitalDetailPageContent id={id} />
+    </React.Suspense>
   );
 }

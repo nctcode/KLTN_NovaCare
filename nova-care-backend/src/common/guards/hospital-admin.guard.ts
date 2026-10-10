@@ -27,6 +27,7 @@ export class HospitalAdminGuard implements CanActivate {
         request.params?.hospitalId ||
         request.query?.hospitalId ||
         request.body?.hospitalId ||
+        user.hospitalId ||
         null;
       return true;
     }

@@ -9,12 +9,15 @@ export class AdminHospitalsService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
-  async findAll(params: { page?: number; limit?: number; search?: string; type?: string; city?: string; status?: string }) {
+  async findAll(params: { page?: number; limit?: number; search?: string; type?: string; city?: string; status?: string; hospitalId?: string }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
     const skip = (page - 1) * limit;
 
     const where: any = { deletedAt: null };
+    if (params.hospitalId) {
+      where.id = params.hospitalId;
+    }
     if (params.search) {
       where.OR = [
         { name: { contains: params.search, mode: 'insensitive' } },
@@ -35,6 +38,13 @@ export class AdminHospitalsService {
       where.status = statusMap[params.status] || params.status;
     }
 
+    const statsWhere: any = { deletedAt: null };
+    const doctorStatsWhere: any = { isActive: true };
+    if (params.hospitalId) {
+      statsWhere.id = params.hospitalId;
+      doctorStatsWhere.hospitalId = params.hospitalId;
+    }
+
     const [items, total, allHospitalsForStats, totalDoctorsCount] = await Promise.all([
       this.prisma.hospital.findMany({
         where,
@@ -53,10 +63,10 @@ export class AdminHospitalsService {
       }),
       this.prisma.hospital.count({ where }),
       this.prisma.hospital.findMany({
-        where: { deletedAt: null },
+        where: statsWhere,
         select: { status: true },
       }),
-      this.prisma.doctorWorkplace.count({ where: { isActive: true } }),
+      this.prisma.doctorWorkplace.count({ where: doctorStatsWhere }),
     ]);
 
     const formattedItems = items.map((item) => {

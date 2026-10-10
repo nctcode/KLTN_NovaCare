@@ -1,0 +1,12 @@
+{
+  "name": "partner-his-server",
+  "version": "1.0.0",
+  "description": "Máy chủ HIS đối tác độc lập tuân thủ đặc tả kỹ thuật NovaCare NC-HIS-SPEC-2026-V1",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["his", "novacare", "interoperability", "mock"],
+  "author": "NovaCare Partner Interoperability",
+  "license": "ISC"
+}

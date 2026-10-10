@@ -20,6 +20,7 @@ import {
   Award
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { partnerService } from '@/services/partner.service';
 
 function PartnerPageContent() {
   const searchParams = useSearchParams();
@@ -29,6 +30,7 @@ function PartnerPageContent() {
     initialType === 'bac-si' ? 'bac-si' : 'co-so-y-te'
   );
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     titleOrRole: '',
@@ -39,22 +41,58 @@ function PartnerPageContent() {
     notes: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(
+
+    const hospitalName =
       partnerType === 'co-so-y-te'
-        ? 'Đăng ký hợp tác cơ sở y tế thành công! Bộ phận phát triển đối tác NovaCare sẽ liên hệ trong 24h.'
-        : 'Đăng ký tham gia mạng lưới Bác sĩ thành công! Chúng tôi sẽ xác minh hồ sơ và liên hệ với bạn.'
-    );
-    setFormData({
-      name: '',
-      titleOrRole: '',
-      phone: '',
-      email: '',
-      hospitalOrClinic: '',
-      specialty: '',
-      notes: '',
-    });
+        ? (formData.hospitalOrClinic.trim() || formData.name.trim())
+        : (formData.hospitalOrClinic.trim() || `Bác sĩ ${formData.name.trim()}`);
+    const contactName = formData.name.trim() || hospitalName;
+
+    if (!contactName || !formData.email.trim() || !formData.phone.trim()) {
+      toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc (*)');
+      return;
+    }
+
+    if (partnerType === 'co-so-y-te' && !hospitalName) {
+      toast.error('Vui lòng nhập Tên Bệnh viện / Phòng khám');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await partnerService.submitRequest({
+        type: partnerType === 'bac-si' ? 'DOCTOR' : 'HOSPITAL',
+        contactName,
+        titleOrRole: formData.titleOrRole,
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        hospitalName,
+        specialty: formData.specialty,
+        notes: formData.notes,
+      });
+
+      toast.success(
+        partnerType === 'co-so-y-te'
+          ? 'Đăng ký hợp tác cơ sở y tế thành công! Bộ phận phát triển đối tác NovaCare sẽ liên hệ trong 24h.'
+          : 'Đăng ký tham gia mạng lưới Bác sĩ thành công! Chúng tôi sẽ xác minh hồ sơ và liên hệ với bạn.'
+      );
+
+      setFormData({
+        name: '',
+        titleOrRole: '',
+        phone: '',
+        email: '',
+        hospitalOrClinic: '',
+        specialty: '',
+        notes: '',
+      });
+    } catch (err: any) {
+      toast.error('Lỗi gửi yêu cầu: ' + (err?.response?.data?.message || err?.message || 'Vui lòng thử lại sau'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -155,45 +193,98 @@ function PartnerPageContent() {
           </div>
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-xs font-bold text-slate-700">
-                {partnerType === 'co-so-y-te' ? 'Tên Bệnh viện / Phòng khám *' : 'Họ và tên Bác sĩ *'}
-              </label>
-              <Input
-                required
-                placeholder={partnerType === 'co-so-y-te' ? 'VD: Bệnh viện Đa khoa Quốc tế ABC' : 'VD: BS.CKII Nguyễn Văn A'}
-                className="h-11 rounded-xl text-xs"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Số điện thoại liên hệ *</label>
-              <Input
-                required
-                type="tel"
-                placeholder="0912 xxx xxx"
-                className="h-11 rounded-xl text-xs"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Email liên hệ *</label>
-              <Input
-                required
-                type="email"
-                placeholder="contact@hospital.com"
-                className="h-11 rounded-xl text-xs"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-
-            {partnerType === 'bac-si' ? (
+            {partnerType === 'co-so-y-te' ? (
               <>
+                {/* 1. Tên Bệnh viện / Phòng khám */}
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-700">
+                    Tên Bệnh viện / Phòng khám *
+                  </label>
+                  <Input
+                    required
+                    placeholder="VD: Bệnh viện Đa khoa Quốc tế ABC"
+                    className="h-11 rounded-xl text-xs"
+                    value={formData.hospitalOrClinic}
+                    onChange={(e) =>
+                      setFormData({ ...formData, hospitalOrClinic: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* 2. Họ tên người đại diện & Chức vụ */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">
+                    Họ và tên người đại diện liên hệ *
+                  </label>
+                  <Input
+                    required
+                    placeholder="VD: Nguyễn Văn A"
+                    className="h-11 rounded-xl text-xs"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">
+                    Chức vụ người liên hệ *
+                  </label>
+                  <Input
+                    required
+                    placeholder="VD: Giám đốc chuyên môn, Trưởng phòng Kế hoạch..."
+                    className="h-11 rounded-xl text-xs"
+                    value={formData.titleOrRole}
+                    onChange={(e) =>
+                      setFormData({ ...formData, titleOrRole: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* 3. Số điện thoại & Email */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">
+                    Số điện thoại liên hệ *
+                  </label>
+                  <Input
+                    required
+                    type="tel"
+                    placeholder="0912 xxx xxx"
+                    className="h-11 rounded-xl text-xs"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Email liên hệ *</label>
+                  <Input
+                    required
+                    type="email"
+                    placeholder="contact@hospital.com"
+                    className="h-11 rounded-xl text-xs"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                  <p className="text-[11px] text-slate-500 font-normal">
+                    Email này sẽ được dùng làm tài khoản quản trị viện & nhận liên kết kích hoạt.
+                  </p>
+                </div>
+
+              </>
+            ) : (
+              <>
+                {/* Dành cho Bác sĩ */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Họ và tên Bác sĩ *</label>
+                  <Input
+                    required
+                    placeholder="VD: BS.CKII Nguyễn Văn A"
+                    className="h-11 rounded-xl text-xs"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Chuyên khoa *</label>
                   <Input
@@ -204,27 +295,50 @@ function PartnerPageContent() {
                     onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
                   />
                 </div>
+
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Nơi công tác hiện tại</label>
+                  <label className="text-xs font-bold text-slate-700">
+                    Nơi công tác hiện tại (Tùy chọn)
+                  </label>
                   <Input
                     placeholder="VD: Bệnh viện Chợ Rẫy, Bệnh viện Bạch Mai..."
                     className="h-11 rounded-xl text-xs"
                     value={formData.hospitalOrClinic}
-                    onChange={(e) => setFormData({ ...formData, hospitalOrClinic: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, hospitalOrClinic: e.target.value })
+                    }
                   />
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">
+                    Số điện thoại liên hệ *
+                  </label>
+                  <Input
+                    required
+                    type="tel"
+                    placeholder="0912 xxx xxx"
+                    className="h-11 rounded-xl text-xs"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-700">Email liên hệ *</label>
+                  <Input
+                    required
+                    type="email"
+                    placeholder="doctor@example.com"
+                    className="h-11 rounded-xl text-xs"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                  <p className="text-[11px] text-slate-500 font-normal">
+                    Email nhận thông tin trao đổi và tài khoản hệ thống.
+                  </p>
+                </div>
               </>
-            ) : (
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-bold text-slate-700">Chức vụ người liên hệ *</label>
-                <Input
-                  required
-                  placeholder="VD: Giám đốc chuyên môn, Trưởng phòng Kinh doanh..."
-                  className="h-11 rounded-xl text-xs"
-                  value={formData.titleOrRole}
-                  onChange={(e) => setFormData({ ...formData, titleOrRole: e.target.value })}
-                />
-              </div>
             )}
 
             <div className="space-y-1.5 md:col-span-2">
@@ -239,9 +353,22 @@ function PartnerPageContent() {
             </div>
 
             <div className="md:col-span-2 text-center pt-2">
-              <Button type="submit" className="h-12 px-10 bg-[#0c4b39] hover:bg-[#083327] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg cursor-pointer">
-                <Send className="h-4 w-4 mr-2 text-[#66FF33]" />
-                Gửi đăng ký hợp tác
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-12 px-10 bg-[#0c4b39] hover:bg-[#083327] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin text-[#66FF33]" />
+                    Đang gửi thông tin...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2 text-[#66FF33]" />
+                    Gửi đăng ký hợp tác
+                  </>
+                )}
               </Button>
             </div>
           </form>

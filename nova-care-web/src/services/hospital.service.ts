@@ -16,4 +16,9 @@ export const hospitalService = {
     const response = await apiClient.get<any>(`/hospitals/${hospitalId}/specialties/${specialtyId}/doctors`);
     return response.data;
   },
+
+  async getSpecialties(hospitalId: string): Promise<any[]> {
+    const response = await apiClient.get<any>(`/hospitals/${hospitalId}/specialties`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
+  },
 };

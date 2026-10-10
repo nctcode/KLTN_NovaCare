@@ -29,11 +29,17 @@ export function DoctorCard({ doctor }: { doctor: Doctor }) {
             {/* Avatar with Status Pulse */}
             <div className="relative shrink-0 mx-auto sm:mx-0">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-emerald-500/20 shadow-md group-hover:scale-105 transition-transform duration-300 bg-slate-100">
-                <img
-                  src={avatarUrl}
-                  alt={doctor.fullName}
-                  className="w-full h-full object-cover"
-                />
+                {avatarUrl && avatarUrl.trim() ? (
+                  <img
+                    src={avatarUrl.trim()}
+                    alt={doctor.fullName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-emerald-800 font-bold text-lg bg-emerald-50">
+                    {doctor.fullName?.charAt(0) || 'D'}
+                  </div>
+                )}
               </div>
               {/* Green online pulse badge */}
               <div className="absolute -bottom-1 -right-1 bg-white p-0.5 rounded-full shadow-sm">

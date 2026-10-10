@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/stores/auth.store';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -62,6 +63,8 @@ const getTodayStr = () => {
 };
 
 export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }: AppointmentTabProps) {
+  const { user } = useAuthStore();
+  const isHospitalAdmin = user?.role === 'HOSPITAL_ADMIN';
   const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
@@ -69,7 +72,14 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [hospitalId, setHospitalId] = useState('');
+  const [hospitalId, setHospitalId] = useState(isHospitalAdmin ? (user?.hospitalId || '') : '');
+
+  // Sync hospitalId if user loads asynchronously
+  useEffect(() => {
+    if (isHospitalAdmin && user?.hospitalId && hospitalId !== user.hospitalId) {
+      setHospitalId(user.hospitalId);
+    }
+  }, [isHospitalAdmin, user?.hospitalId, hospitalId]);
   const [doctorId, setDoctorId] = useState('');
   const [specialtyId, setSpecialtyId] = useState('');
   const [medicalServiceId, setMedicalServiceId] = useState('');
@@ -91,8 +101,8 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
 
   // Fetch Stats (4 small stat cards)
   const { data: stats } = useQuery({
-    queryKey: ['admin-appointment-stats'],
-    queryFn: () => adminService.getAppointmentStats(),
+    queryKey: ['admin-appointment-stats', hospitalId],
+    queryFn: () => adminService.getAppointmentStats(hospitalId ? { hospitalId } : undefined),
   });
 
   // Fetch Hospitals for filter dropdown
@@ -179,7 +189,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
 
   const handleResetFilters = () => {
     setSearch('');
-    setHospitalId('');
+    setHospitalId(isHospitalAdmin ? (user?.hospitalId || '') : '');
     setDoctorId('');
     setSpecialtyId('');
     setMedicalServiceId('');
@@ -188,7 +198,8 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
     setPage(1);
   };
 
-  const hasActiveFilter = !!(search || hospitalId || doctorId || specialtyId || medicalServiceId || (initialMode === 'all' && statusFilter) || (initialMode === 'all' && dateFilter));
+  const isHospitalFiltered = isHospitalAdmin ? false : !!hospitalId;
+  const hasActiveFilter = !!(search || isHospitalFiltered || doctorId || specialtyId || medicalServiceId || (initialMode === 'all' && statusFilter) || (initialMode === 'all' && dateFilter));
 
   return (
     <div className="space-y-6">
@@ -203,8 +214,8 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
             {pageSubtitle || (initialMode === 'today'
               ? 'Theo dõi và quản lý danh sách bệnh nhân có lịch hẹn khám trong ngày hôm nay.'
               : initialMode === 'history'
-              ? 'Tra cứu và kiểm tra lịch sử các lượt khám bệnh đã hoàn tất trên hệ thống.'
-              : 'Theo dõi và quản lý các lịch hẹn khám được đặt trên nền tảng NovaCare.')}
+                ? 'Tra cứu và kiểm tra lịch sử các lượt khám bệnh đã hoàn tất trên hệ thống.'
+                : 'Theo dõi và quản lý các lịch hẹn khám được đặt trên nền tảng NovaCare.')}
           </p>
         </div>
 
@@ -318,29 +329,37 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                 setPage(1);
               }}
               className={`pl-9 text-xs rounded-lg h-9 border-slate-200 dark:border-slate-700 ${isLight
-                  ? 'bg-white text-slate-900 placeholder:text-slate-400'
-                  : 'bg-slate-900 text-white placeholder:text-slate-500'
+                ? 'bg-white text-slate-900 placeholder:text-slate-400'
+                : 'bg-slate-900 text-white placeholder:text-slate-500'
                 }`}
             />
           </div>
 
           {/* Hospital Select */}
-          <select
-            value={hospitalId}
-            onChange={(e) => {
-              setHospitalId(e.target.value);
-              setPage(1);
-            }}
-            className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
-              }`}
-          >
-            <option value="">Bệnh viện (Tất cả)</option>
-            {hospitalsData?.items?.map((h: any) => (
-              <option key={h.id} value={h.id}>
-                {h.name}
-              </option>
-            ))}
-          </select>
+          {isHospitalAdmin ? (
+            <div className={`flex items-center gap-1.5 px-3 h-9 rounded-lg border text-xs font-semibold ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+              }`}>
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate max-w-[180px]">{user?.hospital?.name || 'Bệnh viện của bạn'}</span>
+            </div>
+          ) : (
+            <select
+              value={hospitalId}
+              onChange={(e) => {
+                setHospitalId(e.target.value);
+                setPage(1);
+              }}
+              className={`border text-xs font-normal px-2.5 py-1.5 h-9 rounded-lg border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 ${isLight ? 'bg-white text-slate-800' : 'bg-slate-900 text-white'
+                }`}
+            >
+              <option value="">Bệnh viện (Tất cả)</option>
+              {hospitalsData?.items?.map((h: any) => (
+                <option key={h.id} value={h.id}>
+                  {h.name}
+                </option>
+              ))}
+            </select>
+          )}
 
           {/* Doctor Select */}
           <select

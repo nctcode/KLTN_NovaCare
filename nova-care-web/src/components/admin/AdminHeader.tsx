@@ -107,7 +107,9 @@ export function AdminHeader() {
               </Avatar>
               <div className="text-left hidden sm:block">
                 <p className="text-xs font-semibold truncate max-w-[120px]">{user?.fullName || 'Quản trị viên'}</p>
-                <p className="text-[10px] text-emerald-600 font-medium">ADMIN</p>
+                <p className="text-[10px] text-emerald-600 font-medium">
+                  {user?.role === 'HOSPITAL_ADMIN' ? 'HOSPITAL ADMIN' : 'ADMIN'}
+                </p>
               </div>
             </Button>
           </DropdownMenuTrigger>

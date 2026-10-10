@@ -11,39 +11,98 @@ export class AdminSpecialtiesService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
-  async findAll(params: { page?: number; limit?: number; search?: string; status?: string }) {
+  async findAll(params: { page?: number; limit?: number; search?: string; status?: string; hospitalId?: string }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const andConditions: any[] = [];
 
     if (params.search) {
-      where.OR = [
-        { name: { contains: params.search, mode: 'insensitive' } },
-        { description: { contains: params.search, mode: 'insensitive' } },
-      ];
+      andConditions.push({
+        OR: [
+          { name: { contains: params.search, mode: 'insensitive' } },
+          { description: { contains: params.search, mode: 'insensitive' } },
+        ],
+      });
     }
 
     if (params.status && params.status !== 'ALL') {
       if (params.status === 'ACTIVE' || params.status === 'Hoạt động') {
-        where.isActive = true;
+        if (params.hospitalId) {
+          andConditions.push({
+            hospitalSpecialties: {
+              some: {
+                hospitalId: params.hospitalId,
+                isActive: true,
+              },
+            },
+          });
+        } else {
+          andConditions.push({ isActive: true });
+        }
       } else if (params.status === 'PAUSED' || params.status === 'INACTIVE' || params.status === 'Tạm ngưng') {
-        where.isActive = false;
+        if (params.hospitalId) {
+          andConditions.push({
+            hospitalSpecialties: {
+              some: {
+                hospitalId: params.hospitalId,
+                isActive: false,
+              },
+            },
+          });
+        } else {
+          andConditions.push({ isActive: false });
+        }
       }
     }
 
-    const [items, total, allSpecialties, totalHospitalSpecialties] = await Promise.all([
+    // Filter by Hospital: Specialty must be linked to the hospital via HospitalSpecialty or DoctorWorkplace
+    if (params.hospitalId) {
+      andConditions.push({
+        OR: [
+          {
+            hospitalSpecialties: {
+              some: {
+                hospitalId: params.hospitalId,
+              },
+            },
+          },
+          {
+            workPlaces: {
+              some: {
+                hospitalId: params.hospitalId,
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    const where: any = andConditions.length > 0 ? { AND: andConditions } : {};
+
+    const [items, total] = await Promise.all([
       this.prisma.specialty.findMany({
         where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          hospitalSpecialties: {
-            where: { isActive: true },
-            select: { id: true, hospitalId: true },
-          },
+          hospitalSpecialties: params.hospitalId
+            ? {
+                where: { hospitalId: params.hospitalId },
+                select: { id: true, hospitalId: true, isActive: true },
+              }
+            : {
+                where: { isActive: true },
+                select: { id: true, hospitalId: true, isActive: true },
+              },
+          workPlaces: params.hospitalId
+            ? {
+                where: { hospitalId: params.hospitalId, isActive: true },
+                select: { id: true, doctorId: true },
+              }
+            : false,
           _count: {
             select: {
               hospitalSpecialties: true,
@@ -53,28 +112,97 @@ export class AdminSpecialtiesService {
         },
       }),
       this.prisma.specialty.count({ where }),
-      this.prisma.specialty.findMany({ select: { isActive: true } }),
-      this.prisma.hospitalSpecialty.count({ where: { isActive: true } }),
     ]);
 
-    const formattedItems = items.map((spec) => ({
-      id: spec.id,
-      name: spec.name,
-      description: spec.description || '',
-      icon: spec.icon || '',
-      coverImageUrl: spec.coverImageUrl || '',
-      isActive: spec.isActive,
-      hospitalCount: spec.hospitalSpecialties.length || spec._count.hospitalSpecialties,
-      createdAt: spec.createdAt,
-      updatedAt: spec.updatedAt,
-    }));
+    let stats;
+    if (params.hospitalId) {
+      // Calculate stats specifically for the requested hospital
+      const hospitalSpecialtiesAll = await this.prisma.specialty.findMany({
+        where: {
+          OR: [
+            {
+              hospitalSpecialties: {
+                some: {
+                  hospitalId: params.hospitalId,
+                },
+              },
+            },
+            {
+              workPlaces: {
+                some: {
+                  hospitalId: params.hospitalId,
+                },
+              },
+            },
+          ],
+        },
+        include: {
+          hospitalSpecialties: {
+            where: { hospitalId: params.hospitalId },
+            select: { isActive: true },
+          },
+          workPlaces: {
+            where: { hospitalId: params.hospitalId, isActive: true },
+            select: { id: true },
+          },
+        },
+      });
 
-    const stats = {
-      totalSpecialties: allSpecialties.length,
-      activeSpecialties: allSpecialties.filter((s) => s.isActive).length,
-      inactiveSpecialties: allSpecialties.filter((s) => !s.isActive).length,
-      totalHospitalsUsing: totalHospitalSpecialties,
-    };
+      const totalDoctorsInHospital = hospitalSpecialtiesAll.reduce(
+        (sum, s) => sum + s.workPlaces.length,
+        0
+      );
+
+      const activeCount = hospitalSpecialtiesAll.filter((s) => {
+        const hs = s.hospitalSpecialties[0];
+        return hs ? hs.isActive : s.isActive;
+      }).length;
+
+      stats = {
+        totalSpecialties: hospitalSpecialtiesAll.length,
+        activeSpecialties: activeCount,
+        inactiveSpecialties: hospitalSpecialtiesAll.length - activeCount,
+        totalDoctorsUsing: totalDoctorsInHospital,
+        totalHospitalsUsing: 1,
+      };
+    } else {
+      const [allSpecialties, totalHospitalSpecialties] = await Promise.all([
+        this.prisma.specialty.findMany({ select: { isActive: true } }),
+        this.prisma.hospitalSpecialty.count({ where: { isActive: true } }),
+      ]);
+
+      stats = {
+        totalSpecialties: allSpecialties.length,
+        activeSpecialties: allSpecialties.filter((s) => s.isActive).length,
+        inactiveSpecialties: allSpecialties.filter((s) => !s.isActive).length,
+        totalHospitalsUsing: totalHospitalSpecialties,
+      };
+    }
+
+    const formattedItems = items.map((spec) => {
+      const hospitalLink = params.hospitalId
+        ? spec.hospitalSpecialties.find((hs: any) => hs.hospitalId === params.hospitalId)
+        : null;
+
+      const isHospitalActive = hospitalLink ? hospitalLink.isActive : spec.isActive;
+
+      return {
+        id: spec.id,
+        name: spec.name,
+        description: spec.description || '',
+        icon: spec.icon || '',
+        coverImageUrl: spec.coverImageUrl || '',
+        isActive: params.hospitalId ? isHospitalActive : spec.isActive,
+        isHospitalActive,
+        hospitalSpecialtyId: hospitalLink?.id || null,
+        hospitalCount: spec.hospitalSpecialties.length || spec._count?.hospitalSpecialties || 0,
+        doctorCount: params.hospitalId && (spec as any).workPlaces
+          ? (spec as any).workPlaces.length
+          : spec._count?.workPlaces || 0,
+        createdAt: spec.createdAt,
+        updatedAt: spec.updatedAt,
+      };
+    });
 
     return {
       items: formattedItems,
@@ -86,7 +214,7 @@ export class AdminSpecialtiesService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, hospitalId?: string) {
     const specialty = await this.prisma.specialty.findUnique({
       where: { id },
       include: {
@@ -105,6 +233,23 @@ export class AdminSpecialtiesService {
           },
           orderBy: { createdAt: 'desc' },
         },
+        workPlaces: hospitalId
+          ? {
+              where: { hospitalId, isActive: true },
+              include: {
+                doctor: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    title: true,
+                    avatarUrl: true,
+                    rating: true,
+                    consultationCount: true,
+                  },
+                },
+              },
+            }
+          : false,
       },
     });
 
@@ -124,18 +269,60 @@ export class AdminSpecialtiesService {
       createdAt: hs.createdAt,
     }));
 
+    const hospitalDoctors = (specialty as any).workPlaces?.map((wp: any) => ({
+      ...wp.doctor,
+      consultationFee: wp.consultationFee,
+    })) || [];
+
+    const hospitalLink = hospitalId
+      ? specialty.hospitalSpecialties.find((hs) => hs.hospitalId === hospitalId)
+      : null;
+
     return {
       id: specialty.id,
       name: specialty.name,
       description: specialty.description,
       icon: specialty.icon,
       coverImageUrl: specialty.coverImageUrl,
-      isActive: specialty.isActive,
+      isActive: hospitalId && hospitalLink ? hospitalLink.isActive : specialty.isActive,
+      isHospitalActive: hospitalLink ? hospitalLink.isActive : specialty.isActive,
       createdAt: specialty.createdAt,
       updatedAt: specialty.updatedAt,
       hospitalCount: appliedHospitals.length,
       appliedHospitals,
+      hospitalDoctors,
     };
+  }
+
+  async toggleHospitalStatus(specialtyId: string, hospitalId: string, isActive: boolean) {
+    const existing = await this.prisma.hospitalSpecialty.findUnique({
+      where: {
+        hospitalId_specialtyId: {
+          hospitalId,
+          specialtyId,
+        },
+      },
+    });
+
+    if (!existing) {
+      return await this.prisma.hospitalSpecialty.create({
+        data: {
+          hospitalId,
+          specialtyId,
+          isActive,
+        },
+      });
+    }
+
+    return await this.prisma.hospitalSpecialty.update({
+      where: {
+        hospitalId_specialtyId: {
+          hospitalId,
+          specialtyId,
+        },
+      },
+      data: { isActive },
+    });
   }
 
   async create(data: CreateSpecialtyDto, adminUserId: string, ipAddress?: string, userAgent?: string) {

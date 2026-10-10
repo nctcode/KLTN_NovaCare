@@ -16,6 +16,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { AdminUsersService } from './admin-users.service';
 import { CreateHospitalAdminDto } from './dto/create-hospital-admin.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { Role } from '@prisma/client';
 import { Post } from '@nestjs/common';
 
@@ -25,7 +26,7 @@ import { Post } from '@nestjs/common';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class AdminUsersController {
-  constructor(private readonly service: AdminUsersService) {}
+  constructor(private readonly service: AdminUsersService) { }
 
   @Post('hospital-admin')
   @ApiOperation({ summary: 'Cấp tài khoản Quản trị viên Bệnh viện (Hospital Admin)' })
@@ -79,15 +80,15 @@ export class AdminUsersController {
   }
 
   @Patch(':id/role')
-  @ApiOperation({ summary: 'Cập nhật quyền (Role) của người dùng' })
+  @ApiOperation({ summary: 'Cập nhật quyền (Role) và gán cơ sở y tế của người dùng' })
   updateRole(
     @Param('id') id: string,
-    @Body('role') role: Role,
+    @Body() dto: UpdateUserRoleDto,
     @Req() req: any,
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ) {
-    return this.service.updateRole(id, role, req.user.id, ip, ua);
+    return this.service.updateRole(id, dto.role, dto.hospitalId, req.user.id, ip, ua);
   }
 
   @Get(':id/appointments')

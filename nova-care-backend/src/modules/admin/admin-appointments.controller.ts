@@ -11,6 +11,7 @@ import {
   Req,
   Ip,
   Headers,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -23,14 +24,22 @@ import { AppointmentStatus } from '@prisma/client';
 @ApiBearerAuth('access-token')
 @Controller('api/v1/admin/appointments')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles('ADMIN', 'HOSPITAL_ADMIN')
 export class AdminAppointmentsController {
-  constructor(private readonly service: AdminAppointmentsService) {}
+  constructor(private readonly service: AdminAppointmentsService) { }
 
   @Get('stats')
   @ApiOperation({ summary: 'Thống kê tổng quan lịch khám hôm nay và trạng thái' })
-  getStats() {
-    return this.service.getStats();
+  @ApiQuery({ name: 'hospitalId', required: false, type: String })
+  getStats(@Req() req: any, @Query('hospitalId') hospitalId?: string) {
+    let scopedHospitalId = hospitalId;
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      scopedHospitalId = req.user.hospitalId;
+    }
+    return this.service.getStats(scopedHospitalId);
   }
 
   @Get()
@@ -46,6 +55,7 @@ export class AdminAppointmentsController {
   @ApiQuery({ name: 'medicalServiceId', required: false, type: String })
   @ApiQuery({ name: 'date', required: false, type: String })
   findAll(
+    @Req() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
@@ -57,12 +67,19 @@ export class AdminAppointmentsController {
     @Query('medicalServiceId') medicalServiceId?: string,
     @Query('date') date?: string,
   ) {
+    let scopedHospitalId = hospitalId;
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      scopedHospitalId = req.user.hospitalId;
+    }
     return this.service.findAll({
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 10,
       search,
       status,
-      hospitalId,
+      hospitalId: scopedHospitalId,
       branchId,
       doctorId,
       specialtyId,

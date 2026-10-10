@@ -28,6 +28,7 @@ import { AdminModule } from '@/modules/admin/admin.module';
 import { ClinicalModule } from '@/modules/clinical/clinical.module';
 import { IntegrationModule } from '@/modules/integration/integration.module';
 import { HospitalAdminModule } from '@/modules/hospital-admin/hospital-admin.module';
+import { PartnerRequestsModule } from '@/modules/partner-requests/partner-requests.module';
 
 import { SchedulesModule } from '@/modules/schedules/schedules.module';
 import { ConsultationsModule } from '@/modules/consultations/consultations.module';
@@ -69,9 +70,13 @@ import { SearchModule } from '@/modules/search/search.module';
     ClinicalModule,
     IntegrationModule,
     HospitalAdminModule,
+<<<<<<< HEAD
     ConsultationsModule,
     SearchModule,
     ClinicRoomsModule,
+=======
+    PartnerRequestsModule,
+>>>>>>> 5d6d7dd (feat: Tich hop lien he hop tac va ket noi API HIS doi tac)
   ],
 })
-export class AppModule {}
+export class AppModule { }

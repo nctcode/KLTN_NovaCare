@@ -157,6 +157,7 @@ export default function AdminRolesPage() {
   const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
   const [selectedUserForRole, setSelectedUserForRole] = useState<any | null>(null);
   const [newSelectedRole, setNewSelectedRole] = useState<string>('PATIENT');
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('');
 
   const cardStyle = isLight
     ? 'bg-white border-slate-200 text-slate-900 shadow-sm'
@@ -178,10 +179,24 @@ export default function AdminRolesPage() {
       }),
   });
 
+  // Query hospitals list for dropdown
+  const { data: hospitalsData, isLoading: loadingHospitals } = useQuery({
+    queryKey: ['admin-hospitals-simple-list'],
+    queryFn: () => adminService.getHospitals({ limit: 100 }),
+  });
+  const hospitals: any[] = hospitalsData?.items || [];
+
   // Role mutation
   const updateRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      adminService.updateUserRole(userId, role),
+    mutationFn: ({
+      userId,
+      role,
+      hospitalId,
+    }: {
+      userId: string;
+      role: string;
+      hospitalId?: string | null;
+    }) => adminService.updateUserRole(userId, role, hospitalId),
     onSuccess: () => {
       toast.success('Đã cập nhật vai trò người dùng thành công!');
       queryClient.invalidateQueries({ queryKey: ['admin-roles-users'] });
@@ -196,13 +211,19 @@ export default function AdminRolesPage() {
   const handleOpenRoleModal = (user: any) => {
     setSelectedUserForRole(user);
     setNewSelectedRole(user.role || 'PATIENT');
+    setSelectedHospitalId(user.hospitalId || user.hospital?.id || '');
   };
 
   const handleSaveRole = () => {
     if (!selectedUserForRole) return;
+    if (newSelectedRole === 'HOSPITAL_ADMIN' && !selectedHospitalId) {
+      toast.error('Vui lòng chọn cơ sở y tế cho Quản trị viên Bệnh viện');
+      return;
+    }
     updateRoleMutation.mutate({
       userId: selectedUserForRole.id,
       role: newSelectedRole,
+      hospitalId: newSelectedRole === 'HOSPITAL_ADMIN' ? selectedHospitalId : null,
     });
   };
 
@@ -321,11 +342,10 @@ export default function AdminRolesPage() {
       <div className={`flex border-b ${isLight ? 'border-slate-200' : 'border-slate-800'} gap-6 text-xs sm:text-sm font-bold`}>
         <button
           onClick={() => setActiveTab('matrix')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'matrix'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'matrix'
               ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400'
-          }`}
+            }`}
         >
           <Shield className="w-4 h-4" />
           <span>Ma Trận Phân Quyền (RBAC Matrix)</span>
@@ -333,11 +353,10 @@ export default function AdminRolesPage() {
 
         <button
           onClick={() => setActiveTab('users')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'users'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'users'
               ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400'
-          }`}
+            }`}
         >
           <UserCog className="w-4 h-4" />
           <span>Phân Quyền & Gán Vai Trò Tài Khoản</span>
@@ -376,9 +395,8 @@ export default function AdminRolesPage() {
                     {group.permissions.map((perm, pIdx) => (
                       <tr
                         key={pIdx}
-                        className={`transition-colors ${
-                          isLight ? 'hover:bg-slate-50/60' : 'hover:bg-slate-900/40'
-                        }`}
+                        className={`transition-colors ${isLight ? 'hover:bg-slate-50/60' : 'hover:bg-slate-900/40'
+                          }`}
                       >
                         <td className="py-3 px-5">
                           <div className="font-semibold text-slate-900 dark:text-white">{perm.name}</div>
@@ -413,11 +431,10 @@ export default function AdminRolesPage() {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className={`pl-9 text-xs rounded-xl ${
-                    isLight
+                  className={`pl-9 text-xs rounded-xl ${isLight
                       ? 'bg-white border-slate-300 text-slate-900'
                       : 'bg-slate-900 border-slate-800 text-white'
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -428,9 +445,8 @@ export default function AdminRolesPage() {
                     setRoleFilter(e.target.value);
                     setPage(1);
                   }}
-                  className={`border text-xs px-3 py-2 rounded-xl focus:outline-none ${
-                    isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                  }`}
+                  className={`border text-xs px-3 py-2 rounded-xl focus:outline-none ${isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
                 >
                   <option value="all">Tất cả vai trò</option>
                   <option value="ADMIN">Quản trị viên (ADMIN)</option>
@@ -465,9 +481,8 @@ export default function AdminRolesPage() {
                     usersData.items.map((user: any) => (
                       <tr
                         key={user.id}
-                        className={`transition-colors ${
-                          isLight ? 'hover:bg-slate-50/60' : 'hover:bg-slate-900/40'
-                        }`}
+                        className={`transition-colors ${isLight ? 'hover:bg-slate-50/60' : 'hover:bg-slate-900/40'
+                          }`}
                       >
                         <td className="py-3 px-5">
                           <div className="font-bold text-slate-900 dark:text-white">
@@ -481,13 +496,12 @@ export default function AdminRolesPage() {
                         </td>
                         <td className="py-3 px-3.5 text-center">
                           <Badge
-                            className={`text-[11px] font-bold ${
-                              user.role === 'ADMIN'
+                            className={`text-[11px] font-bold ${user.role === 'ADMIN'
                                 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                                 : user.role === 'HOSPITAL_ADMIN'
-                                ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30'
-                                : 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/30'
-                            }`}
+                                  ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30'
+                                  : 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/30'
+                              }`}
                           >
                             {user.role || 'PATIENT'}
                           </Badge>
@@ -571,15 +585,44 @@ export default function AdminRolesPage() {
               <select
                 value={newSelectedRole}
                 onChange={(e) => setNewSelectedRole(e.target.value)}
-                className={`w-full border text-xs px-3 py-2 rounded-xl focus:outline-none ${
-                  isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-                }`}
+                className={`w-full border text-xs px-3 py-2 rounded-xl focus:outline-none ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+                  }`}
               >
                 <option value="PATIENT">Bệnh nhân (PATIENT) - Người dùng cơ bản</option>
                 <option value="HOSPITAL_ADMIN">Quản trị viên Bệnh viện (HOSPITAL_ADMIN)</option>
                 <option value="ADMIN">Quản trị viên Tối cao (ADMIN) - Toàn quyền</option>
               </select>
             </div>
+
+            {newSelectedRole === 'HOSPITAL_ADMIN' && (
+              <div className="space-y-1.5 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <label className="text-xs font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-blue-500" />
+                  Cơ sở y tế trực thuộc: <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={selectedHospitalId}
+                  onChange={(e) => setSelectedHospitalId(e.target.value)}
+                  className={`w-full border text-xs px-3 py-2 rounded-xl focus:outline-none ${
+                    isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+                  }`}
+                  required
+                >
+                  <option value="">-- Chọn bệnh viện quản lý --</option>
+                  {hospitals.map((h: any) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name} {h.city ? `(${h.city})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {loadingHospitals && (
+                  <p className="text-[11px] text-slate-400">Đang tải danh sách cơ sở...</p>
+                )}
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  Tài khoản này sẽ chỉ có quyền truy cập dữ liệu (bác sĩ, lịch hẹn, dịch vụ) của bệnh viện được chọn.
+                </p>
+              </div>
+            )}
 
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
               <p className="font-semibold flex items-center gap-1.5 mb-1">

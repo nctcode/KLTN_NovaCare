@@ -83,8 +83,8 @@ export const adminService = {
     return extractData(response);
   },
 
-  async updateUserRole(id: string, role: string): Promise<any> {
-    const response = await apiClient.patch<any>(`/admin/users/${id}/role`, { role });
+  async updateUserRole(id: string, role: string, hospitalId?: string | null): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/users/${id}/role`, { role, hospitalId });
     return extractData(response);
   },
 
@@ -98,8 +98,11 @@ export const adminService = {
   },
 
   // Appointments
-  async getAppointmentStats(): Promise<any> {
-    const response = await apiClient.get<any>('/admin/appointments/stats');
+  async getAppointmentStats(params?: { hospitalId?: string }): Promise<any> {
+    const query = new URLSearchParams();
+    if (params?.hospitalId) query.append('hospitalId', params.hospitalId);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const response = await apiClient.get<any>(`/admin/appointments/stats${qs}`);
     return extractData(response);
   },
 
@@ -465,13 +468,15 @@ export const adminService = {
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.search) query.append('search', params.search);
     if (params?.status) query.append('status', params.status);
+    if (params?.hospitalId) query.append('hospitalId', params.hospitalId);
 
     const response = await apiClient.get<any>(`/admin/specialties?${query.toString()}`);
     return extractData(response);
   },
 
-  async getSpecialtyDetail(id: string): Promise<any> {
-    const response = await apiClient.get<any>(`/admin/specialties/${id}`);
+  async getSpecialtyDetail(id: string, hospitalId?: string): Promise<any> {
+    const query = hospitalId ? `?hospitalId=${hospitalId}` : '';
+    const response = await apiClient.get<any>(`/admin/specialties/${id}${query}`);
     return extractData(response);
   },
 
@@ -487,6 +492,11 @@ export const adminService = {
 
   async toggleSpecialtyStatus(id: string, isActive: boolean): Promise<any> {
     const response = await apiClient.patch<any>(`/admin/specialties/${id}/status`, { isActive });
+    return extractData(response);
+  },
+
+  async toggleHospitalSpecialtyStatus(id: string, isActive: boolean, hospitalId?: string): Promise<any> {
+    const response = await apiClient.patch<any>(`/admin/specialties/${id}/hospital-status`, { isActive, hospitalId });
     return extractData(response);
   },
 
@@ -546,6 +556,17 @@ export const adminService = {
 
   async simulateInteroperabilityTraffic(): Promise<any> {
     const response = await apiClient.post<any>('/admin/interoperability/simulate-traffic', {});
+    return extractData(response);
+  },
+
+  // HIS Gateway Ingestion & Sync
+  async syncHisCatalog(endpointUrl?: string): Promise<any> {
+    const response = await apiClient.post<any>('/integration/catalog-sync', { endpointUrl });
+    return extractData(response);
+  },
+
+  async testHisHandshake(data: { endpointUrl?: string; authType?: string; authToken?: string }): Promise<any> {
+    const response = await apiClient.post<any>('/hospital-admin/integration/test-handshake', data);
     return extractData(response);
   },
 };

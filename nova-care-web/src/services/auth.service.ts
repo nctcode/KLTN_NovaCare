@@ -64,4 +64,14 @@ export const authService = {
   async resetPassword(data: { resetToken: string; newPassword: string }): Promise<{ message: string }> {
     return apiClient.post('/auth/reset-password', data);
   },
+
+  async verifyActivationToken(token: string): Promise<any> {
+    const res = await apiClient.get<any>(`/auth/verify-activation-token?token=${encodeURIComponent(token)}`);
+    return res && res.data ? res.data : res;
+  },
+
+  async activateHospitalAccount(data: { token: string; password: string }): Promise<AuthResponse> {
+    const res = await apiClient.post<any>('/auth/activate-hospital-account', data);
+    return res && res.data ? res.data : res;
+  },
 };

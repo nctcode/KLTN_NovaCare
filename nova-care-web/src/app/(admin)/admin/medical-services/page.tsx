@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth.store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { hospitalService } from '@/services/hospital.service';
@@ -37,18 +39,28 @@ import {
 } from 'lucide-react';
 
 export default function AdminMedicalServicesPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
   const queryClient = useQueryClient();
 
+  const isHospitalAdmin = user?.role === 'HOSPITAL_ADMIN';
+
   // Filters & Pagination state
   const [search, setSearch] = useState('');
-  const [selectedHospitalId, setSelectedHospitalId] = useState('');
+  const [selectedHospitalId, setSelectedHospitalId] = useState(isHospitalAdmin ? (user?.hospitalId || '') : '');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [sortBy, setSortBy] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const limit = 10;
+
+  useEffect(() => {
+    if (isHospitalAdmin && user?.hospitalId && selectedHospitalId !== user.hospitalId) {
+      setSelectedHospitalId(user.hospitalId);
+    }
+  }, [isHospitalAdmin, user?.hospitalId, selectedHospitalId]);
 
   // Modals state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -108,7 +120,7 @@ export default function AdminMedicalServicesPage() {
     setEditingService(null);
     setFormState({
       name: '',
-      hospitalId: hospitals[0]?.id || '',
+      hospitalId: isHospitalAdmin ? (user?.hospitalId || '') : (hospitals[0]?.id || ''),
       price: 150000,
       duration: 30,
       description: '',
@@ -267,8 +279,12 @@ export default function AdminMedicalServicesPage() {
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Bệnh viện niêm yết</p>
-              <h3 className={`text-lg font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{stats.totalHospitalsOffering}</h3>
+              <p className="text-xs font-medium text-slate-500">
+                {isHospitalAdmin ? 'Cơ sở quản lý' : 'Bệnh viện niêm yết'}
+              </p>
+              <h3 className={`text-lg font-bold truncate max-w-[150px] ${isLight ? 'text-slate-900' : 'text-white'}`} title={isHospitalAdmin ? (user?.hospital?.name || 'Bệnh viện') : undefined}>
+                {isHospitalAdmin ? (user?.hospital?.name || 'Bệnh viện') : stats.totalHospitalsOffering}
+              </h3>
             </div>
           </div>
         </Card>
@@ -293,24 +309,25 @@ export default function AdminMedicalServicesPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Hospital Filter */}
-            <select
-              value={selectedHospitalId}
-              onChange={(e) => {
-                setSelectedHospitalId(e.target.value);
-                setPage(1);
-              }}
-              className={`text-xs h-9 px-3 rounded-lg border font-medium outline-none ${
-                isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
-            >
-              <option value="">Tất cả Bệnh viện</option>
-              {hospitals.map((h: any) => (
-                <option key={h.id} value={h.id}>
-                  {h.name}
-                </option>
-              ))}
-            </select>
+            {/* Hospital Filter - Chỉ hiển thị cho Admin toàn sàn */}
+            {!isHospitalAdmin && (
+              <select
+                value={selectedHospitalId}
+                onChange={(e) => {
+                  setSelectedHospitalId(e.target.value);
+                  setPage(1);
+                }}
+                className={`text-xs h-9 px-3 rounded-lg border font-medium outline-none ${isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                  }`}
+              >
+                <option value="">Tất cả Bệnh viện</option>
+                {hospitals.map((h: any) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
             {/* Status Filter */}
             <select
@@ -319,9 +336,8 @@ export default function AdminMedicalServicesPage() {
                 setSelectedStatus(e.target.value);
                 setPage(1);
               }}
-              className={`text-xs h-9 px-3 rounded-lg border font-medium outline-none ${
-                isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
+              className={`text-xs h-9 px-3 rounded-lg border font-medium outline-none ${isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                }`}
             >
               <option value="ALL">Tất cả Trạng thái</option>
               <option value="ACTIVE">Đang cung cấp</option>
@@ -336,9 +352,8 @@ export default function AdminMedicalServicesPage() {
                 setSortBy(sb);
                 setSortOrder(so as 'asc' | 'desc');
               }}
-              className={`text-xs h-9 px-3 rounded-lg border font-medium outline-none ${
-                isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
+              className={`text-xs h-9 px-3 rounded-lg border font-medium outline-none ${isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                }`}
             >
               <option value="updatedAt-desc">Mới cập nhật nhất</option>
               <option value="name-asc">Tên dịch vụ (A-Z)</option>
@@ -382,9 +397,8 @@ export default function AdminMedicalServicesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead>
-                <tr className={`border-b font-semibold text-xs ${
-                  isLight ? 'bg-slate-100 text-slate-800 border-slate-200' : 'bg-slate-900 text-slate-300 border-slate-800'
-                }`}>
+                <tr className={`border-b font-semibold text-xs ${isLight ? 'bg-slate-100 text-slate-800 border-slate-200' : 'bg-slate-900 text-slate-300 border-slate-800'
+                  }`}>
                   <th className="p-3.5">Dịch vụ</th>
                   <th className="p-3.5">Bệnh viện</th>
                   <th className="p-3.5">Đơn giá (VNĐ)</th>
@@ -438,11 +452,10 @@ export default function AdminMedicalServicesPage() {
                         title="Bấm để chuyển đổi trạng thái"
                         className="cursor-pointer focus:outline-none"
                       >
-                        <span className={`inline-flex items-center gap-1.5 font-medium px-2 py-0.5 rounded text-[11px] ${
-                          srv.isActive
+                        <span className={`inline-flex items-center gap-1.5 font-medium px-2 py-0.5 rounded text-[11px] ${srv.isActive
                             ? isLight ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800'
                             : isLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-slate-900 text-slate-400 border border-slate-800'
-                        }`}>
+                          }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${srv.isActive ? 'bg-emerald-600' : 'bg-slate-400'}`} />
                           {srv.isActive ? 'Đang cung cấp' : 'Tạm ngưng'}
                         </span>
@@ -462,9 +475,8 @@ export default function AdminMedicalServicesPage() {
                             setViewingService(srv);
                             setIsViewOpen(true);
                           }}
-                          className={`h-7 px-2 text-xs font-medium rounded-lg border ${
-                            isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
-                          }`}
+                          className={`h-7 px-2 text-xs font-medium rounded-lg border ${isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
+                            }`}
                           title="Xem chi tiết"
                         >
                           <Eye className="w-3.5 h-3.5 mr-1 text-[#0c4b39] dark:text-[#66FF33]" /> Xem
@@ -474,9 +486,8 @@ export default function AdminMedicalServicesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleOpenEdit(srv)}
-                          className={`h-7 px-2 text-xs font-medium rounded-lg border ${
-                            isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
-                          }`}
+                          className={`h-7 px-2 text-xs font-medium rounded-lg border ${isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
+                            }`}
                           title="Sửa dịch vụ"
                         >
                           <Pencil className="w-3.5 h-3.5 mr-1 text-slate-500" /> Sửa
@@ -489,9 +500,8 @@ export default function AdminMedicalServicesPage() {
                             setDeletingService(srv);
                             setIsDeleteOpen(true);
                           }}
-                          className={`h-7 px-2 text-xs font-medium rounded-lg border ${
-                            isLight ? 'bg-white border-slate-200 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-slate-800 text-rose-400 hover:bg-slate-800'
-                          }`}
+                          className={`h-7 px-2 text-xs font-medium rounded-lg border ${isLight ? 'bg-white border-slate-200 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-slate-800 text-rose-400 hover:bg-slate-800'
+                            }`}
                           title="Xóa dịch vụ"
                         >
                           <Trash2 className="w-3.5 h-3.5 mr-1 text-rose-600" /> Xóa
@@ -507,9 +517,8 @@ export default function AdminMedicalServicesPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className={`flex items-center justify-between pt-3 border-t text-xs ${
-            isLight ? 'border-slate-200 text-slate-700 font-medium' : 'border-slate-800 text-slate-300'
-          }`}>
+          <div className={`flex items-center justify-between pt-3 border-t text-xs ${isLight ? 'border-slate-200 text-slate-700 font-medium' : 'border-slate-800 text-slate-300'
+            }`}>
             <span>
               Hiển thị <strong>{services.length}</strong> / <strong>{total}</strong> dịch vụ
             </span>
@@ -575,24 +584,25 @@ export default function AdminMedicalServicesPage() {
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold mb-1 block">Bệnh viện cung cấp *</label>
-              <select
-                required
-                value={formState.hospitalId}
-                onChange={(e) => setFormState({ ...formState, hospitalId: e.target.value })}
-                className={`w-full text-xs p-2.5 rounded-lg border font-medium outline-none ${
-                  isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-                }`}
-              >
-                <option value="">-- Chọn Bệnh viện --</option>
-                {hospitals.map((h: any) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!isHospitalAdmin && (
+              <div>
+                <label className="text-xs font-semibold mb-1 block">Bệnh viện cung cấp *</label>
+                <select
+                  required
+                  value={formState.hospitalId}
+                  onChange={(e) => setFormState({ ...formState, hospitalId: e.target.value })}
+                  className={`w-full text-xs p-2.5 rounded-lg border font-medium outline-none ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                >
+                  <option value="">-- Chọn Bệnh viện --</option>
+                  {hospitals.map((h: any) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -629,9 +639,8 @@ export default function AdminMedicalServicesPage() {
                 placeholder="Mô tả quy trình, lợi ích hoặc yêu cầu của dịch vụ..."
                 value={formState.description}
                 onChange={(e) => setFormState({ ...formState, description: e.target.value })}
-                className={`w-full text-xs p-2.5 rounded-lg border outline-none ${
-                  isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-                }`}
+                className={`w-full text-xs p-2.5 rounded-lg border outline-none ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                  }`}
               />
             </div>
 
@@ -682,11 +691,10 @@ export default function AdminMedicalServicesPage() {
                     <Activity className="w-5 h-5 text-[#0c4b39] dark:text-[#66FF33]" />
                     Chi tiết Dịch vụ Y tế
                   </DialogTitle>
-                  <span className={`inline-flex items-center gap-1 font-medium px-2 py-0.5 rounded text-[11px] ${
-                    viewingService.isActive
+                  <span className={`inline-flex items-center gap-1 font-medium px-2 py-0.5 rounded text-[11px] ${viewingService.isActive
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : 'bg-slate-100 text-slate-600 border border-slate-200'
-                  }`}>
+                    }`}>
                     {viewingService.isActive ? 'Đang cung cấp' : 'Tạm ngưng'}
                   </span>
                 </div>

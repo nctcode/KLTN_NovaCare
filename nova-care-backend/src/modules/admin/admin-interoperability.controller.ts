@@ -9,7 +9,7 @@ import { AdminInteroperabilityService } from './admin-interoperability.service';
 @ApiBearerAuth('access-token')
 @Controller('api/v1/admin/interoperability')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles('ADMIN', 'HOSPITAL_ADMIN')
 export class AdminInteroperabilityController {
   constructor(private readonly service: AdminInteroperabilityService) {}
 

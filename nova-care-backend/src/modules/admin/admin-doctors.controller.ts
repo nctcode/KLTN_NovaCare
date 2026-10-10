@@ -11,6 +11,7 @@ import {
   Req,
   Ip,
   Headers,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -23,7 +24,7 @@ import { CreateDoctorAccountDto } from './dto/create-doctor-account.dto';
 @ApiBearerAuth('access-token')
 @Controller('api/v1/admin/doctors')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles('ADMIN', 'HOSPITAL_ADMIN')
 export class AdminDoctorsController {
   constructor(private readonly service: AdminDoctorsService) { }
 
@@ -39,6 +40,7 @@ export class AdminDoctorsController {
   @ApiQuery({ name: 'gender', required: false, type: String })
   @ApiQuery({ name: 'source', required: false, type: String })
   findAll(
+    @Req() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
@@ -49,12 +51,20 @@ export class AdminDoctorsController {
     @Query('gender') gender?: string,
     @Query('source') source?: string,
   ) {
+    let scopedHospitalId = hospitalId;
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      scopedHospitalId = req.user.hospitalId;
+    }
+
     return this.service.findAll({
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 10,
       search,
       externalId,
-      hospitalId,
+      hospitalId: scopedHospitalId,
       specialtyId,
       isActive,
       gender,
@@ -76,6 +86,12 @@ export class AdminDoctorsController {
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ) {
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      body.hospitalId = req.user.hospitalId;
+    }
     return this.service.create(body, req.user?.id, ip, ua);
   }
 
@@ -92,6 +108,7 @@ export class AdminDoctorsController {
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Xóa bác sĩ (Soft Delete)' })
   delete(
     @Param('id') id: string,
@@ -105,7 +122,13 @@ export class AdminDoctorsController {
   // Workplace management endpoints
   @Post(':id/workplaces')
   @ApiOperation({ summary: 'Thêm nơi công tác cho bác sĩ' })
-  createWorkplace(@Param('id') doctorId: string, @Body() body: any) {
+  createWorkplace(@Param('id') doctorId: string, @Body() body: any, @Req() req: any) {
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      body.hospitalId = req.user.hospitalId;
+    }
     return this.service.createWorkplace(doctorId, body);
   }
 

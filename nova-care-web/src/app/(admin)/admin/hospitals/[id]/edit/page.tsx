@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/stores/auth.store';
 import { hospitalService } from '@/services/hospital.service';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
@@ -41,6 +42,14 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
   const { id } = React.use(params);
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
+  const { user } = useAuthStore();
+  const isHospitalAdmin = user?.role === 'HOSPITAL_ADMIN';
+
+  useEffect(() => {
+    if (isHospitalAdmin && user?.hospitalId && id !== user.hospitalId) {
+      router.replace(`/admin/hospitals/${user.hospitalId}/edit`);
+    }
+  }, [isHospitalAdmin, user?.hospitalId, id, router]);
 
   // Fetch hospital existing data
   const { data: rawHospital, isLoading: loadingHospital } = useQuery({

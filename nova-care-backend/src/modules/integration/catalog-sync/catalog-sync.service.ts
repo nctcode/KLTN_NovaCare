@@ -15,13 +15,16 @@ export class CatalogSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly normalizer: CatalogNormalizerService
-  ) {}
+  ) { }
 
   /**
    * Chuyển đổi endpoint sang host.docker.internal nếu backend đang chạy trong Docker
    */
   private resolveEndpointUrl(rawUrl?: string): string {
-    const base = rawUrl?.trim() || 'http://localhost:4000/api/hospital-catalog';
+    const base = rawUrl?.trim();
+    if (!base) {
+      throw new BadRequestException('Vui lòng nhập đường dẫn Endpoint URL của hệ thống HIS');
+    }
     // Nếu chạy trong container Linux mà gọi localhost thì chuyển sang host.docker.internal
     if (
       process.env.DATABASE_URL?.includes('postgres:5432') &&
@@ -33,17 +36,40 @@ export class CatalogSyncService {
   }
 
   /**
-   * Gọi API lấy dữ liệu thô từ HIS
+   * Gọi API lấy dữ liệu thô từ HIS với cơ chế bảo mật (API Key / Bearer Token)
    */
-  async fetchHisCatalog(url?: string): Promise<RawHisCatalog> {
+  async fetchHisCatalog(
+    url?: string,
+    authType?: string,
+    authToken?: string
+  ): Promise<RawHisCatalog> {
     const targetUrl = this.resolveEndpointUrl(url);
-    this.logger.log(`Bắt đầu kéo dữ liệu từ HIS endpoint: ${targetUrl}`);
+    this.logger.log(`Bắt đầu kéo dữ liệu từ HIS endpoint: ${targetUrl} (Auth: ${authType || 'none'})`);
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+    };
+
+    const token = authToken?.trim();
+    if (token) {
+      if (authType === 'api_key' || (!authType && !token.startsWith('Bearer '))) {
+        headers['X-API-KEY'] = token;
+      } else if (authType === 'bearer') {
+        headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      }
+    }
 
     try {
       const response = await fetch(targetUrl, {
         method: 'GET',
-        headers: { Accept: 'application/json' },
+        headers,
       });
+
+      if (response.status === 401) {
+        throw new BadRequestException(
+          'Hệ thống HIS từ chối kết nối (401 Unauthorized): Mã API Key hoặc Bearer Token không chính xác hoặc thiếu quyền truy cập'
+        );
+      }
 
       if (!response.ok) {
         throw new BadRequestException(
@@ -152,8 +178,22 @@ export class CatalogSyncService {
         doc.targetSpecialtyName.toLowerCase().trim()
       );
       if (!specialtyId) {
-        // Nếu chưa có, lấy chuyên khoa đầu tiên làm fallback an toàn
-        specialtyId = existingSpecialties[0]?.id;
+        const cleanName = this.normalizer.cleanDepartmentName(doc.targetSpecialtyName);
+        let existing = await this.prisma.specialty.findFirst({
+          where: { name: { equals: cleanName, mode: 'insensitive' } },
+        });
+        if (!existing) {
+          existing = await this.prisma.specialty.create({
+            data: {
+              name: cleanName,
+              description: `Chuyên khoa tự động khởi tạo từ HIS Catalog (${doc.targetSpecialtyName})`,
+              isActive: true,
+            },
+          });
+        }
+        specialtyId = existing.id;
+        specialtyMapByName.set(cleanName.toLowerCase().trim(), specialtyId);
+        existingSpecialties.push({ id: existing.id, name: existing.name });
       }
 
       // Tìm bác sĩ theo externalId
