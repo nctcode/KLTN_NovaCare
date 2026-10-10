@@ -134,14 +134,15 @@ export class AuthController {
   }
 
   @Public()
-<<<<<<< HEAD
   @Post('forgot-password/verify-otp')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async verifyForgotPasswordOtp(@Body() dto: VerifyOtpDto) {
     const data = await this.authService.verifyForgotPasswordOtp(dto);
     return { statusCode: HttpStatus.OK, message: 'Xác minh OTP thành công', data };
-=======
+  }
+
+  @Public()
   @Get('verify-activation-token')
   @ApiOperation({ summary: 'Xác minh token kích hoạt tài khoản Quản trị bệnh viện' })
   @ApiQuery({ name: 'token', required: true, description: 'Token kích hoạt từ email' })
@@ -165,7 +166,6 @@ export class AuthController {
       message: 'Kích hoạt tài khoản thành công',
       data,
     };
->>>>>>> 5d6d7dd (feat: Tich hop lien he hop tac va ket noi API HIS doi tac)
   }
 
   @Post('logout')

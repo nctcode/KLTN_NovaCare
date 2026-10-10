@@ -70,13 +70,10 @@ import { SearchModule } from '@/modules/search/search.module';
     ClinicalModule,
     IntegrationModule,
     HospitalAdminModule,
-<<<<<<< HEAD
     ConsultationsModule,
     SearchModule,
     ClinicRoomsModule,
-=======
     PartnerRequestsModule,
->>>>>>> 5d6d7dd (feat: Tich hop lien he hop tac va ket noi API HIS doi tac)
   ],
 })
 export class AppModule { }
