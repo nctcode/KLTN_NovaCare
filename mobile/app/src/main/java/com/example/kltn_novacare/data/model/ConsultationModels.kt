@@ -1,5 +1,8 @@
 package com.example.kltn_novacare.data.model
 
+data class VideoCapabilities(val videoEnabled: Boolean = false)
+data class VideoJoinResult(val serverUrl: String, val participantToken: String, val roomName: String, val consultationId: String, val endsAt: String)
+
 data class ConsultationDoctor(
     val id: String,
     val fullName: String,

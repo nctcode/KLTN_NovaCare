@@ -13,6 +13,7 @@ describe('Patient cancellation deadline', () => {
       appointment: { findUnique: jest.fn(async () => appointment), update: jest.fn(async () => ({ ...appointment, status: 'CANCELLED' })) },
       appointmentSlotBooking: { findMany: jest.fn(async () => []) },
       appointmentSlot: { findUnique: jest.fn(async () => null) },
+      medicalEncounter: { findUnique: jest.fn(async () => null) },
       appointmentStatusHistory: { create: jest.fn() },
       notification: { create: jest.fn() },
     };

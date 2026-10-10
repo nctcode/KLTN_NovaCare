@@ -8,6 +8,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AppointmentDetailDrawer } from './AppointmentDetailDrawer';
+import { RecordContactModal } from './RecordContactModal';
+import { NoShowConfirmModal } from './NoShowConfirmModal';
+import { RevertNoShowModal } from './RevertNoShowModal';
 import {
   CalendarCheck,
   Search,
@@ -26,6 +29,8 @@ import {
   User,
   RotateCcw,
   AlertCircle,
+  Phone,
+  UserCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -72,6 +77,9 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
   const [dateFilter, setDateFilter] = useState(initialMode === 'today' ? getTodayStr() : '');
 
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [contactModalAppt, setContactModalAppt] = useState<any | null>(null);
+  const [noShowModalAppt, setNoShowModalAppt] = useState<any | null>(null);
+  const [revertModalAppt, setRevertModalAppt] = useState<any | null>(null);
 
   const cardStyle = isLight
     ? 'bg-white border-slate-200 text-slate-900 shadow-sm'
@@ -146,6 +154,18 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
       toast.success('Hủy lịch khám thành công');
       queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
       queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
+    },
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: (id: string) => adminService.checkInAppointment(id, { note: 'Tiếp đón tại quầy' }),
+    onSuccess: () => {
+      toast.success('Xác nhận tiếp đón và check-in thành công');
+      queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || 'Không thể check-in tiếp đón');
     },
   });
 
@@ -490,6 +510,18 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                             <div className="font-medium text-slate-900 dark:text-white leading-tight">
                               {appt.patientProfile?.fullName || appt.user?.fullName}
                             </div>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              {appt.checkInAt && (
+                                <span className="inline-flex items-center text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-semibold border border-emerald-200 dark:border-emerald-800">
+                                  ✓ Đã đến ({new Date(appt.checkInAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })})
+                                </span>
+                              )}
+                              {appt.contactLogs && appt.contactLogs.length > 0 && (
+                                <span className="inline-flex items-center text-[10px] text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded font-semibold border border-blue-200 dark:border-blue-800">
+                                  📞 {appt.contactLogs.length} lần gọi
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           {/* Doctor */}
@@ -533,21 +565,69 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
 
                           {/* Actions */}
                           <td className="py-2.5 px-3 text-right align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            {slotStart && slotStart.getTime() < Date.now() && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
-                              <Button variant="outline" disabled={updateStatusMutation.isPending} onClick={() => {
-                                if (window.confirm('Xác nhận bệnh nhân không đến khám? Chỉ thực hiện sau khi kiểm tra tại cơ sở.')) {
-                                  updateStatusMutation.mutate({ id: appt.id, status: 'NO_SHOW' });
-                                }
-                              }}>Không đến khám</Button>
-                            )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedAppointmentId(appt.id)}
-                              className="h-7 text-xs font-normal rounded-lg px-2.5 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
-                            >
-                              <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" /> Chi tiết
-                            </Button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Quick Check-in button */}
+                              {!appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={checkInMutation.isPending}
+                                  onClick={() => checkInMutation.mutate(appt.id)}
+                                  className="h-7 text-xs font-semibold rounded-lg px-2 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+                                  title="Tiếp đón & Check-in tại quầy"
+                                >
+                                  Check-in
+                                </Button>
+                              )}
+
+                              {/* Contact Log button */}
+                              {['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setContactModalAppt(appt)}
+                                  className="h-7 text-xs font-normal rounded-lg px-2 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400"
+                                  title="Ghi nhận nhật ký liên hệ người bệnh"
+                                >
+                                  <Phone className="w-3 h-3 mr-1" /> Liên hệ
+                                </Button>
+                              )}
+
+                              {/* Confirm NO_SHOW button */}
+                              {slotStart && slotStart.getTime() < Date.now() && !appt.checkInAt && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setNoShowModalAppt(appt)}
+                                  className="h-7 text-xs font-semibold rounded-lg px-2 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                                  title="Thẩm định điều kiện và xác nhận vắng mặt"
+                                >
+                                  Vắng mặt
+                                </Button>
+                              )}
+
+                              {/* Revert NO_SHOW button */}
+                              {appt.status === 'NO_SHOW' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setRevertModalAppt(appt)}
+                                  className="h-7 text-xs font-semibold rounded-lg px-2 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/50"
+                                  title="Khôi phục trạng thái lịch hẹn (Bệnh nhân đến muộn / ghi nhận nhầm)"
+                                >
+                                  <RotateCcw className="w-3 h-3 mr-1" /> Khôi phục
+                                </Button>
+                              )}
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedAppointmentId(appt.id)}
+                                className="h-7 text-xs font-normal rounded-lg px-2.5 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" /> Chi tiết
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -681,6 +761,26 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
         appointmentId={selectedAppointmentId}
         open={!!selectedAppointmentId}
         onClose={() => setSelectedAppointmentId(null)}
+      />
+
+      {/* Reception Modals */}
+      <RecordContactModal
+        appointment={contactModalAppt}
+        open={!!contactModalAppt}
+        onClose={() => setContactModalAppt(null)}
+      />
+
+      <NoShowConfirmModal
+        appointment={noShowModalAppt}
+        open={!!noShowModalAppt}
+        onClose={() => setNoShowModalAppt(null)}
+        onOpenContactLog={(appt) => setContactModalAppt(appt)}
+      />
+
+      <RevertNoShowModal
+        appointment={revertModalAppt}
+        open={!!revertModalAppt}
+        onClose={() => setRevertModalAppt(null)}
       />
     </div>
   );

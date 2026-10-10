@@ -108,11 +108,21 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
+                                    .clickable { navController.navigate(Screen.Settings.route) }
                                     .background(Color.White.copy(alpha = 0.2f), CircleShape)
                                     .border(1.5.dp, Color.White.copy(alpha = 0.4f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(initials, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                if (!currentUser?.avatarUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = currentUser?.avatarUrl,
+                                        contentDescription = "Avatar",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                    )
+                                } else {
+                                    Text(initials, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
@@ -372,7 +382,7 @@ fun HomeScreen(
                             icon = Icons.Outlined.Videocam,
                             tint = Color(0xFFDB2777),
                             bgTint = Color(0xFFFDF2F8)
-                        ) { navController.navigate(Screen.Search.route) }
+                        ) { navController.navigate(Screen.Consultations.route) }
 
                         QuickActionItem(
                             label = "Hồ sơ\nsức khỏe",

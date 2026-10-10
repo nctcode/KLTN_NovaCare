@@ -8,6 +8,10 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
 interface ApiService {
+    @GET("consultation-video/capabilities")
+    fun videoCapabilities(): Call<ApiResponse<VideoCapabilities>>
+    @POST("consultation-video/{id}/join")
+    fun joinVideo(@Path("id") id: String): Call<ApiResponse<VideoJoinResult>>
     @POST("auth/forgot-password")
     fun requestPasswordOtp(@Body request: PasswordOtpRequest): Call<ApiResponse<PasswordOtpResult>>
     @POST("auth/forgot-password/verify-otp")

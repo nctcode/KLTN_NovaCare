@@ -13,6 +13,7 @@ class TokenManager(context: Context) {
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_ID = "user_id"
+        private const val KEY_USER_AVATAR = "user_avatar"
     }
 
     fun saveTokens(accessToken: String, refreshToken: String) {
@@ -23,11 +24,25 @@ class TokenManager(context: Context) {
         }
     }
 
-    fun saveUser(id: String, fullName: String, email: String) {
+    fun saveUser(id: String, fullName: String, email: String, avatarUrl: String? = null) {
         prefs.edit().apply {
             putString(KEY_USER_ID, id)
             putString(KEY_USER_NAME, fullName)
             putString(KEY_USER_EMAIL, email)
+            if (avatarUrl != null) {
+                putString(KEY_USER_AVATAR, avatarUrl)
+            }
+            apply()
+        }
+    }
+
+    fun saveAvatar(avatarUri: String?) {
+        prefs.edit().apply {
+            if (avatarUri != null) {
+                putString(KEY_USER_AVATAR, avatarUri)
+            } else {
+                remove(KEY_USER_AVATAR)
+            }
             apply()
         }
     }
@@ -41,6 +56,8 @@ class TokenManager(context: Context) {
     fun getUserName(): String? = prefs.getString(KEY_USER_NAME, null)
 
     fun getUserEmail(): String? = prefs.getString(KEY_USER_EMAIL, null)
+
+    fun getUserAvatar(): String? = prefs.getString(KEY_USER_AVATAR, null)
 
     fun clear() {
         prefs.edit().clear().apply()

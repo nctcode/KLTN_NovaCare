@@ -9,6 +9,11 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class ConsultationRepository(private val api: ApiService = ApiClient.getService()) {
+    suspend fun videoCapabilities(): Result<VideoCapabilities> =
+        healthApiResult("Không thể kiểm tra dịch vụ video", { api.videoCapabilities() }) { requireNotNull(it.data) }
+
+    suspend fun joinVideo(id: String): Result<VideoJoinResult> =
+        healthApiResult("Không thể vào phòng video", { api.joinVideo(id) }) { requireNotNull(it.data) }
     suspend fun transition(id: String, action: String): Result<Consultation> =
         healthApiResult("Không thể cập nhật phiên tư vấn", {
             when (action) {

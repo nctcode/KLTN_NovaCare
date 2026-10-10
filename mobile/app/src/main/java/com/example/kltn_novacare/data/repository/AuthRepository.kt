@@ -21,7 +21,7 @@ class AuthRepository {
             if (response.isSuccessful && body != null && body.success) {
                 val data = body.data!!
                 tokenManager.saveTokens(data.accessToken, data.refreshToken)
-                tokenManager.saveUser(data.user.id, data.user.fullName, data.user.email)
+                tokenManager.saveUser(data.user.id, data.user.fullName, data.user.email, data.user.avatarUrl)
                 Result.success(data)
             } else {
                 val errorMsg = body?.error ?: body?.message ?: "Đăng nhập thất bại"
@@ -39,7 +39,7 @@ class AuthRepository {
             if (response.isSuccessful && body != null && body.success) {
                 val data = body.data!!
                 tokenManager.saveTokens(data.accessToken, data.refreshToken)
-                tokenManager.saveUser(data.user.id, data.user.fullName, data.user.email)
+                tokenManager.saveUser(data.user.id, data.user.fullName, data.user.email, data.user.avatarUrl)
                 Result.success(data)
             } else {
                 val errorMsg = body?.error ?: body?.message ?: "Đăng ký thất bại"
@@ -72,6 +72,11 @@ class AuthRepository {
         val id = tokenManager.getUserId() ?: return null
         val name = tokenManager.getUserName() ?: ""
         val email = tokenManager.getUserEmail() ?: ""
-        return User(id, email, null, name, "PATIENT", true)
+        val avatar = tokenManager.getUserAvatar()
+        return User(id, email, null, name, "PATIENT", true, avatar)
+    }
+
+    fun updateAvatar(avatarUri: String?) {
+        tokenManager.saveAvatar(avatarUri)
     }
 }

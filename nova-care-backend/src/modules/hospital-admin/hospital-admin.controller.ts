@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
   Patch,
   Body,
@@ -153,6 +154,79 @@ export class HospitalAdminController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Cập nhật trạng thái lịch hẹn thành công',
+      data,
+    };
+  }
+
+  @Get('appointments/:id/no-show-eligibility')
+  @ApiOperation({ summary: 'Kiểm tra điều kiện xác nhận NO_SHOW theo chính sách bệnh viện' })
+  async checkNoShowEligibility(@Req() req: any, @Param('id') id: string) {
+    const data = await this.service.validateNoShowEligibility(
+      req.targetHospitalId,
+      id
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Kiểm tra điều kiện NO_SHOW thành công',
+      data,
+    };
+  }
+
+  @Patch('appointments/:id/check-in')
+  @ApiOperation({ summary: 'Tiếp đón / Check-in bệnh nhân tại quầy bệnh viện' })
+  async checkIn(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { note?: string }
+  ) {
+    const data = await this.service.checkIn(
+      req.targetHospitalId,
+      id,
+      body
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Tiếp đón bệnh nhân thành công',
+      data,
+    };
+  }
+
+  @Patch('appointments/:id/revert-no-show')
+  @ApiOperation({ summary: 'Khôi phục lịch khám bị ghi nhận nhầm hoặc bệnh nhân đến muộn' })
+  async revertNoShow(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { reason: string }
+  ) {
+    const data = await this.service.revertNoShow(
+      req.targetHospitalId,
+      id,
+      body
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Khôi phục lịch hẹn thành công',
+      data,
+    };
+  }
+
+  @Post('appointments/:id/contact-logs')
+  @ApiOperation({ summary: 'Ghi nhận liên hệ bệnh nhân (gọi điện, SMS...)' })
+  async recordContactLog(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { channel: string; outcome: string; note?: string }
+  ) {
+    const data = await this.service.recordContactLog(
+      req.targetHospitalId,
+      id,
+      body,
+      req.user?.id,
+      req.user?.fullName
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Ghi nhận lịch sử liên hệ thành công',
       data,
     };
   }

@@ -88,12 +88,19 @@ class ConsultationViewModel(
         }
     }
 
-    fun createConsultation(appointmentId: String, topic: String, description: String, onCreated: (String) -> Unit) {
+    private val _videoAvailable = MutableStateFlow(false)
+    val videoAvailable = _videoAvailable.asStateFlow()
+    fun loadVideoCapabilities() { viewModelScope.launch {
+        _videoAvailable.value = repository.videoCapabilities().getOrNull()?.videoEnabled == true
+    } }
+
+    fun createConsultation(appointmentId: String, topic: String, description: String, channel: String = "CHAT", onCreated: (String) -> Unit) {
         if (_createState.value is NetworkState.Loading) return
         viewModelScope.launch {
             _createState.value = NetworkState.Loading
             repository.create(CreateConsultationRequest(
                 appointmentId = appointmentId,
+                channel = channel,
                 topic = topic.trim(),
                 description = description.trim(),
                 consentAccepted = true,

@@ -83,4 +83,12 @@ class AuthViewModel(private val authRepository: AuthRepository = AuthRepository(
             onComplete()
         }
     }
+
+    fun updateAvatar(avatarUri: String?) {
+        authRepository.updateAvatar(avatarUri)
+        val user = authRepository.getCurrentUser()
+        if (user != null) {
+            _authState.value = AuthState.Authenticated(user)
+        }
+    }
 }

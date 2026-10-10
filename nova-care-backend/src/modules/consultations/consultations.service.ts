@@ -26,6 +26,7 @@ import { SendMessageDto } from './dto/send-message.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import { ConsultationVideoService } from './consultation-video.service';
 
 const consultationInclude = Prisma.validator<Prisma.ConsultationSessionInclude>()({
   patientProfile: {
@@ -62,6 +63,7 @@ export class ConsultationsService {
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditLogService,
+    private readonly video: ConsultationVideoService,
   ) {}
 
   async create(userId: string, dto: CreateConsultationDto) {
@@ -77,9 +79,7 @@ export class ConsultationsService {
     if (dto.requestMode !== ConsultationRequestMode.SCHEDULED) {
       throw new ServiceUnavailableException('Tư vấn ngay chưa được hỗ trợ vì chưa có trạng thái trực tuyến của bác sĩ');
     }
-    if (dto.channel !== ConsultationChannel.CHAT) {
-      throw new ServiceUnavailableException('Phiên gọi video chưa được hỗ trợ');
-    }
+    if (dto.channel === ConsultationChannel.VIDEO) this.video.requireConfigured();
     if (!dto.consentAccepted) throw new BadRequestException('Cần xác nhận chia sẻ thông tin với bác sĩ tư vấn');
 
     const appointment = await this.prisma.appointment.findFirst({
@@ -136,7 +136,7 @@ export class ConsultationsService {
         scheduledEndAt: appointment.slot.endTime,
         chatOpenAt,
         expiresAt: appointment.slot.endTime,
-        videoEnabled: false,
+        videoEnabled: dto.channel === ConsultationChannel.VIDEO,
       },
       include: consultationInclude,
     });
@@ -446,10 +446,19 @@ export class ConsultationsService {
     timestamps: Prisma.ConsultationSessionUpdateInput,
   ) {
     const updated = await this.prisma.consultationSession.update({
-      where: { id: session.id },
+      where: { id: session.id, status: session.status },
       data: { status, ...timestamps },
       include: consultationInclude,
+    }).catch(error => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new ConflictException('Phiên tư vấn đã thay đổi. Vui lòng tải lại.');
+      }
+      throw error;
     });
+    if (session.videoEnabled && (status === ConsultationStatus.COMPLETED || status === ConsultationStatus.CANCELLED || status === ConsultationStatus.EXPIRED)) {
+      // Persist the terminal state first; the reconciler retries provider failures.
+      await this.video.close(session.id).catch(() => undefined);
+    }
     await this.audit.logAction({
       userId: actorUserId,
       action: `CONSULTATION_${status}`,

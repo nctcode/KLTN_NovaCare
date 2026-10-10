@@ -38,7 +38,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ConsultationHomeScreen(navController: NavController, viewModel: ConsultationViewModel) {
     val state by viewModel.consultations.collectAsState()
-    LaunchedEffect(Unit) { viewModel.loadConsultations() }
+    val videoAvailable by viewModel.videoAvailable.collectAsState()
+    LaunchedEffect(Unit) { viewModel.loadConsultations(); viewModel.loadVideoCapabilities() }
 
     val isRefreshing = state is NetworkState.Loading
 
@@ -82,6 +83,13 @@ fun ConsultationHomeScreen(navController: NavController, viewModel: Consultation
                         description = "Chọn bác sĩ và thời gian tư vấn online phù hợp.",
                         onClick = { navController.navigate(Screen.Search.route) }
                     )
+                }
+                item {
+                    if (videoAvailable) ConsultationModeCard(
+                        title = "Tư vấn video theo lịch hẹn",
+                        description = "Mở lịch khám online đã xác nhận, chọn tư vấn và hình thức Video và chat. Vào phòng từ biểu tượng camera trong phiên.",
+                        onClick = { navController.navigate(Screen.Appointments.route) }
+                    ) else Text("Tư vấn video chưa sẵn sàng. Bạn vẫn có thể sử dụng các phiên chat hiện có.", color = TextSecondary, fontSize = 13.sp)
                 }
                 item {
                     Text("Cuộc tư vấn của bạn", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary,

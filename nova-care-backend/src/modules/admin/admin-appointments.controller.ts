@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
@@ -87,6 +88,48 @@ export class AdminAppointmentsController {
     @Headers('user-agent') ua: string,
   ) {
     return this.service.updateStatus(id, status, note, req.user.id, ip, ua);
+  }
+
+  @Get(':id/no-show-eligibility')
+  @ApiOperation({ summary: 'Kiểm tra điều kiện xác nhận NO_SHOW theo chính sách cơ sở' })
+  checkNoShowEligibility(@Param('id') id: string) {
+    return this.service.validateNoShowEligibility(id);
+  }
+
+  @Patch(':id/check-in')
+  @ApiOperation({ summary: 'Tiếp nhận / Check-in bệnh nhân có mặt tại cơ sở y tế' })
+  checkIn(
+    @Param('id') id: string,
+    @Body('note') note: string,
+    @Req() req: any,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ) {
+    return this.service.checkIn(id, { note }, req.user?.id, req.user?.fullName, ip, ua);
+  }
+
+  @Patch(':id/revert-no-show')
+  @ApiOperation({ summary: 'Khôi phục lịch khám bị ghi nhận nhầm hoặc bệnh nhân đến muộn' })
+  revertNoShow(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ) {
+    return this.service.revertNoShow(id, { reason }, req.user?.id, ip, ua);
+  }
+
+  @Post(':id/contact-logs')
+  @ApiOperation({ summary: 'Ghi nhận lịch sử liên hệ với bệnh nhân (gọi điện, SMS...)' })
+  recordContactLog(
+    @Param('id') id: string,
+    @Body() body: { channel: string; outcome: string; note?: string },
+    @Req() req: any,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ) {
+    return this.service.recordContactLog(id, body, req.user?.id, req.user?.fullName, ip, ua);
   }
 
   @Delete(':id')

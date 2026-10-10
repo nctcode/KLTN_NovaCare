@@ -1,11 +1,16 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Phone, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
+import { RecordContactModal } from './RecordContactModal';
+import { NoShowConfirmModal } from './NoShowConfirmModal';
+import { RevertNoShowModal } from './RevertNoShowModal';
 
 const STATUS_BADGE: Record<string, { label: string; styleDark: string; styleLight: string }> = {
   PENDING: { label: 'Chờ xác nhận', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -27,13 +32,31 @@ interface AppointmentDetailDrawerProps {
 }
 
 export function AppointmentDetailDrawer({ appointmentId, open, onClose }: AppointmentDetailDrawerProps) {
+  const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
+
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showNoShowModal, setShowNoShowModal] = useState(false);
+  const [showRevertModal, setShowRevertModal] = useState(false);
 
   const { data: appt, isLoading } = useQuery({
     queryKey: ['admin-appointment-detail', appointmentId],
     queryFn: () => adminService.getAppointmentDetail(appointmentId!),
     enabled: !!appointmentId && open,
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: () => adminService.checkInAppointment(appointmentId!, { note: 'Tiếp đón tại quầy' }),
+    onSuccess: () => {
+      toast.success('Xác nhận tiếp đón và check-in thành công');
+      queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-appointment-detail', appointmentId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || err.message || 'Không thể check-in');
+    },
   });
 
   const st = appt ? STATUS_BADGE[appt.status] || { label: appt.status, styleDark: 'bg-slate-800 text-slate-300 border-slate-700', styleLight: 'bg-slate-100 text-slate-700 border-slate-200' } : null;
@@ -123,6 +146,26 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
                       {st?.label || appt.status}
                     </td>
                   </tr>
+                  <tr>
+                    <td className={labelCellClass}>Tiếp đón / Check-in</td>
+                    <td className={valueCellClass}>
+                      {appt.checkInAt ? (
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          ✓ Đã check-in lúc {new Date(appt.checkInAt).toLocaleTimeString('vi-VN')} ({new Date(appt.checkInAt).toLocaleDateString('vi-VN')})
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic">Chưa check-in tại quầy</span>
+                      )}
+                    </td>
+                  </tr>
+                  {appt.noShowAt && (
+                    <tr>
+                      <td className={labelCellClass}>Ghi nhận vắng mặt</td>
+                      <td className={`${valueCellClass} text-rose-600 dark:text-rose-400 font-semibold`}>
+                        Xác nhận NO_SHOW lúc {new Date(appt.noShowAt).toLocaleTimeString('vi-VN')} ({new Date(appt.noShowAt).toLocaleDateString('vi-VN')})
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -282,10 +325,141 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
                 </table>
               </div>
             )}
+
+            {/* 6. Nhật ký liên hệ bệnh nhân */}
+            <div className={tableContainerClass}>
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                <span className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  6. Nhật ký liên hệ người bệnh ({appt.contactLogs?.length || 0} lượt)
+                </span>
+                {appt.contactLogs?.length > 0 && (
+                  <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                    {appt.contactLogs.length} lần liên hệ
+                  </span>
+                )}
+              </div>
+              {appt.contactLogs && appt.contactLogs.length > 0 ? (
+                <table className="w-full text-xs border-collapse">
+                  <thead className={isLight ? 'bg-slate-50 border-b border-slate-200' : 'bg-slate-900 border-b border-slate-800'}>
+                    <tr>
+                      <th className="px-3 py-1.5 text-left font-semibold text-slate-500 w-[130px]">Thời gian</th>
+                      <th className="px-3 py-1.5 text-left font-semibold text-slate-500 w-[90px]">Kênh</th>
+                      <th className="px-3 py-1.5 text-left font-semibold text-slate-500 w-[140px]">Kết quả</th>
+                      <th className="px-3 py-1.5 text-left font-semibold text-slate-500 w-[120px]">Nhân viên</th>
+                      <th className="px-3 py-1.5 text-left font-semibold text-slate-500">Ghi chú</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800'}`}>
+                    {appt.contactLogs.map((log: any, idx: number) => {
+                      const outcomeLabel: Record<string, string> = {
+                        NO_ANSWER: 'Không bắt máy',
+                        BUSY: 'Máy bận',
+                        UNREACHABLE: 'Không liên lạc được',
+                        ANSWERED: 'Đã liên hệ được',
+                        WRONG_NUMBER: 'Nhầm số',
+                        RESCHEDULE_REQUESTED: 'Yêu cầu dời lịch',
+                        OTHER: 'Khác',
+                      };
+                      const channelLabel: Record<string, string> = {
+                        PHONE: 'Điện thoại',
+                        SMS: 'SMS',
+                        ZALO: 'Zalo',
+                        DIRECT: 'Trực tiếp',
+                        OTHER: 'Khác',
+                      };
+                      return (
+                        <tr key={log.id || idx}>
+                          <td className="px-3 py-1.5 font-mono text-slate-500 text-[11px]">
+                            {new Date(log.contactedAt || log.createdAt).toLocaleString('vi-VN')}
+                          </td>
+                          <td className="px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300">
+                            {channelLabel[log.channel] || log.channel}
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              log.outcome === 'ANSWERED'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}>
+                              {outcomeLabel[log.outcome] || log.outcome}
+                            </span>
+                          </td>
+                          <td className="px-3 py-1.5 text-slate-600 dark:text-slate-400">
+                            {log.staffName || 'Nhân viên'}
+                          </td>
+                          <td className="px-3 py-1.5 text-slate-600 dark:text-slate-400">
+                            {log.note || '---'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-400 italic">
+                  Chưa ghi nhận lượt liên hệ nào cho lịch hẹn này.
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        <DialogFooter className="pt-3 border-t border-slate-200 dark:border-slate-800">
+        <DialogFooter className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Check-in */}
+            {appt && !appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={checkInMutation.isPending}
+                onClick={() => checkInMutation.mutate()}
+                className="text-xs text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 font-semibold rounded-lg"
+              >
+                Check-in tiếp đón
+              </Button>
+            )}
+
+            {/* Record contact */}
+            {appt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowContactModal(true)}
+                className="text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 font-medium rounded-lg gap-1"
+              >
+                <Phone className="w-3.5 h-3.5" /> Ghi nhận liên hệ
+              </Button>
+            )}
+
+            {/* Mark NO_SHOW */}
+            {appt && slotStartTime && slotStartTime.getTime() < Date.now() && !appt.checkInAt && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowNoShowModal(true)}
+                className="text-xs text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 font-semibold rounded-lg"
+              >
+                Xác nhận vắng mặt (NO_SHOW)
+              </Button>
+            )}
+
+            {/* Revert NO_SHOW */}
+            {appt && appt.status === 'NO_SHOW' && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowRevertModal(true)}
+                className="text-xs text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/50 font-semibold rounded-lg gap-1"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Khôi phục lịch hẹn
+              </Button>
+            )}
+          </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -295,6 +469,26 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
             Đóng
           </Button>
         </DialogFooter>
+
+        {/* Modals for actions */}
+        <RecordContactModal
+          appointment={appt}
+          open={showContactModal}
+          onClose={() => setShowContactModal(false)}
+        />
+
+        <NoShowConfirmModal
+          appointment={appt}
+          open={showNoShowModal}
+          onClose={() => setShowNoShowModal(false)}
+          onOpenContactLog={() => setShowContactModal(true)}
+        />
+
+        <RevertNoShowModal
+          appointment={appt}
+          open={showRevertModal}
+          onClose={() => setShowRevertModal(false)}
+        />
       </DialogContent>
     </Dialog>
   );

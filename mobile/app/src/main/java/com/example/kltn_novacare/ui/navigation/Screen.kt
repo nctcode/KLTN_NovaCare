@@ -23,6 +23,9 @@ sealed class Screen(val route: String) {
     
     object Notifications : Screen("notifications")
     object Consultations : Screen("consultations")
+    object ConsultationVideo : Screen("consultations/{consultationId}/video") {
+        fun createRoute(id: String) = "consultations/$id/video"
+    }
     object ConsultationPrecheck : Screen("consultations/new/{appointmentId}") {
         fun createRoute(appointmentId: String) = "consultations/new/$appointmentId"
     }

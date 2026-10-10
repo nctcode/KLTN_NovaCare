@@ -27,7 +27,8 @@ data class User(
     val phone: String?,
     val fullName: String,
     val role: String,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val avatarUrl: String? = null
 )
 
 data class AuthResponse(

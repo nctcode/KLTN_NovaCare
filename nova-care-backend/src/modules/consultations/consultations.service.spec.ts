@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   ConsultationChannel,
   ConsultationRequestMode,
@@ -16,7 +17,8 @@ describe('ConsultationsService', () => {
   const config: any = { get: jest.fn() };
   const notifications: any = { createNotification: jest.fn().mockResolvedValue(undefined) };
   const audit: any = { logAction: jest.fn().mockResolvedValue(undefined) };
-  const service = new ConsultationsService(prisma, config, notifications, audit);
+  const video: any = { requireConfigured: jest.fn(), close: jest.fn().mockResolvedValue(undefined) };
+  const service = new ConsultationsService(prisma, config, notifications, audit, video);
 
   const baseSession = {
     id: 'consultation-id',
@@ -30,6 +32,20 @@ describe('ConsultationsService', () => {
   };
 
   beforeEach(() => jest.clearAllMocks());
+
+  it('does not resurrect a session cancelled during acceptance', async () => {
+    prisma.consultationSession.findUnique.mockResolvedValue({ ...baseSession, status: ConsultationStatus.SCHEDULED });
+    prisma.consultationSession.update.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError('stale state', { code: 'P2025', clientVersion: 'test' }));
+    await expect(service.accept('consultation-id', 'doctor-user')).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.consultationSession.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'consultation-id', status: ConsultationStatus.SCHEDULED } }));
+  });
+
+  it('closes the video room when the assigned doctor completes the session', async () => {
+    prisma.consultationSession.findUnique.mockResolvedValue({ ...baseSession, videoEnabled: true, status: ConsultationStatus.ACTIVE });
+    prisma.consultationSession.update.mockResolvedValueOnce({ ...baseSession, status: ConsultationStatus.COMPLETED });
+    await service.complete('consultation-id', 'doctor-user');
+    expect(video.close).toHaveBeenCalledWith('consultation-id');
+  });
 
   it('rejects a forged image MIME type before writing a file', async () => {
     prisma.consultationSession.findUnique.mockResolvedValue(baseSession);

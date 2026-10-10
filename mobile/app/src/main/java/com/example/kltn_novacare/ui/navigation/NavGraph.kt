@@ -173,6 +173,11 @@ fun NavGraph(
         composable(Screen.Consultations.route) {
             ConsultationHomeScreen(navController, consultationViewModel)
         }
+        composable(Screen.ConsultationVideo.route, arguments = listOf(navArgument("consultationId") { type = NavType.StringType })) { entry ->
+            com.example.kltn_novacare.ui.screens.consultation.ConsultationVideoScreen(
+                entry.arguments?.getString("consultationId").orEmpty(), navController
+            )
+        }
 
         composable(
             route = Screen.ConsultationPrecheck.route,

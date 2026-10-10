@@ -330,6 +330,8 @@ model Appointment {
   completedAt      DateTime?
   reminderSentAt   DateTime?
   reminderCount    Int               @default(0)
+  checkInAt        DateTime?
+  noShowAt         DateTime?
 
   patientProfile   PatientProfile             @relation(fields: [patientProfileId], references: [id])
   user             User                       @relation(fields: [userId], references: [id])
@@ -337,6 +339,7 @@ model Appointment {
   medicalService   MedicalService?            @relation(fields: [medicalServiceId], references: [id])
   slotBookings     AppointmentSlotBooking[]
   statusHistory    AppointmentStatusHistory[]
+  contactLogs      AppointmentContactLog[]
   payment          PaymentTransaction?
   medicalEncounter MedicalEncounter?
   consultation     ConsultationSession?
@@ -393,6 +396,23 @@ model AppointmentStatusHistory {
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
   @@map("appointment_status_histories")
+}
+
+model AppointmentContactLog {
+  id            String   @id @default(uuid())
+  appointmentId String
+  staffId       String?
+  staffName     String?
+  channel       String   @default("PHONE") // PHONE, SMS, ZALO, DIRECT, OTHER
+  outcome       String   @default("NO_ANSWER") // NO_ANSWER, BUSY, UNREACHABLE, ANSWERED, WRONG_NUMBER, OTHER
+  note          String?
+  contactedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@map("appointment_contact_logs")
 }
 
 model PaymentTransaction {
@@ -538,6 +558,10 @@ model HospitalBookingConfig {
   minAdvanceMinutes   Int            @default(60)
   defaultSlotDuration Int            @default(30)
   scheduleSource      ScheduleSource @default(INTERNAL)
+  gracePeriodMinutes  Int            @default(15)
+  minContactAttempts  Int            @default(2)
+  minContactIntervalMinutes Int      @default(5)
+  autoNoShowEnabled   Boolean        @default(false)
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 

@@ -32,9 +32,12 @@ fun ConsultationPrecheckScreen(appointmentId: String, navController: NavControll
     var topic by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var consent by rememberSaveable { mutableStateOf(false) }
+    var video by rememberSaveable { mutableStateOf(false) }
+    val videoAvailable by viewModel.videoAvailable.collectAsState()
     LaunchedEffect(appointmentId) {
         viewModel.resetCreateState()
         viewModel.prepareAppointment(appointmentId)
+        viewModel.loadVideoCapabilities()
     }
     val busy = createState is NetworkState.Loading
 
@@ -77,6 +80,12 @@ fun ConsultationPrecheckScreen(appointmentId: String, navController: NavControll
             val topicError = topic.isNotEmpty() && !topicValid
             val descriptionError = description.isNotEmpty() && !descriptionValid
 
+            Text("Hình thức tư vấn", fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FilterChip(selected = !video, onClick = { video = false }, enabled = !busy, label = { Text("Nhắn tin") })
+                if (videoAvailable) FilterChip(selected = video, onClick = { video = true }, enabled = !busy, label = { Text("Video và chat") })
+            }
+            if (!videoAvailable) Text("Dịch vụ video chưa sẵn sàng tại hệ thống.", color = TextSecondary, fontSize = 12.sp)
             Text("Bạn cần tư vấn vấn đề gì?", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
             OutlinedTextField(
                 value = topic,
@@ -157,7 +166,7 @@ fun ConsultationPrecheckScreen(appointmentId: String, navController: NavControll
 
             Button(
                 onClick = {
-                    viewModel.createConsultation(appointmentId, topic, description) { id ->
+                    viewModel.createConsultation(appointmentId, topic, description, if (video && videoAvailable) "VIDEO" else "CHAT") { id ->
                         navController.navigate(Screen.ConsultationChat.createRoute(id)) {
                             popUpTo(Screen.ConsultationPrecheck.route) { inclusive = true }
                         }

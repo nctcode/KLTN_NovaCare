@@ -86,6 +86,11 @@ const statusConfig: Record<string, { label: string; style: string; icon: React.R
     style: 'bg-slate-100 text-slate-600 border-slate-200',
     icon: <XCircle className="h-3.5 w-3.5" />
   },
+  NO_SHOW: {
+    label: 'Không đến khám',
+    style: 'bg-rose-50 text-rose-700 border-rose-200',
+    icon: <XCircle className="h-3.5 w-3.5" />
+  },
 };
 
 export default function AppointmentDetailPage() {
@@ -147,7 +152,7 @@ export default function AppointmentDetailPage() {
 
   // Timeline step helper
   const getTimelineStep = () => {
-    if (appointment.status === 'CANCELLED' || appointment.status === 'EXPIRED') return -1;
+    if (appointment.status === 'CANCELLED' || appointment.status === 'EXPIRED' || appointment.status === 'NO_SHOW') return -1;
     if (appointment.status === 'COMPLETED') return 4;
     if (appointment.status === 'PAID' || appointment.status === 'CONFIRMED') return 3;
     if (appointment.status === 'AWAITING_PAYMENT') return 2;
@@ -181,7 +186,7 @@ export default function AppointmentDetailPage() {
         </div>
 
         <div className="flex items-center gap-3 self-start md:self-auto">
-          {appointment.status !== 'CANCELLED' && (
+          {appointment.status !== 'CANCELLED' && appointment.status !== 'NO_SHOW' && (
             <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 border-slate-300 text-slate-800 font-semibold hover:bg-slate-50">
               <Printer className="h-4 w-4" />
               In phiếu khám
@@ -190,7 +195,20 @@ export default function AppointmentDetailPage() {
         </div>
       </div>
 
-      {/* Progress Timeline Banner (If not cancelled) */}
+      {/* NO_SHOW Patient Guidance Banner */}
+      {appointment.status === 'NO_SHOW' && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 shadow-xs flex items-start gap-3.5">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-rose-900">Cơ sở y tế đã ghi nhận bạn không đến khám</h3>
+            <p className="text-xs text-rose-700 leading-relaxed">
+              Lịch khám mã <strong>#{appointment.bookingCode}</strong> đã qua giờ hẹn và cơ sở y tế đã ghi nhận vắng mặt (NO_SHOW) theo quy trình tiếp đón. Nếu có nhầm lẫn hoặc cần hỗ trợ dời lịch hẹn, vui lòng liên hệ trực tiếp với bộ phận chăm sóc khách hàng của cơ sở y tế.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Progress Timeline Banner (If not cancelled/no-show) */}
       {currentStep > 0 && (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
@@ -377,7 +395,7 @@ export default function AppointmentDetailPage() {
         {/* 6. QR Code Ticket & Billing Breakdown (Side-by-Side inside single column) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* QR Ticket */}
-          {appointment.status !== 'CANCELLED' && appointment.status !== 'EXPIRED' && (
+          {appointment.status !== 'CANCELLED' && appointment.status !== 'EXPIRED' && appointment.status !== 'NO_SHOW' && (
             <Card className="border-slate-200 shadow-sm bg-white text-center rounded-2xl">
               <CardHeader className="pb-2 border-b border-slate-100">
                 <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-center gap-2">
@@ -405,6 +423,16 @@ export default function AppointmentDetailPage() {
                   {appointment.bookingCode}
                 </p>
               </CardContent>
+            </Card>
+          )}
+
+          {appointment.status === 'NO_SHOW' && (
+            <Card className="border-slate-200 shadow-sm bg-slate-50 text-center rounded-2xl p-6 flex flex-col items-center justify-center">
+              <XCircle className="w-12 h-12 text-rose-400 mb-2" />
+              <p className="font-bold text-slate-800 text-sm">Phiếu khám không còn hiệu lực</p>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs">
+                Phiếu khám này đã được ghi nhận vắng mặt (NO_SHOW) và mã QR không còn giá trị tiếp đón tại quầy.
+              </p>
             </Card>
           )}
 

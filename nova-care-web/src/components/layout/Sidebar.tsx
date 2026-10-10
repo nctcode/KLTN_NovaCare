@@ -18,6 +18,7 @@ export function Sidebar({ open, setOpen, collapsed, setCollapsed }: SidebarProps
   const { logout } = useAuth();
 
   const menuItems = [
+    { label: 'Tư vấn bác sĩ / Video', href: '/tu-van', icon: UserCheck },
     {
       label: 'Tài khoản của tôi',
       href: '/tai-khoan',

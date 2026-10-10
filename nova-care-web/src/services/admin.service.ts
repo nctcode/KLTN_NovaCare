@@ -135,6 +135,28 @@ export const adminService = {
     return extractData(response);
   },
 
+  async checkNoShowEligibility(id: string): Promise<any> {
+    const response = await apiClient.get<any>(`/admin/appointments/${id}/no-show-eligibility`);
+    return extractData(response);
+  },
+
+  async checkInAppointment(id: string, data?: { note?: string } | string): Promise<any> {
+    const payload = typeof data === 'string' ? { note: data } : data;
+    const response = await apiClient.patch<any>(`/admin/appointments/${id}/check-in`, payload || {});
+    return extractData(response);
+  },
+
+  async revertNoShowAppointment(id: string, data: { reason: string } | string): Promise<any> {
+    const payload = typeof data === 'string' ? { reason: data } : data;
+    const response = await apiClient.patch<any>(`/admin/appointments/${id}/revert-no-show`, payload);
+    return extractData(response);
+  },
+
+  async recordContactLog(id: string, data: { channel: string; outcome: string; staffName?: string; note?: string }): Promise<any> {
+    const response = await apiClient.post<any>(`/admin/appointments/${id}/contact-logs`, data);
+    return extractData(response);
+  },
+
   async cancelAppointment(id: string, reason: string): Promise<any> {
     const response = await apiClient.delete<any>(`/admin/appointments/${id}`, { data: { reason } });
     return extractData(response);

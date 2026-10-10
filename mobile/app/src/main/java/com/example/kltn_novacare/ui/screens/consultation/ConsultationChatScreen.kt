@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
+import com.example.kltn_novacare.ui.navigation.Screen
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import com.example.kltn_novacare.data.model.Consultation
@@ -126,6 +127,11 @@ fun ConsultationChatScreen(consultationId: String, navController: NavController,
                         }
                     },
                     actions = {
+                        if (consultation?.videoEnabled == true && consultation.status !in listOf("COMPLETED", "CANCELLED", "EXPIRED")) {
+                            IconButton(onClick = { navController.navigate(Screen.ConsultationVideo.createRoute(consultation.id)) }) {
+                                Icon(Icons.Outlined.Videocam, contentDescription = "Vào phòng tư vấn video", tint = PrimaryDark)
+                            }
+                        }
                         if (consultation != null) {
                             IconButton(onClick = { showDoctorSheet = true }) {
                                 Icon(Icons.Outlined.Info, contentDescription = "Thông tin phiên", tint = PrimaryDark)
@@ -146,6 +152,18 @@ fun ConsultationChatScreen(consultationId: String, navController: NavController,
         bottomBar = {
             if (consultation != null) {
                 Column {
+                    if (consultation.videoEnabled && consultation.status in listOf("ACCEPTED", "ACTIVE")) {
+                        Button(
+                            onClick = { navController.navigate(Screen.ConsultationVideo.createRoute(consultation.id)) },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Outlined.Videocam, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Tham gia video", fontWeight = FontWeight.Bold)
+                        }
+                    }
                     if (viewModel.isAssignedDoctor(consultation)) {
                         val action = when (consultation.status) {
                             "SCHEDULED", "WAITING" -> "accept" to "Nhận phiên tư vấn"

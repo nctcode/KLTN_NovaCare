@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppointmentsService } from '../../src/modules/appointments/appointments.service';
 import { PrismaService } from '../../src/database/prisma.service';
+import { SlotStatusService } from '../../src/modules/schedules/slot-status.service';
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 
 describe('AppointmentsService', () => {
@@ -17,6 +18,7 @@ describe('AppointmentsService', () => {
     bookedCount: 0,
     isAvailable: true,
     isActive: true,
+    status: 'AVAILABLE',
     startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
     endTime: new Date(Date.now() + 24.5 * 60 * 60 * 1000),
     doctorWorkplaceId: 'workplace-1',
@@ -52,7 +54,7 @@ describe('AppointmentsService', () => {
     updatedAt: new Date(),
   };
 
-  const mockPrismaService = {
+  const mockPrismaService: any = {
     patientProfile: {
       findFirst: jest.fn(),
     },
@@ -66,20 +68,38 @@ describe('AppointmentsService', () => {
     },
     appointmentSlot: {
       findUnique: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([mockSlot]),
       update: jest.fn(),
     },
     doctorWorkplace: {
       findUnique: jest.fn(),
     },
-    medicalService: {
-      findUnique: jest.fn(),
-    },
     appointmentStatusHistory: {
       create: jest.fn(),
     },
-    $transaction: jest.fn(),
+    appointmentSlotBooking: {
+      findMany: jest.fn().mockResolvedValue([]),
+      create: jest.fn(),
+    },
+    clinicRoomSession: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    medicalEncounter: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      delete: jest.fn(),
+    },
+    notification: {
+      create: jest.fn(),
+    },
+    $transaction: jest.fn((cb: any) => (typeof cb === 'function' ? cb(mockPrismaService) : Promise.resolve())),
     $queryRawUnsafe: jest.fn(),
     $executeRaw: jest.fn(),
+  };
+
+  const mockSlotStatusService: any = {
+    updateAndSyncSlotStatus: jest.fn().mockResolvedValue('AVAILABLE'),
+    resolveStatus: jest.fn().mockResolvedValue('AVAILABLE'),
   };
 
   beforeEach(async () => {
@@ -89,6 +109,10 @@ describe('AppointmentsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: SlotStatusService,
+          useValue: mockSlotStatusService,
         },
       ],
     }).compile();
@@ -117,7 +141,7 @@ describe('AppointmentsService', () => {
       mockPrismaService.appointment.findFirst.mockResolvedValue(null);
       mockPrismaService.doctorWorkplace.findUnique.mockResolvedValue(mockWorkplace);
       mockPrismaService.appointment.count.mockResolvedValue(0);
-      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+      mockPrismaService.$transaction.mockImplementation(async (callback: any) => {
         return callback(mockPrismaService);
       });
       mockPrismaService.appointment.create.mockResolvedValue(mockAppointment);
@@ -152,12 +176,13 @@ describe('AppointmentsService', () => {
         idempotencyKey: 'idempotent-1',
       };
 
-      const fullSlot = { ...mockSlot, bookedCount: 1, capacity: 1, isAvailable: false };
+      const fullSlot = { ...mockSlot, bookedCount: 1, capacity: 1, isAvailable: false, status: 'FULL' };
 
       mockPrismaService.patientProfile.findFirst.mockResolvedValue(mockProfile);
       mockPrismaService.appointment.findUnique.mockResolvedValue(null);
       mockPrismaService.$queryRawUnsafe.mockResolvedValue([fullSlot]);
-      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+      mockPrismaService.appointmentSlot.findMany.mockResolvedValue([fullSlot]);
+      mockPrismaService.$transaction.mockImplementation(async (callback: any) => {
         return callback(mockPrismaService);
       });
 
@@ -177,7 +202,7 @@ describe('AppointmentsService', () => {
       };
 
       mockPrismaService.appointment.findUnique.mockResolvedValue(appointmentWithSlot);
-      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+      mockPrismaService.$transaction.mockImplementation(async (callback: any) => {
         return callback(mockPrismaService);
       });
       mockPrismaService.appointment.update.mockResolvedValue({

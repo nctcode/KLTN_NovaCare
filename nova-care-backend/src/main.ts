@@ -6,10 +6,12 @@ import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import helmet from 'helmet';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+  app.useBodyParser('json', { type: ['application/json', 'application/webhook+json'] });
 
   // ── Security ─────────────────────────────────────────────────────────
   app.use(helmet());

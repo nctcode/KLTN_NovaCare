@@ -188,6 +188,32 @@ fun AppointmentDetailContent(
                 Text("Tạo phiên tư vấn với bác sĩ", fontWeight = FontWeight.Bold)
             }
         }
+        // NO_SHOW Notice Banner
+        if (appointment.status == "NO_SHOW") {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECACA)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Cơ sở y tế đã ghi nhận bạn không đến khám",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color(0xFF991B1B)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Lịch khám mã #${appointment.bookingCode} đã qua giờ hẹn và cơ sở y tế đã ghi nhận vắng mặt (NO_SHOW). Nếu có nhầm lẫn hoặc cần hỗ trợ dời lịch, vui lòng liên hệ trực tiếp với cơ sở y tế.",
+                        fontSize = 12.sp,
+                        color = Color(0xFFB91C1C),
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+        }
+
         // QR Code Ticket
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -198,7 +224,6 @@ fun AppointmentDetailContent(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
@@ -208,9 +233,10 @@ fun AppointmentDetailContent(
                     color = Secondary
                 )
                 Text(
-                    text = "Xuất trình mã đặt khám tại quầy tiếp đón của bệnh viện",
+                    text = if (appointment.status == "NO_SHOW") "Phiếu khám đã hết hiệu lực (Không đến khám)"
+                           else "Xuất trình mã đặt khám tại quầy tiếp đón của bệnh viện",
                     fontSize = 12.sp,
-                    color = TextSecondary,
+                    color = if (appointment.status == "NO_SHOW") Color(0xFFEF4444) else TextSecondary,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }

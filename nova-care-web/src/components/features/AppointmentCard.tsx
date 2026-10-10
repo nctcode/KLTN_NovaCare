@@ -150,7 +150,7 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap justify-end">
-              {appointment.status !== 'COMPLETED' && appointment.status !== 'CANCELLED' && appointment.status !== 'EXPIRED' && (
+              {appointment.status !== 'COMPLETED' && appointment.status !== 'CANCELLED' && appointment.status !== 'EXPIRED' && appointment.status !== 'NO_SHOW' && (
                 <Button
                   onClick={handleFulfill}
                   disabled={isFulfilling}
