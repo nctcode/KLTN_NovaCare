@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { AuditLogService } from '@/common/services/audit-log.service';
 import { Role } from '@prisma/client';
@@ -10,7 +10,7 @@ export class AdminUsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
-  ) {}
+  ) { }
 
   async findAll(params: {
     page?: number;
@@ -202,31 +202,71 @@ export class AdminUsersService {
     };
   }
 
-  async updateRole(id: string, role: Role, adminUserId: string, ipAddress?: string, userAgent?: string) {
+  async updateRole(
+    id: string,
+    role: Role,
+    hospitalId?: string | null,
+    adminUserId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
+    let finalHospitalId: string | null = null;
+
+    if (role === Role.HOSPITAL_ADMIN) {
+      finalHospitalId = hospitalId !== undefined ? hospitalId : user.hospitalId;
+      if (!finalHospitalId) {
+        throw new BadRequestException('Vui lòng chọn cơ sở y tế cho Quản trị viên Bệnh viện (HOSPITAL_ADMIN)');
+      }
+      const hospital = await this.prisma.hospital.findUnique({ where: { id: finalHospitalId } });
+      if (!hospital) {
+        throw new NotFoundException('Cơ sở y tế được chỉ định không tồn tại');
+      }
+    } else {
+      // Khi chuyển sang vai trò khác (PATIENT hoặc ADMIN), hủy liên kết bệnh viện
+      finalHospitalId = null;
+    }
+
     const updated = await this.prisma.user.update({
       where: { id },
-      data: { role },
+      data: {
+        role,
+        hospitalId: finalHospitalId,
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        hospitalId: true,
+        hospital: {
+          select: { id: true, name: true },
+        },
+      },
     });
 
-    await this.auditLogService.logAction({
-      userId: adminUserId,
-      action: 'UPDATE_USER_ROLE',
-      entityType: 'User',
-      entityId: id,
-      oldValue: { role: user.role },
-      newValue: { role: updated.role },
-      ipAddress,
-      userAgent,
-    });
+    if (adminUserId) {
+      await this.auditLogService.logAction({
+        userId: adminUserId,
+        action: 'UPDATE_USER_ROLE',
+        entityType: 'User',
+        entityId: id,
+        oldValue: { role: user.role, hospitalId: user.hospitalId },
+        newValue: { role: updated.role, hospitalId: updated.hospitalId },
+        ipAddress,
+        userAgent,
+      });
+    }
 
     return {
       id: updated.id,
       fullName: updated.fullName,
       role: updated.role,
-      message: 'Cập nhật quyền người dùng thành công',
+      hospitalId: updated.hospitalId,
+      hospital: updated.hospital,
+      message: 'Cập nhật quyền và cơ sở y tế người dùng thành công',
     };
   }
 

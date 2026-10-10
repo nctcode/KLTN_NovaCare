@@ -1,7 +1,9 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -13,6 +15,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -20,6 +23,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ActivateAccountDto } from './dto/activate-account.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { Public } from '@/common/decorators/public.decorator';
@@ -31,7 +35,7 @@ import { RequestRegistrationOtpDto, VerifyOtpDto } from './dto/verify-otp.dto';
 @ApiTags('Xác thực')
 @Controller('api/v1/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Public()
   @Post('register/request-otp')
@@ -130,12 +134,38 @@ export class AuthController {
   }
 
   @Public()
+<<<<<<< HEAD
   @Post('forgot-password/verify-otp')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async verifyForgotPasswordOtp(@Body() dto: VerifyOtpDto) {
     const data = await this.authService.verifyForgotPasswordOtp(dto);
     return { statusCode: HttpStatus.OK, message: 'Xác minh OTP thành công', data };
+=======
+  @Get('verify-activation-token')
+  @ApiOperation({ summary: 'Xác minh token kích hoạt tài khoản Quản trị bệnh viện' })
+  @ApiQuery({ name: 'token', required: true, description: 'Token kích hoạt từ email' })
+  async verifyActivationToken(@Query('token') token: string) {
+    const data = await this.authService.verifyActivationToken(token);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Token hợp lệ',
+      data,
+    };
+  }
+
+  @Public()
+  @Post('activate-hospital-account')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Thiết lập mật khẩu và hoàn tất kích hoạt tài khoản Quản trị bệnh viện' })
+  async activateHospitalAccount(@Body() dto: ActivateAccountDto) {
+    const data = await this.authService.activateHospitalAccount(dto.token, dto.password);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Kích hoạt tài khoản thành công',
+      data,
+    };
+>>>>>>> 5d6d7dd (feat: Tich hop lien he hop tac va ket noi API HIS doi tac)
   }
 
   @Post('logout')

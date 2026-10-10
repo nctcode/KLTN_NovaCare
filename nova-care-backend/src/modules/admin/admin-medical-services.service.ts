@@ -7,7 +7,7 @@ export class AdminMedicalServicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
-  ) {}
+  ) { }
 
   async findAll(params: {
     page?: number;
@@ -41,6 +41,11 @@ export class AdminMedicalServicesService {
     const orderBy: any = {};
     orderBy[sortField] = sortDirection;
 
+    const statsWhere: any = {};
+    if (params.hospitalId) {
+      statsWhere.hospitalId = params.hospitalId;
+    }
+
     const [items, total, totalServices, activeServices, inactiveServices, hospitalsCount] = await Promise.all([
       this.prisma.medicalService.findMany({
         where,
@@ -50,10 +55,12 @@ export class AdminMedicalServicesService {
         include: { hospital: true },
       }),
       this.prisma.medicalService.count({ where }),
-      this.prisma.medicalService.count(),
-      this.prisma.medicalService.count({ where: { isActive: true } }),
-      this.prisma.medicalService.count({ where: { isActive: false } }),
-      this.prisma.hospital.count({ where: { services: { some: {} } } }),
+      this.prisma.medicalService.count({ where: statsWhere }),
+      this.prisma.medicalService.count({ where: { ...statsWhere, isActive: true } }),
+      this.prisma.medicalService.count({ where: { ...statsWhere, isActive: false } }),
+      params.hospitalId
+        ? this.prisma.medicalService.count({ where: statsWhere }).then((count) => (count > 0 ? 1 : 0))
+        : this.prisma.hospital.count({ where: { services: { some: {} } } }),
     ]);
 
     return {

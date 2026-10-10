@@ -26,9 +26,13 @@ export interface RawHisDoctor {
 export interface RawHisCatalog {
   hospital_code: string;
   hospital_name: string;
-  hotline: string;
-  address: string;
-  city: string;
+  hotline?: string;
+  emergency_hotline?: string;
+  address?: string;
+  city?: string;
+  website?: string;
+  established_year?: number;
+  bed_count?: number;
   hospital_type?: string;
   operating_hours?: string;
   current_state?: number;

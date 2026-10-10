@@ -10,6 +10,7 @@ import {
   UseGuards,
   Req,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -20,7 +21,7 @@ import { AdminMedicalServicesService } from './admin-medical-services.service';
 @ApiTags('Admin - Medical Services')
 @Controller('api/v1/admin/medical-services')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles('ADMIN', 'HOSPITAL_ADMIN')
 @ApiBearerAuth('access-token')
 export class AdminMedicalServicesController {
   constructor(private readonly adminMedicalServicesService: AdminMedicalServicesService) {}
@@ -28,6 +29,7 @@ export class AdminMedicalServicesController {
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách dịch vụ y tế cho Admin (phân trang, lọc, tìm kiếm)' })
   async findAll(
+    @Req() req: any,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
@@ -36,11 +38,19 @@ export class AdminMedicalServicesController {
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
+    let scopedHospitalId = hospitalId;
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      scopedHospitalId = req.user.hospitalId;
+    }
+
     const data = await this.adminMedicalServicesService.findAll({
       page,
       limit,
       search,
-      hospitalId,
+      hospitalId: scopedHospitalId,
       status,
       sortBy,
       sortOrder,
@@ -66,6 +76,12 @@ export class AdminMedicalServicesController {
   @Post()
   @ApiOperation({ summary: 'Tạo mới dịch vụ y tế' })
   async create(@Body() body: any, @Req() req: any) {
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      body.hospitalId = req.user.hospitalId;
+    }
     const adminUserId = req.user?.id || req.user?.userId;
     const ipAddress = req.ip;
     const userAgent = req.headers['user-agent'];

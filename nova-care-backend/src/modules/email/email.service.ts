@@ -143,4 +143,70 @@ export class EmailService {
     `;
     return this.sendMail(email, subject, html, undefined, userId, 'forgot_password_otp');
   }
+
+  async sendHospitalActivationEmail(
+    email: string,
+    hospitalName: string,
+    contactName: string,
+    activationUrl: string
+  ): Promise<boolean> {
+    const subject = `[NovaCare] Chúc mừng hợp tác thành công - Kích hoạt tài khoản Quản trị ${hospitalName}`;
+    const html = `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 620px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <div style="background: linear-gradient(135deg, #0c4b39 0%, #166534 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">NOVACARE HEALTH PLATFORM</h1>
+          <p style="margin: 8px 0 0; font-size: 14px; color: #bbf7d0; font-weight: 500;">Nền tảng Quản trị & Kết nối Y tế Thông minh</p>
+        </div>
+        
+        <div style="padding: 32px 28px; color: #1e293b; line-height: 1.6;">
+          <h2 style="color: #0f172a; font-size: 18px; margin-top: 0; font-weight: 700;">
+            Kính gửi Quý đại diện ${contactName ? `<strong>${contactName}</strong> - ` : ''}<strong>${hospitalName}</strong>,
+          </h2>
+          <p style="font-size: 14px; color: #334155;">
+            NovaCare trân trọng thông báo: Yêu cầu kết nối hợp tác của Quý Cơ sở y tế đã được <strong>Ban Giám Đốc NovaCare phê duyệt thành công</strong>.
+          </p>
+          
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #22c55e; border-radius: 8px; padding: 18px 20px; margin: 24px 0;">
+            <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase;">Thông tin tài khoản Quản trị cơ sở:</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Cơ sở y tế:</strong> <span style="color: #0c4b39; font-weight: 700;">${hospitalName}</span></p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Email đăng nhập:</strong> <span style="color: #2563eb; font-weight: 600;">${email}</span></p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Vai trò:</strong> Quản trị viên Bệnh viện (Hospital Admin)</p>
+          </div>
+
+          <p style="font-size: 14px; color: #334155;">
+            Để hoàn tất quy trình và bắt đầu quản lý thông tin bệnh viện trên Cổng Quản trị NovaCare, vui lòng nhấp vào nút bên dưới để <strong>thiết lập mật khẩu quản trị và kích hoạt tài khoản</strong>:
+          </p>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${activationUrl}" style="background-color: #0c4b39; color: #ffffff; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(12, 75, 57, 0.25);">
+              👉 Kích Hoạt Tài Khoản & Thiết Lập Mật Khẩu
+            </a>
+          </div>
+
+          <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 16px;">
+            <em>(Liên kết kích hoạt này có hiệu lực trong vòng <strong>48 giờ</strong>. Vui lòng không chia sẻ liên kết này cho người không có thẩm quyền.)</em>
+          </p>
+          
+          <p style="font-size: 12px; color: #94a3b8; word-break: break-all; margin-top: 24px; border-top: 1px dashed #cbd5e1; padding-top: 16px;">
+            Nếu nút bấm trên không hoạt động, Quý viện có thể sao chép và mở trực tiếp đường dẫn sau trong trình duyệt:<br/>
+            <a href="${activationUrl}" style="color: #2563eb;">${activationUrl}</a>
+          </p>
+        </div>
+
+        <div style="background-color: #f1f5f9; padding: 20px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0 0 4px;"><strong>NovaCare Health - Hệ sinh thái chăm sóc sức khỏe số</strong></p>
+          <p style="margin: 0;">Hotline hỗ trợ đối tác: 1900 6868 | Email: support@novacare.vn</p>
+        </div>
+      </div>
+    `;
+
+    this.logger.log(`================================================================`);
+    this.logger.log(`[HOSPITAL ACTIVATION EMAIL]`);
+    this.logger.log(`To: ${email}`);
+    this.logger.log(`Hospital: ${hospitalName}`);
+    this.logger.log(`Activation Link: ${activationUrl}`);
+    this.logger.log(`================================================================`);
+
+    return this.sendMail(email, subject, html, undefined, undefined, 'hospital_activation');
+  }
 }

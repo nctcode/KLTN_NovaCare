@@ -11,6 +11,7 @@ import {
   Req,
   Ip,
   Headers,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -22,7 +23,7 @@ import { AdminHospitalsService } from './admin-hospitals.service';
 @ApiBearerAuth('access-token')
 @Controller('api/v1/admin/hospitals')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles('ADMIN', 'HOSPITAL_ADMIN')
 export class AdminHospitalsController {
   constructor(private readonly service: AdminHospitalsService) {}
 
@@ -35,6 +36,7 @@ export class AdminHospitalsController {
   @ApiQuery({ name: 'city', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, type: String })
   findAll(
+    @Req() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
@@ -42,6 +44,14 @@ export class AdminHospitalsController {
     @Query('city') city?: string,
     @Query('status') status?: string,
   ) {
+    let scopedHospitalId: string | undefined = undefined;
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      scopedHospitalId = req.user.hospitalId;
+    }
+
     return this.service.findAll({
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 10,
@@ -49,16 +59,21 @@ export class AdminHospitalsController {
       type,
       city,
       status,
+      hospitalId: scopedHospitalId,
     });
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Chi tiết bệnh viện' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string, @Req() req: any) {
+    if (req.user?.role === 'HOSPITAL_ADMIN' && req.user.hospitalId !== id) {
+      throw new ForbiddenException('Bạn chỉ có quyền xem thông tin cơ sở y tế của mình');
+    }
     return this.service.findOne(id);
   }
 
   @Post()
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Tạo bệnh viện mới' })
   create(
     @Body() body: any,
@@ -78,10 +93,14 @@ export class AdminHospitalsController {
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ) {
+    if (req.user?.role === 'HOSPITAL_ADMIN' && req.user.hospitalId !== id) {
+      throw new ForbiddenException('Bạn chỉ có quyền cập nhật thông tin cơ sở y tế của mình');
+    }
     return this.service.update(id, body, req.user.id, ip, ua);
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Xóa bệnh viện' })
   delete(
     @Param('id') id: string,

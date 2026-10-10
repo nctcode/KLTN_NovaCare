@@ -40,6 +40,12 @@ services:
       OPENAI_API_KEY: sk-bee-24090705ac27bb4c3fb277e4263409a982db7568a3feb77029cc287a5578d9be
       OPENAI_MODEL_CHAT: gpt-5.4
       OPENAI_MODEL_VISION: gpt-5.4
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: trinhvu13102004@gmail.com
+      SMTP_PASS: isndogrsaipulhkm
+      SMTP_FROM: trinhvu13102004@gmail.com
+      FRONTEND_URL: http://localhost:3001
     ports:
       - '3000:3000'
     volumes:

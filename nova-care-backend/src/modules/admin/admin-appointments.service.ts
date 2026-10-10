@@ -8,17 +8,24 @@ export class AdminAppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
-  ) {}
+  ) { }
 
-  async getStats() {
+  async getStats(hospitalId?: string) {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
+    const baseWhere: any = {};
+    if (hospitalId) {
+      baseWhere.slot = { doctorWorkplace: { hospitalId } };
+    }
+
     const [todayTotal, confirmed, completed, cancelled] = await Promise.all([
       this.prisma.appointment.count({
         where: {
+          ...baseWhere,
           slot: {
+            ...(baseWhere.slot || {}),
             startTime: {
               gte: startOfDay,
               lte: endOfDay,
@@ -28,14 +35,21 @@ export class AdminAppointmentsService {
       }),
       this.prisma.appointment.count({
         where: {
+          ...baseWhere,
           status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.PAID] },
         },
       }),
       this.prisma.appointment.count({
-        where: { status: AppointmentStatus.COMPLETED },
+        where: {
+          ...baseWhere,
+          status: AppointmentStatus.COMPLETED,
+        },
       }),
       this.prisma.appointment.count({
-        where: { status: AppointmentStatus.CANCELLED },
+        where: {
+          ...baseWhere,
+          status: AppointmentStatus.CANCELLED,
+        },
       }),
     ]);
 

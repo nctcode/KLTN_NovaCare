@@ -1,0 +1,289 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NovaCare Hospital Integration API Contract",
+    "description": "Chuẩn đặc tả kỹ thuật kết nối dữ liệu danh mục Bệnh viện, Khoa phòng, Bác sĩ và Lịch khám từ phần mềm HIS sang nền tảng NovaCare Health.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "NovaCare Interoperability Team",
+      "email": "integration@novacare.vn",
+      "url": "https://novacare.vn"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000/api",
+      "description": "Máy chủ HIS mẫu thử nghiệm (Mock HIS Server)"
+    }
+  ],
+  "paths": {
+    "/hospital-catalog": {
+      "get": {
+        "summary": "Xuất danh mục dữ liệu Bệnh viện (HIS Catalog)",
+        "description": "Endpoint do Bệnh viện cung cấp, trả về thông tin cơ sở y tế, danh mục khoa phòng, nhân sự bác sĩ và lịch trực tuần.",
+        "operationId": "getHospitalCatalog",
+        "security": [
+          { "ApiKeyAuth": [] },
+          { "BearerAuth": [] },
+          {}
+        ],
+        "parameters": [
+          {
+            "name": "hospital_code",
+            "in": "query",
+            "required": false,
+            "description": "Mã định danh bệnh viện do NovaCare cấp",
+            "schema": {
+              "type": "string",
+              "example": "HIS_BV_ANBINH"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dữ liệu danh mục đạt chuẩn hợp đồng NovaCare",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HisCatalogResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không đúng cấu trúc yêu cầu"
+          },
+          "401": {
+            "description": "Xác thực API Key / Secret Token thất bại"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HisCatalogResponse": {
+        "type": "object",
+        "required": ["status", "data"],
+        "properties": {
+          "status": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy danh mục dữ liệu bệnh viện thành công"
+          },
+          "data": {
+            "$ref": "#/components/schemas/HospitalCatalogData"
+          }
+        }
+      },
+      "HospitalCatalogData": {
+        "type": "object",
+        "required": [
+          "hospital_code",
+          "hospital_name",
+          "hotline",
+          "address",
+          "city",
+          "departments",
+          "doctors"
+        ],
+        "properties": {
+          "hospital_code": {
+            "type": "string",
+            "description": "Mã định danh cơ sở y tế tại hệ thống HIS",
+            "example": "HIS_BV_ANBINH"
+          },
+          "hospital_name": {
+            "type": "string",
+            "description": "Tên pháp nhân đầy đủ của Bệnh viện / Phòng khám",
+            "example": "Bệnh Viện Đa Khoa An Bình"
+          },
+          "hotline": {
+            "type": "string",
+            "description": "Số điện thoại tổng đài đón tiếp bệnh nhân",
+            "example": "028 3923 4260"
+          },
+          "address": {
+            "type": "string",
+            "description": "Địa chỉ cơ sở (Số nhà, tên đường, phường/xã, quận/huyện)",
+            "example": "146 An Bình, Phường 7, Quận 5"
+          },
+          "city": {
+            "type": "string",
+            "description": "Tỉnh hoặc Thành phố trực thuộc trung ương",
+            "example": "TP. Hồ Chí Minh"
+          },
+          "hospital_type": {
+            "type": "string",
+            "enum": ["PUBLIC", "PRIVATE", "INTERNATIONAL"],
+            "description": "Loại hình cơ sở y tế",
+            "example": "PUBLIC"
+          },
+          "emergency_hotline": {
+            "type": "string",
+            "description": "Đường dây nóng cấp cứu 24/7 của bệnh viện",
+            "example": "115 (Trực cấp cứu 24/7)"
+          },
+          "website": {
+            "type": "string",
+            "description": "Website cổng thông tin chính thức của bệnh viện",
+            "example": "https://benhvienanbinh.vn"
+          },
+          "established_year": {
+            "type": "integer",
+            "description": "Năm thành lập cơ sở y tế",
+            "example": 2001
+          },
+          "bed_count": {
+            "type": "integer",
+            "description": "Quy mô số giường bệnh điều trị nội trú",
+            "example": 500
+          },
+          "operating_hours": {
+            "type": "string",
+            "description": "Giờ đón tiếp khám chung của cơ sở",
+            "example": "07:00 - 16:30 (Thứ 2 - Thứ 6)"
+          },
+          "departments": {
+            "type": "array",
+            "description": "Danh sách các khoa / phòng ban trực thuộc viện",
+            "items": {
+              "$ref": "#/components/schemas/DepartmentItem"
+            }
+          },
+          "doctors": {
+            "type": "array",
+            "description": "Danh sách nhân sự bác sĩ khám bệnh",
+            "items": {
+              "$ref": "#/components/schemas/DoctorItem"
+            }
+          }
+        }
+      },
+      "DepartmentItem": {
+        "type": "object",
+        "required": ["dept_code", "dept_name"],
+        "properties": {
+          "dept_code": {
+            "type": "string",
+            "description": "Mã nội bộ khoa phòng tại bệnh viện (Unique)",
+            "example": "K_TIM_CAN_THIEP"
+          },
+          "dept_name": {
+            "type": "string",
+            "description": "Tên khoa phòng hiển thị",
+            "example": "Khoa Tim Mạch Can Thiệp"
+          }
+        }
+      },
+      "DoctorItem": {
+        "type": "object",
+        "required": [
+          "staff_id",
+          "full_name",
+          "gender",
+          "academic_degree",
+          "dept_code",
+          "consultation_fee",
+          "weekly_shifts"
+        ],
+        "properties": {
+          "staff_id": {
+            "type": "string",
+            "description": "Mã nhân viên / Bác sĩ tại bệnh viện (Unique)",
+            "example": "DOC_AB_001"
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Họ và tên bác sĩ",
+            "example": "Nguyễn Văn An"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["MALE", "FEMALE"],
+            "example": "MALE"
+          },
+          "academic_degree": {
+            "type": "string",
+            "description": "Học vị viết tắt (ThS.BS, TS.BS, BS.CKI...)",
+            "example": "ThS.BS"
+          },
+          "qualification_title": {
+            "type": "string",
+            "description": "Trình độ chuyên môn chi tiết",
+            "example": "Thạc sĩ Y học, Bác sĩ Chuyên khoa I Tim mạch"
+          },
+          "dept_code": {
+            "type": "string",
+            "description": "Mã khoa bác sĩ trực thuộc (khớp với bảng departments)",
+            "example": "K_TIM_CAN_THIEP"
+          },
+          "consultation_fee": {
+            "type": "number",
+            "description": "Phí khám bệnh ban đầu (VNĐ)",
+            "example": 300000
+          },
+          "experience_years": {
+            "type": "integer",
+            "description": "Số năm kinh nghiệm",
+            "example": 8
+          },
+          "avatar_url": {
+            "type": "string",
+            "description": "Đường dẫn ảnh đại diện",
+            "example": "https://images.unsplash.com/photo-1622253692010-333f2da6031d"
+          },
+          "weekly_shifts": {
+            "type": "array",
+            "description": "Các ca trực cố định trong tuần",
+            "items": {
+              "$ref": "#/components/schemas/WeeklyShiftItem"
+            }
+          }
+        }
+      },
+      "WeeklyShiftItem": {
+        "type": "object",
+        "required": ["day_of_week", "start_time", "end_time"],
+        "properties": {
+          "day_of_week": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6,
+            "description": "Thứ trong tuần (0: Chủ nhật, 1: Thứ 2, 2: Thứ 3... 6: Thứ 7)",
+            "example": 1
+          },
+          "start_time": {
+            "type": "string",
+            "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
+            "description": "Giờ bắt đầu ca khám (HH:mm)",
+            "example": "08:00"
+          },
+          "end_time": {
+            "type": "string",
+            "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
+            "description": "Giờ kết thúc ca khám (HH:mm)",
+            "example": "12:00"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-KEY",
+        "description": "Mã khóa API Key bảo mật do Bệnh viện cấp cho NovaCare"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Mã Bearer Token tiêu chuẩn do Bệnh viện cấp cho NovaCare"
+      }
+    }
+  }
+}

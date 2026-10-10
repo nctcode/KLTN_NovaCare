@@ -41,7 +41,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user.role !== 'ADMIN') {
+  if (user.role !== 'ADMIN' && user.role !== 'HOSPITAL_ADMIN') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white p-6 space-y-4 text-center">
         <ShieldAlert className="w-12 h-12 text-rose-500" />
@@ -64,6 +64,24 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             Đăng nhập tài khoản khác
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (user.role === 'HOSPITAL_ADMIN' && !user.hospitalId) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white p-6 space-y-4 text-center">
+        <ShieldAlert className="w-12 h-12 text-amber-500" />
+        <h2 className="text-xl font-bold">Chưa liên kết Bệnh viện</h2>
+        <p className="text-xs text-slate-400 max-w-md">
+          Tài khoản Quản trị viên Bệnh viện của bạn chưa được liên kết với cơ sở y tế nào trong hệ thống. Vui lòng liên hệ Quản trị viên nền tảng để được hỗ trợ.
+        </p>
+        <Button
+          onClick={() => router.push('/dang-nhap')}
+          className="bg-[#66FF33] text-slate-950 hover:bg-[#52e622] font-bold text-xs rounded-xl"
+        >
+          Đăng nhập lại
+        </Button>
       </div>
     );
   }

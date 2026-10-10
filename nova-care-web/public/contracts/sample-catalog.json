@@ -1,0 +1,73 @@
+{
+  "hospital_code": "HIS_BV_ANBINH",
+  "hospital_name": "Bệnh Viện Đa Khoa An Bình",
+  "hotline": "028 3923 4260",
+  "emergency_hotline": "115 (Trực cấp cứu 24/7)",
+  "address": "146 An Bình, Phường 7, Quận 5",
+  "city": "TP. Hồ Chí Minh",
+  "website": "https://benhvienanbinh.vn",
+  "established_year": 2001,
+  "bed_count": 500,
+  "hospital_type": "PUBLIC",
+  "operating_hours": "07:00 - 16:30 (Thứ 2 - Thứ 6)",
+  "departments": [
+    {
+      "dept_code": "K_TIM_CAN_THIEP",
+      "dept_name": "Khoa Tim Mạch Can Thiệp"
+    },
+    {
+      "dept_code": "K_NHI_SO_SINH",
+      "dept_name": "Khoa Nhi Sơ Sinh"
+    },
+    {
+      "dept_code": "K_DA_LIEU_THAM_MY",
+      "dept_name": "Khoa Da Liễu & Thẩm Mỹ Da"
+    }
+  ],
+  "doctors": [
+    {
+      "staff_id": "HIS_DOC_001",
+      "full_name": "Nguyễn Văn An",
+      "gender": "MALE",
+      "academic_degree": "ThS.BS",
+      "qualification_title": "Thạc sĩ Y học, Bác sĩ Chuyên khoa I Tim mạch",
+      "dept_code": "K_TIM_CAN_THIEP",
+      "consultation_fee": 300000,
+      "experience_years": 8,
+      "avatar_url": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&auto=format&fit=crop&q=80",
+      "weekly_shifts": [
+        { "day_of_week": 1, "start_time": "08:00", "end_time": "12:00" },
+        { "day_of_week": 3, "start_time": "13:30", "end_time": "17:00" }
+      ]
+    },
+    {
+      "staff_id": "HIS_DOC_002",
+      "full_name": "Lê Thị Mai",
+      "gender": "FEMALE",
+      "academic_degree": "BS.CKI",
+      "qualification_title": "Bác sĩ Chuyên khoa I Nhi Sơ sinh",
+      "dept_code": "K_NHI_SO_SINH",
+      "consultation_fee": 250000,
+      "experience_years": 6,
+      "avatar_url": "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&auto=format&fit=crop&q=80",
+      "weekly_shifts": [
+        { "day_of_week": 2, "start_time": "08:00", "end_time": "11:30" },
+        { "day_of_week": 5, "start_time": "13:30", "end_time": "16:30" }
+      ]
+    },
+    {
+      "staff_id": "HIS_DOC_003",
+      "full_name": "Trần Quốc Hùng",
+      "gender": "MALE",
+      "academic_degree": "TS.BS",
+      "qualification_title": "Tiến sĩ Y khoa Da liễu",
+      "dept_code": "K_DA_LIEU_THAM_MY",
+      "consultation_fee": 400000,
+      "experience_years": 15,
+      "avatar_url": "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400&auto=format&fit=crop&q=80",
+      "weekly_shifts": [
+        { "day_of_week": 4, "start_time": "09:00", "end_time": "16:00" }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth.store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { hospitalService } from '@/services/hospital.service';
@@ -37,16 +39,26 @@ import {
 } from 'lucide-react';
 
 export default function AdminDoctorsPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
 
+  const isHospitalAdmin = user?.role === 'HOSPITAL_ADMIN';
+
   // Pagination & Filter States
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [hospitalIdFilter, setHospitalIdFilter] = useState('ALL');
+  const [hospitalIdFilter, setHospitalIdFilter] = useState(isHospitalAdmin ? (user?.hospitalId || 'ALL') : 'ALL');
   const [specialtyIdFilter, setSpecialtyIdFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  useEffect(() => {
+    if (isHospitalAdmin && user?.hospitalId && hospitalIdFilter !== user.hospitalId) {
+      setHospitalIdFilter(user.hospitalId);
+    }
+  }, [isHospitalAdmin, user?.hospitalId, hospitalIdFilter]);
 
   // Modal dialog states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -194,7 +206,7 @@ export default function AdminDoctorsPage() {
 
   const handleResetFilters = () => {
     setSearch('');
-    setHospitalIdFilter('ALL');
+    if (!isHospitalAdmin) setHospitalIdFilter('ALL');
     setSpecialtyIdFilter('ALL');
     setStatusFilter('ALL');
     setPage(1);
@@ -209,21 +221,32 @@ export default function AdminDoctorsPage() {
 
   return (
     <div className="space-y-5 max-w-[1600px] mx-auto pb-12 font-sans">
-      {/* 1. BỐ CỤC PHẦN ĐẦU: TIÊU ĐỀ GIÁM SÁT TOÀN SÀN */}
+      {/* 1. BỐ CỤC PHẦN ĐẦU: TIÊU ĐỀ */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-              Giám sát Bác sĩ Toàn Sàn
+              {isHospitalAdmin ? 'Quản lý Đội ngũ Bác sĩ' : 'Giám sát Bác sĩ Toàn Sàn'}
             </h1>
-            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-xs font-semibold">
-              Chế độ Giám sát
+            <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-semibold">
+              {isHospitalAdmin ? 'Cơ sở Y tế' : 'Chế độ Giám sát'}
             </Badge>
           </div>
           <p className={`text-xs mt-1 font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-            Theo dõi đội ngũ y bác sĩ và đơn vị công tác trên toàn nền tảng NovaCare.
+            {isHospitalAdmin
+              ? 'Quản lý danh sách bác sĩ, hồ sơ chuyên môn và nơi làm việc của bệnh viện.'
+              : 'Theo dõi đội ngũ y bác sĩ và đơn vị công tác trên toàn nền tảng NovaCare.'}
           </p>
         </div>
+
+        {isHospitalAdmin && (
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-[#0c4b39] hover:bg-[#083629] text-white font-medium text-xs rounded-lg px-4 py-2 shadow-sm flex items-center gap-1.5 shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Thêm Bác sĩ Mới
+          </Button>
+        )}
       </div>
 
       {/* 2. BỘ LỌC TÌM KIẾM TỐI GIẢN */}
@@ -240,26 +263,27 @@ export default function AdminDoctorsPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className={`pl-9 text-xs font-medium rounded-lg ${
-                isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400' : 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-400'
-              }`}
+              className={`pl-9 text-xs font-medium rounded-lg ${isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400' : 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-400'
+                }`}
             />
           </div>
 
-          {/* Hospital Filter */}
-          <select
-            value={hospitalIdFilter}
-            onChange={(e) => {
-              setHospitalIdFilter(e.target.value);
-              setPage(1);
-            }}
-            className={selectBg}
-          >
-            <option value="ALL">Tất cả Bệnh viện</option>
-            {hospitals.map((h: any) => (
-              <option key={h.id} value={h.id}>{h.name}</option>
-            ))}
-          </select>
+          {/* Hospital Filter - Chỉ hiển thị cho Admin toàn sàn */}
+          {!isHospitalAdmin && (
+            <select
+              value={hospitalIdFilter}
+              onChange={(e) => {
+                setHospitalIdFilter(e.target.value);
+                setPage(1);
+              }}
+              className={selectBg}
+            >
+              <option value="ALL">Tất cả Bệnh viện</option>
+              {hospitals.map((h: any) => (
+                <option key={h.id} value={h.id}>{h.name}</option>
+              ))}
+            </select>
+          )}
 
           {/* Specialty Filter */}
           <select
@@ -291,7 +315,7 @@ export default function AdminDoctorsPage() {
           </select>
 
           {/* Reset Filters */}
-          {(search || hospitalIdFilter !== 'ALL' || specialtyIdFilter !== 'ALL' || statusFilter !== 'ALL') && (
+          {(search || (!isHospitalAdmin && hospitalIdFilter !== 'ALL') || specialtyIdFilter !== 'ALL' || statusFilter !== 'ALL') && (
             <Button
               variant="ghost"
               size="sm"
@@ -357,13 +381,12 @@ export default function AdminDoctorsPage() {
                         {/* 1. Bác sĩ (Avatar + fullName ONLY) */}
                         <td className="p-3.5 whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 border overflow-hidden ${
-                              isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-800 border-slate-700 text-slate-300'
-                            }`}>
-                              {doc.avatarUrl ? (
-                                <img src={doc.avatarUrl} alt={doc.fullName} className="w-full h-full object-cover" />
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 border overflow-hidden ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-800 border-slate-700 text-slate-300'
+                              }`}>
+                              {doc.avatarUrl && doc.avatarUrl.trim() ? (
+                                <img src={doc.avatarUrl.trim()} alt={doc.fullName} className="w-full h-full object-cover" />
                               ) : (
-                                doc.fullName.charAt(0)
+                                doc.fullName?.charAt(0) || 'D'
                               )}
                             </div>
                             <span className={`font-semibold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -375,9 +398,8 @@ export default function AdminDoctorsPage() {
                         {/* 2. Chức danh */}
                         <td className="p-3.5 text-xs whitespace-nowrap">
                           {doc.title ? (
-                            <Badge variant="outline" className={`text-[11px] font-medium px-2 py-0.5 ${
-                              isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-slate-200'
-                            }`}>
+                            <Badge variant="outline" className={`text-[11px] font-medium px-2 py-0.5 ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-slate-200'
+                              }`}>
                               {doc.title}
                             </Badge>
                           ) : (
@@ -416,31 +438,28 @@ export default function AdminDoctorsPage() {
                         {/* 7. Trạng thái */}
                         <td className="p-3.5 text-xs whitespace-nowrap">
                           {doc.isActive ? (
-                            <span className={`inline-flex items-center gap-1.5 font-medium px-2 py-0.5 rounded text-[11px] ${
-                              isLight ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800'
-                            }`}>
+                            <span className={`inline-flex items-center gap-1.5 font-medium px-2 py-0.5 rounded text-[11px] ${isLight ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800'
+                              }`}>
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> Đang hoạt động
                             </span>
                           ) : (
-                            <span className={`inline-flex items-center gap-1.5 font-medium px-2 py-0.5 rounded text-[11px] ${
-                              isLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-slate-900 text-slate-400 border border-slate-800'
-                            }`}>
+                            <span className={`inline-flex items-center gap-1.5 font-medium px-2 py-0.5 rounded text-[11px] ${isLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-slate-900 text-slate-400 border border-slate-800'
+                              }`}>
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Tạm ngưng
                             </span>
                           )}
                         </td>
 
-                        {/* 8. Thao tác giám sát (Chỉ xem) */}
+                        {/* 8. Thao tác */}
                         <td className="p-3.5 text-right whitespace-nowrap">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => openDetailDialog(doc.id, 'INFO', false)}
-                            className={`h-7 text-xs font-semibold px-3 rounded-lg border ${
-                              isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
-                            }`}
+                            className={`h-7 text-xs font-medium px-3 rounded-lg border ${isLight ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
+                              }`}
                           >
-                            <Eye className="w-3.5 h-3.5 mr-1.5 text-[#0c4b39] dark:text-[#66FF33]" /> Xem hồ sơ
+                            <Eye className="w-3.5 h-3.5 mr-1.5 text-slate-500" /> Xem hồ sơ
                           </Button>
                         </td>
                       </tr>
@@ -455,9 +474,8 @@ export default function AdminDoctorsPage() {
 
       {/* 4. PHÂN TRANG */}
       {data?.totalPages > 1 && (
-        <div className={`flex items-center justify-between p-3.5 rounded-lg border text-xs ${
-          isLight ? 'bg-white border-slate-200 text-slate-700 font-medium' : 'bg-slate-950 border-slate-800 text-slate-300'
-        }`}>
+        <div className={`flex items-center justify-between p-3.5 rounded-lg border text-xs ${isLight ? 'bg-white border-slate-200 text-slate-700 font-medium' : 'bg-slate-950 border-slate-800 text-slate-300'
+          }`}>
           <span>
             Hiển thị trang <strong>{data.page}</strong> / <strong>{data.totalPages}</strong> (Tổng {data.total} bác sĩ)
           </span>
@@ -487,9 +505,8 @@ export default function AdminDoctorsPage() {
       {/* 5. MODAL: THÊM BÁC SĨ MỚI */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className={`border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-xl ${
-            isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
-          }`}>
+          <div className={`border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-xl ${isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
+            }`}>
             <div className={`flex justify-between items-center border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
               <h3 className="font-bold text-sm">Thêm Bác Sĩ Mới</h3>
               <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -516,9 +533,8 @@ export default function AdminDoctorsPage() {
                   <select
                     value={createForm.title}
                     onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                    className={`w-full text-xs font-medium rounded-lg p-2 border ${
-                      isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
+                    className={`w-full text-xs font-medium rounded-lg p-2 border ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                      }`}
                   >
                     <option value="BS.">BS.</option>
                     <option value="BS.CKI">BS.CKI</option>
@@ -576,15 +592,16 @@ export default function AdminDoctorsPage() {
         </div>
       )}
 
-      {/* 6. MODAL CHI TIẾT BÁC SĨ (CHẾ ĐỘ GIÁM SÁT READ-ONLY) */}
+      {/* 6. MODAL CHI TIẾT BÁC SĨ */}
       {selectedDoctorId && (
         <DoctorDetailDialog
           doctorId={selectedDoctorId}
+          hospitalId={hospitalIdFilter !== 'ALL' ? hospitalIdFilter : (isHospitalAdmin ? user?.hospitalId : undefined)}
           open={isDetailDialogOpen}
           onOpenChange={setIsDetailDialogOpen}
           initialTab={dialogTab}
-          initialIsEditing={false}
-          readOnly={true}
+          initialIsEditing={dialogEditing}
+          readOnly={false}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['admin-doctors'] });
           }}

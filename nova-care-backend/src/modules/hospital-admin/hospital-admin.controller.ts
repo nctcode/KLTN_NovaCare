@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
   Patch,
   Body,
@@ -21,6 +22,8 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { HospitalAdminGuard } from '@/common/guards/hospital-admin.guard';
 import { HospitalAdminService } from './hospital-admin.service';
 import { UpdateMyHospitalDto } from './dto/update-my-hospital.dto';
+import { TestHandshakeDto } from './dto/test-handshake.dto';
+import { SyncHospitalCatalogDto } from './dto/sync-hospital-catalog.dto';
 import { AppointmentStatus } from '@prisma/client';
 
 @ApiTags('Cổng Quản trị Bệnh viện (Hospital Admin Portal)')
@@ -28,7 +31,7 @@ import { AppointmentStatus } from '@prisma/client';
 @UseGuards(JwtAuthGuard, HospitalAdminGuard)
 @Controller('api/v1/hospital-admin')
 export class HospitalAdminController {
-  constructor(private readonly service: HospitalAdminService) {}
+  constructor(private readonly service: HospitalAdminService) { }
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Thống kê tổng quan bệnh viện của tôi' })
@@ -97,7 +100,7 @@ export class HospitalAdminController {
   async updateDoctorWorkplace(
     @Req() req: any,
     @Param('workplaceId') workplaceId: string,
-    @Body() body: { consultationFee?: number; isActive?: boolean }
+    @Body() body: { consultationFee?: number; isActive?: boolean; specialtyId?: string }
   ) {
     const data = await this.service.updateDoctorWorkplace(
       req.targetHospitalId,
@@ -175,6 +178,94 @@ export class HospitalAdminController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Lấy lịch làm việc bác sĩ thành công',
+      data,
+    };
+  }
+
+  @Get('services')
+  @ApiOperation({ summary: 'Danh mục dịch vụ y tế của bệnh viện' })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'specialtyId', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  async getMyServices(
+    @Req() req: any,
+    @Query('search') search?: string,
+    @Query('specialtyId') specialtyId?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number
+  ) {
+    const data = await this.service.getMyServices(req.targetHospitalId, {
+      search,
+      specialtyId,
+      page,
+      limit,
+    });
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy danh mục dịch vụ y tế thành công',
+      data,
+    };
+  }
+
+  @Patch('services/:id')
+  @ApiOperation({ summary: 'Cập nhật giá hoặc trạng thái dịch vụ y tế' })
+  async updateMyService(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { price?: number; isActive?: boolean }
+  ) {
+    const data = await this.service.updateMyService(
+      req.targetHospitalId,
+      id,
+      body
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Cập nhật dịch vụ y tế thành công',
+      data,
+    };
+  }
+
+  @Post('integration/test-handshake')
+  @ApiOperation({ summary: 'Kiểm tra bắt tay (Handshake) với endpoint HIS của bệnh viện' })
+  async testHandshake(
+    @Req() req: any,
+    @Body() dto: TestHandshakeDto
+  ) {
+    const data = await this.service.testHandshake(
+      dto.endpointUrl,
+      dto.authType,
+      dto.authToken || dto.secretToken
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Kiểm tra bắt tay với hệ thống HIS thành công',
+      data,
+    };
+  }
+
+  @Post('integration/sync-catalog')
+  @ApiOperation({ summary: 'Đồng bộ danh mục khoa phòng & bác sĩ từ HIS vào bệnh viện' })
+  async syncCatalog(
+    @Req() req: any,
+    @Body() dto: SyncHospitalCatalogDto
+  ) {
+    const data = await this.service.syncHospitalCatalog(req.targetHospitalId, dto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Đồng bộ dữ liệu từ HIS vào bệnh viện thành công',
+      data,
+    };
+  }
+
+  @Get('integration/status')
+  @ApiOperation({ summary: 'Lấy trạng thái kết nối tích hợp HIS hiện tại của bệnh viện' })
+  async getIntegrationStatus(@Req() req: any) {
+    const data = await this.service.getIntegrationStatus(req.targetHospitalId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Lấy trạng thái tích hợp thành công',
       data,
     };
   }

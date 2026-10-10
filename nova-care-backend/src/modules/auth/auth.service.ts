@@ -206,6 +206,113 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto) { return this.passwordReset.reset(dto); }
 
+  /**
+   * Xác minh mã token kích hoạt tài khoản Quản trị bệnh viện
+   */
+  async verifyActivationToken(token: string) {
+    if (!token) {
+      throw new BadRequestException('Mã token kích hoạt không được để trống');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        activationToken: token,
+      },
+      include: {
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Mã kích hoạt không hợp lệ hoặc tài khoản đã được kích hoạt');
+    }
+
+    if (user.activationExpiresAt && user.activationExpiresAt < new Date()) {
+      throw new BadRequestException('Mã kích hoạt đã hết hạn (quá 48 giờ). Vui lòng liên hệ NovaCare để nhận lại mã mới.');
+    }
+
+    return {
+      valid: true,
+      email: user.email,
+      fullName: user.fullName,
+      hospitalName: user.hospital?.name || 'Cơ sở Y tế Đối tác',
+      hospitalId: user.hospitalId,
+    };
+  }
+
+  /**
+   * Kích hoạt tài khoản: Thiết lập mật khẩu mới và tự động đăng nhập
+   */
+  async activateHospitalAccount(token: string, password: string): Promise<AuthResponse> {
+    if (!token) {
+      throw new BadRequestException('Mã token kích hoạt không được để trống');
+    }
+    if (!password || password.length < 6) {
+      throw new BadRequestException('Mật khẩu phải có ít nhất 6 ký tự');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        activationToken: token,
+      },
+      include: {
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+            externalId: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Mã kích hoạt không hợp lệ hoặc đã được sử dụng');
+    }
+
+    if (user.activationExpiresAt && user.activationExpiresAt < new Date()) {
+      throw new BadRequestException('Mã kích hoạt đã hết hạn. Vui lòng liên hệ NovaCare để được hỗ trợ.');
+    }
+
+    // Băm mật khẩu người dùng tự đặt
+    const passwordHash = await argon2.hash(password);
+
+    // Cập nhật trạng thái người dùng
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        isActive: true,
+        activationToken: null,
+        activationExpiresAt: null,
+        lastLoginAt: new Date(),
+      },
+      include: {
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+            externalId: true,
+          },
+        },
+      },
+    });
+
+    // Tự động sinh token đăng nhập và trả về
+    const tokens = await this.generateTokens(updatedUser);
+    const { passwordHash: _, activationToken: __, ...sanitizedUser } = updatedUser;
+
+    return { ...tokens, user: sanitizedUser as any };
+  }
+
   private async generateTokens(user: any): Promise<{
     accessToken: string;
     refreshToken: string;

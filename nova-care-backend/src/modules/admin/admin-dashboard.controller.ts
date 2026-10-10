@@ -9,7 +9,7 @@ import { AdminDashboardService } from './admin-dashboard.service';
 @ApiBearerAuth('access-token')
 @Controller('api/v1/admin/dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles('ADMIN', 'HOSPITAL_ADMIN')
 export class AdminDashboardController {
   constructor(private readonly service: AdminDashboardService) {}
 

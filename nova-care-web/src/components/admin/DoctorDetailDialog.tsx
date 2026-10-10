@@ -39,11 +39,13 @@ import {
   User,
   Upload,
   Sparkles,
+  Power,
 } from 'lucide-react';
 
 interface DoctorDetailDialogProps {
   doctorId: string | null;
   initialDoctor?: any;
+  hospitalId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
@@ -87,12 +89,13 @@ const DAY_NAMES: Record<number, string> = {
 export function DoctorDetailDialog({
   doctorId,
   initialDoctor,
+  hospitalId,
   open,
   onOpenChange,
   onSuccess,
   initialTab = 'INFO',
   initialIsEditing = false,
-  readOnly = true,
+  readOnly = false,
 }: DoctorDetailDialogProps) {
   const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
@@ -126,7 +129,31 @@ export function DoctorDetailDialog({
 
   const doctor = fetchedDoctor || initialDoctor;
 
-  // Fetch specialties and hospitals for sub-modals
+  // Resolve current hospital ID for this doctor
+  const currentHospitalId =
+    hospitalId ||
+    doctor?.workPlaces?.find((w: any) => w.isPrimary)?.hospitalId ||
+    doctor?.workPlaces?.[0]?.hospitalId ||
+    initialDoctor?.hospitalId ||
+    initialDoctor?.workPlaces?.[0]?.hospitalId;
+
+  // Fetch specialties of THAT specific hospital
+  const { data: rawHospitalSpecialties } = useQuery({
+    queryKey: ['hospital-specialties-dialog', currentHospitalId],
+    queryFn: async () => {
+      if (!currentHospitalId) return [];
+      try {
+        const res = await hospitalService.getSpecialties(currentHospitalId);
+        return Array.isArray(res) ? res : (res as any)?.data || [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!currentHospitalId && open,
+  });
+  const hospitalSpecialties = Array.isArray(rawHospitalSpecialties) ? rawHospitalSpecialties : [];
+
+  // Fallback all specialties only if doctor has no hospital attached
   const { data: rawSpecialties } = useQuery({
     queryKey: ['specialties-all'],
     queryFn: async () => {
@@ -137,9 +164,10 @@ export function DoctorDetailDialog({
         return [];
       }
     },
-    enabled: open,
+    enabled: open && !currentHospitalId,
   });
   const specialties = Array.isArray(rawSpecialties) ? rawSpecialties : [];
+  const displaySpecialties = currentHospitalId && hospitalSpecialties.length > 0 ? hospitalSpecialties : (currentHospitalId ? hospitalSpecialties : specialties);
 
   const { data: rawHospitals } = useQuery({
     queryKey: ['admin-hospitals-all'],
@@ -229,6 +257,31 @@ export function DoctorDetailDialog({
       });
     }
     setIsEditing(false);
+  };
+
+  // Toggle Booking Status Mutation (Ẩn / Hiện bác sĩ trên nền tảng)
+  const toggleBookingMutation = useMutation({
+    mutationFn: (newStatus: boolean) =>
+      adminService.updateDoctor(doctorId!, { isActive: newStatus }),
+    onSuccess: (_, newStatus) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-doctor-detail', doctorId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-doctors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-hospital-detail'] });
+      showToast(
+        newStatus
+          ? 'Đã mở lại nhận đặt lịch. Bác sĩ sẽ hiển thị trên nền tảng.'
+          : 'Đã ngừng nhận đặt lịch. Bác sĩ đã được ẩn khỏi nền tảng.'
+      );
+      if (onSuccess) onSuccess();
+    },
+    onError: (err: any) => {
+      showToast('Lỗi khi cập nhật trạng thái: ' + (err?.message || 'Vui lòng thử lại'));
+    },
+  });
+
+  const handleToggleBooking = () => {
+    const currentActive = doctor?.isActive !== undefined ? doctor.isActive : true;
+    toggleBookingMutation.mutate(!currentActive);
   };
 
   // Workplace actions
@@ -415,149 +468,139 @@ export function DoctorDetailDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className={`max-w-4xl p-6 sm:p-8 rounded-3xl max-h-[90vh] overflow-y-auto ${isLight ? 'bg-white text-slate-950 border-slate-200' : 'bg-slate-950 text-white border-slate-800'}`}>
-          <DialogHeader className="border-b pb-4 border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+          <DialogHeader className="border-b pb-3.5 border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between gap-4">
             <div>
-              <DialogTitle className="text-xl font-black flex items-center gap-2.5">
-                <UserCheck className="w-6 h-6 text-[#0c4b39] dark:text-[#66FF33]" />
+              <DialogTitle className="text-base sm:text-lg font-semibold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                <UserCheck className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                 Chi tiết Hồ sơ Bác sĩ
               </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500 font-medium mt-0.5">
-                Xem và chỉnh sửa thông tin cá nhân, nơi công tác, lịch làm việc & thống kê bác sĩ.
+              <DialogDescription className="text-xs text-slate-500 font-normal mt-0.5">
+                Xem thông tin chuyên môn, nơi công tác và lịch trực khám của bác sĩ.
               </DialogDescription>
             </div>
 
-            <div className="flex items-center gap-2 pr-6">
-              {readOnly ? (
-                <Badge variant="outline" className="text-emerald-400 border-emerald-500/40 bg-emerald-500/10 text-xs font-semibold px-2.5 py-1">
-                  Chế độ Giám sát (Read-Only)
-                </Badge>
-              ) : !isEditing ? (
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  className="bg-[#0c4b39] hover:bg-[#09392b] text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm"
-                >
-                  <Edit3 className="w-3.5 h-3.5" /> Chỉnh sửa
-                </Button>
+            <div className="flex items-center gap-2 pr-6 shrink-0">
+              {doctor?.isActive ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 font-normal">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Đang nhận đặt lịch
+                </span>
               ) : (
-                <>
-                  <Button variant="outline" size="sm" onClick={handleCancelEdit} className="text-xs font-bold rounded-xl px-3">
-                    <X className="w-3.5 h-3.5 mr-1" /> Hủy
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveInfo}
-                    disabled={updateDoctorMutation.isPending}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl px-4 flex items-center gap-1"
-                  >
-                    {updateDoctorMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    Lưu
-                  </Button>
-                </>
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-800 font-normal">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                  Ngừng nhận lịch (Đã ẩn)
+                </span>
               )}
             </div>
           </DialogHeader>
 
           {isLoading ? (
             <div className="py-16 flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-[#0c4b39]" />
-              <p className="text-xs text-slate-500 font-bold">Đang tải hồ sơ bác sĩ...</p>
+              <Loader2 className="w-6 h-6 animate-spin text-slate-600" />
+              <p className="text-xs text-slate-500 font-normal">Đang tải hồ sơ bác sĩ...</p>
             </div>
           ) : (
-            <div className="space-y-6 pt-4 font-sans">
+            <div className="space-y-5 pt-3 font-sans">
               {/* Toast Notification Banner */}
               {toastMessage && (
-                <div className="flex items-center gap-3 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-lg font-bold text-xs">
-                  <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                <div className="flex items-center gap-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2.5 rounded-xl shadow font-medium text-xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
                   <span>{toastMessage}</span>
                 </div>
               )}
 
-              {/* BANNER AVATAR LỚN & THÔNG TIN CHÍNH */}
-              <Card className={`${cardBg} rounded-3xl p-5 sm:p-6 border relative`}>
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+              {/* CARD TỔNG QUAN BÁC SĨ (TRẮNG ĐEN / SLATE TỐI GIẢN) */}
+              <div className="rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                   <div className="relative group shrink-0">
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
-                      {formData.avatarUrl || doctor?.avatarUrl ? (
-                        <img
-                          src={isEditing ? formData.avatarUrl : (formData.avatarUrl || doctor?.avatarUrl)}
-                          alt={formData.fullName || doctor?.fullName || ''}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <UserCheck className="w-12 h-12 text-slate-400" />
-                      )}
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center">
+                      {(() => {
+                        const avatarToDisplay = (isEditing
+                          ? (formData.avatarUrl || doctor?.avatarUrl)
+                          : (formData.avatarUrl || doctor?.avatarUrl))?.trim();
+                        if (avatarToDisplay) {
+                          return (
+                            <img
+                              src={avatarToDisplay}
+                              alt={formData.fullName || doctor?.fullName || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          );
+                        }
+                        return <UserCheck className="w-10 h-10 text-slate-400" />;
+                      })()}
                     </div>
                   </div>
 
-                  <div className="flex-1 text-center sm:text-left space-y-2">
+                  <div className="flex-1 text-center sm:text-left space-y-1.5">
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                      <Badge variant="outline" className="bg-emerald-50 text-[#0c4b39] border-emerald-300 dark:bg-emerald-950 dark:text-[#66FF33] font-black text-[11px] px-2.5 py-0.5">
+                      <Badge variant="outline" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 font-normal text-xs px-2.5 py-0.5">
                         {formData.title || doctor?.title || 'BS.'}
                       </Badge>
-                      {formData.isActive ? (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 font-bold text-[11px] px-2.5 py-0.5 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" /> Đang hoạt động
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 font-bold text-[11px] px-2.5 py-0.5 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Tạm ngưng
-                        </Badge>
-                      )}
+                      <span className="text-xs text-slate-500 font-normal">
+                        Mã: {doctor?.externalId || doctor?.id?.slice(0, 8)}
+                      </span>
                     </div>
 
-                    <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">
                       {formData.fullName || doctor?.fullName}
                     </h2>
 
-                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center justify-center sm:justify-start gap-2">
-                      <Award className="w-4 h-4 text-emerald-600" />
-                      <span>{formData.qualification || doctor?.qualification}</span>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center justify-center sm:justify-start gap-2 font-normal">
+                      <span>{formData.qualification || doctor?.qualification || 'Bác sĩ chuyên khoa'}</span>
                       <span>•</span>
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span>{formData.yearsOfExperience || doctor?.yearsOfExperience} năm kinh nghiệm</span>
+                      <span>{formData.yearsOfExperience || doctor?.yearsOfExperience || 0} năm kinh nghiệm</span>
                     </p>
                   </div>
                 </div>
-              </Card>
+              </div>
 
-              {/* TAB NAVIGATION */}
-              <div className={`p-1 rounded-2xl border flex items-center gap-1 overflow-x-auto ${isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+              {/* TAB NAVIGATION (THANH ĐIỀU HƯỚNG TỐI GIẢN) */}
+              <div className="p-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900 flex items-center gap-1 overflow-x-auto">
                 <button
+                  type="button"
                   onClick={() => setActiveTab('INFO')}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'INFO'
-                      ? 'bg-[#0c4b39] text-white shadow'
-                      : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
-                    }`}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeTab === 'INFO'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-medium'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-normal'
+                  }`}
                 >
                   <User className="w-3.5 h-3.5" /> 1. Thông tin
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setActiveTab('WORKPLACE')}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'WORKPLACE'
-                      ? 'bg-[#0c4b39] text-white shadow'
-                      : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
-                    }`}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeTab === 'WORKPLACE'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-medium'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-normal'
+                  }`}
                 >
                   <Building2 className="w-3.5 h-3.5" /> 2. Nơi công tác ({doctor?.workPlaces?.length || 0})
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setActiveTab('SCHEDULE')}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'SCHEDULE'
-                      ? 'bg-[#0c4b39] text-white shadow'
-                      : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
-                    }`}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeTab === 'SCHEDULE'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-medium'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-normal'
+                  }`}
                 >
                   <Calendar className="w-3.5 h-3.5" /> 3. Lịch làm việc
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setActiveTab('STATS')}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'STATS'
-                      ? 'bg-[#0c4b39] text-white shadow'
-                      : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
-                    }`}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeTab === 'STATS'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-medium'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-normal'
+                  }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5" /> 4. Thống kê
                 </button>
@@ -565,36 +608,41 @@ export function DoctorDetailDialog({
 
               {/* TAB 1: THÔNG TIN */}
               {activeTab === 'INFO' && (
-                <Card className={`${cardBg} rounded-3xl p-5 space-y-5 border`}>
+                <div className="rounded-xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                   {!isEditing ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                       <div>
-                        <span className="text-slate-400 font-bold block mb-0.5">Họ và tên:</span>
-                        <p className="font-extrabold text-sm">{doctor?.fullName}</p>
+                        <span className="text-slate-400 font-normal block mb-0.5">Họ và tên</span>
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">{doctor?.fullName}</p>
                       </div>
                       <div>
-                        <span className="text-slate-400 font-bold block mb-0.5">Chức danh:</span>
-                        <p className="font-bold">{doctor?.title || 'BS.'}</p>
+                        <span className="text-slate-400 font-normal block mb-0.5">Chức danh</span>
+                        <p className="font-medium text-slate-800 dark:text-slate-200">{doctor?.title || 'BS.'}</p>
                       </div>
                       <div>
-                        <span className="text-slate-400 font-bold block mb-0.5">Trình độ chuyên môn:</span>
-                        <p className="font-bold text-emerald-600">{doctor?.qualification}</p>
+                        <span className="text-slate-400 font-normal block mb-0.5">Chuyên khoa</span>
+                        <p className="font-medium text-slate-800 dark:text-slate-200">
+                          {doctor?.workPlaces?.find((w: any) => w.isPrimary)?.specialty?.name ||
+                            doctor?.workPlaces?.[0]?.specialty?.name ||
+                            doctor?.qualification ||
+                            'Chưa phân chuyên khoa'}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-slate-400 font-bold block mb-0.5">Kinh nghiệm:</span>
-                        <p className="font-bold">{doctor?.yearsOfExperience} năm</p>
+                        <span className="text-slate-400 font-normal block mb-0.5">Kinh nghiệm</span>
+                        <p className="font-medium text-slate-800 dark:text-slate-200">{doctor?.yearsOfExperience || 0} năm</p>
                       </div>
                       <div>
-                        <span className="text-slate-400 font-bold block mb-0.5">Giới tính:</span>
-                        <p className="font-bold">{doctor?.gender === 'MALE' ? 'Nam' : doctor?.gender === 'FEMALE' ? 'Nữ' : 'Khác'}</p>
+                        <span className="text-slate-400 font-normal block mb-0.5">Giới tính</span>
+                        <p className="font-medium text-slate-800 dark:text-slate-200">{doctor?.gender === 'MALE' ? 'Nam' : doctor?.gender === 'FEMALE' ? 'Nữ' : 'Khác'}</p>
                       </div>
                       <div>
-                        <span className="text-slate-400 font-bold block mb-0.5">Nguồn dữ liệu:</span>
-                        <Badge variant="outline">{doctor?.source || 'MANUAL'}</Badge>
+                        <span className="text-slate-400 font-normal block mb-0.5">Nguồn dữ liệu</span>
+                        <Badge variant="outline" className="border-slate-200 dark:border-slate-700 font-normal text-xs">{doctor?.source || 'MANUAL'}</Badge>
                       </div>
-                      <div className="sm:col-span-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-400 font-bold block mb-1">Tiểu sử & Giới thiệu:</span>
-                        <p className="text-xs leading-relaxed font-medium bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <div className="sm:col-span-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <span className="text-slate-400 font-normal block mb-1">Tiểu sử & Giới thiệu</span>
+                        <p className="text-xs leading-relaxed font-normal bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
                           {doctor?.bio || 'Chưa cập nhật nội dung giới thiệu.'}
                         </p>
                       </div>
@@ -602,19 +650,19 @@ export function DoctorDetailDialog({
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                       <div className="space-y-1">
-                        <label className="font-bold block">Họ và tên *</label>
+                        <label className="font-medium text-slate-700 dark:text-slate-300 block">Họ và tên *</label>
                         <Input
                           value={formData.fullName}
                           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                          className={`text-xs rounded-xl font-bold ${inputBg}`}
+                          className={`text-xs rounded-lg font-normal ${inputBg}`}
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold block">Chức danh *</label>
+                        <label className="font-medium text-slate-700 dark:text-slate-300 block">Chức danh *</label>
                         <select
                           value={formData.title}
                           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          className={`w-full text-xs font-bold rounded-xl p-2.5 border ${inputBg}`}
+                          className={`w-full text-xs font-normal rounded-lg p-2 border ${inputBg}`}
                         >
                           <option value="BS.">BS.</option>
                           <option value="BS.CKI">BS.CKI</option>
@@ -625,71 +673,90 @@ export function DoctorDetailDialog({
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold block">Chuyên môn *</label>
-                        <Input
+                        <label className="font-medium text-slate-700 dark:text-slate-300 block">Chuyên khoa của bệnh viện *</label>
+                        <select
                           value={formData.qualification}
                           onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-                          className={`text-xs rounded-xl font-bold ${inputBg}`}
-                        />
+                          className={`w-full text-xs font-normal rounded-lg p-2 border ${inputBg}`}
+                        >
+                          <option value="">-- Chọn chuyên khoa của bệnh viện --</option>
+                          {displaySpecialties.map((s: any) => (
+                            <option key={s.id} value={s.name}>
+                              {s.name}
+                            </option>
+                          ))}
+                          {formData.qualification && !displaySpecialties.some((s: any) => s.name === formData.qualification) && (
+                            <option value={formData.qualification}>{formData.qualification}</option>
+                          )}
+                        </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold block">Số năm kinh nghiệm</label>
+                        <label className="font-medium text-slate-700 dark:text-slate-300 block">Số năm kinh nghiệm</label>
                         <Input
                           type="number"
                           value={formData.yearsOfExperience}
                           onChange={(e) => setFormData({ ...formData, yearsOfExperience: parseInt(e.target.value) || 0 })}
-                          className={`text-xs rounded-xl font-bold ${inputBg}`}
+                          className={`text-xs rounded-lg font-normal ${inputBg}`}
                         />
                       </div>
                       <div className="sm:col-span-2 space-y-1">
-                        <label className="font-bold block">Tiểu sử bác sĩ</label>
+                        <label className="font-medium text-slate-700 dark:text-slate-300 block">URL Ảnh đại diện (Avatar)</label>
+                        <Input
+                          placeholder="https://..."
+                          value={formData.avatarUrl}
+                          onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
+                          className={`text-xs rounded-lg font-normal ${inputBg}`}
+                        />
+                      </div>
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="font-medium text-slate-700 dark:text-slate-300 block">Tiểu sử bác sĩ</label>
                         <textarea
                           rows={3}
                           value={formData.bio}
                           onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                          className={`w-full text-xs font-medium p-2.5 rounded-xl border ${inputBg}`}
+                          className={`w-full text-xs font-normal p-2.5 rounded-lg border ${inputBg}`}
                         />
                       </div>
                     </div>
                   )}
-                </Card>
+                </div>
               )}
 
               {/* TAB 2: NƠI CÔNG TÁC */}
               {activeTab === 'WORKPLACE' && (
-                <Card className={`${cardBg} rounded-3xl p-5 space-y-4 border`}>
-                  <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
-                    <h3 className="font-black text-xs uppercase tracking-wider text-[#0c4b39] dark:text-[#66FF33] flex items-center gap-1.5">
-                      <Building2 className="w-4 h-4" /> Danh sách nơi công tác
+                <div className="rounded-xl p-4 sm:p-5 space-y-3 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                  <div className="flex items-center justify-between border-b pb-2.5 border-slate-200 dark:border-slate-800">
+                    <h3 className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-slate-500" /> Danh sách nơi công tác
                     </h3>
                     {!readOnly && (
-                      <Button onClick={handleOpenAddWorkplace} size="sm" className="bg-[#0c4b39] text-white text-xs font-bold rounded-xl">
+                      <Button onClick={handleOpenAddWorkplace} size="sm" variant="outline" className="text-xs font-medium rounded-lg h-8">
                         <Plus className="w-3.5 h-3.5 mr-1" /> Thêm nơi công tác
                       </Button>
                     )}
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {(doctor.workPlaces || []).map((wp: any) => (
-                      <div key={wp.id} className="p-4 rounded-2xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                      <div key={wp.id} className="p-3.5 rounded-xl border bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-black">🏥 {wp.hospital?.name}</span>
-                            {wp.isPrimary && <Badge className="bg-emerald-600 text-white text-[9px]">Chính</Badge>}
+                            <span className="font-medium text-slate-900 dark:text-slate-100">🏥 {wp.hospital?.name}</span>
+                            {wp.isPrimary && <Badge variant="outline" className="text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700">Chính</Badge>}
                           </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Chuyên khoa: <strong className="text-emerald-600">{wp.specialty?.name}</strong> • Giá khám: <strong>{Number(wp.consultationFee || 0).toLocaleString('vi-VN')} đ</strong>
+                          <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
+                            Chuyên khoa: <span className="font-medium text-slate-700 dark:text-slate-300">{wp.specialty?.name}</span> • Giá khám: <span className="font-medium text-slate-700 dark:text-slate-300">{Number(wp.consultationFee || 0).toLocaleString('vi-VN')} đ</span>
                           </p>
                         </div>
 
                         {!readOnly && (
                           <div className="flex items-center gap-2">
                             {!wp.isPrimary && (
-                              <Button size="sm" variant="outline" onClick={() => handleSetPrimaryWorkplace(wp.id)} className="text-[11px]">
+                              <Button size="sm" variant="outline" onClick={() => handleSetPrimaryWorkplace(wp.id)} className="text-[11px] h-7">
                                 Đặt làm chính
                               </Button>
                             )}
-                            <Button size="sm" variant="outline" onClick={() => handleToggleWorkplaceStatus(wp.id, wp.isActive)} className="text-[11px]">
+                            <Button size="sm" variant="outline" onClick={() => handleToggleWorkplaceStatus(wp.id, wp.isActive)} className="text-[11px] h-7">
                               {wp.isActive ? 'Ngừng công tác' : 'Kích hoạt'}
                             </Button>
                           </div>
@@ -697,36 +764,36 @@ export function DoctorDetailDialog({
                       </div>
                     ))}
                   </div>
-                </Card>
+                </div>
               )}
 
               {/* TAB 3: LỊCH LÀM VIỆC */}
               {activeTab === 'SCHEDULE' && (
-                <Card className={`${cardBg} rounded-3xl p-5 space-y-4 border`}>
-                  <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
-                    <h3 className="font-black text-xs uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4" /> Ca làm việc theo tuần
+                <div className="rounded-xl p-4 sm:p-5 space-y-3 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                  <div className="flex items-center justify-between border-b pb-2.5 border-slate-200 dark:border-slate-800">
+                    <h3 className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-slate-500" /> Ca làm việc theo tuần
                     </h3>
                     {!readOnly && (
-                      <Button onClick={handleOpenAddSchedule} size="sm" className="bg-[#0c4b39] text-white text-xs font-bold rounded-xl">
+                      <Button onClick={handleOpenAddSchedule} size="sm" variant="outline" className="text-xs font-medium rounded-lg h-8">
                         <Plus className="w-3.5 h-3.5 mr-1" /> Thêm ca làm
                       </Button>
                     )}
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {(doctor.workPlaces || []).map((wp: any) => (
                       <div key={wp.id} className="space-y-2">
-                        <span className="font-bold text-xs text-slate-500">🏥 {wp.hospital?.name} ({wp.specialty?.name})</span>
+                        <span className="text-xs font-medium text-slate-500">🏥 {wp.hospital?.name} ({wp.specialty?.name})</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {(wp.schedules || []).map((sch: any) => (
-                            <div key={sch.id} className="p-3 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                            <div key={sch.id} className="p-3 rounded-lg border bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
                               <div>
-                                <span className="font-bold text-emerald-600">{DAY_NAMES[sch.dayOfWeek] || `Thứ ${sch.dayOfWeek}`}</span>
-                                <p className="text-[11px] font-semibold">{sch.startTime} - {sch.endTime}</p>
+                                <span className="font-medium text-slate-800 dark:text-slate-200">{DAY_NAMES[sch.dayOfWeek] || `Thứ ${sch.dayOfWeek}`}</span>
+                                <p className="text-[11px] text-slate-500 mt-0.5">{sch.startTime} - {sch.endTime}</p>
                               </div>
                               {!readOnly && (
-                                <button onClick={() => handleDeleteSchedule(sch.id)} className="text-rose-600 hover:underline text-[11px]">
+                                <button onClick={() => handleDeleteSchedule(sch.id)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-[11px]">
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               )}
@@ -736,34 +803,131 @@ export function DoctorDetailDialog({
                       </div>
                     ))}
                   </div>
-                </Card>
+                </div>
               )}
 
               {/* TAB 4: THỐNG KÊ */}
               {activeTab === 'STATS' && (
-                <Card className={`${cardBg} rounded-3xl p-5 space-y-4 border`}>
-                  <h3 className="font-black text-xs uppercase tracking-wider text-amber-600 flex items-center gap-1.5 border-b pb-2 border-slate-200 dark:border-slate-800">
-                    <BarChart3 className="w-4 h-4" /> Chỉ số thống kê (Read-only)
+                <div className="rounded-xl p-4 sm:p-5 space-y-3 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                  <h3 className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 border-b pb-2.5 border-slate-200 dark:border-slate-800">
+                    <BarChart3 className="w-4 h-4 text-slate-500" /> Chỉ số thống kê (Read-only)
                   </h3>
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
-                      <Star className="w-6 h-6 text-amber-500 mx-auto mb-1 fill-amber-500" />
-                      <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300">Đánh giá trung bình</p>
-                      <h4 className="text-xl font-black text-amber-600">{doctor?.rating || 5.0} / 5.0</h4>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                      <Star className="w-5 h-5 text-amber-500 mx-auto mb-1 fill-amber-500" />
+                      <p className="text-[11px] text-slate-500 font-normal">Đánh giá trung bình</p>
+                      <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{doctor?.rating || 5.0} / 5.0</h4>
                     </div>
-                    <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
-                      <Award className="w-6 h-6 text-blue-600 mx-auto mb-1" />
-                      <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300">Lượt đánh giá</p>
-                      <h4 className="text-xl font-black text-blue-600">{doctor?.reviewCount || 0}</h4>
+                    <div className="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                      <Award className="w-5 h-5 text-slate-600 dark:text-slate-400 mx-auto mb-1" />
+                      <p className="text-[11px] text-slate-500 font-normal">Lượt đánh giá</p>
+                      <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{doctor?.reviewCount || 0}</h4>
                     </div>
-                    <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
-                      <Stethoscope className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
-                      <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">Lượt khám</p>
-                      <h4 className="text-xl font-black text-emerald-600">{doctor?.consultationCount || 0}</h4>
+                    <div className="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                      <Stethoscope className="w-5 h-5 text-slate-600 dark:text-slate-400 mx-auto mb-1" />
+                      <p className="text-[11px] text-slate-500 font-normal">Lượt khám</p>
+                      <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{doctor?.consultationCount || 0}</h4>
                     </div>
                   </div>
-                </Card>
+                </div>
               )}
+
+              {/* FOOTER ĐIỀU KHIỂN CHÍNH: CHỈNH SỬA, NGỪNG/MỞ NHẬN ĐẶT LỊCH, ĐÓNG */}
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* Nút Ngừng / Mở lại nhận đặt lịch */}
+                <div>
+                  {!isEditing && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={toggleBookingMutation.isPending}
+                      onClick={handleToggleBooking}
+                      className={`text-xs font-medium rounded-lg h-9 px-3.5 border transition ${
+                        doctor?.isActive
+                          ? 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          : 'border-slate-900 dark:border-slate-100 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800'
+                      }`}
+                    >
+                      {toggleBookingMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          Đang cập nhật...
+                        </>
+                      ) : doctor?.isActive ? (
+                        <>
+                          <Power className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
+                          Ngừng nhận đặt lịch
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                          Mở lại nhận đặt lịch
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Các nút Chỉnh sửa / Hủy / Lưu / Đóng */}
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  {!isEditing ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onOpenChange(false)}
+                        className="text-xs font-medium rounded-lg h-9 px-4 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        Đóng
+                      </Button>
+                      {!readOnly && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setIsEditing(true)}
+                          className="bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-medium rounded-lg h-9 px-4 shadow-xs"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 mr-1.5" />
+                          Chỉnh sửa thông tin
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancelEdit}
+                        className="text-xs font-medium rounded-lg h-9 px-4 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        Hủy
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleSaveInfo}
+                        disabled={updateDoctorMutation.isPending}
+                        className="bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-medium rounded-lg h-9 px-4 shadow-xs"
+                      >
+                        {updateDoctorMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            Đang lưu...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-3.5 h-3.5 mr-1.5" />
+                            Lưu thay đổi
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -800,16 +964,16 @@ export function DoctorDetailDialog({
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold block">Chuyên khoa *</label>
+              <label className="font-bold block">Chuyên khoa của bệnh viện *</label>
               <select
                 value={wpForm.specialtyId}
                 onChange={(e) => setWpForm({ ...wpForm, specialtyId: e.target.value })}
                 className={`w-full text-xs font-bold rounded-xl p-2.5 border ${inputBg}`}
               >
-                {specialties.map((s: any) => (
+                <option value="">-- Chọn chuyên khoa của bệnh viện --</option>
+                {hospitalSpecialties.map((s: any) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
-                {specialties.length === 0 && <option value="spec-1">Tim mạch</option>}
               </select>
             </div>
 

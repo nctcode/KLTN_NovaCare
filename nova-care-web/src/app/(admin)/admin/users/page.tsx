@@ -422,9 +422,9 @@ function AdminUsersContent() {
                     >
                       {/* Avatar */}
                       <td className="py-2.5 px-3 align-middle text-center">
-                        {user.avatarUrl ? (
+                        {user.avatarUrl && user.avatarUrl.trim() ? (
                           <img
-                            src={user.avatarUrl}
+                            src={user.avatarUrl.trim()}
                             alt={user.fullName}
                             className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700 inline-block"
                           />

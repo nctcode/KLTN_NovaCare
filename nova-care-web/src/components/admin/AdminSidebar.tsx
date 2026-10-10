@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAdminTheme } from './AdminThemeContext';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   LayoutDashboard,
   Users,
@@ -23,6 +24,8 @@ import {
   BarChart2,
   ClipboardList,
   Network,
+  UserPlus,
+  MapPin,
 } from 'lucide-react';
 
 interface SubMenuItem {
@@ -44,118 +47,63 @@ interface MenuGroup {
 const ADMIN_MENU_CONFIG: MenuGroup[] = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Tổng quan nền tảng',
     icon: LayoutDashboard,
     href: '/admin',
   },
   {
-    id: 'users-group',
-    label: 'Quản lý người dùng',
-    icon: Users,
-    items: [
-      {
-        id: 'users-list',
-        label: 'Danh sách người dùng',
-        href: '/admin/users',
-        icon: Users,
-        exact: true,
-      },
-      {
-        id: 'users-roles',
-        label: 'Vai trò & Phân quyền',
-        href: '/admin/users/roles',
-        icon: ShieldCheck,
-      },
-      {
-        id: 'users-activity',
-        label: 'Lịch sử hoạt động',
-        href: '/admin/users/activity',
-        icon: History,
-      },
-    ],
-  },
-  {
-    id: 'hospitals-group',
-    label: 'Quản lý bệnh viện',
+    id: 'hospitals-partner',
+    label: 'Bệnh viện đối tác',
     icon: Building2,
-    items: [
-      {
-        id: 'hospitals-list',
-        label: 'Danh sách bệnh viện',
-        href: '/admin/hospitals',
-        icon: Building2,
-      },
-      {
-        id: 'specialties',
-        label: 'Chuyên khoa',
-        href: '/admin/specialties',
-        icon: Stethoscope,
-      },
-      {
-        id: 'doctors',
-        label: 'Bác sĩ',
-        href: '/admin/doctors',
-        icon: UserCheck,
-      },
-      {
-        id: 'schedules',
-        label: 'Lịch trực bác sĩ',
-        href: '/admin/schedules',
-        icon: Calendar,
-      },
-    ],
+    href: '/admin/hospitals',
   },
   {
-    id: 'appointments-group',
-    label: 'Quản lý lịch hẹn',
-    icon: CalendarCheck,
-    items: [
-      {
-        id: 'appointments-list',
-        label: 'Danh sách lịch hẹn',
-        href: '/admin/appointments',
-        icon: CalendarCheck,
-        exact: true,
-      },
-      {
-        id: 'appointments-today',
-        label: 'Lịch hẹn hôm nay',
-        href: '/admin/appointments/today',
-        icon: Clock,
-      },
-      {
-        id: 'appointments-history',
-        label: 'Lịch sử khám',
-        href: '/admin/appointments/history',
-        icon: FileText,
-      },
-    ],
+    id: 'partner-requests',
+    label: 'Đăng ký hợp tác',
+    icon: UserPlus,
+    href: '/admin/partner-requests',
   },
   {
-    id: 'interoperability-group',
-    label: 'Giám sát liên thông',
+    id: 'hospital-admins',
+    label: 'Tài khoản Quản trị viện',
+    icon: ShieldCheck,
+    href: '/admin/users/roles',
+  },
+  {
+    id: 'his-sync',
+    label: 'Tích hợp HIS / API',
+    icon: Network,
+    href: '/admin/his-sync',
+  },
+  {
+    id: 'interoperability',
+    label: 'Liên thông Bệnh án',
     icon: Share2,
-    items: [
-      {
-        id: 'interop-overview',
-        label: 'Tổng quan',
-        href: '/admin/interoperability',
-        icon: Activity,
-        exact: true,
-      },
-      {
-        id: 'interop-lookups',
-        label: 'Lượt tra cứu',
-        href: '/admin/interoperability?tab=lookups',
-        icon: BarChart2,
-      },
-      {
-        id: 'interop-audit',
-        label: 'Audit Log',
-        href: '/admin/interoperability?tab=audit',
-        icon: ClipboardList,
-      },
-    ],
+    href: '/admin/interoperability',
+  },
+  {
+    id: 'appointments-monitor',
+    label: 'Giám sát đặt lịch',
+    icon: CalendarCheck,
+    href: '/admin/appointments',
+  },
+  {
+    id: 'audit-logs',
+    label: 'Nhật ký hệ thống',
+    icon: History,
+    href: '/admin/audit-logs',
+  },
+  {
+    id: 'master-specialties',
+    label: 'Cấu hình & Danh mục chuẩn',
+    icon: Stethoscope,
+    href: '/admin/specialties',
+  },
+  {
+    id: 'users-list',
+    label: 'Người dùng & Bệnh nhân',
+    icon: Users,
+    href: '/admin/users',
   },
 ];
 
@@ -164,6 +112,70 @@ function AdminSidebarInner() {
   const searchParams = useSearchParams();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
+  const { user } = useAuthStore();
+
+  const isHospitalAdmin = user?.role === 'HOSPITAL_ADMIN';
+  const hospitalId = user?.hospitalId || '';
+
+  // Dynamic menu configuration based on role
+  const menuConfig: MenuGroup[] = isHospitalAdmin
+    ? [
+        {
+          id: 'dashboard',
+          label: 'Tổng quan Bệnh viện',
+          icon: LayoutDashboard,
+          href: '/admin',
+        },
+        {
+          id: 'hospital-doctors',
+          label: 'Đội ngũ Bác sĩ',
+          icon: UserCheck,
+          href: '/admin/doctors',
+        },
+        {
+          id: 'hospital-services',
+          label: 'Dịch vụ Y tế',
+          icon: ClipboardList,
+          href: '/admin/medical-services',
+        },
+        {
+          id: 'hospital-packages',
+          label: 'Gói khám Sức khỏe',
+          icon: Stethoscope,
+          href: '/admin/health-packages',
+        },
+        {
+          id: 'hospital-specialties',
+          label: 'Chuyên khoa Tiếp nhận',
+          icon: Activity,
+          href: '/admin/specialties',
+        },
+        {
+          id: 'schedules-menu',
+          label: 'Lịch trực & Ca khám',
+          icon: Calendar,
+          href: '/admin/schedules',
+        },
+        {
+          id: 'appointments-menu',
+          label: 'Lịch hẹn Bệnh nhân',
+          icon: CalendarCheck,
+          href: '/admin/appointments',
+        },
+        {
+          id: 'his-sync-menu',
+          label: 'Cổng Đồng bộ HIS',
+          icon: Network,
+          href: '/admin/his-sync',
+        },
+        {
+          id: 'my-hospital',
+          label: 'Hồ sơ Cơ sở Y tế',
+          icon: Building2,
+          href: `/admin/hospitals/${hospitalId}`,
+        },
+      ]
+    : ADMIN_MENU_CONFIG;
 
   // Helper to determine if a sub-item is active
   const checkSubItemActive = (sub: SubMenuItem) => {
@@ -214,12 +226,12 @@ function AdminSidebarInner() {
 
   // Automatically expand group containing active item
   useEffect(() => {
-    ADMIN_MENU_CONFIG.forEach((group) => {
+    menuConfig.forEach((group) => {
       if (group.items?.some((sub) => checkSubItemActive(sub))) {
         setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
       }
     });
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, menuConfig]);
 
   const toggleGroup = (groupId: string) => {
     setOpenGroups((prev) => ({
@@ -238,25 +250,40 @@ function AdminSidebarInner() {
     >
       {/* Brand Header */}
       <div className={`h-16 flex items-center px-5 border-b shrink-0 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-        <Link href="/admin" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
-            N
+        <Link href="/admin" className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
+            {isHospitalAdmin ? 'H' : 'N'}
           </div>
-          <div>
-            <span className="font-bold text-sm tracking-tight block">NovaCare Admin</span>
-            <span className="text-[11px] text-slate-400 block -mt-0.5">Quản trị nền tảng</span>
+          <div className="min-w-0">
+            <span className="font-bold text-sm tracking-tight block truncate">
+              {isHospitalAdmin ? (user?.hospital?.name || 'Cổng Bệnh Viện') : 'NovaCare Admin'}
+            </span>
+            <span className="text-[11px] text-slate-400 block -mt-0.5 truncate">
+              {isHospitalAdmin ? 'Quản trị cơ sở y tế' : 'Quản trị nền tảng'}
+            </span>
           </div>
         </Link>
       </div>
 
       {/* Nav List */}
       <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
-        {ADMIN_MENU_CONFIG.map((group) => {
+        {menuConfig.map((group) => {
           const GroupIcon = group.icon;
 
           // Single item without submenu (e.g. Dashboard)
           if (!group.items && group.href) {
-            const isSingleActive = pathname === group.href;
+            const isSingleActive =
+              group.href === '/admin'
+                ? pathname === '/admin'
+                : group.href === '/admin/users'
+                ? pathname === '/admin/users'
+                : group.href.includes('?tab=')
+                ? pathname.startsWith(`/admin/hospitals/${hospitalId}`) &&
+                  searchParams.get('tab') === group.href.split('?tab=')[1]
+                : group.href === `/admin/hospitals/${hospitalId}`
+                ? pathname === `/admin/hospitals/${hospitalId}` &&
+                  (!searchParams.get('tab') || searchParams.get('tab') === 'overview')
+                : pathname === group.href || (group.href !== '/admin' && pathname.startsWith(group.href));
 
             return (
               <Link
@@ -373,24 +400,7 @@ function AdminSidebarInner() {
           );
         })}
 
-        {/* Secondary: HIS Integration */}
-        <div className="pt-2">
-          <Link
-            href="/admin/his-sync"
-            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
-              pathname.startsWith('/admin/his-sync')
-                ? isLight
-                  ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60'
-                  : 'bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-800/50'
-                : isLight
-                ? 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-                : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-            }`}
-          >
-            <Network className="w-4 h-4 shrink-0 text-slate-400" />
-            <span className="truncate">Tích hợp HIS</span>
-          </Link>
-        </div>
+
       </nav>
 
       {/* Footer */}

@@ -4,7 +4,7 @@ import { AuditLogService } from '@/common/services/audit-log.service';
 
 @Injectable()
 export class AdminHealthPackagesService {
-  constructor(private readonly prisma: PrismaService, private readonly auditLogService: AuditLogService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditLogService: AuditLogService) { }
 
   async findAll(params: {
     page?: number;
@@ -42,6 +42,14 @@ export class AdminHealthPackagesService {
     const orderBy: any = {};
     orderBy[sortField] = sortDirection;
 
+    const statsWhere: any = {};
+    if (params.hospitalId) {
+      statsWhere.hospitalId = params.hospitalId;
+    }
+    if (params.specialtyId) {
+      statsWhere.specialtyId = params.specialtyId;
+    }
+
     const [items, total, totalPackages, activePackages, inactivePackages, hospitalsCount] = await Promise.all([
       this.prisma.healthPackage.findMany({
         where,
@@ -51,10 +59,12 @@ export class AdminHealthPackagesService {
         include: { hospital: true, specialty: true },
       }),
       this.prisma.healthPackage.count({ where }),
-      this.prisma.healthPackage.count(),
-      this.prisma.healthPackage.count({ where: { isActive: true } }),
-      this.prisma.healthPackage.count({ where: { isActive: false } }),
-      this.prisma.hospital.count({ where: { packages: { some: {} } } }),
+      this.prisma.healthPackage.count({ where: statsWhere }),
+      this.prisma.healthPackage.count({ where: { ...statsWhere, isActive: true } }),
+      this.prisma.healthPackage.count({ where: { ...statsWhere, isActive: false } }),
+      params.hospitalId
+        ? this.prisma.healthPackage.count({ where: statsWhere }).then((count) => (count > 0 ? 1 : 0))
+        : this.prisma.hospital.count({ where: { packages: { some: {} } } }),
     ]);
 
     return {

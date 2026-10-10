@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth.store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
@@ -183,9 +185,25 @@ const INITIAL_HOSPITALS: Hospital[] = [
 ];
 
 function AdminHospitalsContent() {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
+
+  useEffect(() => {
+    if (user?.role === 'HOSPITAL_ADMIN' && user?.hospitalId) {
+      router.replace(`/admin/hospitals/${user.hospitalId}`);
+    }
+  }, [user, router]);
+
+  if (user?.role === 'HOSPITAL_ADMIN') {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
 
   // Modal & Toast state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

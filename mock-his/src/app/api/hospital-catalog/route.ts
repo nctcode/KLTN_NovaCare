@@ -150,14 +150,101 @@ function getDoctorsForState(state: 1 | 2): MockDoctor[] {
 
 /**
  * GET /api/hospital-catalog
- * Hỗ trợ tham số query ?state=1 hoặc ?state=2 (mặc định lấy theo currentHisState)
+ * Hỗ trợ tham số query:
+ * - ?scenario=success (hoặc không truyền): Dữ liệu chuẩn mực
+ * - ?scenario=missing_hospital_code: Thiếu mã bệnh viện
+ * - ?scenario=invalid_fee: Bác sĩ có giá khám bị sai kiểu dữ liệu
+ * - ?scenario=missing_staff_id: Bác sĩ bị thiếu mã nhân sự duy nhất staff_id
+ * - ?scenario=unauthorized: Yêu cầu X-API-KEY, nếu thiếu trả về 401
+ * - ?scenario=server_error: Giả lập máy chủ HIS bị lỗi 500
+ * - ?scenario=timeout: Giả lập treo kết nối > 10 giây
+ * - ?state=1 hoặc ?state=2: Chuyển đổi trạng thái dữ liệu (KLTN Delta Sync)
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const scenario = searchParams.get('scenario') || 'success';
   const stateParam = searchParams.get('state');
 
-  const effectiveState: 1 | 2 = stateParam === '2' ? 2 : stateParam === '1' ? 1 : currentHisState;
+  // Kịch bản 1: Giả lập lỗi Server 500
+  if (scenario === 'server_error') {
+    return NextResponse.json(
+      {
+        status: 500,
+        message: 'Lỗi máy chủ HIS nội bộ (500): Database Connection Failed tại cơ sở y tế',
+      },
+      { status: 500 }
+    );
+  }
 
+  // Kịch bản 2: Giả lập lỗi Xác thực 401 Unauthorized
+  if (scenario === 'unauthorized') {
+    const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization');
+    if (!apiKey || apiKey !== 'his_secret_novacare_2026') {
+      return NextResponse.json(
+        {
+          status: 401,
+          message: 'Từ chối truy cập (401 Unauthorized): Thiếu hoặc sai Header X-API-KEY của bệnh viện',
+        },
+        { status: 401 }
+      );
+    }
+  }
+
+  // Kịch bản 3: Giả lập Timeout (Treo kết nối 11 giây)
+  if (scenario === 'timeout') {
+    await new Promise((resolve) => setTimeout(resolve, 11000));
+  }
+
+  const effectiveState: 1 | 2 = stateParam === '2' ? 2 : stateParam === '1' ? 1 : currentHisState;
+  const doctors = getDoctorsForState(effectiveState);
+
+  // Kịch bản 4: Thiếu mã bệnh viện (Missing hospital_code)
+  if (scenario === 'missing_hospital_code') {
+    return NextResponse.json({
+      status: 200,
+      message: 'Lấy dữ liệu nhưng thiếu trường hospital_code',
+      data: {
+        hospital_name: 'Bệnh Viện Đa Khoa Quốc Tế NovaLife',
+        hotline: '1900 6868',
+        departments: DEPARTMENTS,
+        doctors: doctors,
+      },
+    });
+  }
+
+  // Kịch bản 5: Bác sĩ có giá khám bị sai kiểu dữ liệu (String thay vì number)
+  if (scenario === 'invalid_fee') {
+    const corruptDoctors = JSON.parse(JSON.stringify(doctors));
+    corruptDoctors[0].consultation_fee = 'ba trăm năm mươi ngàn'; // Sai kiểu
+    return NextResponse.json({
+      status: 200,
+      message: 'Lấy dữ liệu nhưng có bác sĩ sai định dạng giá khám',
+      data: {
+        hospital_code: 'HIS_BV_NOVALIFE',
+        hospital_name: 'Bệnh Viện Đa Khoa Quốc Tế NovaLife',
+        departments: DEPARTMENTS,
+        doctors: corruptDoctors,
+      },
+    });
+  }
+
+  // Kịch bản 6: Bác sĩ bị thiếu staff_id
+  if (scenario === 'missing_staff_id') {
+    const corruptDoctors = JSON.parse(JSON.stringify(doctors));
+    corruptDoctors[1].staff_id = ''; // Rỗng
+    return NextResponse.json({
+      status: 200,
+      message: 'Lấy dữ liệu nhưng có bác sĩ bị thiếu staff_id',
+      data: {
+        hospital_code: 'HIS_BV_NOVALIFE',
+        hospital_name: 'Bệnh Viện Đa Khoa Quốc Tế NovaLife',
+        departments: DEPARTMENTS,
+        doctors: corruptDoctors,
+      },
+    });
+  }
+
+  // MẶC ĐỊNH: Kịch bản CHUẨN MỰC THÀNH CÔNG (HTTP 200 OK)
   const catalog = {
     hospital_code: 'HIS_BV_NOVALIFE',
     hospital_name: 'Bệnh Viện Đa Khoa Quốc Tế NovaLife',
@@ -172,7 +259,7 @@ export async function GET(request: Request) {
         ? 'Trạng thái 1: Dữ liệu khởi tạo ban đầu (3 bác sĩ)'
         : 'Trạng thái 2: Biến động dữ liệu (BS_001 tăng học vị/giá khám, thêm BS_004)',
     departments: DEPARTMENTS,
-    doctors: getDoctorsForState(effectiveState),
+    doctors: doctors,
   };
 
   return NextResponse.json({

@@ -34,13 +34,47 @@ import {
   AlertTriangle,
   X,
   FileText,
+  Network,
+  Users,
+  UserCheck,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuthStore } from '@/stores/auth.store';
+import { specialtyService } from '@/services/specialty.service';
 
 export default function AdminSpecialtiesPage() {
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+
+  const isHospitalAdmin = user?.role === 'HOSPITAL_ADMIN';
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>(
+    isHospitalAdmin ? (user?.hospitalId || 'ALL') : 'ALL'
+  );
+
+  React.useEffect(() => {
+    if (isHospitalAdmin && user?.hospitalId && selectedHospitalId !== user.hospitalId) {
+      setSelectedHospitalId(user.hospitalId);
+    }
+  }, [isHospitalAdmin, user?.hospitalId]);
+
+  // Load hospitals list for Platform Admin
+  const { data: hospitalsData } = useQuery({
+    queryKey: ['admin-hospitals-simple-list'],
+    queryFn: () => adminService.getHospitals({ limit: 100 }),
+    enabled: !isHospitalAdmin,
+  });
+  const hospitals = hospitalsData?.items || [];
+
+  const isHospitalScope = isHospitalAdmin || (selectedHospitalId !== 'ALL' && !!selectedHospitalId);
+  const effectiveHospitalId = isHospitalAdmin
+    ? (user?.hospitalId || '')
+    : (selectedHospitalId !== 'ALL' ? selectedHospitalId : '');
+
+  const selectedHospitalName = isHospitalAdmin
+    ? (user?.hospital?.name || (user as any)?.hospitalName || 'Bệnh viện của bạn')
+    : (hospitals.find((h: any) => h.id === selectedHospitalId)?.name || '');
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +86,9 @@ export default function AdminSpecialtiesPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedAssignSpecialtyId, setSelectedAssignSpecialtyId] = useState('');
+  const [submittingAssign, setSubmittingAssign] = useState(false);
 
   // Selected Specialty for Detail or Deactivation
   const [selectedSpecialty, setSelectedSpecialty] = useState<any>(null);
@@ -82,26 +119,30 @@ export default function AdminSpecialtiesPage() {
   const [submittingEdit, setSubmittingEdit] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Fetch real specialties list from NestJS database API
+  // Fetch real specialties list from NestJS database API (supports hospital filtering)
   const { data: rawSpecialtiesData, isLoading } = useQuery({
-    queryKey: ['admin-specialties', page, searchTerm, statusFilter],
+    queryKey: ['admin-specialties', page, searchTerm, statusFilter, effectiveHospitalId],
     queryFn: async () => {
       const res = await adminService.getSpecialties({
         page,
         limit,
         search: searchTerm || undefined,
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        hospitalId: effectiveHospitalId || undefined,
       });
       return res;
     },
   });
 
-  // Fetch real detail & applied hospitals for selected specialty
+  // Fetch real detail & applied hospitals / doctors for selected specialty
   const { data: detailData, isLoading: isLoadingDetail } = useQuery({
-    queryKey: ['admin-specialty-detail', selectedSpecialty?.id],
+    queryKey: ['admin-specialty-detail', selectedSpecialty?.id, effectiveHospitalId],
     queryFn: async () => {
       if (!selectedSpecialty?.id) return null;
-      return await adminService.getSpecialtyDetail(selectedSpecialty.id);
+      return await adminService.getSpecialtyDetail(
+        selectedSpecialty.id,
+        effectiveHospitalId || undefined
+      );
     },
     enabled: !!selectedSpecialty?.id && isDetailDialogOpen,
   });
@@ -113,17 +154,55 @@ export default function AdminSpecialtiesPage() {
     activeSpecialties: items.filter((s: any) => s.isActive).length,
     inactiveSpecialties: items.filter((s: any) => !s.isActive).length,
     totalHospitalsUsing: items.reduce((acc: number, cur: any) => acc + (cur.hospitalCount || 0), 0),
+    totalDoctorsUsing: items.reduce((acc: number, cur: any) => acc + (cur.doctorCount || 0), 0),
   };
 
   const totalPages = rawSpecialtiesData?.totalPages || Math.ceil(items.length / limit) || 1;
 
-  // Applied hospitals from backend DB
+  // Applied hospitals or hospital doctors from backend DB
   const appliedHospitals = detailData?.appliedHospitals || selectedSpecialty?.appliedHospitals || [];
+  const hospitalDoctors = detailData?.hospitalDoctors || [];
 
   // Trigger Toast Notification
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Query all platform specialties for hospital assigning
+  const { data: allPlatformSpecialties = [] } = useQuery({
+    queryKey: ['platform-specialties-all'],
+    queryFn: specialtyService.getAll,
+    enabled: isHospitalScope && isAssignDialogOpen,
+  });
+
+  const unassignedSpecialties = (allPlatformSpecialties || []).filter(
+    (ps: any) => !items.some((item: any) => item.id === ps.id || item.name?.toLowerCase().trim() === ps.name?.toLowerCase().trim())
+  );
+
+  // Submit Assign Specialty to Hospital
+  const handleAssignSpecialtySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAssignSpecialtyId) {
+      alert('Vui lòng chọn chuyên khoa cần tiếp nhận');
+      return;
+    }
+    setSubmittingAssign(true);
+    try {
+      await adminService.toggleHospitalSpecialtyStatus(
+        selectedAssignSpecialtyId,
+        true,
+        effectiveHospitalId
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin-specialties'] });
+      setIsAssignDialogOpen(false);
+      setSelectedAssignSpecialtyId('');
+      showToast('Đã thêm chuyên khoa tiếp nhận mới cho cơ sở y tế thành công!');
+    } catch (err: any) {
+      alert('Không thể tiếp nhận chuyên khoa: ' + (err.response?.data?.message || err.message || 'Lỗi hệ thống'));
+    } finally {
+      setSubmittingAssign(false);
+    }
   };
 
   // Open Add Dialog
@@ -228,7 +307,11 @@ export default function AdminSpecialtiesPage() {
     if (!selectedSpecialty) return;
 
     try {
-      await adminService.toggleSpecialtyStatus(selectedSpecialty.id, targetActive);
+      if (isHospitalScope && effectiveHospitalId) {
+        await adminService.toggleHospitalSpecialtyStatus(selectedSpecialty.id, targetActive, effectiveHospitalId);
+      } else {
+        await adminService.toggleSpecialtyStatus(selectedSpecialty.id, targetActive);
+      }
 
       setSelectedSpecialty({ ...selectedSpecialty, isActive: targetActive });
       queryClient.invalidateQueries({ queryKey: ['admin-specialties'] });
@@ -237,8 +320,12 @@ export default function AdminSpecialtiesPage() {
       setIsDeactivateDialogOpen(false);
       showToast(
         targetActive
-          ? `Đã kích hoạt lại chuyên khoa "${selectedSpecialty.name}"`
-          : `Đã ngừng hoạt động chuyên khoa "${selectedSpecialty.name}"`
+          ? (isHospitalScope
+              ? `Đã kích hoạt lại tiếp nhận chuyên khoa "${selectedSpecialty.name}"`
+              : `Đã kích hoạt lại chuyên khoa "${selectedSpecialty.name}"`)
+          : (isHospitalScope
+              ? `Đã tạm ngưng tiếp nhận chuyên khoa "${selectedSpecialty.name}" tại cơ sở y tế`
+              : `Đã ngừng hoạt động chuyên khoa "${selectedSpecialty.name}"`)
       );
     } catch (err: any) {
       alert('Không thể thay đổi trạng thái: ' + (err.response?.data?.message || err.message || 'Lỗi kết nối'));
@@ -282,24 +369,57 @@ export default function AdminSpecialtiesPage() {
               <Stethoscope className="w-5 h-5" />
             </div>
             <div>
-              <h1 className={`text-xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                Danh mục Chuyên khoa
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className={`text-xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  {isHospitalScope ? 'Chuyên khoa Tiếp nhận' : 'Danh mục Chuyên khoa'}
+                </h1>
+                {isHospitalScope && (
+                  <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold py-0.5">
+                    {selectedHospitalName || 'Cơ sở y tế'}
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-slate-500">
-                Quản lý danh mục chuyên khoa chuẩn toàn sàn NovaCare.
+                {isHospitalScope
+                  ? 'Danh mục các chuyên khoa cơ sở y tế đang tiếp nhận khám & điều trị (đồng bộ từ hệ thống HIS/API kết nối).'
+                  : 'Quản lý danh mục chuyên khoa chuẩn toàn sàn NovaCare.'}
               </p>
             </div>
           </div>
         </div>
 
         {/* Top Action Button */}
-        <Button
-          onClick={handleOpenAddModal}
-          className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-lg px-3.5 py-2 h-9 flex items-center gap-1.5 shrink-0 transition shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Thêm chuyên khoa</span>
-        </Button>
+        {isHospitalScope ? (
+          <div className="flex items-center gap-2">
+            <Link href="/admin/his-sync">
+              <Button
+                variant="outline"
+                className="text-xs font-semibold rounded-lg px-3 py-2 h-9 flex items-center gap-1.5 shrink-0 transition"
+              >
+                <Network className="w-4 h-4 text-emerald-600" />
+                <span>Cổng Đồng bộ HIS</span>
+              </Button>
+            </Link>
+            <Button
+              onClick={() => {
+                setSelectedAssignSpecialtyId('');
+                setIsAssignDialogOpen(true);
+              }}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-lg px-3.5 py-2 h-9 flex items-center gap-1.5 shrink-0 transition shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tiếp nhận chuyên khoa</span>
+            </Button>
+          </div>
+        ) : (
+          <Button
+            onClick={handleOpenAddModal}
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-lg px-3.5 py-2 h-9 flex items-center gap-1.5 shrink-0 transition shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Thêm chuyên khoa</span>
+          </Button>
+        )}
       </div>
 
       {/* ========================================== */}
@@ -309,31 +429,39 @@ export default function AdminSpecialtiesPage() {
         {/* Card 1: Total */}
         <Card className={`${cardBg} rounded-xl p-4 border shadow-xs`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tổng chuyên khoa</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {isHospitalScope ? 'Chuyên khoa tiếp nhận' : 'Tổng chuyên khoa'}
+            </span>
             <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
               <Stethoscope className="w-4 h-4" />
             </div>
           </div>
           <p className="text-xl font-bold">{stats.totalSpecialties}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Dữ liệu hệ thống</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            {isHospitalScope ? 'Đồng bộ từ API kết nối' : 'Dữ liệu hệ thống'}
+          </p>
         </Card>
 
         {/* Card 2: Active */}
         <Card className={`${cardBg} rounded-xl p-4 border shadow-xs`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Đang hoạt động</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {isHospitalScope ? 'Đang tiếp nhận' : 'Đang hoạt động'}
+            </span>
             <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{stats.activeSpecialties}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Sẵn sàng áp dụng</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Sẵn sàng nhận lịch</p>
         </Card>
 
         {/* Card 3: Inactive */}
         <Card className={`${cardBg} rounded-xl p-4 border shadow-xs`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tạm ngưng</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {isHospitalScope ? 'Tạm ngưng tiếp nhận' : 'Tạm ngưng'}
+            </span>
             <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
               <Power className="w-4 h-4" />
             </div>
@@ -342,16 +470,22 @@ export default function AdminSpecialtiesPage() {
           <p className="text-[11px] text-slate-400 mt-0.5">Tạm ngưng sử dụng</p>
         </Card>
 
-        {/* Card 4: Hospitals Using */}
+        {/* Card 4: Hospitals Using / Doctors in Hospital */}
         <Card className={`${cardBg} rounded-xl p-4 border shadow-xs`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Bệnh viện áp dụng</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {isHospitalScope ? 'Bác sĩ tại viện' : 'Bệnh viện áp dụng'}
+            </span>
             <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
-              <Building2 className="w-4 h-4" />
+              {isHospitalScope ? <UserCheck className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
             </div>
           </div>
-          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats.totalHospitalsUsing}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Lượt liên kết</p>
+          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+            {isHospitalScope ? (stats.totalDoctorsUsing || 0) : stats.totalHospitalsUsing}
+          </p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            {isHospitalScope ? 'Lượt phân bổ nhân sự' : 'Lượt liên kết'}
+          </p>
         </Card>
       </div>
 
@@ -382,23 +516,49 @@ export default function AdminSpecialtiesPage() {
             )}
           </div>
 
-          {/* Filter Status Dropdown */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs font-medium text-slate-500 shrink-0">Trạng thái:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className={`text-xs rounded-lg px-3 py-1.5 font-normal border transition ${
-                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            >
-              <option value="ALL">Tất cả trạng thái</option>
-              <option value="ACTIVE">Hoạt động</option>
-              <option value="PAUSED">Tạm ngưng</option>
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Hospital Selector Dropdown (for Platform Admin) */}
+            {!isHospitalAdmin && (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-medium text-slate-500 shrink-0">Cơ sở y tế:</span>
+                <select
+                  value={selectedHospitalId}
+                  onChange={(e) => {
+                    setSelectedHospitalId(e.target.value);
+                    setPage(1);
+                  }}
+                  className={`text-xs rounded-lg px-3 py-1.5 font-normal border transition max-w-[200px] truncate ${
+                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                  }`}
+                >
+                  <option value="ALL">Toàn hệ thống (Tất cả)</option>
+                  {hospitals.map((h: any) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Filter Status Dropdown */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-medium text-slate-500 shrink-0">Trạng thái:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className={`text-xs rounded-lg px-3 py-1.5 font-normal border transition ${
+                  isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                }`}
+              >
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="ACTIVE">{isHospitalScope ? 'Đang tiếp nhận' : 'Hoạt động'}</option>
+                <option value="PAUSED">{isHospitalScope ? 'Tạm ngưng tiếp nhận' : 'Tạm ngưng'}</option>
+              </select>
+            </div>
           </div>
         </div>
       </Card>
@@ -414,9 +574,15 @@ export default function AdminSpecialtiesPage() {
                 <th className="py-3 px-3.5 min-w-[60px]">Icon</th>
                 <th className="py-3 px-3.5 min-w-[160px]">Tên chuyên khoa</th>
                 <th className="py-3 px-3.5 min-w-[240px]">Mô tả ngắn</th>
-                <th className="py-3 px-3.5 min-w-[120px] text-center">Bệnh viện</th>
-                <th className="py-3 px-3.5 min-w-[120px]">Trạng thái</th>
-                <th className="py-3 px-3.5 min-w-[100px]">Ngày tạo</th>
+                <th className="py-3 px-3.5 min-w-[120px] text-center">
+                  {isHospitalScope ? 'Bác sĩ tiếp nhận' : 'Bệnh viện'}
+                </th>
+                <th className="py-3 px-3.5 min-w-[120px]">
+                  {isHospitalScope ? 'Trạng thái tiếp nhận' : 'Trạng thái'}
+                </th>
+                <th className="py-3 px-3.5 min-w-[100px]">
+                  {isHospitalScope ? 'Ngày cập nhật' : 'Ngày tạo'}
+                </th>
                 <th className="py-3 px-3.5 min-w-[120px] text-right">Hành động</th>
               </tr>
             </thead>
@@ -436,7 +602,11 @@ export default function AdminSpecialtiesPage() {
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Stethoscope className="w-7 h-7 text-slate-400 opacity-60" />
                       <p className="font-medium text-slate-600 dark:text-slate-400">Không tìm thấy chuyên khoa phù hợp</p>
-                      <p className="text-[11px] text-slate-400">Thử thay đổi từ khóa tìm kiếm hoặc tạo mới</p>
+                      <p className="text-[11px] text-slate-400">
+                        {isHospitalScope
+                          ? 'Cơ sở y tế chưa có chuyên khoa này hoặc chưa đồng bộ từ cổng HIS'
+                          : 'Thử thay đổi từ khóa tìm kiếm hoặc tạo mới'}
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -473,11 +643,22 @@ export default function AdminSpecialtiesPage() {
                       </p>
                     </td>
 
-                    {/* Số bệnh viện đang sử dụng */}
+                    {/* Số bệnh viện đang sử dụng / Số bác sĩ tại viện */}
                     <td className="py-3 px-3.5 text-center">
-                      <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                        {spec.hospitalCount || 0} BV
-                      </span>
+                      {isHospitalScope ? (
+                        <Link
+                          href={`/admin/doctors?specialtyId=${spec.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition"
+                          title="Xem danh sách bác sĩ thuộc chuyên khoa này"
+                        >
+                          <UserCheck className="w-3 h-3" />
+                          <span>{spec.doctorCount || 0} Bác sĩ</span>
+                        </Link>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          {spec.hospitalCount || 0} BV
+                        </span>
+                      )}
                     </td>
 
                     {/* Trạng thái */}
@@ -485,7 +666,7 @@ export default function AdminSpecialtiesPage() {
                       {spec.isActive ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Hoạt động
+                          {isHospitalScope ? 'Tiếp nhận' : 'Hoạt động'}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
@@ -495,9 +676,13 @@ export default function AdminSpecialtiesPage() {
                       )}
                     </td>
 
-                    {/* Ngày tạo */}
+                    {/* Ngày tạo / cập nhật */}
                     <td className="py-3 px-3.5 font-mono text-slate-500 text-[11px]">
-                      {spec.createdAt ? new Date(spec.createdAt).toLocaleDateString('vi-VN') : '---'}
+                      {spec.updatedAt
+                        ? new Date(spec.updatedAt).toLocaleDateString('vi-VN')
+                        : spec.createdAt
+                        ? new Date(spec.createdAt).toLocaleDateString('vi-VN')
+                        : '---'}
                     </td>
 
                     {/* Hành động */}
@@ -514,16 +699,18 @@ export default function AdminSpecialtiesPage() {
                           <Eye className="w-3.5 h-3.5" />
                         </Button>
 
-                        {/* Chỉnh sửa */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenDetailModal(spec, true)}
-                          className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                          title="Chỉnh sửa"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
+                        {/* Chỉnh sửa (chỉ cho Platform Admin) */}
+                        {!isHospitalAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDetailModal(spec, true)}
+                            className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                            title="Chỉnh sửa"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
 
                         {/* Ngừng hoạt động / Kích hoạt lại */}
                         {spec.isActive ? (
@@ -532,7 +719,7 @@ export default function AdminSpecialtiesPage() {
                             size="icon"
                             onClick={() => handleOpenDeactivateModal(spec)}
                             className="h-7 w-7 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                            title="Ngừng hoạt động"
+                            title={isHospitalScope ? 'Tạm ngưng tiếp nhận' : 'Ngừng hoạt động'}
                           >
                             <Power className="w-3.5 h-3.5" />
                           </Button>
@@ -542,7 +729,7 @@ export default function AdminSpecialtiesPage() {
                             size="icon"
                             onClick={() => handleConfirmToggleStatus(true)}
                             className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
-                            title="Kích hoạt lại"
+                            title={isHospitalScope ? 'Kích hoạt tiếp nhận lại' : 'Kích hoạt lại'}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                           </Button>
@@ -560,7 +747,7 @@ export default function AdminSpecialtiesPage() {
         <div className={`p-3.5 border-t ${isLight ? 'border-slate-100 bg-slate-50/50' : 'border-slate-800 bg-slate-900/50'} flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-medium text-slate-500`}>
           <span>
             Hiển thị {items.length > 0 ? (page - 1) * limit + 1 : 0} -{' '}
-            {Math.min(page * limit, rawSpecialtiesData?.total || items.length)} trên tổng số {rawSpecialtiesData?.total || items.length} chuyên khoa CSDL
+            {Math.min(page * limit, rawSpecialtiesData?.total || items.length)} trên tổng số {rawSpecialtiesData?.total || items.length} chuyên khoa {isHospitalScope ? 'tiếp nhận' : 'CSDL'}
           </span>
 
           <div className="flex items-center gap-2">
@@ -799,6 +986,97 @@ export default function AdminSpecialtiesPage() {
       </Dialog>
 
       {/* ========================================== */}
+      {/* 5B. DIALOG: TIẾP NHẬN CHUYÊN KHOA CHO BỆNH VIỆN */}
+      {/* ========================================== */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className={`max-w-lg p-6 rounded-3xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
+          <DialogHeader className="border-b pb-3 border-slate-200 dark:border-slate-800">
+            <DialogTitle className="text-lg font-black flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400">
+              <Stethoscope className="w-5 h-5 stroke-[2.5]" />
+              Tiếp nhận Chuyên khoa mới cho Cơ sở Y tế
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-medium">
+              Chọn chuyên khoa từ danh mục y tế chuẩn của NovaCare để kích hoạt tiếp nhận bệnh nhân tại {selectedHospitalName || 'cơ sở y tế'}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleAssignSpecialtySubmit} className="space-y-4 py-3">
+            <div>
+              <label className="text-xs font-extrabold mb-1.5 block">
+                Chọn Chuyên khoa cần tiếp nhận <span className="text-rose-500">*</span>
+              </label>
+
+              {unassignedSpecialties.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+                  <p className="font-bold">Cơ sở y tế đã tiếp nhận tất cả các chuyên khoa hiện có!</p>
+                  <p className="text-[11px] mt-1 text-slate-500">
+                    Nếu bệnh viện có chuyên khoa đặc thù mới từ máy chủ HIS, vui lòng dùng tính năng Đồng bộ từ Cổng HIS.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                  {unassignedSpecialties.map((spec: any) => (
+                    <label
+                      key={spec.id}
+                      className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition ${
+                        selectedAssignSpecialtyId === spec.id
+                          ? 'border-emerald-600 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+                          : isLight
+                          ? 'border-slate-200 hover:bg-slate-50 text-slate-800'
+                          : 'border-slate-800 hover:bg-slate-900 text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="selectedSpecialty"
+                          value={spec.id}
+                          checked={selectedAssignSpecialtyId === spec.id}
+                          onChange={() => setSelectedAssignSpecialtyId(spec.id)}
+                          className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-white dark:bg-slate-800 border flex items-center justify-center shrink-0">
+                          {spec.icon && spec.icon.startsWith('http') ? (
+                            <img src={spec.icon} alt={spec.name} className="w-full h-full object-cover" />
+                          ) : spec.icon ? (
+                            <span>{spec.icon}</span>
+                          ) : (
+                            <Stethoscope className="w-4 h-4 text-emerald-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold">{spec.name}</p>
+                          <p className="text-[10px] text-slate-500 line-clamp-1">{spec.description || 'Chuyên khoa y tế chuẩn'}</p>
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAssignDialogOpen(false)}
+                className="text-xs rounded-xl font-bold px-4"
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                disabled={submittingAssign || !selectedAssignSpecialtyId}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl px-5 shadow-md flex items-center gap-2"
+              >
+                {submittingAssign ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kích hoạt tiếp nhận'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================== */}
       {/* 6. DIALOG: CHI TIẾT CHUYÊN KHOA & CHỈNH SỬA */}
       {/* ========================================== */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
@@ -881,8 +1159,8 @@ export default function AdminSpecialtiesPage() {
                       Tab 1: Thông tin chuyên khoa
                     </TabsTrigger>
                     <TabsTrigger value="hospitals" className="text-xs font-extrabold py-2 rounded-xl flex items-center justify-center gap-2">
-                      <Building2 className="w-4 h-4 text-blue-600" />
-                      Tab 2: Bệnh viện đang áp dụng ({appliedHospitals.length})
+                      {isHospitalScope ? <UserCheck className="w-4 h-4 text-emerald-600" /> : <Building2 className="w-4 h-4 text-blue-600" />}
+                      {isHospitalScope ? `Tab 2: Bác sĩ tại viện (${hospitalDoctors.length})` : `Tab 2: Bệnh viện đang áp dụng (${appliedHospitals.length})`}
                     </TabsTrigger>
                   </TabsList>
 
@@ -1012,58 +1290,121 @@ export default function AdminSpecialtiesPage() {
                     )}
                   </TabsContent>
 
-                  {/* TAB 2: BỆNH VIỆN ĐANG ÁP DỤNG (LẤY TỪ CSDL CỦA BACKEND) */}
+                  {/* TAB 2: BÁC SĨ TẠI VIỆN HOẶC BỆNH VIỆN ĐANG ÁP DỤNG */}
                   <TabsContent value="hospitals" className="pt-4 space-y-3">
-                    <p className="text-xs text-slate-500 font-medium border-b pb-2 border-slate-200 dark:border-slate-800">
-                      Danh sách thực tế các bệnh viện đang gán chuyên khoa này trong CSDL PostgreSQL. (Quản lý gán/bỏ gán được thực hiện trong Chi tiết Bệnh viện).
-                    </p>
+                    {isHospitalScope ? (
+                      <div className="space-y-3">
+                        <p className="text-xs text-slate-500 font-medium border-b pb-2 border-slate-200 dark:border-slate-800">
+                          Danh sách bác sĩ thuộc cơ sở y tế đang tiếp nhận bệnh nhân tại chuyên khoa này (đồng bộ từ HIS/phân bổ tại viện).
+                        </p>
 
-                    {isLoadingDetail ? (
-                      <div className="py-8 text-center text-slate-500 flex items-center justify-center gap-2 text-xs">
-                        <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
-                        <span>Đang tải danh sách bệnh viện từ CSDL...</span>
-                      </div>
-                    ) : appliedHospitals.length === 0 ? (
-                      <div className="py-8 text-center text-slate-500 space-y-1">
-                        <Building2 className="w-8 h-8 text-slate-400 opacity-40 mx-auto" />
-                        <p className="text-xs font-bold">Chưa có bệnh viện nào gán chuyên khoa này</p>
+                        {isLoadingDetail ? (
+                          <div className="py-8 text-center text-slate-500 flex items-center justify-center gap-2 text-xs">
+                            <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                            <span>Đang tải danh sách bác sĩ tại viện...</span>
+                          </div>
+                        ) : hospitalDoctors.length === 0 ? (
+                          <div className="py-8 text-center text-slate-500 space-y-1">
+                            <UserCheck className="w-8 h-8 text-slate-400 opacity-40 mx-auto" />
+                            <p className="text-xs font-bold">Chưa có bác sĩ nào thuộc chuyên khoa này tại cơ sở y tế</p>
+                            <p className="text-[11px] text-slate-400">Đồng bộ thêm nhân sự từ cổng HIS hoặc phân bổ bác sĩ vào chuyên khoa</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                            {hospitalDoctors.map((doc: any) => (
+                              <div
+                                key={doc.id}
+                                className={`p-3.5 rounded-2xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'} flex items-center justify-between gap-3`}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 flex items-center justify-center p-0.5">
+                                    {doc.avatarUrl && doc.avatarUrl.trim() ? (
+                                      <img src={doc.avatarUrl.trim()} alt={doc.fullName} className="w-full h-full object-cover rounded-lg" />
+                                    ) : (
+                                      <UserCheck className="w-5 h-5 text-emerald-600" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h4 className="font-extrabold text-xs truncate">
+                                      {doc.title ? `${doc.title} ` : ''}{doc.fullName}
+                                    </h4>
+                                    <p className="text-[10px] text-slate-500 truncate">{doc.qualification || 'Bác sĩ chuyên khoa'}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 shrink-0">
+                                  {doc.consultationFee ? (
+                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px] px-2 py-0.5 rounded-lg">
+                                      {doc.consultationFee.toLocaleString('vi-VN')} đ
+                                    </Badge>
+                                  ) : null}
+                                  <Link
+                                    href={`/admin/doctors?search=${encodeURIComponent(doc.fullName)}`}
+                                    className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                                  >
+                                    <span>Xem Bác sĩ</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </Link>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-                        {appliedHospitals.map((hosp: any) => (
-                          <div
-                            key={hosp.id || hosp.hospitalId}
-                            className={`p-3.5 rounded-2xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'} flex items-center justify-between gap-3`}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 flex items-center justify-center p-0.5">
-                                {hosp.hospitalLogoUrl ? (
-                                  <img src={hosp.hospitalLogoUrl} alt={hosp.hospitalName} className="w-full h-full object-cover rounded-lg" />
-                                ) : (
-                                  <Building2 className="w-5 h-5 text-purple-600" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <h4 className="font-extrabold text-xs truncate">{hosp.hospitalName || hosp.name}</h4>
-                                <p className="text-[10px] text-slate-500 truncate">{hosp.hospitalAddress || hosp.address || hosp.hospitalCity}</p>
-                              </div>
-                            </div>
+                      <div className="space-y-3">
+                        <p className="text-xs text-slate-500 font-medium border-b pb-2 border-slate-200 dark:border-slate-800">
+                          Danh sách thực tế các bệnh viện đang gán chuyên khoa này trong CSDL PostgreSQL. (Quản lý gán/bỏ gán được thực hiện trong Chi tiết Bệnh viện).
+                        </p>
 
-                            <div className="flex items-center gap-3 shrink-0">
-                              <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] px-2 py-0.5 rounded-lg">
-                                {hosp.hospitalStatus || 'Hoạt động'}
-                              </Badge>
-                              <Link
-                                href={`/admin/hospitals/${hosp.hospitalId || hosp.id}`}
-                                target="_blank"
-                                className="text-xs font-extrabold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
-                              >
-                                <span>Xem Bệnh viện</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </Link>
-                            </div>
+                        {isLoadingDetail ? (
+                          <div className="py-8 text-center text-slate-500 flex items-center justify-center gap-2 text-xs">
+                            <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                            <span>Đang tải danh sách bệnh viện từ CSDL...</span>
                           </div>
-                        ))}
+                        ) : appliedHospitals.length === 0 ? (
+                          <div className="py-8 text-center text-slate-500 space-y-1">
+                            <Building2 className="w-8 h-8 text-slate-400 opacity-40 mx-auto" />
+                            <p className="text-xs font-bold">Chưa có bệnh viện nào gán chuyên khoa này</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                            {appliedHospitals.map((hosp: any) => (
+                              <div
+                                key={hosp.id || hosp.hospitalId}
+                                className={`p-3.5 rounded-2xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'} flex items-center justify-between gap-3`}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 flex items-center justify-center p-0.5">
+                                    {hosp.hospitalLogoUrl && hosp.hospitalLogoUrl.trim() ? (
+                                      <img src={hosp.hospitalLogoUrl.trim()} alt={hosp.hospitalName} className="w-full h-full object-cover rounded-lg" />
+                                    ) : (
+                                      <Building2 className="w-5 h-5 text-purple-600" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h4 className="font-extrabold text-xs truncate">{hosp.hospitalName || hosp.name}</h4>
+                                    <p className="text-[10px] text-slate-500 truncate">{hosp.hospitalAddress || hosp.address || hosp.hospitalCity}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] px-2 py-0.5 rounded-lg">
+                                    {hosp.hospitalStatus || 'Hoạt động'}
+                                  </Badge>
+                                  <Link
+                                    href={`/admin/hospitals/${hosp.hospitalId || hosp.id}`}
+                                    target="_blank"
+                                    className="text-xs font-extrabold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+                                  >
+                                    <span>Xem Bệnh viện</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </Link>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </TabsContent>
