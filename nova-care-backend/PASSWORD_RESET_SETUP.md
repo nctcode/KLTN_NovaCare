@@ -38,6 +38,17 @@ Web bỏ hiển thị/tự điền OTP thử nghiệm. Mobile có đường dẫ
 
 ## Triển khai và kiểm thử thực tế
 
+### Chẩn đoán lỗi gửi SMS 503
+
+Backend ghi `sms_delivery_failed` với `requestId`, `failure`, HTTP status và `providerCode`; không ghi nội dung SMS, số điện thoại, khóa hoặc phản hồi thô của eSMS. Tra log nội bộ để phân biệt lỗi nhà cung cấp với lỗi mạng. Người dùng vẫn nhận thông báo lỗi chung.
+
+- `103`: không đủ số dư; nạp tiền trong tài khoản eSMS rồi thử lại sau thời gian giới hạn gửi.
+- `101`: kiểm tra API Key/Secret Key trong môi trường backend.
+- `104` / `146`: kiểm tra Brandname hoặc mẫu nội dung đã được eSMS duyệt.
+- `network_or_timeout`: kiểm tra kết nối từ backend đến eSMS; không tự gửi lại ngay vì request trước có thể đã được chấp nhận.
+
+Kiểm tra ngày 10/10/2026: API số dư trả `100`, số dư 260 đồng; yêu cầu kiểm tra `Sandbox=1` trả `103`. Không gửi SMS thật và không đổi cấu hình ứng dụng sang sandbox. Sau khi nạp tiền, cần thử lại luồng OTP thật để xác nhận nhận tin; mã `100` chỉ là eSMS nhận yêu cầu.
+
 Áp dụng migration `20261006090000_password_reset`, generate Prisma Client và restart API. Không reset/seed DB. Migration vô hiệu OTP cũ dạng plaintext.
 
 Sau khi eSMS duyệt: yêu cầu OTP cho số điện thoại tài khoản kiểm thử có quyền sử dụng; kiểm tra SMS nhận đúng mẫu, đổi mật khẩu, đăng nhập mật khẩu mới, thử lại OTP cũ, thử refresh token cũ, thử gửi lại và mã sai. SMS có thể tính phí. Bộ unit test mock eSMS không gửi tin thật.

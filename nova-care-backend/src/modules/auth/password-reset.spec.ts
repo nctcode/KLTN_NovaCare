@@ -2,6 +2,7 @@ import { PasswordResetService, resetIdentifier } from './password-reset.service'
 import { SmsService } from './sms.service';
 import * as argon2 from 'argon2';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { Logger } from '@nestjs/common';
 
 describe('Password recovery', () => {
   let challenge: any;
@@ -100,6 +101,7 @@ describe('Password recovery', () => {
 });
 
 describe('eSMS transport', () => {
+  beforeEach(() => jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined));
   afterEach(() => jest.restoreAllMocks());
   const config: any = { get: (key: string) => ({ ESMS_API_KEY: 'test-key', ESMS_SECRET_KEY: 'test-secret', ESMS_BRANDNAME: 'NovaCare', ESMS_OTP_TEMPLATE: '{OTP} test' }[key]) };
   it('requires configuration before sending', async () => {
@@ -123,6 +125,24 @@ describe('eSMS transport', () => {
   it('rejects provider failures without echoing secrets', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ CodeResult: '103' }) } as any);
     await expect(new SmsService(config).sendResetOtp('0912345678', '123456')).rejects.toThrow('Chưa thể gửi');
+    expect(Logger.prototype.error).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'sms_delivery_failed', failure: 'provider_rejected', providerCode: '103',
+    }));
+  });
+  it('does not log arbitrary provider content or request secrets', async () => {
+    const sensitive = 'test-secret 0912345678 123456';
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200,
+      json: async () => ({ CodeResult: sensitive, ErrorMessage: sensitive }) } as any);
+    await expect(new SmsService(config).sendResetOtp('0912345678', '123456')).rejects.toThrow();
+    const logged = JSON.stringify((Logger.prototype.error as jest.Mock).mock.calls);
+    for (const value of sensitive.split(' ')) expect(logged).not.toContain(value);
+    expect(Logger.prototype.error).toHaveBeenCalledWith(expect.objectContaining({ providerCode: 'unknown' }));
+  });
+  it('reports malformed responses separately from network failures', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 502,
+      json: async () => { throw new SyntaxError('private response'); } } as any);
+    await expect(new SmsService(config).sendResetOtp('0912345678', '123456')).rejects.toThrow();
+    expect(Logger.prototype.error).toHaveBeenCalledWith(expect.objectContaining({ failure: 'http_error', httpStatus: 502 }));
   });
   it('handles network timeout without logging provider data', async () => {
     jest.spyOn(global, 'fetch').mockRejectedValue(new Error('timeout'));
