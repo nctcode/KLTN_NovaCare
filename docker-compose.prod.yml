@@ -1,0 +1,84 @@
+services:
+  # ── 1. PostgreSQL Database ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: novacare_prod_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-novacare_secure_pass_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-nova_care}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - prod_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-nova_care}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - novacare_prod_network
+
+  # ── 2. Redis Cache & Queue ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: novacare_prod_redis
+    restart: always
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:-}"
+    volumes:
+      - prod_redis_data:/data
+    networks:
+      - novacare_prod_network
+
+  # ── 3. NestJS Backend API ───────────────────────────────────────────
+  api:
+    build:
+      context: ./nova-care-backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: novacare_prod_api
+    restart: always
+    env_file:
+      - ./nova-care-backend/.env.production
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-novacare_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-nova_care}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - novacare_prod_network
+
+  # ── 4. Next.js Web Frontend ─────────────────────────────────────────
+  web:
+    build:
+      context: ./nova-care-web
+      dockerfile: Dockerfile
+    container_name: novacare_prod_web
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.novacare.vn/api/v1}
+    ports:
+      - '127.0.0.1:3001:3001'
+    depends_on:
+      - api
+    networks:
+      - novacare_prod_network
+
+volumes:
+  prod_postgres_data:
+  prod_redis_data:
+
+networks:
+  novacare_prod_network:
+    driver: bridge
