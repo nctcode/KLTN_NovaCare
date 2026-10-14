@@ -1,14 +1,22 @@
 import axios, { AxiosInstance } from 'axios';
 import { useAuthStore } from '@/stores/auth.store';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const getBaseApiUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api/v1`;
+  }
+  return 'http://127.0.0.1:3000/api/v1';
+};
 
 class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: API_URL,
+      baseURL: getBaseApiUrl(),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -17,6 +25,9 @@ class ApiClient {
     // Request interceptor
     this.client.interceptors.request.use(
       async (config) => {
+        if (typeof window !== 'undefined' && (!config.baseURL || config.baseURL.includes('localhost:3000'))) {
+          config.baseURL = `${window.location.origin}/api/v1`;
+        }
         const { accessToken } = useAuthStore.getState();
         if (accessToken) {
           config.headers.Authorization = `Bearer ${accessToken}`;
