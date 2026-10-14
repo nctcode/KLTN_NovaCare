@@ -2,11 +2,11 @@ import axios, { AxiosInstance } from 'axios';
 import { useAuthStore } from '@/stores/auth.store';
 
 const getBaseApiUrl = () => {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
   if (typeof window !== 'undefined') {
     return `${window.location.origin}/api/v1`;
+  }
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
   }
   return 'http://127.0.0.1:3000/api/v1';
 };
@@ -27,7 +27,7 @@ class ApiClient {
     // Request interceptor
     this.client.interceptors.request.use(
       async (config) => {
-        if (typeof window !== 'undefined' && (!config.baseURL || config.baseURL.includes('localhost:3000'))) {
+        if (typeof window !== 'undefined') {
           config.baseURL = `${window.location.origin}/api/v1`;
         }
         const { accessToken } = useAuthStore.getState();
@@ -55,7 +55,10 @@ class ApiClient {
               return Promise.reject(error);
             }
 
-            const response = await axios.post(`${API_URL}/auth/refresh`, {
+            const refreshBaseUrl = typeof window !== 'undefined'
+              ? `${window.location.origin}/api/v1`
+              : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3000/api/v1');
+            const response = await axios.post(`${refreshBaseUrl}/auth/refresh`, {
               refreshToken,
             });
             const { accessToken, refreshToken: newRefreshToken } = response.data.data;
