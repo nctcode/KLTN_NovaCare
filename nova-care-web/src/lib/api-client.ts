@@ -3,6 +3,9 @@ import { useAuthStore } from '@/stores/auth.store';
 
 const getBaseApiUrl = () => {
   if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+    }
     return `${window.location.origin}/api/v1`;
   }
   if (process.env.NEXT_PUBLIC_API_URL) {
@@ -28,7 +31,11 @@ class ApiClient {
     this.client.interceptors.request.use(
       async (config) => {
         if (typeof window !== 'undefined') {
-          config.baseURL = `${window.location.origin}/api/v1`;
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            config.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+          } else {
+            config.baseURL = `${window.location.origin}/api/v1`;
+          }
         }
         const { accessToken } = useAuthStore.getState();
         if (accessToken) {
@@ -56,7 +63,7 @@ class ApiClient {
             }
 
             const refreshBaseUrl = typeof window !== 'undefined'
-              ? `${window.location.origin}/api/v1`
+              ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1') : `${window.location.origin}/api/v1`)
               : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3000/api/v1');
             const response = await axios.post(`${refreshBaseUrl}/auth/refresh`, {
               refreshToken,

@@ -37,7 +37,9 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
     consultationService.messages(id).then(result => {
       if (active) { setMessages(result.data.items); setCursor(result.data.nextCursor); }
     }).catch(report);
-    const origin = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000')).replace(/\/api\/v1\/?$/, '');
+    const origin = (typeof window !== 'undefined'
+      ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : window.location.origin)
+      : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000')).replace(/\/api\/v1\/?$/, '');
     const socket = io(`${origin}/consultations`, { auth: { token }, transports: ['websocket', 'polling'] });
     socket.on('connect', () => { setRealtime(true); socket.emit('consultation.join', { consultationId: id });
       cache.invalidateQueries({ queryKey: ['consultation', id] }); refreshMessages().catch(report); });
