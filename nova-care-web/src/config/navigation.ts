@@ -95,7 +95,7 @@ export const MAIN_NAVIGATION: NavParentItem[] = [
           },
           {
             title: 'Đặt khám ngoài giờ',
-            href: '/dat-lich?type=ngoai-gio',
+            href: '/dat-kham-co-so?mode=out_of_hours',
             iconName: 'Activity'
           },
           {

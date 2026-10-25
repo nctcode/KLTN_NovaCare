@@ -9,5 +9,5 @@ interface PageProps {
 export default async function SpecialtyPage({ params }: PageProps) {
   const resolved = await params;
   const id = Array.isArray(resolved.specialtyId) ? resolved.specialtyId.join('-') : resolved.specialtyId;
-  redirect(`/dat-kham-chuyen-khoa/${id}`);
+  redirect(`/dat-kham-co-so?specialtyId=${id}&mode=general`);
 }

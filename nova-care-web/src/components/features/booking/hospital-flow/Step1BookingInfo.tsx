@@ -34,7 +34,6 @@ import { Hospital, Specialty, Doctor, MedicalService } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 
-import { AIAssistedBookingModal } from '../ai/AIAssistedBookingModal';
 import { BookingType } from '@/config/bookingTypes';
 
 interface Step1BookingInfoProps {
@@ -81,53 +80,8 @@ export function Step1BookingInfo({
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [timeSession, setTimeSession] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
   const [noticeModalData, setNoticeModalData] = useState<{ isBHYT: boolean; serviceName: string } | null>(null);
-
-  // Fetch all Doctors at this hospital for AI matching
-  const { data: allHospitalDoctors = [] } = useQuery({
-    queryKey: ['all-doctors-by-hospital', hospital.id],
-    queryFn: () => doctorService.search({ hospitalId: hospital.id }),
-    enabled: !!hospital.id,
-  });
-
-  const handleApplyAIRecommendation = (rec: {
-    specialtyId?: string;
-    specialtyName: string;
-    reason?: string;
-    doctor?: Doctor | null;
-    doctorId?: string;
-    doctorName?: string;
-  }) => {
-    const targetSpec = specialties.find(
-      (s: any) => s.id === rec.specialtyId || s.name?.toLowerCase().includes(rec.specialtyName?.toLowerCase())
-    );
-    if (targetSpec) {
-      setSelectedSpecialty(targetSpec);
-    }
-
-    // Tự động áp dụng Bác sĩ được AI đề xuất
-    if (rec.doctor) {
-      setSelectedDoctor(rec.doctor);
-    } else if (rec.doctorId || rec.doctorName) {
-      const targetDoc = (allHospitalDoctors.length > 0 ? allHospitalDoctors : doctors).find(
-        (d: any) => d.id === rec.doctorId || d.fullName?.toLowerCase().includes(rec.doctorName?.toLowerCase())
-      );
-      if (targetDoc) {
-        setSelectedDoctor(targetDoc);
-      }
-    }
-
-    // Tự động chọn dịch vụ đầu tiên nếu có
-    if (medicalServices.length > 0 && !selectedService) {
-      setSelectedService(medicalServices[0]);
-    }
-
-    toast.success(
-      `Đã tự động áp dụng Chuyên khoa ${rec.specialtyName}${rec.doctorName ? ` và Bác sĩ ${rec.doctorName}` : ''} vào lịch đặt khám!`
-    );
-  };
 
   // Fetch Specialties available at this hospital
   const { data: specialties = [], isLoading: loadingSpecialties } = useQuery({
@@ -499,45 +453,6 @@ export function Step1BookingInfo({
         </Badge>
       </div>
 
-      {/* AI Assistant Callout Banner */}
-      <div className="bg-gradient-to-r from-emerald-950 via-[#0c4b39] to-teal-900 rounded-3xl p-5 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border border-emerald-400/30">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 text-amber-300">
-            <Sparkles className="w-6 h-6 animate-pulse" />
-          </div>
-          <div className="space-y-0.5 text-left">
-            <div className="flex items-center gap-2">
-              <h3 className="font-black text-sm text-white">Chưa biết chọn Chuyên khoa nào phù hợp?</h3>
-              <Badge className="bg-amber-400 text-slate-950 font-black text-[10px]">
-                100% Smartphone AI
-              </Badge>
-            </div>
-            <p className="text-xs text-emerald-100/90 font-medium">
-              Sử dụng AI đo Nhịp tim PPG bằng Camera, phân tích ảnh tổn thương/xét nghiệm & giọng nói để gợi ý ngay
-            </p>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          onClick={() => setIsAIModalOpen(true)}
-          className="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs h-11 px-6 rounded-2xl shadow-md shrink-0 flex items-center justify-center gap-2 transition-transform active:scale-95"
-        >
-          <Sparkles className="w-4 h-4 text-slate-950" />
-          <span>Nhờ AI Sàng Lọc & Gợi Ý Ngay</span>
-        </Button>
-      </div>
-
-      {/* AI Assisted Booking Modal */}
-      <AIAssistedBookingModal
-        isOpen={isAIModalOpen}
-        onClose={() => setIsAIModalOpen(false)}
-        hospital={hospital}
-        specialties={specialties}
-        doctors={allHospitalDoctors.length > 0 ? allHospitalDoctors : doctors}
-        onApplyAIRecommendation={handleApplyAIRecommendation}
-      />
-
       {/* Grid of Popup Pickers: Distinct Cards for each of the 3 Booking Modes */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* 1. CHỌN CHUYÊN KHOA (ALL MODES REQUIRE SPECIALTY) */}
@@ -589,12 +504,7 @@ export function Step1BookingInfo({
         {bookingMode === 'DOCTOR' && (
           <Card
             onClick={() => {
-              if (!selectedSpecialty) {
-                toast.info('Vui lòng chọn Chuyên khoa trước!');
-                setIsSpecialtyModalOpen(true);
-              } else {
-                setIsDoctorModalOpen(true);
-              }
+              setIsDoctorModalOpen(true);
             }}
             className={`border-2 transition-all cursor-pointer rounded-3xl p-5 hover:shadow-md ${selectedDoctor
                 ? 'bg-emerald-50/70 border-[#0c4b39]'
@@ -1031,6 +941,12 @@ export function Step1BookingInfo({
         onSelect={(doc) => {
           if (doc.id !== selectedDoctor?.id) {
             setSelectedDoctor(doc);
+            const docSpec =
+              doc.workPlaces?.find((w) => w.hospitalId === hospital.id)?.specialty ||
+              doc.workPlaces?.[0]?.specialty;
+            if (docSpec && !selectedSpecialty) {
+              setSelectedSpecialty(docSpec);
+            }
             setSelectedDate('');
             setSelectedSlotTime('');
             setSelectedSlotId(null);

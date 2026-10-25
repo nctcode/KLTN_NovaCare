@@ -1,6 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { doctorService } from '@/services/doctor.service';
+import { specialtyService } from '@/services/specialty.service';
+import { medicalServiceService } from '@/services/medical-service.service';
 import { Step1BookingInfo } from './Step1BookingInfo';
 import { Step2SelectPatientProfile } from './Step2SelectPatientProfile';
 import { Step3ConfirmInfo } from './Step3ConfirmInfo';
@@ -16,9 +20,18 @@ import { MedicalRecordShareDraft } from './MedicalRecordShareConsent';
 interface DoctorBookingWizardProps {
   hospital: Hospital;
   bookingMode?: BookingType | null;
+  initialDoctorId?: string | null;
+  initialSpecialtyId?: string | null;
+  initialServiceId?: string | null;
 }
 
-export function DoctorBookingWizard({ hospital, bookingMode = 'DOCTOR' }: DoctorBookingWizardProps) {
+export function DoctorBookingWizard({
+  hospital,
+  bookingMode = 'DOCTOR',
+  initialDoctorId,
+  initialSpecialtyId,
+  initialServiceId,
+}: DoctorBookingWizardProps) {
   // Wizard current step: 1 | 2 | 3 | 4 | 5
   const [step, setStep] = useState<number>(1);
 
@@ -34,6 +47,54 @@ export function DoctorBookingWizard({ hospital, bookingMode = 'DOCTOR' }: Doctor
   const [selectedEncounter, setSelectedEncounter] = useState<any | null>(null);
   const [reason, setReason] = useState<string>('');
   const [medicalRecordShare, setMedicalRecordShare] = useState<MedicalRecordShareDraft | null>(null);
+
+  // Pre-load initial doctor if passed in URL
+  const { data: fetchedDoctor } = useQuery({
+    queryKey: ['initial-doctor-preload', initialDoctorId],
+    queryFn: () => doctorService.getById(initialDoctorId!),
+    enabled: !!initialDoctorId && !selectedDoctor,
+  });
+
+  // Pre-load initial specialty if passed in URL
+  const { data: fetchedSpecialty } = useQuery({
+    queryKey: ['initial-specialty-preload', initialSpecialtyId],
+    queryFn: () => specialtyService.getById(initialSpecialtyId!),
+    enabled: !!initialSpecialtyId && !selectedSpecialty,
+  });
+
+  // Pre-load initial service if passed in URL
+  const { data: fetchedService } = useQuery({
+    queryKey: ['initial-service-preload', initialServiceId],
+    queryFn: () => medicalServiceService.getById(initialServiceId!),
+    enabled: !!initialServiceId && !selectedService,
+  });
+
+  // Apply pre-loaded doctor & matching specialty
+  useEffect(() => {
+    if (fetchedDoctor && !selectedDoctor) {
+      setSelectedDoctor(fetchedDoctor);
+      const wp =
+        fetchedDoctor.workPlaces?.find((w) => w.hospitalId === hospital.id) ||
+        fetchedDoctor.workPlaces?.[0];
+      if (wp?.specialty && !selectedSpecialty) {
+        setSelectedSpecialty(wp.specialty);
+      }
+    }
+  }, [fetchedDoctor, selectedDoctor, selectedSpecialty, hospital.id]);
+
+  // Apply pre-loaded specialty
+  useEffect(() => {
+    if (fetchedSpecialty && !selectedSpecialty) {
+      setSelectedSpecialty(fetchedSpecialty);
+    }
+  }, [fetchedSpecialty, selectedSpecialty]);
+
+  // Apply pre-loaded service
+  useEffect(() => {
+    if (fetchedService && !selectedService) {
+      setSelectedService(fetchedService);
+    }
+  }, [fetchedService, selectedService]);
 
   const currentConfig = bookingMode ? BOOKING_TYPES_CONFIG[bookingMode] : null;
   const isInpatientMode = bookingMode === 'INPATIENT_FOLLOWUP';

@@ -67,7 +67,7 @@ export default function LabTestsPage() {
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-xl font-black text-[#0c4b39]">{test.price}</span>
                 <Link
-                  href="/dat-lich"
+                  href="/dat-kham-co-so?mode=service"
                   className="py-2.5 px-5 bg-[#0c4b39] hover:bg-[#083327] text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-sm transition"
                 >
                   Đặt xét nghiệm

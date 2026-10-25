@@ -1948,7 +1948,7 @@ export default function ElectronicHealthRecordPage() {
             <div className="rounded-lg border border-slate-200 bg-white p-8 text-center space-y-2">
               <p className="text-xs text-slate-500">Bạn chưa có hồ sơ bệnh án nào được ghi nhận.</p>
               <Button asChild size="sm" className="bg-slate-900 hover:bg-slate-800 text-white text-xs rounded-md">
-                <Link href="/dat-lich">Đặt lịch khám ngay</Link>
+                <Link href="/dat-kham-co-so">Đặt lịch khám ngay</Link>
               </Button>
             </div>
           )}

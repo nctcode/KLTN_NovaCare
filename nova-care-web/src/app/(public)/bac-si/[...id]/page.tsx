@@ -31,9 +31,9 @@ export default function DoctorDetailPage() {
   }, [doctor]);
 
   const handleQuickBook = () => {
-    if (quickWpId) {
-      router.push(`/dat-lich?workplaceId=${quickWpId}${quickDate ? `&date=${quickDate}` : ''}`);
-    }
+    const selectedWp = doctor?.workPlaces?.find((w) => w.id === quickWpId) || doctor?.workPlaces?.[0];
+    const hospitalId = selectedWp?.hospitalId || '';
+    router.push(`/dat-kham-co-so?hospitalId=${hospitalId}&doctorId=${doctor?.id}&mode=doctor${quickDate ? `&date=${quickDate}` : ''}`);
   };
 
   if (isLoading) {
@@ -170,7 +170,7 @@ export default function DoctorDetailPage() {
                       </p>
                     </div>
                     <Button asChild className="bg-[#4caf50] hover:bg-[#439e47] text-white font-bold transition">
-                      <Link href={`/dat-lich?workplaceId=${workplace.id}`}>
+                      <Link href={`/dat-kham-co-so?hospitalId=${workplace.hospitalId}&doctorId=${doctor.id}&mode=doctor`}>
                         Đặt lịch
                         <ChevronRight className="h-4 w-4 ml-1" />
                       </Link>

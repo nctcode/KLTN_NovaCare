@@ -129,7 +129,7 @@ export default function HomeHealthcarePage() {
                     <span className="text-lg font-black text-[#0c4b39]">{srv.price}</span>
                   </div>
                   <Link
-                    href="/dat-lich"
+                    href="/dat-kham-co-so?mode=service"
                     className="py-2.5 px-5 bg-[#0c4b39] hover:bg-[#083327] text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-sm transition"
                   >
                     Đặt lịch khám tại nhà

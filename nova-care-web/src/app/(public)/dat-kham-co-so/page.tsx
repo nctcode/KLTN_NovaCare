@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { hospitalService } from '@/services/hospital.service';
+import { doctorService } from '@/services/doctor.service';
 import { HospitalSelectModal } from '@/components/features/booking/hospital-flow/HospitalSelectModal';
 import { BookingTypeStep } from '@/components/features/booking/hospital-flow/BookingTypeStep';
 import { DoctorBookingWizard } from '@/components/features/booking/hospital-flow/DoctorBookingWizard';
@@ -30,10 +31,39 @@ function HospitalBookingPageContent() {
 
   const hospitalIdParam = searchParams.get('hospitalId');
   const modeParam = searchParams.get('mode');
+  const doctorIdParam = searchParams.get('doctorId');
+  const workplaceIdParam = searchParams.get('workplaceId');
+  const specialtyIdParam = searchParams.get('specialtyId');
+  const serviceIdParam = searchParams.get('serviceId');
+
+  // Preload workplace if passed in URL
+  const { data: fetchedWorkplace } = useQuery({
+    queryKey: ['workplace-preload-co-so', workplaceIdParam],
+    queryFn: () => doctorService.getWorkplace(workplaceIdParam!),
+    enabled: !!workplaceIdParam,
+  });
+
+  // Preload doctor to resolve hospital if doctorId is given without hospitalId
+  const { data: fetchedDoctorForHospital } = useQuery({
+    queryKey: ['doctor-preload-hospital-co-so', doctorIdParam],
+    queryFn: () => doctorService.getById(doctorIdParam!),
+    enabled: !!doctorIdParam && !hospitalIdParam && !workplaceIdParam,
+  });
+
+  const effectiveHospitalId =
+    hospitalIdParam ||
+    fetchedWorkplace?.hospitalId ||
+    fetchedDoctorForHospital?.workPlaces?.[0]?.hospitalId ||
+    null;
 
   // Helper to parse valid BookingType from query parameter
   const parseBookingType = (modeStr: string | null): BookingType | null => {
-    if (!modeStr) return null;
+    if (!modeStr) {
+      if (doctorIdParam || workplaceIdParam) return 'DOCTOR';
+      if (serviceIdParam) return 'SERVICE';
+      if (specialtyIdParam) return 'GENERAL';
+      return null;
+    }
     const normalized = modeStr.toUpperCase();
     if (normalized in BOOKING_TYPES_CONFIG) {
       return normalized as BookingType;
@@ -52,7 +82,7 @@ function HospitalBookingPageContent() {
 
   useEffect(() => {
     setBookingMode(parseBookingType(modeParam));
-  }, [modeParam]);
+  }, [modeParam, doctorIdParam, workplaceIdParam, specialtyIdParam, serviceIdParam]);
 
   // Query all hospitals for hospital selector modal
   const { data: hospitals = [], isLoading: loadingHospitals } = useQuery({
@@ -60,20 +90,20 @@ function HospitalBookingPageContent() {
     queryFn: () => hospitalService.getAll(),
   });
 
-  // Query details if hospitalIdParam is passed
+  // Query details if hospitalId is known
   const { data: fetchedHospital, isLoading: loadingFetchedHospital } = useQuery({
-    queryKey: ['hospital-detail-preload', hospitalIdParam],
-    queryFn: () => hospitalService.getById(hospitalIdParam!),
-    enabled: !!hospitalIdParam,
+    queryKey: ['hospital-detail-preload', effectiveHospitalId],
+    queryFn: () => hospitalService.getById(effectiveHospitalId!),
+    enabled: !!effectiveHospitalId,
   });
 
   useEffect(() => {
     if (fetchedHospital) {
       setSelectedHospital(fetchedHospital);
-    } else if (hospitals.length > 0 && !selectedHospital && !hospitalIdParam) {
+    } else if (hospitals.length > 0 && !selectedHospital && !effectiveHospitalId) {
       setSelectedHospital(hospitals[0]);
     }
-  }, [fetchedHospital, hospitals, selectedHospital, hospitalIdParam]);
+  }, [fetchedHospital, hospitals, selectedHospital, effectiveHospitalId]);
 
   const handleSelectBookingMode = (mode: BookingType) => {
     setBookingMode(mode);
@@ -89,7 +119,7 @@ function HospitalBookingPageContent() {
     }
   };
 
-  if (loadingHospitals || (hospitalIdParam && loadingFetchedHospital)) {
+  if (loadingHospitals || (effectiveHospitalId && loadingFetchedHospital)) {
     return (
       <div className="min-h-screen flex flex-col justify-center items-center bg-slate-50 gap-3">
         <Loader2 className="animate-spin h-10 w-10 text-[#0c4b39]" />
@@ -221,7 +251,13 @@ function HospitalBookingPageContent() {
                 </div>
 
                 {/* Multi-step Wizard */}
-                <DoctorBookingWizard hospital={selectedHospital} bookingMode={bookingMode} />
+                <DoctorBookingWizard
+                  hospital={selectedHospital}
+                  bookingMode={bookingMode}
+                  initialDoctorId={doctorIdParam || fetchedWorkplace?.doctorId || null}
+                  initialSpecialtyId={specialtyIdParam || fetchedWorkplace?.specialtyId || null}
+                  initialServiceId={serviceIdParam || null}
+                />
               </div>
             )}
           </div>

@@ -47,15 +47,14 @@ import {
   HeartHandshake,
   Check,
   PhoneCall,
-  Sparkle
+  Sparkle,
+  CalendarCheck2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { formatPrice, getDoctorSpecialtyName } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AIHealthAssessmentWizard } from '@/components/features/booking/AIHealthAssessmentWizard';
 
 // Render Lucide icons matching specialty names with NovaCare green palette
 const renderSpecialtyIcon = (name: string, className = "h-7 w-7 text-[#0c4b39] group-hover:text-white transition-colors duration-300") => {
@@ -186,15 +185,14 @@ const QUICK_BOOKING_SERVICES = [
     iconBg: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white',
   },
   {
-    id: 'ai-screening',
-    title: 'AI Sàng lọc tiền khám',
-    subtitle: 'Trợ lý AI phân tích triệu chứng & tư vấn',
-    icon: Sparkles,
-    href: '#ai-screening',
-    isAI: true,
-    badge: 'HOT AI TECH',
-    badgeColor: 'bg-purple-50 text-purple-800 border-purple-200 animate-pulse',
-    iconBg: 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white',
+    id: 'inpatient-followup',
+    title: 'Tái khám nội trú',
+    subtitle: 'Nhập mã bệnh án đặt lịch tái khám',
+    icon: CalendarCheck2,
+    href: '/dat-kham-co-so?mode=inpatient_followup',
+    badge: 'Tái khám nhanh',
+    badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    iconBg: 'bg-emerald-50 text-[#0c4b39] group-hover:bg-[#0c4b39] group-hover:text-white',
   },
   {
     id: 'telehealth',
@@ -252,7 +250,6 @@ export default function HomePage() {
   const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('ALL');
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const packagesScrollRef = useRef<HTMLDivElement>(null);
 
@@ -480,23 +477,22 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Floating Card 2: Bottom Left - AI Triage */}
-                <button
-                  type="button"
-                  onClick={() => setIsAIModalOpen(true)}
-                  className="absolute -bottom-5 -left-4 sm:-left-6 bg-gradient-to-r from-[#0c4b39] to-[#063024] text-white p-3.5 rounded-2xl shadow-2xl border border-emerald-400/40 flex items-center gap-3 text-left hover:scale-105 transition-transform cursor-pointer"
+                {/* Floating Card 2: Bottom Left - Đặt khám cơ sở */}
+                <Link
+                  href="/dat-kham-co-so"
+                  className="absolute -bottom-5 -left-4 sm:-left-6 bg-gradient-to-r from-[#0c4b39] to-[#063024] text-white p-3.5 rounded-2xl shadow-2xl border border-emerald-400/40 flex items-center gap-3 text-left hover:scale-105 transition-transform no-underline"
                 >
                   <div className="w-10 h-10 rounded-xl bg-emerald-400/20 text-emerald-300 flex items-center justify-center shrink-0">
-                    <Bot className="w-5 h-5 text-emerald-300" />
+                    <Building2 className="w-5 h-5 text-emerald-300" />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-extrabold text-white">Trợ lý AI Sàng lọc</span>
+                      <span className="text-xs font-extrabold text-white">Đặt khám cơ sở y tế</span>
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
                     </div>
-                    <div className="text-[11px] text-emerald-200">Gợi ý chuyên khoa sau 30s ➔</div>
+                    <div className="text-[11px] text-emerald-200">Lấy số thứ tự trực tuyến ➔</div>
                   </div>
-                </button>
+                </Link>
               </div>
             </div>
           </div>
@@ -556,74 +552,12 @@ export default function HomePage() {
                 </div>
               );
 
-              if (service.isAI) {
-                return (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => setIsAIModalOpen(true)}
-                    className="text-left w-full cursor-pointer focus:outline-none"
-                  >
-                    {CardContentInner}
-                  </button>
-                );
-              }
-
               return (
                 <Link key={service.id} href={service.href} className="no-underline">
                   {CardContentInner}
                 </Link>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 3. AI Triage Spotlight Banner (Điểm sáng công nghệ KLTN) ─── */}
-      <section className="container-custom mb-16">
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#062c22] via-[#094132] to-[#041d16] text-white p-6 sm:p-10 border border-emerald-500/20 shadow-2xl">
-          {/* Ambient light inside */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="flex-1 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 text-xs font-extrabold uppercase tracking-wider mb-3">
-                <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                <span>Trợ lý AI Tiên phong trong Y tế Số</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-snug mb-3">
-                Chưa rõ triệu chứng? Để Trợ lý AI NovaCare phân tích sơ bộ cho bạn
-              </h3>
-              <p className="text-sm md:text-base text-emerald-100/80 leading-relaxed max-w-2xl mb-4">
-                Sử dụng mô hình AI y khoa thông minh phân tích các dấu hiệu bất thường, đưa ra định hướng chuyên khoa chính xác và gợi ý bác sĩ chuyên môn phù hợp trong vòng 30 giây.
-              </p>
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-emerald-200/90 font-medium">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Hoàn toàn bảo mật</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Sàng lọc đa triệu chứng</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Miễn phí 100%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="shrink-0 flex flex-col sm:flex-row items-center gap-3">
-              <Button
-                type="button"
-                onClick={() => setIsAIModalOpen(true)}
-                className="h-13 px-8 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-[#062c22] font-black text-base rounded-2xl shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer flex items-center gap-2.5"
-              >
-                <Bot className="w-5 h-5 text-[#062c22]" />
-                <span>Trải nghiệm AI Sàng lọc</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
           </div>
         </div>
       </section>
@@ -666,7 +600,7 @@ export default function HomePage() {
                 {specialties.map((specialty) => (
                   <Link
                     key={specialty.id}
-                    href={`/dat-kham-chuyen-khoa/${specialty.id}`}
+                    href={`/dat-kham-co-so?specialtyId=${specialty.id}&mode=general`}
                     className="min-w-[190px] max-w-[210px] flex-shrink-0 bg-white border border-slate-200 hover:border-emerald-600/50 rounded-2xl p-5 text-gray-800 flex flex-col items-center justify-between h-[180px] group hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 shadow-xs relative overflow-hidden cursor-pointer no-underline"
                   >
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 group-hover:bg-emerald-700 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-xs mb-1">
@@ -721,9 +655,11 @@ export default function HomePage() {
                   ? doctor.workPlaces[0]
                   : null;
                 const firstWorkplaceId = firstWorkplace?.id || null;
-                const bookingUrl = firstWorkplaceId
-                  ? `/dat-lich?workplaceId=${firstWorkplaceId}`
-                  : `/bac-si/${doctor.id}`;
+                const bookingUrl = firstWorkplace?.hospitalId
+                  ? `/dat-kham-co-so?hospitalId=${firstWorkplace.hospitalId}&doctorId=${doctor.id}&mode=doctor`
+                  : firstWorkplaceId
+                  ? `/dat-kham-co-so?workplaceId=${firstWorkplaceId}&mode=doctor`
+                  : `/dat-kham-co-so?doctorId=${doctor.id}&mode=doctor`;
 
                 const specialtyName = getDoctorSpecialtyName(doctor);
                 const consultationFee = firstWorkplace?.consultationFee || 200000;
@@ -960,7 +896,7 @@ export default function HomePage() {
                           <span>{pkg.price}</span>
                         </div>
                         <Link
-                          href={`/dat-lich?packageId=${pkg.id}`}
+                          href="/dat-kham-co-so?mode=service"
                           className="block w-full text-center py-2.5 bg-gradient-to-r from-emerald-400 to-teal-300 hover:from-emerald-300 hover:to-teal-200 text-[#0c4b39] font-black rounded-xl text-xs uppercase tracking-wider mt-3 transition duration-200 shadow-md cursor-pointer"
                         >
                           Đặt khám ngay
@@ -1145,8 +1081,8 @@ export default function HomePage() {
 
                   <div className="space-y-2 mb-3">
                     <div className="p-2.5 bg-white rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
-                      <span className="font-bold text-gray-700">Trợ lý AI Triage</span>
-                      <span className="text-[10px] text-purple-600 font-extrabold">Đã sàng lọc</span>
+                      <span className="font-bold text-gray-700">Hình thức đăng ký</span>
+                      <span className="text-[10px] text-emerald-600 font-extrabold">Theo cơ sở y tế</span>
                     </div>
                     <div className="p-2.5 bg-white rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
                       <span className="font-bold text-gray-700">Hồ sơ y bạ EHR</span>
@@ -1213,16 +1149,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ── AI Modal Assessment Wizard ─────────────────────────────────── */}
-      <Dialog open={isAIModalOpen} onOpenChange={setIsAIModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto p-2 sm:p-6 bg-white rounded-3xl border-none shadow-2xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>AI Sàng lọc tiền khám NovaCare</DialogTitle>
-          </DialogHeader>
-          <AIHealthAssessmentWizard onCancel={() => setIsAIModalOpen(false)} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

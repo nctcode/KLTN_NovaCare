@@ -799,7 +799,7 @@ export default function HospitalDetailPage({ params }: PageProps) {
                           size="sm"
                           className="w-full text-xs font-extrabold rounded-2xl bg-[#0c4b39] hover:bg-[#083629] text-white"
                         >
-                          <Link href={`/dat-lich?workplaceId=${br.id}`}>Đặt lịch tại đây</Link>
+                          <Link href={`/dat-kham-co-so?hospitalId=${hospital.id}&mode=general`}>Đặt lịch tại đây</Link>
                         </Button>
                       </div>
                     </Card>
@@ -914,7 +914,7 @@ export default function HospitalDetailPage({ params }: PageProps) {
                             asChild
                             className="w-full bg-[#0c4b39] hover:bg-[#083629] text-white text-xs font-extrabold h-9 rounded-2xl"
                           >
-                            <Link href={`/dat-lich?doctorId=${doc.id}&hospitalId=${hospital.id}`}>
+                            <Link href={`/dat-kham-co-so?doctorId=${doc.id}&hospitalId=${hospital.id}&mode=doctor`}>
                               Đặt lịch khám
                             </Link>
                           </Button>

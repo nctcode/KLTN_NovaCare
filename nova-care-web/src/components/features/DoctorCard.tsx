@@ -123,7 +123,15 @@ export function DoctorCard({ doctor }: { doctor: Doctor }) {
                 asChild
                 className="flex-1 w-full bg-[#0c4b39] hover:bg-[#083327] active:bg-[#05221a] text-white font-extrabold text-xs h-10 rounded-xl transition shadow-md hover:shadow-emerald-900/20 cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <Link href={defaultWorkplace?.id ? `/dat-lich?workplaceId=${defaultWorkplace.id}` : `/bac-si/${doctor.id}`}>
+                <Link
+                  href={
+                    defaultWorkplace?.hospitalId
+                      ? `/dat-kham-co-so?hospitalId=${defaultWorkplace.hospitalId}&doctorId=${doctor.id}&mode=doctor`
+                      : defaultWorkplace?.id
+                      ? `/dat-kham-co-so?workplaceId=${defaultWorkplace.id}&mode=doctor`
+                      : `/dat-kham-co-so?doctorId=${doctor.id}&mode=doctor`
+                  }
+                >
                   <Calendar className="w-3.5 h-3.5 text-[#66FF33]" />
                   <span>Đặt lịch ngay</span>
                 </Link>
