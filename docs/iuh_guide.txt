@@ -1,0 +1,420 @@
+---PAGE 1---
+1 
+ 
+TRƯỜNG ĐẠI HỌC CÔNG NGHIỆP THÀNH PHỐ HỒ CHÍ MINH 
+KHOA CÔNG NGHỆ ĐỘNG LỰC  
+---------------o0o--------------- 
+ 
+Version. 26.1 
+ 
+HƯỚNG DẪN  
+ĐỊNH DẠNG VÀ TRÌNH BÀY  
+BÁO CÁO KHOÁ LUẬN TỐT NGHIỆP 
+ 
+Nội dung 
+1. Quy định về loại giấy, cách in và quy cách đóng cuốn Báo cáo Khoá luận tốt nghiệp. ........... 2 
+2. Quy định về hình thức và bố cục trình bày ............................................................................... 2 
+2.1. Chung .............................................................................................................................. 2 
+2.1.1. Định dạng trang ......................................................................................................... 2 
+2.1.2. Thứ tự các đề mục cơ bản, cách đánh số trang, cách ngắt trang và gán Header & 
+Footer cho các trang của Báo cáo KLTN .................................................................. 4 
+2.1.3. Font chữ, cỡ chữ, kiểu chữ, và định dạng đoạn văn ................................................. 4 
+2.2. Trang bìa ngoài & Gáy trang ........................................................................................... 6 
+2.3. Header & Footer .............................................................................................................. 7 
+2.3.1. Định dạng .................................................................................................................. 7 
+2.3.2. Header ....................................................................................................................... 7 
+2.3.3. Footer ........................................................................................................................ 8 
+2.4. Chú thích hình ảnh, bảng và công thức ........................................................................... 8 
+2.5. Mục lục ............................................................................................................................ 9 
+2.6. Tài liệu tham khảo ........................................................................................................... 9 
+2.6.1. TLTK là sách ............................................................................................................. 9 
+2.6.2. TLTK là bài báo khoa học ......................................................................................... 9 
+2.6.3. TLTK là luận văn tốt nghiệp ................................................................................... 10 
+3. Quy định về nội dung .............................................................................................................. 10 
+ 
+KL64a  
+
+---PAGE 2---
+2 
+ 
+1.  Quy định về loại giấy, cách in và quy cách đóng cuốn Báo cáo Khoá luận tốt nghiệp. 
+ Trang bìa ngoài Các trang còn lại 
+Màu nền Nền trắng (màu trắng giấy), chữ đen. Trắng (màu trắng giấy) 
+Loại giấy Khổ A4, định lượng ≥ 180 gsm. Khổ A4, định lượng ≥ 80 gsm. 
+In ấn 
+In, rồi cán bóng bên ngoài để không bong tróc 
+mực in. (Lưu ý không in trên giấy bóng như 
+hình thẻ) 
+In 2 mặt, in màu các hình mà cần dựa vào 
+màu để dễ nhận biết tính chất, mức độ…(ví dụ 
+các đồ thị, hình ảnh là kết quả của mô 
+phỏng…) 
+Kích thước 
+cuốn báo cáo 
+294 x 208 (mm) 
+• Lưu ý quy định trên chỉ áp dung cho cuốn Báo cáo Khoá luận tốt nghiệp hoàn thiện cuối cùng mà sinh 
+viên phải nộp cho khoa để lưu. 
+2.  Quy định về hình thức và bố cục trình bày 
+2.1.  Chung 
+2.1.1.  Định dạng trang 
+
+
+---PAGE 3---
+3 
+ 
+ 
+ 
+
+
+---PAGE 4---
+4 
+ 
+ 
+2.1.2.  Thứ tự các đề mục cơ bản, cách đánh số trang, cách ngắt trang và gán Header & Footer 
+cho các trang của Báo cáo KLTN 
+ 
+STT ĐỀ MỤC Cách đánh số trang Cách ngắt trang Header & 
+Footer 
+1 {Trang bìa ngoài} 
+Không đánh số trang. 
+Phải ngắt trang, để Đề 
+mục được bắt đầu 
+trong trang mới 
+(Layout - Breaks-Next 
+page). 
+Không 
+Header & 
+Footer 
+2 {Trang bìa trong} 
+3 PHIẾU GIAO ĐỀ TÀI KHÓA 
+LUẬN TỐT NGHIỆP 
+4 PHIẾU NHẬN XÉT KHÓA 
+LUẬN TỐT NGHIỆP (Dành cho 
+giảng viên hướng dẫn) 
+5 PHIẾU NHẬN XÉT KHÓA 
+LUẬN TỐT NGHIỆP (Dành cho 
+giảng viên phản biện) 
+6 PHIẾU XÁC NHẬN CHỈNH 
+SỬA KHÓA LUẬN TỐT 
+NGHIỆP 
+7 LỜI CẢM ƠN 
+Đánh số trang theo kí tự 
+La Mã, chữ thường. Bắt 
+đầu từ i, ii, iii, iv, v… 
+Có Header 
+& Footer 
+8 LỜI CAM KẾT 
+9 MỤC LỤC 
+10 DANH MỤC HÌNH 
+11 DANH MỤC BẢNG 
+12 DANH MỤC CÁC TỪ VIẾT 
+TẮT 
+13 TÓM TẮT 
+14 ABSTRACT 
+15 CHƯƠNG 1. AAAAA 
+Đánh số trang theo số 
+đếm, chữ thường. Bắt đầu 
+từ 1, 2, 3… 
+Không cần ngắt trang. 
+….. 1.1. Abcde 
+ 1.1.1. Befgh 
+ CHƯƠNG 2. BBBBBB 
+ 2.1. 
+ 2.1.1. 
+ ….. 
+16 TÀI LIỆU THAM KHẢO Phải ngắt trang. 17 PHỤ LỤC 
+ 
+2.1.3.  Font chữ, cỡ chữ, kiểu chữ, và định dạng đoạn văn 
+ 
+ĐỀ MỤC Font chữ Cỡ chữ Kiểu chữ 
+Paragraph (Đoạn văn) 
+General Identation Spacing 
+Alignment Left Right Special By Before After Line spacing 
+Trang 
+bìa 
+ngoài 
+ 
+Times 
+New 
+Roman 
+14 
+(Riêng tên 
+đề tài 20) 
+CHỮ HOA, 
+(Riêng tên 
+đề tài IN 
+ĐẬM) 
+Centered, 
+Right 0,0 0,0 (None) 0,0 0,0 0,0 1,5 lines 
+Gáy 
+trang  
+Times 
+New 
+Roman 
+Tối đa 14. 
+Nếu tên đề 
+tài dài giảm 
+CHỮ HOA, 
+chữ thường Justified 0,0 0,0 (None) 0,0 0,0 0,0 single 
+
+---PAGE 5---
+5 
+ 
+cỡ chữ để 
+nằm trên 1 
+hàng. 
+Trang 
+bìa trong  
+Times 
+New 
+Roman 
+14 
+(Riêng tên 
+đề tài 20) 
+CHỮ HOA, 
+(Riêng tên 
+đề tài IN 
+ĐẬM) 
+Centered, 
+Left 0,0 0,0 (None) 0,0 0,0 0,0 1,5 lines 
+Tiêu đề 
+Level 1 
+LỜI CẢM ƠN 
+Times 
+New 
+Roman 
+13 
+CHỮ 
+HOA, IN 
+ĐẬM 
+Centered 0,0 0,0 (None) 0,0 3pt 0,0 1,5 lines 
+LỜI CAM KẾT 
+MỤC LỤC 
+DANH MỤC 
+HÌNH 
+DANH MỤC 
+BẢNG 
+DANH MỤC CÁC 
+TỪ VIẾT TẮT 
+TÓM TẮT 
+ABSTRACT 
+CHƯƠNG 1;2;3…. 
+TÀI LIỆU THAM 
+KHẢO 
+PHỤ LỤC 
+Tiêu đề 
+Level 2 1.1. Abc 
+Times 
+New 
+Roman 
+13 Chữ 
+thường, in 
+đậm 
+Justified 0,0 0,0 (None) 0,0 2pt 0,0 1,5 lines 
+Tiêu đề 
+Level 3 1.1.1. Bcd 
+Times 
+New 
+Roman 
+13 Justified 0,0 0,0 (None) 0,0 2pt 0,0 1,5 lines 
+Nội 
+dung 
+của 
+Level 1 
+LỜI CẢM ƠN 
+Times 
+New 
+Roman 
+13 Chữ thường. Justified 0,0 0,0 First line 0,76 cm 3pt 0,0 1,5 lines 
+LỜI CAM KẾT 
+TÓM TẮT 
+ABSTRACT 
+CHƯƠNG 1;2;3…. 
+MỤC LỤC 
+Times 
+New 
+Roman 
+13 Chữ thường. Justified 0,0 0,0 (None) 0,0 3pt 0,0 1,5 lines 
+DANH MỤC 
+HÌNH 
+DANH MỤC 
+BẢNG 
+DANH MỤC CÁC 
+TỪ VIẾT TẮT 
+TÀI LIỆU THAM 
+KHẢO 
+PHỤ LỤC 
+Nội 
+dung 
+của 
+Level 2; 
+Level 3 
+1.1. Abc 
+Aaaaaaaaaa 
+1.1.1. Bcd 
+Bbbbbbbbb 
+Times 
+New 
+Roman 
+13 Chữ thường. Justified 0,0 0,0 First line 0,76 cm 3pt 0,0 1,5 lines 
+Hình     Centered 0,0 0,0 (None) 0,0 3pt 0,0 1,5 lines 
+Chú 
+thích 
+Hình 
+Hình 1.1 
+Abcdef 
+Times 
+New 
+Roman 
+13 Chữ in nghiêng Centered 0,0 0,0 (None) 0,0 0,0 0,0 1,5 lines 
+Bảng     Centered 0,0 0,0 (None) 0,0 0,0 0,0 1,5 lines 
+Nội 
+dung 
+trong 
+Bảng 
+ 
+Times 
+New 
+Roman 
+13 Chữ thường.  0,0 0,0 (None) 0,0 0,0 0,0 1,5 lines 
+Chú 
+thích 
+Bảng 1.1 
+Cdefgh 
+Times 
+New 13 Chữ in nghiêng Centered 0,0 0,0 (None) 0,0 3pt 0,0 1,5 lines 
+
+---PAGE 6---
+6 
+ 
+Bảng Roman 
+Công 
+thức  Cambria Math 13 Chữ in nghiêng Centered 0,0 0,0 (None) 0,0 3pt 0,0 1,5 lines 
+Đánh số 
+Công 
+thức 
+(2.1) 
+Times 
+New 
+Roman 
+13 Chữ thường. Right 0,0 0,0 (None) 0,0 3pt 0,0 1,5 lines 
+Header  
+Times 
+New 
+Roman 
+12 
+CHỮ HOA, 
+IN 
+THƯỜNG 
+Left, 
+Right 0,0 0,0 (None) 0,0 0,0 0,0 1,5 lines 
+Footer  
+Times 
+New 
+Roman 
+Tối đa 12. 
+Nếu tên đề 
+tài dài giảm 
+cỡ chữ để 
+nằm trên 1 
+hàng. 
+Chữ 
+thường, in 
+đậm 
+Left 0,0 0,0 (None) 0,0 0,0 0,0 1,5 lines 
+Page 
+number  
+Times 
+New 
+Roman 
+12 Chữ thường Right 0,0 0,0 (None) 0,0 0,0 0,0 1,5 lines 
+ 
+2.2.  Trang bìa ngoài & Gáy trang 
+
+---PAGE 7---
+7 
+ 
+ 
+ Lưu ý: Đường viền nét đứt, màu xanh, sẽ bỏ khi in. 
+2.3.  Header & Footer 
+2.3.1.  Định dạng 
+ 
+2.3.2.  Header 
+Gáy 
+trang 
+3.0cm 
+10.52 cm 
+
+---PAGE 8---
+8 
+ 
+ 
+2.3.3.  Footer 
+ 
+2.4.  Chú thích hình ảnh, bảng và công thức 
+Phần chú thích hình nằm ngay phía dưới hình, phần chú thích Bảng nằm ngay phía trên bảng, phần chú thích 
+Công thức nằm sát biên phải trang định dạng. 
+Định dạng chú thích: 
+Hình a.b._Xxxxxxxxxxxxxxxx 
+Bảng a.b._Yyyyyyyyyyyyyyyy 
+a: là chỉ Chương a chứa hình/bảng/công thức. 
+b: là  chỉ số thứ tự hình/bảng/công thức trong Chương a. 
+_Xxxxxxxxxxxxxxxx : là khoảng trắng và tên nội dung chú thích cho Hình. 
+_Yyyyyyyyyyyyyyyy: là khoảng trắng và tên nội dung chú thích cho Bảng. 
+Ví dụ hình 
+ 
+Hình 2.3. Kết quả mô phỏng hành khách trong xe khi trang bị dây đai 2 điểm 
+ Giải thích:  “Hình 2.3.” là Hình thứ 3 trong Chương 2. 
+Ví dụ bảng 
+Bảng 2.7. Lực hiển thị 
+TT Lực (N) Gia tốc (m/s2) 
+1 5 5 
+2 3 7 
+3 4 1 
+ Giải thích:  “Bảng 2.7.” là Bảng thứ 7 trong Chương 2. 
+Ví dụ công thức 
+𝑃𝑖 = 𝑝𝑖. 𝑉ℎ. 𝑖. 𝑛30. 𝜏 (2.1) 
+ Giải thích:  “(2.1)” là Công thức thứ 1 (thứ nhất) trong Chương 2.
+
+
+---PAGE 9---
+9 
+ 
+2.5.  Mục lục 
+Đề mục của phần mục lục chỉ hiển thị tối đa mức 3 - Level 3. (Đề mục trong phần nội dung luận văn 
+cho phép dùng đến mức 5- Level 5) 
+Ví dụ 
+  
+2.6.  Tài liệu tham khảo 
+Cách định dạng tên các loại tài liệu tham khảo (TLTK) như sau: 
+2.6.1.  TLTK là sách 
+Ghi theo thứ tự: “Tên tác giả. Tên Sách. Nhà xuất bản. (Năm xuất bản).” 
+Ví dụ: 
+ 
+2.6.2.  TLTK là bài báo khoa học 
+• Bài báo khoa học trích trong tạp chí ghi theo thứ tự: “Tên tác giả. Tên bài báo. Tên tạp chí, 
+(Năm xuất bản), Số tạp chí phát hành, Trang bắt đầu – Trang kết thúc.” 
+Ví dụ: 
+ 
+
+
+---PAGE 10---
+10 
+ 
+• Bài báo khoa học trích trong kỷ yếu, hội nghị ghi theo thứ tự: “Tên tác giả. Tên bài báo. Tên 
+Hội nghị, (Năm xuất bản), Trang bắt đầu – Trang kết thúc.” 
+Ví dụ: 
+ 
+2.6.3.  TLTK là luận văn tốt nghiệp 
+Ghi theo thứ tự: “Tên tác giả. Tên luận văn. Cấp học làm luận văn, Tên trường (năm xuất bản).” 
+ 
+3.  Quy định về nội dung 
+Khoá luận tốt nghiệp cần đảm bảo các quy định về liêm chính học thuật, cần kiểm tra trùng lặp 
+đạo văn bằng phần mềm Turnitin trước khi nộp cho khoa. Quy định về mức độ trùng lặp của 
+nội dung KLTN được chấp nhận như sau: 
+❖ Không được vượt quá 30% trên tổng tài liệu phát hiện trùng lặp. (≤ 30%) 
+❖ Không được vượt quá 5% trên mỗi tài liệu phát hiện trùng lặp. (≤ 5%) 
+Đóng kèm trang tổng phần trăm trùng lặp (xuất từ phần mềm Turnitin) vào cuối cuốn báo cáo 
+KLTN. 
+ 
+ 

@@ -1,0 +1,1361 @@
+[
+  {
+    "id": "TC-CARDIO-01",
+    "chief_symptom": "Đau thắt ngực dữ dội kiểu bóp nghẹt sau xương ức lan lên vai và cánh tay trái",
+    "expected_specialty": "Tim mạch",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": false,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Nghi ngờ hội chứng vành cấp hoặc nhồi máu cơ tim cấp."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.15,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 11.0,
+      "Tim mạch": 6.5,
+      "Hô hấp": 6.0
+    },
+    "clinical_rationale": "Cơn đau ngực kiểu thắt nghẽn điển hình lan tay trái kèm khó thở, vã mồ hôi là dấu hiệu cảnh báo đỏ của Hội chứng vành cấp / Nhồi máu cơ tim cấp."
+  },
+  {
+    "id": "TC-CARDIO-02",
+    "chief_symptom": "Cảm giác hồi hộp, tim đập nhanh dồn dập từng cơn lúc nghỉ ngơi",
+    "expected_specialty": "Tim mạch",
+    "returned_specialty": "Tim mạch",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tim mạch": 17.0,
+      "Răng Hàm Mặt": 3.5,
+      "Hô hấp": 2.5
+    },
+    "clinical_rationale": "Hồi hộp đánh trống ngực kèm nhịp tim nhanh là triệu chứng rối loạn nhịp tim cần đo điện tâm đồ ECG và siêu âm tim tại chuyên khoa Tim mạch."
+  },
+  {
+    "id": "TC-CARDIO-03",
+    "chief_symptom": "Khó thở khi nằm đầu thấp, phải kê 2-3 gối mới ngủ được, tỉnh giấc vì ngột ngạt",
+    "expected_specialty": "Tim mạch",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": false,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 14.0,
+      "Tim mạch": 6.5,
+      "Thần kinh": 6.5
+    },
+    "clinical_rationale": "Khó thở khi nằm (Orthopnea) kèm khó thở kịch phát về đêm và phù chân là tam chứng kinh điển của Suy tim ứ huyết."
+  },
+  {
+    "id": "TC-CARDIO-04",
+    "chief_symptom": "Tim đập dồn dập như muốn nhảy khỏi lồng ngực, mặt tái nhợt, hoa mắt choáng ngất",
+    "expected_specialty": "Tim mạch",
+    "returned_specialty": "Tim mạch",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Nhịp tim PPG bất thường nguy hiểm: 160 BPM."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tim mạch": 10.0,
+      "Hô hấp": 6.0,
+      "Mắt": 3.5
+    },
+    "clinical_rationale": "Nhịp tim cực nhanh 160 BPM đo qua camera PPG kèm tụt huyết áp và choáng váng là Cơn nhịp nhanh kịch phát đe dọa huyết động."
+  },
+  {
+    "id": "TC-CARDIO-05",
+    "chief_symptom": "Kiểm tra huyết áp tại nhà thấy chỉ số dao động 145/95 mmHg, thỉnh thoảng hơi nặng đầu",
+    "expected_specialty": "Tim mạch",
+    "returned_specialty": "Tim mạch",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": false,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tim mạch": 6.5,
+      "Thần kinh": 6.0,
+      "Hô hấp": 6.0
+    },
+    "clinical_rationale": "Tăng huyết áp độ 1 có triệu chứng cần được bác sĩ Tim mạch chẩn đoán giai đoạn và kê đơn thuốc hạ áp duy trì."
+  },
+  {
+    "id": "TC-NEURO-01",
+    "chief_symptom": "Đau đầu dữ dội đột ngột chưa từng có trong đời, đau như búa bổ khắp đầu",
+    "expected_specialty": "Thần kinh",
+    "returned_specialty": "Thần kinh",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Đau đầu khởi phát đột ngột, dữ dội bất thường nghi xuất huyết dưới nhện."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 16.01,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Thần kinh": 6.0,
+      "Tai Mũi Họng": 4.5,
+      "Tiêu hóa": 3.5
+    },
+    "clinical_rationale": "Đau đầu sét đánh (Thunderclap headache) kèm nôn vọt và dấu màng não (cổ cứng) là Red Flag xuất huyết dưới nhện do vỡ phình mạch não."
+  },
+  {
+    "id": "TC-NEURO-02",
+    "chief_symptom": "Đột ngột méo miệng lệch sang trái, tay phải yếu không nâng được cốc nước, nói ngọng",
+    "expected_specialty": "Thần kinh",
+    "returned_specialty": "Thần kinh",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Dấu hiệu nguy kịch đột quỵ não hoặc tổn thương thần kinh khu trú cấp tính."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Thần kinh": 11.0,
+      "Cơ xương khớp": 3.0,
+      "Tai Mũi Họng": 2.0
+    },
+    "clinical_rationale": "Dấu hiệu FAST dương tính (Face méo, Arm yếu, Speech ngọng) là dấu hiệu kinh điển của Tai biến mạch máu não / Đột quỵ thiếu máu não cấp trong cửa sổ vàng."
+  },
+  {
+    "id": "TC-NEURO-03",
+    "chief_symptom": "Đau nhức nửa đầu bên phải theo nhịp đập của mạch máu, kéo dài từ sáng",
+    "expected_specialty": "Thần kinh",
+    "returned_specialty": "Thần kinh",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Thần kinh": 6.0,
+      "Mắt": 5.5,
+      "Tim mạch": 3.5
+    },
+    "clinical_rationale": "Đau nửa đầu theo nhịp đập có tiền triệu thị giác (Aura), sợ ánh sáng và tiếng ồn là bệnh cảnh điển hình của Migraine."
+  },
+  {
+    "id": "TC-NEURO-04",
+    "chief_symptom": "Tê bì châm chích các đầu ngón tay hai bên, cảm giác như kiến bò hoặc mang găng tay",
+    "expected_specialty": "Thần kinh",
+    "returned_specialty": "Thần kinh",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Thần kinh": 10.0,
+      "Cơ xương khớp": 6.0,
+      "Hô hấp": 3.5
+    },
+    "clinical_rationale": "Tê bì ngón tay hai bên kiểu châm chích tăng về đêm hướng đến Hội chứng ống cổ tay hoặc bệnh lý thần kinh ngoại biên."
+  },
+  {
+    "id": "TC-NEURO-05",
+    "chief_symptom": "Chóng mặt quay cuồng khi thay đổi tư thế nằm sang ngồi hoặc khi trở mình trên giường",
+    "expected_specialty": "Thần kinh",
+    "returned_specialty": "Thần kinh",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Thần kinh": 6.0,
+      "Tiêu hóa": 3.5,
+      "Hô hấp": 3.5
+    },
+    "clinical_rationale": "Chóng mặt tư thế kịch phát lành tính (BPPV) do sỏi nhĩ sỏi tiền đình cần khám chuyên khoa Thần kinh hoặc Tai Mũi Họng."
+  },
+  {
+    "id": "TC-ENDO-01",
+    "chief_symptom": "Uống nước liên tục, lúc nào cũng khát khô cổ, đi tiểu rất nhiều lần cả ngày lẫn đêm",
+    "expected_specialty": "Nội tiết",
+    "returned_specialty": "Nhi khoa",
+    "is_specialty_correct": false,
+    "expected_risk": "CONSULT",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": false,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Nhi khoa": 3.5,
+      "Mắt": 3.5,
+      "Sản phụ khoa": 3.0
+    },
+    "clinical_rationale": "Hội chứng 4 nhiều (Ăn nhiều, Uống nhiều, Tiểu nhiều, Sút cân nhanh) là dấu hiệu kinh điển của Đái tháo đường khởi phát."
+  },
+  {
+    "id": "TC-ENDO-02",
+    "chief_symptom": "Run nhẹ hai bàn tay, tim đập nhanh, tính khí hay cáu gắt, sợ nóng lúc nào cũng vã mồ hôi",
+    "expected_specialty": "Nội tiết",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": false,
+    "expected_risk": "CONSULT",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": false,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 7.0,
+      "Tim mạch": 3.5,
+      "Sản phụ khoa": 3.5
+    },
+    "clinical_rationale": "Hội chứng nhiễm độc giáp (sợ nóng, sụt cân, run tay, nhịp tim nhanh, bướu cổ to) hướng đến bệnh lý Cường giáp / Basedow."
+  },
+  {
+    "id": "TC-ENDO-03",
+    "chief_symptom": "Bệnh nhân đái tháo đường sốt cao, thở sâu và nhanh, hơi thở có mùi hoa quả thối (mùi táo chín), lơ mơ",
+    "expected_specialty": "Nội tiết",
+    "returned_specialty": "Tiêu hóa",
+    "is_specialty_correct": false,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": false,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [],
+    "is_red_flag_correct": false,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tiêu hóa": 11.0,
+      "Mắt": 7.0,
+      "Hô hấp": 6.0
+    },
+    "clinical_rationale": "Thở kiểu Kussmaul có mùi ceton kèm lơ mơ ở người bệnh tiểu đường là cấp cứu Nhiễm toan Ceton đái tháo đường (DKA)."
+  },
+  {
+    "id": "TC-ENDO-04",
+    "chief_symptom": "Mệt mỏi kiệt sức triền miên, sợ lạnh dù trời nóng, tăng cân bất thường dù ăn rất ít",
+    "expected_specialty": "Nội tiết",
+    "returned_specialty": "Nhi khoa",
+    "is_specialty_correct": false,
+    "expected_risk": "CONSULT",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": false,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Nhi khoa": 3.5,
+      "Mắt": 3.5,
+      "Da liễu": 3.5
+    },
+    "clinical_rationale": "Hội chứng suy giáp (nhịp tim chậm, sợ lạnh, tăng cân, táo bón, da khô, phù niêm) cần xét nghiệm định lượng TSH, FT4 chuyên sâu."
+  },
+  {
+    "id": "TC-ENDO-05",
+    "chief_symptom": "Sờ thấy một khối u cục nhỏ bằng hạt lạc ở trước cổ di động theo nhịp nuốt, không đau",
+    "expected_specialty": "Nội tiết",
+    "returned_specialty": "Tai Mũi Họng",
+    "is_specialty_correct": false,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tai Mũi Họng": 6.0,
+      "Nội tiết": 2.0,
+      "Cơ xương khớp": 1.0
+    },
+    "clinical_rationale": "Nhân tuyến giáp tình cờ phát hiện cần được siêu âm tuyến giáp Doppler và chọc hút tế bào kim nhỏ (FNA) tại chuyên khoa Nội tiết."
+  },
+  {
+    "id": "TC-PED-01",
+    "chief_symptom": "Bé 2 tuổi sốt cao 39.8°C đột ngột lên cơn co giật toàn thân trợn mắt tím môi",
+    "expected_specialty": "Nhi khoa",
+    "returned_specialty": "Nhi khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Co giật cấp tính cần can thiệp y tế khẩn cấp.",
+      "Nhịp tim PPG bất thường nguy hiểm: 150 BPM.",
+      "Sốt cao nguy hiểm: 39.8°C."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Nhi khoa": 11.5,
+      "Thần kinh": 6.0,
+      "Mắt": 5.5
+    },
+    "clinical_rationale": "Co giật do sốt cao ở trẻ nhỏ là tình trạng cấp cứu Nhi khoa cần hạ sốt khẩn, cắt cơn và loại trừ viêm màng não."
+  },
+  {
+    "id": "TC-PED-02",
+    "chief_symptom": "Bé 3 tuổi ho có đờm, chảy nước mũi trong sau chuyển vàng, sốt nhẹ 38.2°C",
+    "expected_specialty": "Nhi khoa",
+    "returned_specialty": "Nhi khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Nhi khoa": 11.5,
+      "Hô hấp": 9.5,
+      "Tim mạch": 3.0
+    },
+    "clinical_rationale": "Nhiễm khuẩn đường hô hấp trên ở trẻ em cần khám Nhi khoa để kê đơn thuốc an toàn theo cân nặng lứa tuổi."
+  },
+  {
+    "id": "TC-PED-03",
+    "chief_symptom": "Bé 14 tháng nôn trớ liên tục sau khi bú mẹ, đi ngoài phân lỏng nhiều nước 5 lần/ngày",
+    "expected_specialty": "Nhi khoa",
+    "returned_specialty": "Nhi khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Nhi khoa": 22.0,
+      "Tiêu hóa": 10.0,
+      "Sản phụ khoa": 3.0
+    },
+    "clinical_rationale": "Tiêu chảy cấp có dấu hiệu mất nước nhẹ ở trẻ nhũ nhi cần được bác sĩ Nhi đánh giá phác đồ bù nước điện giải Oresol."
+  },
+  {
+    "id": "TC-PED-04",
+    "chief_symptom": "Bé 18 tháng ho tiếng ông ổng như chó sủa, thở rít khàn đặc khi hít vào, co kéo hõm ức",
+    "expected_specialty": "Nhi khoa",
+    "returned_specialty": "Nhi khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Suy hô hấp cấp tính hoặc tràn khí / ho ra máu nặng.",
+      "Nhịp tim PPG bất thường nguy hiểm: 140 BPM."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Nhi khoa": 11.5,
+      "Hô hấp": 9.5,
+      "Tim mạch": 3.0
+    },
+    "clinical_rationale": "Viêm thanh khí phế quản cấp (Croup) có tiếng thở rít thanh quản thì hít vào và co kéo lồng ngực là cấp cứu suy hô hấp trẻ em."
+  },
+  {
+    "id": "TC-PED-05",
+    "chief_symptom": "Tư vấn dinh dưỡng cho bé 9 tháng chậm tăng cân, biếng ăn dặm, muốn kiểm tra vi chất",
+    "expected_specialty": "Nhi khoa",
+    "returned_specialty": "Nhi khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "MONITOR",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Nhi khoa": 15.0,
+      "Hô hấp": 3.5,
+      "Sản phụ khoa": 3.0
+    },
+    "clinical_rationale": "Khám sức khỏe định kỳ và tư vấn vi chất (còi xương dinh dưỡng) cho trẻ nhũ nhi thuộc phân hệ Nhi khoa."
+  },
+  {
+    "id": "TC-OBGYN-01",
+    "chief_symptom": "Trễ kinh 3 tuần, đột ngột đau nhói xé rách bụng dưới bên phải, ra máu đen âm đạo ít, ngất xỉu",
+    "expected_specialty": "Sản phụ khoa",
+    "returned_specialty": "Sản phụ khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Nghi ngờ thai ngoài tử cung vỡ sốc mất máu."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Sản phụ khoa": 13.0,
+      "Tiêu hóa": 9.5,
+      "Tim mạch": 7.0
+    },
+    "clinical_rationale": "Tam chứng trễ kinh + đau bụng dưới dữ dội + ra máu âm đạo kèm tụt huyết áp là cấp cứu Thai ngoài tử cung vỡ gây sốc mất máu."
+  },
+  {
+    "id": "TC-OBGYN-02",
+    "chief_symptom": "Đau quặn thắt vùng bụng dưới dữ dội mỗi khi đến chu kỳ kinh nguyệt, kinh nguyệt kéo dài 8 ngày",
+    "expected_specialty": "Sản phụ khoa",
+    "returned_specialty": "Sản phụ khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 16.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Sản phụ khoa": 9.5,
+      "Tiêu hóa": 9.5,
+      "Cơ xương khớp": 7.0
+    },
+    "clinical_rationale": "Thống kinh nặng kèm rong kinh kéo dài hướng đến bệnh lý Lạc nội mạc tử cung hoặc U xơ tử cung cần siêu âm phụ khoa."
+  },
+  {
+    "id": "TC-OBGYN-03",
+    "chief_symptom": "Khí hư ra nhiều bất thường màu vàng xanh sủi bọt có mùi hôi tanh khó chịu, ngứa rát âm đạo",
+    "expected_specialty": "Sản phụ khoa",
+    "returned_specialty": "Sản phụ khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Sản phụ khoa": 10.0,
+      "Nhi khoa": 3.5,
+      "Da liễu": 3.5
+    },
+    "clinical_rationale": "Viêm âm đạo - cổ tử cung do trùng roi Trichomonas hoặc nấm Candida cần soi tươi huyết trắng tại phòng khám Sản phụ khoa."
+  },
+  {
+    "id": "TC-OBGYN-04",
+    "chief_symptom": "Mang thai tuần thứ 12 muốn khám định kỳ, đo độ mờ da gáy và làm xét nghiệm NIPT",
+    "expected_specialty": "Sản phụ khoa",
+    "returned_specialty": "Sản phụ khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": false,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Sản phụ khoa": 16.5,
+      "Tiêu hóa": 6.0,
+      "Tim mạch": 3.5
+    },
+    "clinical_rationale": "Theo dõi thai kỳ mốc 12 tuần sàng lọc dị tật nhiễm sắc thể là quy chuẩn của chuyên khoa Sản phụ khoa."
+  },
+  {
+    "id": "TC-OBGYN-05",
+    "chief_symptom": "Khám phụ khoa định kỳ hàng năm và tầm soát ung thư cổ tử cung (xét nghiệm Pap Smear)",
+    "expected_specialty": "Sản phụ khoa",
+    "returned_specialty": "Sản phụ khoa",
+    "is_specialty_correct": true,
+    "expected_risk": "MONITOR",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Sản phụ khoa": 13.5,
+      "Hô hấp": 3.5,
+      "Tiêu hóa": 3.0
+    },
+    "clinical_rationale": "Tầm soát ung thư phụ khoa định kỳ cho phụ nữ trong độ tuổi sinh sản."
+  },
+  {
+    "id": "TC-ORTHO-01",
+    "chief_symptom": "Đau khớp gối hai bên khi đi lại lên xuống cầu thang, khớp kêu lục cục lạo xạo",
+    "expected_specialty": "Cơ xương khớp",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 16.5,
+      "Hô hấp": 3.5,
+      "Thần kinh": 3.0
+    },
+    "clinical_rationale": "Đau khớp gối cơ học kèm cứng khớp buổi sáng < 30 phút và lạo xạo khớp là hình ảnh điển hình của Thoái hóa khớp gối."
+  },
+  {
+    "id": "TC-ORTHO-02",
+    "chief_symptom": "Đột ngột sưng to, nóng bỏng rát và đau nhức dữ dội ở khớp ngón chân cái bên phải lúc nửa đêm",
+    "expected_specialty": "Cơ xương khớp",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 10.0,
+      "Da liễu": 3.5,
+      "Thần kinh": 1.5
+    },
+    "clinical_rationale": "Cơn viêm khớp bàn ngón chân cái cấp tính sau bữa ăn giàu đạm bia rượu là bệnh cảnh kinh điển của Viêm khớp Gout cấp."
+  },
+  {
+    "id": "TC-ORTHO-03",
+    "chief_symptom": "Đau buốt thắt lưng lan dọc xuống mông, mặt sau đùi và bàn chân trái, ho hắt hơi đau nhói",
+    "expected_specialty": "Cơ xương khớp",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 16.5,
+      "Thần kinh": 6.5,
+      "Hô hấp": 3.5
+    },
+    "clinical_rationale": "Đau thắt lưng lan theo đường đi của dây thần kinh tọa tăng khi tăng áp lực ổ bụng là Thoát vị đĩa đệm cột sống thắt lưng chèn ép rễ."
+  },
+  {
+    "id": "TC-ORTHO-04",
+    "chief_symptom": "Đau nhức khớp vai phải, không thể giơ tay lên chải đầu hoặc với tay ra sau lưng gãi",
+    "expected_specialty": "Cơ xương khớp",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 16.5,
+      "Thần kinh": 6.5,
+      "Hô hấp": 3.5
+    },
+    "clinical_rationale": "Viêm quanh khớp vai thể đông cứng (Frozen shoulder / Adhesive capsulitis) cần điều trị tại chuyên khoa Cơ xương khớp."
+  },
+  {
+    "id": "TC-ORTHO-05",
+    "chief_symptom": "Ngã trượt chân đập cổ tay xuống sàn, cổ tay bị biến dạng gập góc hình chiếc nĩa, đau chói",
+    "expected_specialty": "Cơ xương khớp",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Biến dạng chi nghi gãy xương sau chấn thương."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 13.5,
+      "Răng Hàm Mặt": 3.5,
+      "Da liễu": 3.5
+    },
+    "clinical_rationale": "Biến dạng xương rõ rệt sau chấn thương là dấu hiệu chắc chắn của Gãy xương (Gãy Pouteau-Colles đầu dưới xương quay) cần nắn chỉnh cố định khẩn."
+  },
+  {
+    "id": "TC-ENT-01",
+    "chief_symptom": "Đau rát họng dữ dội mỗi khi nuốt nước bọt, sốt 38.5°C, hai bên góc hàm nổi hạch đau",
+    "expected_specialty": "Tai Mũi Họng",
+    "returned_specialty": "Tai Mũi Họng",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tai Mũi Họng": 13.5,
+      "Răng Hàm Mặt": 3.5,
+      "Nội tiết": 2.0
+    },
+    "clinical_rationale": "Đau họng nuốt đau kèm sốt và sưng hạch là bệnh cảnh Viêm amidan cấp mủ cần nội soi Tai Mũi Họng."
+  },
+  {
+    "id": "TC-ENT-02",
+    "chief_symptom": "Chảy nước mũi đặc màu vàng xanh, ngạt mũi hai bên phải thở bằng miệng, đau nhức vùng trán và hốc mắt",
+    "expected_specialty": "Tai Mũi Họng",
+    "returned_specialty": "Thần kinh",
+    "is_specialty_correct": false,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Thần kinh": 8.5,
+      "Tai Mũi Họng": 7.5,
+      "Mắt": 7.5
+    },
+    "clinical_rationale": "Viêm mũi xoang cấp nhiễm khuẩn (xoang hàm trán) cần hút rửa xoang và dùng kháng sinh điều trị TMH."
+  },
+  {
+    "id": "TC-ENT-03",
+    "chief_symptom": "Đau nhức tai dữ dội kèm chảy mủ tai thối vàng xanh, sốt cao 39°C, sưng đỏ đau nhức vùng xương chũm sau tai",
+    "expected_specialty": "Tai Mũi Họng",
+    "returned_specialty": "Tai Mũi Họng",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": false,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [],
+    "is_red_flag_correct": false,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tai Mũi Họng": 14.0,
+      "Thần kinh": 6.0,
+      "Cơ xương khớp": 3.5
+    },
+    "clinical_rationale": "Viêm tai xương chũm cấp tính có nguy cơ vỡ mủ vào nội sọ gây viêm màng não hoặc áp xe não (Red Flag TMH)."
+  },
+  {
+    "id": "TC-ENT-04",
+    "chief_symptom": "Ù tai một bên tai trái như có tiếng ve kêu hoặc tiếng còi xe bên trong, nghe kém rõ rệt",
+    "expected_specialty": "Tai Mũi Họng",
+    "returned_specialty": "Tai Mũi Họng",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tai Mũi Họng": 12.0,
+      "Hô hấp": 3.5,
+      "Tim mạch": 0.0
+    },
+    "clinical_rationale": "Điếc đột ngột (Sudden sensorineural hearing loss) là cấp cứu thính học cần đo thính lực và dùng Corticoid sớm trong 72 giờ vàng."
+  },
+  {
+    "id": "TC-ENT-05",
+    "chief_symptom": "Nuốt phải xương cá khi ăn cơm, đau nhói ở đáy họng, nuốt nước bọt cũng nhói buốt, không nuốt được cơm",
+    "expected_specialty": "Tai Mũi Họng",
+    "returned_specialty": "Tai Mũi Họng",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": false,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [],
+    "is_red_flag_correct": false,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tai Mũi Họng": 11.0,
+      "Cơ xương khớp": 3.5,
+      "Tiêu hóa": 3.5
+    },
+    "clinical_rationale": "Dị vật đường ăn (hóc xương) cần gắp nội soi Tai Mũi Họng khẩn để tránh đâm thủng thực quản áp xe trung thất."
+  },
+  {
+    "id": "TC-EYE-01",
+    "chief_symptom": "Đau nhức mắt phải dữ dội lan lên nửa đầu cùng bên, mắt đỏ rực nhìn mờ như qua sương mù, nhìn đèn thấy quầng 7 màu",
+    "expected_specialty": "Mắt",
+    "returned_specialty": "Mắt",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Cấp cứu nhãn khoa khẩn cấp (Glocom góc đóng hoặc bỏng hóa chất)."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Mắt": 17.5,
+      "Thần kinh": 6.0,
+      "Nhi khoa": 3.5
+    },
+    "clinical_rationale": "Cơn Glocom góc đóng cấp (Tăng nhãn áp cấp) cần hạ nhãn áp khẩn cấp trong vài giờ để cứu lấy thị lực mắt."
+  },
+  {
+    "id": "TC-EYE-02",
+    "chief_symptom": "Mắt trái đỏ nhiều, cộm xốn như có hạt cát bên trong, rỉ mắt màu vàng dính bết mi mắt vào buổi sáng",
+    "expected_specialty": "Mắt",
+    "returned_specialty": "Mắt",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Mắt": 15.5,
+      "Nhi khoa": 3.5,
+      "Tim mạch": 0.0
+    },
+    "clinical_rationale": "Viêm kết mạc cấp (đau mắt đỏ) do vi khuẩn hoặc virus cần được bác sĩ Mắt khám soi đáy mắt và kê thuốc nhỏ mắt chuyên dụng."
+  },
+  {
+    "id": "TC-EYE-03",
+    "chief_symptom": "Nhìn xa bị mờ nhòe chữ trên bảng, hay phải nheo mắt, mỏi mắt và chảy nước mắt khi dùng máy tính",
+    "expected_specialty": "Mắt",
+    "returned_specialty": "Mắt",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Mắt": 8.5,
+      "Tim mạch": 0.0,
+      "Thần kinh": 0.0
+    },
+    "clinical_rationale": "Tật khúc xạ (Cận thị / Loạn thị) kèm hội chứng thị giác màn hình máy tính cần đo thị lực khúc xạ tại chuyên khoa Mắt."
+  },
+  {
+    "id": "TC-EYE-04",
+    "chief_symptom": "Bị nước tẩy rửa bồn cầu bắn thẳng vào mắt, đau rát xé thịt, mắt nhắm nghiền không thể mở được",
+    "expected_specialty": "Mắt",
+    "returned_specialty": "Mắt",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": false,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [],
+    "is_red_flag_correct": false,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Mắt": 8.5,
+      "Tim mạch": 0.0,
+      "Thần kinh": 0.0
+    },
+    "clinical_rationale": "Bỏng hóa chất mắt (Acid/Kiềm) là tối cấp cứu nhãn khoa cần rửa mắt liên tục dưới vòi nước và cấp cứu Mắt lập tức."
+  },
+  {
+    "id": "TC-EYE-05",
+    "chief_symptom": "Thị lực giảm sút từ từ cả hai mắt như có màng sương mù che trước mắt, nhìn màu sắc bị nhạt nhẽo",
+    "expected_specialty": "Mắt",
+    "returned_specialty": "Mắt",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Mắt": 8.5,
+      "Tim mạch": 0.0,
+      "Thần kinh": 0.0
+    },
+    "clinical_rationale": "Đục thủy tinh thể tuổi già (Cataract) cần khám chuyên khoa Mắt để đánh giá chỉ định phẫu thuật Phaco thay thủy tinh thể nhân tạo."
+  },
+  {
+    "id": "TC-DENTAL-01",
+    "chief_symptom": "Đau nhức răng hàm dưới dữ dội giật theo nhịp tim, buốt óc mỗi khi ăn đồ nóng lạnh, đau nhiều về đêm",
+    "expected_specialty": "Răng Hàm Mặt",
+    "returned_specialty": "Răng Hàm Mặt",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Răng Hàm Mặt": 9.0,
+      "Tim mạch": 3.5,
+      "Nhi khoa": 3.5
+    },
+    "clinical_rationale": "Viêm tủy răng cấp tính do sâu răng nặng cần điều trị tủy diệt tủy tại chuyên khoa Răng Hàm Mặt."
+  },
+  {
+    "id": "TC-DENTAL-02",
+    "chief_symptom": "Sưng vù một bên mặt lan xuống dưới góc hàm và cổ, há miệng khó khăn chỉ há được 1cm, sốt cao 39.5°C",
+    "expected_specialty": "Răng Hàm Mặt",
+    "returned_specialty": "Răng Hàm Mặt",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Sốt cao nguy hiểm: 39.5°C."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Răng Hàm Mặt": 5.5,
+      "Cơ xương khớp": 4.5,
+      "Tai Mũi Họng": 4.5
+    },
+    "clinical_rationale": "Áp xe khoang hàm mặt / Viêm tấy lan tỏa sàn miệng (Angina Ludwig) biến chứng từ răng khôn có nguy cơ chèn ép đường thở gây ngạt thở."
+  },
+  {
+    "id": "TC-DENTAL-03",
+    "chief_symptom": "Sưng đỏ và đau nhức nướu vùng trong cùng hàm dưới bên trái, ấn vào có mủ chảy ra, há miệng đau",
+    "expected_specialty": "Răng Hàm Mặt",
+    "returned_specialty": "Răng Hàm Mặt",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Răng Hàm Mặt": 9.0,
+      "Thần kinh": 2.5,
+      "Tai Mũi Họng": 2.0
+    },
+    "clinical_rationale": "Viêm lợi trùm răng khôn (răng số 8 mọc lệch) cần cắt lợi trùm hoặc phẫu thuật nhổ răng khôn tại Răng Hàm Mặt."
+  },
+  {
+    "id": "TC-DENTAL-04",
+    "chief_symptom": "Khớp hàm phát ra tiếng kêu lục cục lách cách mỗi khi há to miệng hoặc nhai đồ cứng, mỏi cơ hàm hai bên",
+    "expected_specialty": "Răng Hàm Mặt",
+    "returned_specialty": "Răng Hàm Mặt",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Răng Hàm Mặt": 11.0,
+      "Tai Mũi Họng": 7.5,
+      "Thần kinh": 5.0
+    },
+    "clinical_rationale": "Rối loạn khớp thái dương hàm (TMJ Disorder) thuộc lĩnh vực chuyên sâu của chuyên khoa Răng Hàm Mặt."
+  },
+  {
+    "id": "TC-DENTAL-05",
+    "chief_symptom": "Chảy máu nướu răng mỗi khi đánh răng hoặc ăn táo cắn đồ cứng, nhiều cao răng vàng bám quanh chân răng",
+    "expected_specialty": "Răng Hàm Mặt",
+    "returned_specialty": "Răng Hàm Mặt",
+    "is_specialty_correct": true,
+    "expected_risk": "MONITOR",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Răng Hàm Mặt": 9.0,
+      "Nhi khoa": 3.5,
+      "Cơ xương khớp": 3.5
+    },
+    "clinical_rationale": "Viêm nướu / Viêm nha chu do mảng bám vôi răng cần lấy cao răng và vệ sinh khoang miệng định kỳ."
+  },
+  {
+    "id": "TC-DERM-01",
+    "chief_symptom": "Xuất hiện các mảng sẩn đỏ gồ trên mặt da phù nề ngứa ngáy dữ dội khắp người, càng gãi càng lan rộng",
+    "expected_specialty": "Da liễu",
+    "returned_specialty": "Da liễu",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Da liễu": 14.5,
+      "Cơ xương khớp": 6.0,
+      "Mắt": 3.5
+    },
+    "clinical_rationale": "Mề đay cấp tính (Urticaria) do dị ứng thức ăn cần dùng kháng histamin và theo dõi ngoại trú tại chuyên khoa Da liễu."
+  },
+  {
+    "id": "TC-DERM-02",
+    "chief_symptom": "Sau uống thuốc cảm sốt 2 ngày, toàn thân nổi ban đỏ bọng nước trợt da loét nát, loét niêm mạc môi miệng mắt chảy máu",
+    "expected_specialty": "Da liễu",
+    "returned_specialty": "Da liễu",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Cấp cứu da liễu hoặc nhiễm trùng lan tỏa hàm mặt.",
+      "Sốt cao nguy hiểm: 39.5°C."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Da liễu": 14.5,
+      "Mắt": 5.5,
+      "Tim mạch": 3.0
+    },
+    "clinical_rationale": "Hội chứng Stevens-Johnson / Hoại tử thượng bì nhiễm độc (TEN) là dị ứng thuốc thể tối nguy hiểm đe dọa tính mạng."
+  },
+  {
+    "id": "TC-DERM-03",
+    "chief_symptom": "Nổi chùm mụn nước bọng nước trên nền da đỏ dọc theo một bên mạng sườn phải, cảm giác đau bỏng rát như lửa đốt",
+    "expected_specialty": "Da liễu",
+    "returned_specialty": "Da liễu",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Da liễu": 10.5,
+      "Tim mạch": 6.5,
+      "Tiêu hóa": 4.0
+    },
+    "clinical_rationale": "Zona thần kinh (Herpes Zoster) phân bố điển hình theo một nửa khoanh da thần kinh cần dùng thuốc kháng virus Acyclovir sớm."
+  },
+  {
+    "id": "TC-DERM-04",
+    "chief_symptom": "Mặt nổi nhiều mụn bọc sưng đỏ mủ đau nhức ở hai bên má và cằm, để lại nhiều vết sẹo rỗ và thâm đen",
+    "expected_specialty": "Da liễu",
+    "returned_specialty": "Da liễu",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Da liễu": 7.0,
+      "Nhi khoa": 3.5,
+      "Thần kinh": 2.5
+    },
+    "clinical_rationale": "Mụn trứng cá bọc viêm nặng (Acne vulgaris Grade 3-4) cần phác đồ điều trị chuẩn của bác sĩ Da liễu."
+  },
+  {
+    "id": "TC-DERM-05",
+    "chief_symptom": "Vùng khuỷu tay và đầu gối xuất hiện các mảng da màu đỏ tươi phủ lớp vảy trắng đục xếp tầng như sáp nến",
+    "expected_specialty": "Da liễu",
+    "returned_specialty": "Cơ xương khớp",
+    "is_specialty_correct": false,
+    "expected_risk": "CONSULT",
+    "returned_risk": "MONITOR",
+    "is_risk_correct": false,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 16.51,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Cơ xương khớp": 15.5,
+      "Thần kinh": 9.5,
+      "Da liễu": 7.0
+    },
+    "clinical_rationale": "Bệnh vảy nến mảng bám (Psoriasis vulgaris) có tổn thương đặc trưng ở vùng tì đè cần quản lý bệnh tự miễn tại chuyên khoa Da liễu."
+  },
+  {
+    "id": "TC-GASTRO-01",
+    "chief_symptom": "Đau bụng dữ dội đột ngột như có dao đâm thấu vào vùng trên rốn, bụng gồng cứng như tấm gỗ không dám thở",
+    "expected_specialty": "Tiêu hóa",
+    "returned_specialty": "Tiêu hóa",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Dấu hiệu thủng tạng rỗng hoặc viêm phúc mạc cấp."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tiêu hóa": 10.0,
+      "Răng Hàm Mặt": 3.5,
+      "Da liễu": 3.5
+    },
+    "clinical_rationale": "Bụng cứng như gỗ kèm đau như dao đâm đột ngột là dấu hiệu viêm phúc mạc toàn thể do Thủng ổ loét dạ dày - tá tràng cần mổ cấp cứu."
+  },
+  {
+    "id": "TC-GASTRO-02",
+    "chief_symptom": "Cảm giác nóng rát cồn cào sau xương ức trào ngược lên tận cổ họng, ợ chua ợ hơi nhiều sau ăn no hoặc khi nằm ngửa",
+    "expected_specialty": "Tiêu hóa",
+    "returned_specialty": "Tiêu hóa",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tiêu hóa": 11.0,
+      "Hô hấp": 8.0,
+      "Tai Mũi Họng": 7.5
+    },
+    "clinical_rationale": "Bệnh trào ngược dạ dày thực quản (GERD) gây nóng rát sau xương ức và ợ chua cần nội soi thực quản dạ dày."
+  },
+  {
+    "id": "TC-GASTRO-03",
+    "chief_symptom": "Đột ngột nôn ra khoảng 300ml máu đỏ tươi lẫn máu cục thâm đen, sau đó đi cầu phân đen như nhựa đường mùi thối khắm",
+    "expected_specialty": "Tiêu hóa",
+    "returned_specialty": "Tiêu hóa",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": false,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [],
+    "is_red_flag_correct": false,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tiêu hóa": 10.0,
+      "Tim mạch": 3.5,
+      "Thần kinh": 3.5
+    },
+    "clinical_rationale": "Nôn ra máu và đi cầu phân đen kèm tụt huyết áp là Xuất huyết tiêu hóa trên nặng đe dọa sốc mất máu cấp cứu."
+  },
+  {
+    "id": "TC-GASTRO-04",
+    "chief_symptom": "Đau quặn bụng quanh rốn và vùng bụng dưới, đầy hơi chướng bụng, đi ngoài lúc táo bón lúc tiêu chảy phân nát",
+    "expected_specialty": "Tiêu hóa",
+    "returned_specialty": "Tiêu hóa",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tiêu hóa": 13.5,
+      "Sản phụ khoa": 3.0,
+      "Tim mạch": 0.0
+    },
+    "clinical_rationale": "Rối loạn chức năng tiêu hóa / Hội chứng ruột kích thích (IBS) theo tiêu chuẩn Rome IV cần nội soi loại trừ polyp ung thư."
+  },
+  {
+    "id": "TC-GASTRO-05",
+    "chief_symptom": "Đau âm ỉ bắt đầu từ quanh rốn sau đó chuyển khu trú xuống vùng hố chậu bên phải, đau tăng liên tục",
+    "expected_specialty": "Tiêu hóa",
+    "returned_specialty": "Tiêu hóa",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Nghi ngờ viêm ruột thừa cấp cần can thiệp ngoại khoa."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tiêu hóa": 10.0,
+      "Thần kinh": 3.5,
+      "Sản phụ khoa": 3.0
+    },
+    "clinical_rationale": "Đau chuyển từ quanh rốn sang hố chậu phải có điểm Mac Burney đau chói là dấu hiệu điển hình của Viêm ruột thừa cấp cần phẫu thuật cắt ruột thừa."
+  },
+  {
+    "id": "TC-PULMO-01",
+    "chief_symptom": "Lên cơn khó thở dữ dội, thở rít khò khè nghe rõ từ xa, nói ngắt quãng từng từ không thành câu, SpO2 88%",
+    "expected_specialty": "Hô hấp",
+    "returned_specialty": "Hô hấp",
+    "is_specialty_correct": true,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Suy hô hấp cấp tính hoặc tràn khí / ho ra máu nặng.",
+      "SpO2 hạ nguy kịch: 88%."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Hô hấp": 9.5,
+      "Tim mạch": 6.5,
+      "Thần kinh": 3.5
+    },
+    "clinical_rationale": "Cơn hen phế quản nặng / ác tính kèm suy hô hấp cấp (SpO2 < 90%) là cấp cứu Hô hấp khẩn cấp cần thở oxy và khí dung giãn phế quản."
+  },
+  {
+    "id": "TC-PULMO-02",
+    "chief_symptom": "Ho dai dẳng kéo dài hơn 4 tuần nay, khạc đờm đặc màu vàng xanh đục, sốt hâm hấp về chiều",
+    "expected_specialty": "Hô hấp",
+    "returned_specialty": "Hô hấp",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Hô hấp": 9.5,
+      "Da liễu": 3.5,
+      "Tim mạch": 3.0
+    },
+    "clinical_rationale": "Ho đờm mạn tính kéo dài kèm sốt về chiều và sút cân cần chụp X-quang phổi và xét nghiệm đờm tầm soát Lao phổi hoặc Viêm phế quản mạn."
+  },
+  {
+    "id": "TC-PULMO-03",
+    "chief_symptom": "Đột ngột đau nhói ngực dữ dội một bên như dao đâm khi ho mạnh, sau đó khó thở tăng nhanh dồn dập",
+    "expected_specialty": "Hô hấp",
+    "returned_specialty": "Tim mạch",
+    "is_specialty_correct": false,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Dấu hiệu thủng tạng rỗng hoặc viêm phúc mạc cấp.",
+      "SpO2 hạ nguy kịch: 89%."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tim mạch": 6.5,
+      "Hô hấp": 6.0,
+      "Tiêu hóa": 4.5
+    },
+    "clinical_rationale": "Đau ngực đột ngột một bên kèm suy hô hấp cấp ở người trẻ gầy cao là bệnh cảnh điển hình của Tràn khí màng phổi tự phát cấp cứu."
+  },
+  {
+    "id": "TC-PULMO-04",
+    "chief_symptom": "Khó thở tăng dần khi đi bộ nhanh hoặc leo cầu thang, ho khạc đờm trắng dính vào buổi sáng, tiền sử hút thuốc lá 25 năm",
+    "expected_specialty": "Hô hấp",
+    "returned_specialty": "Hô hấp",
+    "is_specialty_correct": true,
+    "expected_risk": "CONSULT",
+    "returned_risk": "CONSULT",
+    "is_risk_correct": true,
+    "is_red_flag_expected": false,
+    "red_flags_detected": [],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Hô hấp": 9.5,
+      "Tim mạch": 6.5,
+      "Răng Hàm Mặt": 3.5
+    },
+    "clinical_rationale": "Khó thở khi gắng sức ở người hút thuốc lá lâu năm là triệu chứng điển hình của Bệnh phổi tắc nghẽn mạn tính (COPD) cần đo chức năng hô hấp Spirometry."
+  },
+  {
+    "id": "TC-PULMO-05",
+    "chief_symptom": "Sau cơn ho sặc sụa thì ộc ra khoảng 100ml máu đỏ tươi có bọt khí, tức ngực nghẹt thở",
+    "expected_specialty": "Hô hấp",
+    "returned_specialty": "Tim mạch",
+    "is_specialty_correct": false,
+    "expected_risk": "EMERGENCY",
+    "returned_risk": "EMERGENCY",
+    "is_risk_correct": true,
+    "is_red_flag_expected": true,
+    "red_flags_detected": [
+      "Nghi ngờ hội chứng vành cấp hoặc nhồi máu cơ tim cấp.",
+      "Suy hô hấp cấp tính hoặc tràn khí / ho ra máu nặng."
+    ],
+    "is_red_flag_correct": true,
+    "response_time_ms": 15.0,
+    "llm_status": "FALLBACK_RULE_ENGINE",
+    "llm_note": "Hệ thống tự động kích hoạt Rule-based & RAG Fallback an toàn do môi trường sandbox nội bộ không có kết nối internet ra Beeknoee OpenAI API Gateway.",
+    "top_scores": {
+      "Tim mạch": 10.0,
+      "Hô hấp": 8.0,
+      "Tai Mũi Họng": 7.5
+    },
+    "clinical_rationale": "Ho ra máu cấp tính có bọt khí là cấp cứu Hô hấp (giãn phế quản vỡ mạch máu / u phổi) có nguy cơ tắc nghẽn đường thở do máu đông."
+  }
+]

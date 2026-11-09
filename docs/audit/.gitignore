@@ -1,0 +1,4 @@
+# Local audit inventories, source extracts, test output and render intermediates.
+# The deliverable is ../NovaCare_TaiLieuKyThuat_ChiTiet.docx.
+*
+!.gitignore

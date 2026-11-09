@@ -1,0 +1,1107 @@
+{
+  "User": {
+    "only_in_erd": [
+      "password",
+      "userId",
+      "tokenHash",
+      "expiresAt",
+      "isRevoked",
+      "userId",
+      "otpHash",
+      "destination",
+      "attempts",
+      "expiresAt",
+      "otpHash",
+      "expiresAt",
+      "isVerified",
+      "userId",
+      "token",
+      "deviceType",
+      "lastActiveAt",
+      "userId",
+      "action",
+      "entityName",
+      "entityId",
+      "ipAddress",
+      "userId",
+      "title",
+      "body",
+      "type",
+      "isRead",
+      "notificationId",
+      "channel",
+      "status",
+      "sentAt",
+      "password",
+      "gender",
+      "dateOfBirth",
+      "avatarUrl"
+    ],
+    "only_in_code": [
+      "authVersion",
+      "passwordHash",
+      "deletedAt",
+      "resetPasswordToken",
+      "resetPasswordExpiresAt",
+      "activationToken",
+      "activationExpiresAt",
+      "otpCode",
+      "otpExpiresAt",
+      "otpVerified"
+    ],
+    "code_col_count": 20,
+    "erd_col_count": 61
+  },
+  "RefreshToken": {
+    "only_in_erd": [],
+    "only_in_code": [
+      "updatedAt"
+    ],
+    "code_col_count": 9,
+    "erd_col_count": 8
+  },
+  "PasswordResetChallenge": {
+    "only_in_erd": [
+      "createdAt"
+    ],
+    "only_in_code": [
+      "requestedAt",
+      "windowStart",
+      "sendCount",
+      "verificationTokenHash",
+      "verificationExpiresAt"
+    ],
+    "code_col_count": 10,
+    "erd_col_count": 6
+  },
+  "RegistrationOtpChallenge": {
+    "only_in_erd": [
+      "isVerified",
+      "createdAt"
+    ],
+    "only_in_code": [
+      "requestedAt",
+      "attempts",
+      "windowStart",
+      "sendCount",
+      "verificationTokenHash",
+      "verificationExpiresAt"
+    ],
+    "code_col_count": 9,
+    "erd_col_count": 5
+  },
+  "DeviceToken": {
+    "only_in_erd": [
+      "token",
+      "lastActiveAt"
+    ],
+    "only_in_code": [
+      "deviceToken",
+      "isActive",
+      "updatedAt"
+    ],
+    "code_col_count": 7,
+    "erd_col_count": 6
+  },
+  "AuditLog": {
+    "only_in_erd": [
+      "entityName",
+      "oldData",
+      "newData"
+    ],
+    "only_in_code": [
+      "entityType",
+      "oldValue",
+      "newValue"
+    ],
+    "code_col_count": 10,
+    "erd_col_count": 10
+  },
+  "Notification": {
+    "only_in_erd": [
+      "body"
+    ],
+    "only_in_code": [
+      "content",
+      "channel",
+      "externalId",
+      "updatedAt"
+    ],
+    "code_col_count": 12,
+    "erd_col_count": 9
+  },
+  "NotificationLog": {
+    "only_in_erd": [
+      "notificationId"
+    ],
+    "only_in_code": [
+      "appointmentId",
+      "userId",
+      "type",
+      "createdAt"
+    ],
+    "code_col_count": 9,
+    "erd_col_count": 6
+  },
+  "PatientProfile": {
+    "only_in_erd": [
+      "relationship",
+      "identityCard",
+      "healthInsuranceNumber",
+      "patientProfileId",
+      "passportNumber",
+      "qrCode",
+      "chronicDiseases",
+      "passportId",
+      "createdBy",
+      "shareToken",
+      "scope",
+      "expiresAt",
+      "isRevoked",
+      "passportId",
+      "shareId",
+      "accessorId",
+      "accessorRole",
+      "accessTime",
+      "patientProfileId",
+      "hospitalId",
+      "consentStatus",
+      "grantedAt",
+      "revokedAt",
+      "patientProfileId",
+      "hospitalId",
+      "externalPatientId",
+      "linkedAt",
+      "relationship",
+      "identityCard",
+      "healthInsuranceNumber"
+    ],
+    "only_in_code": [
+      "patientCode",
+      "relation",
+      "identityNumber",
+      "healthInsurance",
+      "bhytInitialHospitalCode",
+      "bhytValidFrom",
+      "bhytValidTo",
+      "provinceCode",
+      "districtCode",
+      "wardCode",
+      "ethnicity",
+      "nationality",
+      "occupation",
+      "guardianName",
+      "familyMedicalHistory",
+      "lifestyleRiskFactors",
+      "currentMedications",
+      "emergencyContact",
+      "emergencyPhone",
+      "isActive",
+      "securityPin",
+      "deletedAt"
+    ],
+    "code_col_count": 35,
+    "erd_col_count": 57
+  },
+  "MedicalPassport": {
+    "only_in_erd": [
+      "patientProfileId",
+      "passportNumber",
+      "qrCode",
+      "bloodType",
+      "allergies",
+      "chronicDiseases",
+      "createdAt"
+    ],
+    "only_in_code": [
+      "userId",
+      "summary",
+      "version"
+    ],
+    "code_col_count": 5,
+    "erd_col_count": 9
+  },
+  "MedicalPassportShare": {
+    "only_in_erd": [
+      "createdBy",
+      "scope",
+      "expiresAt",
+      "isRevoked"
+    ],
+    "only_in_code": [
+      "qrCode",
+      "pinCode",
+      "allowedSections",
+      "validUntil",
+      "isActive",
+      "lastAccessedAt",
+      "accessCount",
+      "sharedWith"
+    ],
+    "code_col_count": 13,
+    "erd_col_count": 9
+  },
+  "MedicalPassportAccessLog": {
+    "only_in_erd": [
+      "passportId",
+      "accessorId",
+      "accessorRole",
+      "hospitalId",
+      "accessTime"
+    ],
+    "only_in_code": [
+      "userAgent",
+      "accessedAt"
+    ],
+    "code_col_count": 5,
+    "erd_col_count": 8
+  },
+  "PatientConsent": {
+    "only_in_erd": [
+      "hospitalId",
+      "consentStatus",
+      "termsVersion"
+    ],
+    "only_in_code": [
+      "sourceHospitalId",
+      "targetHospitalId",
+      "status",
+      "expiresAt",
+      "scope",
+      "purpose",
+      "confirmedAt",
+      "policyVersion",
+      "updatedAt"
+    ],
+    "code_col_count": 14,
+    "erd_col_count": 8
+  },
+  "PatientHospitalLink": {
+    "only_in_erd": [
+      "dataSource",
+      "linkedAt"
+    ],
+    "only_in_code": [
+      "matchingStatus",
+      "updatedAt"
+    ],
+    "code_col_count": 7,
+    "erd_col_count": 7
+  },
+  "Hospital": {
+    "only_in_erd": [
+      "slug",
+      "code",
+      "partnershipStatus",
+      "province",
+      "district",
+      "hisApiEndpoint",
+      "hospitalId",
+      "advanceBookingDays",
+      "cancelDeadlineHours",
+      "requiresPrepayment",
+      "hospitalId",
+      "branchName",
+      "slug",
+      "hospitalId",
+      "specialtyId",
+      "hospitalId",
+      "specialtyId",
+      "serviceName",
+      "price",
+      "hospitalId",
+      "specialtyId",
+      "roomNumber",
+      "roomName",
+      "clinicRoomId",
+      "sessionDate",
+      "startTime",
+      "endTime",
+      "maxCapacity",
+      "currentBooked",
+      "hospitalId",
+      "packageName",
+      "price",
+      "discountPrice",
+      "hospitalName",
+      "contactName",
+      "licenseNumber",
+      "slug",
+      "code",
+      "partnershipStatus",
+      "province",
+      "district",
+      "bannerUrl",
+      "hisApiEndpoint",
+      "hisApiKey"
+    ],
+    "only_in_code": [
+      "city",
+      "emergencyHotline",
+      "coverImageUrl",
+      "images",
+      "website",
+      "operatingHours",
+      "googleMapUrl",
+      "establishedYear",
+      "bedCount",
+      "rating",
+      "reviewCount",
+      "hospitalCode",
+      "externalId",
+      "source",
+      "deletedAt"
+    ],
+    "code_col_count": 30,
+    "erd_col_count": 79
+  },
+  "HospitalBookingConfig": {
+    "only_in_erd": [
+      "advanceBookingDays",
+      "cancelDeadlineHours",
+      "rescheduleDeadlineHours",
+      "requiresPrepayment",
+      "allowCashAtHospital"
+    ],
+    "only_in_code": [
+      "bookingType",
+      "maxAdvanceDays",
+      "allowSaturday",
+      "allowSunday",
+      "minAdvanceMinutes",
+      "defaultSlotDuration",
+      "scheduleSource",
+      "gracePeriodMinutes",
+      "minContactAttempts",
+      "minContactIntervalMinutes",
+      "autoNoShowEnabled",
+      "createdAt"
+    ],
+    "code_col_count": 15,
+    "erd_col_count": 8
+  },
+  "HospitalBranch": {
+    "only_in_erd": [
+      "branchName"
+    ],
+    "only_in_code": [
+      "name",
+      "latitude",
+      "longitude",
+      "updatedAt",
+      "deletedAt"
+    ],
+    "code_col_count": 11,
+    "erd_col_count": 7
+  },
+  "Specialty": {
+    "only_in_erd": [
+      "slug",
+      "iconUrl"
+    ],
+    "only_in_code": [
+      "icon",
+      "coverImageUrl"
+    ],
+    "code_col_count": 8,
+    "erd_col_count": 8
+  },
+  "HospitalSpecialty": {
+    "only_in_erd": [
+      "status",
+      "description"
+    ],
+    "only_in_code": [
+      "isActive",
+      "updatedAt"
+    ],
+    "code_col_count": 6,
+    "erd_col_count": 6
+  },
+  "MedicalService": {
+    "only_in_erd": [
+      "serviceName",
+      "serviceCode"
+    ],
+    "only_in_code": [
+      "name",
+      "duration",
+      "updatedAt"
+    ],
+    "code_col_count": 10,
+    "erd_col_count": 9
+  },
+  "ClinicRoom": {
+    "only_in_erd": [
+      "roomNumber",
+      "roomName",
+      "locationNotes",
+      "createdAt"
+    ],
+    "only_in_code": [
+      "code",
+      "name"
+    ],
+    "code_col_count": 6,
+    "erd_col_count": 8
+  },
+  "ClinicRoomSession": {
+    "only_in_erd": [
+      "clinicRoomId",
+      "sessionDate",
+      "startTime",
+      "endTime",
+      "maxCapacity",
+      "currentBooked",
+      "createdAt"
+    ],
+    "only_in_code": [
+      "roomId",
+      "medicalServiceId",
+      "slotId",
+      "mode"
+    ],
+    "code_col_count": 5,
+    "erd_col_count": 8
+  },
+  "HealthPackage": {
+    "only_in_erd": [
+      "packageName",
+      "discountPrice",
+      "targetAudience",
+      "detailsJson"
+    ],
+    "only_in_code": [
+      "specialtyId",
+      "name",
+      "thumbnailUrl",
+      "originalPrice",
+      "description",
+      "duration",
+      "services",
+      "preparationNote",
+      "estimatedResultTime",
+      "updatedAt"
+    ],
+    "code_col_count": 15,
+    "erd_col_count": 9
+  },
+  "PartnerRequest": {
+    "only_in_erd": [
+      "licenseNumber",
+      "licenseImageUrl",
+      "reviewNotes"
+    ],
+    "only_in_code": [
+      "type",
+      "titleOrRole",
+      "specialty",
+      "notes",
+      "adminNote",
+      "approvedAt",
+      "createdHospitalId",
+      "createdUserId"
+    ],
+    "code_col_count": 16,
+    "erd_col_count": 11
+  },
+  "Doctor": {
+    "only_in_erd": [
+      "specialtyId",
+      "slug",
+      "experienceYears",
+      "ratingAvg",
+      "doctorId",
+      "hospitalId",
+      "clinicRoomId",
+      "consultationFee",
+      "doctorWorkplaceId",
+      "dayOfWeek",
+      "shift",
+      "startTime",
+      "endTime",
+      "slotDurationMinutes",
+      "scheduleId",
+      "serviceId",
+      "doctorWorkplaceId",
+      "date",
+      "exceptionType",
+      "reason",
+      "specialtyId",
+      "slug",
+      "experienceYears",
+      "biography",
+      "ratingAvg",
+      "ratingCount"
+    ],
+    "only_in_code": [
+      "qualification",
+      "yearsOfExperience",
+      "gender",
+      "bio",
+      "externalId",
+      "source",
+      "rating",
+      "reviewCount",
+      "consultationCount",
+      "deletedAt"
+    ],
+    "code_col_count": 18,
+    "erd_col_count": 43
+  },
+  "DoctorWorkplace": {
+    "only_in_erd": [
+      "clinicRoomId"
+    ],
+    "only_in_code": [
+      "branchId",
+      "specialtyId",
+      "position",
+      "joinedAt",
+      "isPrimary"
+    ],
+    "code_col_count": 12,
+    "erd_col_count": 8
+  },
+  "DoctorSchedule": {
+    "only_in_erd": [
+      "shift",
+      "slotDurationMinutes",
+      "maxPatientsPerSlot"
+    ],
+    "only_in_code": [
+      "bookingType",
+      "breakStart",
+      "breakEnd",
+      "slotDuration",
+      "capacity",
+      "effectiveFrom",
+      "effectiveTo",
+      "updatedAt"
+    ],
+    "code_col_count": 15,
+    "erd_col_count": 10
+  },
+  "DoctorScheduleService": {
+    "only_in_erd": [
+      "serviceId"
+    ],
+    "only_in_code": [
+      "medicalServiceId"
+    ],
+    "code_col_count": 4,
+    "erd_col_count": 4
+  },
+  "ScheduleException": {
+    "only_in_erd": [],
+    "only_in_code": [
+      "updatedAt"
+    ],
+    "code_col_count": 9,
+    "erd_col_count": 8
+  },
+  "AppointmentSlot": {
+    "only_in_erd": [
+      "maxCapacity",
+      "currentBooked",
+      "slotId",
+      "appointmentId",
+      "bookedAt",
+      "appointmentCode",
+      "userId",
+      "patientProfileId",
+      "hospitalId",
+      "doctorId",
+      "slotId",
+      "preExamSessionId",
+      "appointmentDate",
+      "bookingType",
+      "checkinAt",
+      "totalAmount",
+      "reason",
+      "appointmentId",
+      "fromStatus",
+      "toStatus",
+      "changedBy",
+      "appointmentId",
+      "channel",
+      "outcome",
+      "contactedAt",
+      "appointmentId",
+      "userId",
+      "txnRef",
+      "vnpTransactionNo",
+      "amount",
+      "paymentMethod",
+      "payDate",
+      "maxCapacity",
+      "currentBooked"
+    ],
+    "only_in_code": [
+      "capacity",
+      "bookedCount",
+      "isAvailable",
+      "isActive"
+    ],
+    "code_col_count": 13,
+    "erd_col_count": 59
+  },
+  "AppointmentSlotBooking": {
+    "only_in_erd": [
+      "bookedAt"
+    ],
+    "only_in_code": [
+      "createdAt"
+    ],
+    "code_col_count": 4,
+    "erd_col_count": 4
+  },
+  "Appointment": {
+    "only_in_erd": [
+      "appointmentCode",
+      "hospitalId",
+      "doctorId",
+      "doctorWorkplaceId",
+      "preExamSessionId",
+      "appointmentDate",
+      "bookingType",
+      "checkinAt",
+      "totalAmount",
+      "cancellationReason"
+    ],
+    "only_in_code": [
+      "clinicRoomId",
+      "serviceBookingMode",
+      "bookingCode",
+      "medicalServiceId",
+      "symptoms",
+      "totalPrice",
+      "consultationFee",
+      "serviceFee",
+      "idempotencyKey",
+      "expiresAt",
+      "completedAt",
+      "reminderSentAt",
+      "reminderCount",
+      "checkInAt",
+      "noShowAt"
+    ],
+    "code_col_count": 24,
+    "erd_col_count": 19
+  },
+  "AppointmentStatusHistory": {
+    "only_in_erd": [
+      "fromStatus",
+      "toStatus",
+      "changedBy",
+      "reason"
+    ],
+    "only_in_code": [
+      "status",
+      "note"
+    ],
+    "code_col_count": 5,
+    "erd_col_count": 7
+  },
+  "AppointmentContactLog": {
+    "only_in_erd": [
+      "notes"
+    ],
+    "only_in_code": [
+      "staffName",
+      "note",
+      "createdAt"
+    ],
+    "code_col_count": 9,
+    "erd_col_count": 7
+  },
+  "PaymentTransaction": {
+    "only_in_erd": [
+      "userId",
+      "txnRef",
+      "bankCode",
+      "orderInfo",
+      "payDate",
+      "secureHash"
+    ],
+    "only_in_code": [
+      "transactionCode",
+      "vnpResponseCode",
+      "callbackData",
+      "paidAt"
+    ],
+    "code_col_count": 12,
+    "erd_col_count": 14
+  },
+  "PreExamSession": {
+    "only_in_erd": [
+      "patientProfileId",
+      "chiefComplaint",
+      "bodyPart",
+      "painScale",
+      "triageLevel",
+      "recommendedSpecialtyId",
+      "redFlagsDetected",
+      "isCompleted",
+      "sessionId",
+      "questionText",
+      "questionType",
+      "answer",
+      "stepOrder",
+      "sessionId",
+      "mediaType",
+      "filePath",
+      "aiConsentGranted",
+      "patientProfileId",
+      "chiefComplaint",
+      "bodyPart",
+      "painScale",
+      "onsetDays",
+      "associatedSymptoms",
+      "triageLevel",
+      "recommendedSpecialtyId",
+      "recommendationReason",
+      "redFlagsDetected",
+      "redFlagsNotes",
+      "heartRateBpm",
+      "isCompleted",
+      "createdAt",
+      "updatedAt"
+    ],
+    "only_in_code": [
+      "status",
+      "startedAt",
+      "initialText",
+      "voiceTranscript",
+      "bodyDiagramData",
+      "imageAnalysis",
+      "uploadedFiles",
+      "structuredData",
+      "recommendations",
+      "riskLevel",
+      "expiresAt"
+    ],
+    "code_col_count": 14,
+    "erd_col_count": 39
+  },
+  "PreExamQuestion": {
+    "only_in_erd": [
+      "questionText",
+      "questionType",
+      "optionsJson",
+      "stepOrder",
+      "createdAt"
+    ],
+    "only_in_code": [
+      "question",
+      "order",
+      "context"
+    ],
+    "code_col_count": 6,
+    "erd_col_count": 8
+  },
+  "ScreeningMedia": {
+    "only_in_erd": [
+      "mediaType",
+      "filePath",
+      "fileSize",
+      "aiConsentGranted",
+      "consentTimestamp",
+      "analysisResult"
+    ],
+    "only_in_code": [
+      "type",
+      "storageKey",
+      "mimeType",
+      "sizeBytes",
+      "durationMs",
+      "scriptId",
+      "processingStatus",
+      "transcript"
+    ],
+    "code_col_count": 11,
+    "erd_col_count": 9
+  },
+  "ConsultationSession": {
+    "only_in_erd": [
+      "livekitRoomName",
+      "endedAt",
+      "sessionId",
+      "senderId",
+      "senderType",
+      "messageType",
+      "content",
+      "isRead",
+      "sessionId",
+      "fileName",
+      "fileUrl",
+      "fileSize",
+      "livekitRoomName",
+      "livekitRoomSid",
+      "endedAt",
+      "doctorNotes",
+      "prescriptionSummary"
+    ],
+    "only_in_code": [
+      "doctorWorkplaceId",
+      "specialtyId",
+      "createdByUserId",
+      "idempotencyKey",
+      "requestMode",
+      "topic",
+      "description",
+      "scheduledStartAt",
+      "scheduledEndAt",
+      "chatOpenAt",
+      "acceptedAt",
+      "completedAt",
+      "cancelledAt",
+      "expiresAt",
+      "followUpUntil",
+      "videoEnabled"
+    ],
+    "code_col_count": 25,
+    "erd_col_count": 35
+  },
+  "ConsultationMessage": {
+    "only_in_erd": [
+      "sessionId",
+      "senderId",
+      "content",
+      "isRead"
+    ],
+    "only_in_code": [
+      "consultationId",
+      "senderUserId",
+      "clientMessageId",
+      "text",
+      "sentAt",
+      "deliveredAt",
+      "updatedAt"
+    ],
+    "code_col_count": 12,
+    "erd_col_count": 9
+  },
+  "ConsultationAttachment": {
+    "only_in_erd": [
+      "sessionId",
+      "fileUrl",
+      "fileSize",
+      "uploadedBy"
+    ],
+    "only_in_code": [
+      "consultationId",
+      "messageId",
+      "uploadedByUserId",
+      "status",
+      "type",
+      "sizeBytes",
+      "storageKey",
+      "thumbnailKey",
+      "updatedAt"
+    ],
+    "code_col_count": 13,
+    "erd_col_count": 8
+  },
+  "MedicalEncounter": {
+    "only_in_erd": [
+      "doctorId",
+      "isPublished",
+      "encounterId",
+      "icd10Code",
+      "diseaseName",
+      "isPrimary",
+      "encounterId",
+      "category",
+      "code",
+      "name",
+      "value",
+      "unit",
+      "encounterId",
+      "doctorId",
+      "prescriptionCode",
+      "instructions",
+      "prescriptionId",
+      "medicationName",
+      "dosage",
+      "quantity",
+      "unit",
+      "doctorId",
+      "clinicalNotes",
+      "dischargeNotes",
+      "isPublished",
+      "publishedAt"
+    ],
+    "only_in_code": [
+      "externalEncounterId",
+      "doctorName",
+      "doctorTitle",
+      "specialtyName",
+      "clinicalSummary",
+      "physicalExamination",
+      "organSystemsExam",
+      "specialtyExam",
+      "admissionSource",
+      "admissionAt",
+      "dischargeType",
+      "treatmentDays",
+      "initialDiagnosis",
+      "differentialDiagnosis",
+      "treatmentPlan",
+      "doctorNotes",
+      "conclusion",
+      "treatmentResult",
+      "prognosisNear",
+      "prognosisFar",
+      "careLevel",
+      "dietaryRegimen",
+      "departmentHeadName",
+      "hospitalDirectorName",
+      "digitalSignature"
+    ],
+    "code_col_count": 36,
+    "erd_col_count": 48
+  },
+  "Diagnosis": {
+    "only_in_erd": [
+      "icd10Code",
+      "clinicalNotes"
+    ],
+    "only_in_code": [
+      "icdCode",
+      "isComplication",
+      "diagnosisType",
+      "note",
+      "updatedAt"
+    ],
+    "code_col_count": 10,
+    "erd_col_count": 7
+  },
+  "Observation": {
+    "only_in_erd": [
+      "isAbnormal"
+    ],
+    "only_in_code": [
+      "interpretation",
+      "updatedAt"
+    ],
+    "code_col_count": 12,
+    "erd_col_count": 11
+  },
+  "Prescription": {
+    "only_in_erd": [
+      "doctorId",
+      "instructions",
+      "revisitDate"
+    ],
+    "only_in_code": [
+      "prescribedAt",
+      "note"
+    ],
+    "code_col_count": 7,
+    "erd_col_count": 8
+  },
+  "PrescriptionItem": {
+    "only_in_erd": [
+      "medicationName",
+      "route",
+      "usageInstructions"
+    ],
+    "only_in_code": [
+      "drugName",
+      "activeIngredientCode",
+      "usageInstruction",
+      "duration",
+      "note",
+      "updatedAt"
+    ],
+    "code_col_count": 12,
+    "erd_col_count": 9
+  },
+  "Review": {
+    "only_in_erd": [
+      "targetId",
+      "reviewId",
+      "doctorAttitude",
+      "examinationQuality",
+      "hospitalWaitingTime",
+      "hospitalStaffAttitude",
+      "hospitalCleanliness",
+      "reviewId",
+      "responderId",
+      "content",
+      "responderRole",
+      "reviewId",
+      "moderatorId",
+      "action",
+      "reason",
+      "reviewId",
+      "reporterId",
+      "reason",
+      "description",
+      "isResolved",
+      "targetId"
+    ],
+    "only_in_code": [
+      "doctorId",
+      "hospitalId",
+      "moderationReason",
+      "moderatedBy",
+      "moderatedAt",
+      "editWindowUntil",
+      "isEdited",
+      "editedAt"
+    ],
+    "code_col_count": 18,
+    "erd_col_count": 42
+  },
+  "ReviewCriteriaScore": {
+    "only_in_erd": [
+      "examinationQuality",
+      "hospitalCleanliness",
+      "createdAt"
+    ],
+    "only_in_code": [
+      "doctorExplanation",
+      "doctorDedication",
+      "doctorCommunication",
+      "hospitalFacility",
+      "hospitalHygiene"
+    ],
+    "code_col_count": 11,
+    "erd_col_count": 9
+  },
+  "ReviewResponse": {
+    "only_in_erd": [
+      "content"
+    ],
+    "only_in_code": [
+      "responderName",
+      "responseContent"
+    ],
+    "code_col_count": 8,
+    "erd_col_count": 7
+  },
+  "ReviewModerationLog": {
+    "only_in_erd": [
+      "moderatorId",
+      "action"
+    ],
+    "only_in_code": [
+      "adminUserId",
+      "previousStatus",
+      "newStatus",
+      "snapshotContent"
+    ],
+    "code_col_count": 8,
+    "erd_col_count": 6
+  },
+  "ReviewReport": {
+    "only_in_erd": [],
+    "only_in_code": [
+      "resolvedBy"
+    ],
+    "code_col_count": 9,
+    "erd_col_count": 8
+  }
+}

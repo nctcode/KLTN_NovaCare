@@ -1,0 +1,11 @@
+# Office temporary lock files
+~$*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS files
+Thumbs.db
+.DS_Store

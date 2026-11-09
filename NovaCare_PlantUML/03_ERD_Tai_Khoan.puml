@@ -1,0 +1,156 @@
+@startuml 03_ERD_Tai_Khoan
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam defaultFontColor #000000
+
+skinparam ArrowColor #000000
+skinparam ArrowFontColor #000000
+skinparam ArrowThickness 1
+
+skinparam ClassBackgroundColor #87CEEB
+skinparam ClassHeaderBackgroundColor #87CEEB
+skinparam ClassBorderColor #000000
+skinparam ClassBorderThickness 1
+skinparam ClassFontColor #000000
+skinparam ClassFontSize 12
+skinparam ClassFontStyle bold
+skinparam ClassAttributeFontColor #000000
+skinparam ClassAttributeFontSize 11
+skinparam ClassAttributeFontName Arial
+
+skinparam EntityBackgroundColor #87CEEB
+skinparam EntityHeaderBackgroundColor #87CEEB
+skinparam EntityBorderColor #000000
+skinparam EntityBorderThickness 1
+skinparam EntityFontColor #000000
+skinparam EntityFontSize 12
+skinparam EntityFontStyle bold
+skinparam EntityAttributeFontColor #000000
+skinparam EntityAttributeFontSize 11
+skinparam EntityAttributeFontName Arial
+
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageBorderColor #000000
+skinparam packageBorderThickness 1
+skinparam packageFontColor #000000
+skinparam packageFontSize 12
+skinparam packageFontStyle bold
+skinparam packageStyle rectangle
+
+skinparam nodesep 50
+skinparam ranksep 50
+skinparam linetype ortho
+
+hide circle
+
+title ERD PHÂN HỆ TÀI KHOẢN, XÁC THỰC & PHÂN QUYỀN (8 THỰC THỂ)
+
+entity "User" as User {
+    * id : String <<PK>>
+    --
+    email : String <<UK>>
+    phone : String <<UK>>
+    password : String
+    fullName : String
+    gender : Gender
+    dateOfBirth : DateTime
+    avatarUrl : String
+    role : Role
+    hospitalId : String <<FK>>
+    isActive : Boolean
+    lastLoginAt : DateTime
+    createdAt : DateTime
+    updatedAt : DateTime
+}
+
+entity "RefreshToken" as RefreshToken {
+    * id : String <<PK>>
+    --
+    userId : String <<FK>>
+    tokenHash : String
+    deviceInfo : String
+    ipAddress : String
+    expiresAt : DateTime
+    isRevoked : Boolean
+    createdAt : DateTime
+}
+
+entity "PasswordResetChallenge" as PasswordResetChallenge {
+    * userId : String <<PK,FK>>
+    --
+    otpHash : String
+    destination : String
+    attempts : Int
+    expiresAt : DateTime
+    createdAt : DateTime
+}
+
+entity "RegistrationOtpChallenge" as RegistrationOtpChallenge {
+    * phone : String <<PK>>
+    --
+    otpHash : String
+    expiresAt : DateTime
+    isVerified : Boolean
+    createdAt : DateTime
+}
+
+entity "DeviceToken" as DeviceToken {
+    * id : String <<PK>>
+    --
+    userId : String <<FK>>
+    token : String
+    deviceType : String
+    lastActiveAt : DateTime
+    createdAt : DateTime
+}
+
+entity "AuditLog" as AuditLog {
+    * id : String <<PK>>
+    --
+    userId : String <<FK>>
+    action : String
+    entityName : String
+    entityId : String
+    oldData : Json
+    newData : Json
+    ipAddress : String
+    userAgent : String
+    createdAt : DateTime
+}
+
+entity "Notification" as Notification {
+    * id : String <<PK>>
+    --
+    userId : String <<FK>>
+    title : String
+    body : String
+    type : NotificationType
+    data : Json
+    isRead : Boolean
+    readAt : DateTime
+    createdAt : DateTime
+}
+
+entity "NotificationLog" as NotificationLog {
+    * id : String <<PK>>
+    --
+    notificationId : String <<FK>>
+    channel : String
+    status : String
+    errorMessage : String
+    sentAt : DateTime
+}
+
+User ||--o{ RefreshToken : "cấp phát"
+User ||--o| PasswordResetChallenge : "yêu cầu khôi phục"
+User ||--o{ DeviceToken : "đăng ký thiết bị"
+User ||--o{ AuditLog : "ghi nhận hành động"
+User ||--o{ Notification : "nhận thông báo"
+Notification ||--o{ NotificationLog : "nhật ký truyền tải"
+
+@enduml
+

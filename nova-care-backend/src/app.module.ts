@@ -33,6 +33,7 @@ import { PartnerRequestsModule } from '@/modules/partner-requests/partner-reques
 import { SchedulesModule } from '@/modules/schedules/schedules.module';
 import { ConsultationsModule } from '@/modules/consultations/consultations.module';
 import { SearchModule } from '@/modules/search/search.module';
+import { ReviewsModule } from '@/modules/reviews/reviews.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { SearchModule } from '@/modules/search/search.module';
     SearchModule,
     ClinicRoomsModule,
     PartnerRequestsModule,
+    ReviewsModule,
   ],
 })
 export class AppModule { }

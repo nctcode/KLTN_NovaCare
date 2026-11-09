@@ -1,0 +1,45 @@
+{
+  "manifestVersion": "0.1",
+  "createdAt": "2026-11-09T00:00:00+07:00",
+  "status": "DRAFT_UNAPPROVED",
+  "purpose": "Annotation workflow dry run only; no accuracy evaluation",
+  "doNotProvideToAnnotators": true,
+  "caseFile": "DRY_RUN_CASES_V0.1.jsonl",
+  "labelTemplate": "DRY_RUN_LABEL_TEMPLATE_V0.1.jsonl",
+  "caseSchema": "DRY_RUN_CASE_SCHEMA_V0.1.json",
+  "labelSchema": "DRY_RUN_LABEL_SCHEMA_V0.1.json",
+  "registry": "EVIDENCE_REGISTRY_V1.1.md",
+  "catalogSnapshot": "SPECIALTY_CATALOG_SNAPSHOT_DRAFT.json",
+  "labelPolicy": {
+    "allowedStatuses": ["PROVISIONAL_SINGLE_ANNOTATOR", "NEEDS_REVIEW"],
+    "scoringAllowed": false,
+    "llmExecutionAllowed": false,
+    "clinicalGroundTruthClaimAllowed": false
+  },
+  "distribution": {
+    "SAFETY_CRITICAL": 4,
+    "CLEAR_ASSESSMENT": 5,
+    "CROSS_SPECIALTY_AMBIGUOUS": 3,
+    "INSUFFICIENT_INFORMATION": 2,
+    "OUT_OF_CATALOG_CONTEXT": 2,
+    "total": 16
+  },
+  "cases": [
+    {"caseId":"DR-SAF-001","primaryCohort":"SAFETY_CRITICAL","scenarioTags":["chest_pain","radiation","autonomic_symptoms","possible_safety_override"],"coverageHint":["cardiology"],"candidateEvidenceIds":["DOC-BYT-ACS-2019","DOC-AHA-CHEST-2021","DOC-NICE-CHEST-CG95"],"knownOpenDecision":"DL-07/DL-08"},
+    {"caseId":"DR-SAF-002","primaryCohort":"SAFETY_CRITICAL","scenarioTags":["sudden_focal_deficit","speech_disturbance","possible_safety_override"],"coverageHint":["neurology"],"candidateEvidenceIds":["DOC-CDC-STROKE-2026","DOC-NICE-NEURO-NG127"],"knownOpenDecision":"DL-07/DL-08/DL-12"},
+    {"caseId":"DR-SAF-003","primaryCohort":"SAFETY_CRITICAL","scenarioTags":["thunderclap_headache","possible_safety_override"],"coverageHint":["neurology"],"candidateEvidenceIds":["DOC-AAFP-HEADACHE-2022","DOC-CDC-STROKE-2026"],"knownOpenDecision":"DL-07/DL-08"},
+    {"caseId":"DR-SAF-004","primaryCohort":"SAFETY_CRITICAL","scenarioTags":["low_back_pain","bladder_disturbance","perineal_numbness","possible_safety_override"],"coverageHint":["neurology","orthopedics"],"candidateEvidenceIds":["DOC-NICE-NEURO-NG127","DOC-BYT-MSK"],"knownOpenDecision":"DL-07/DL-08/DL-11"},
+    {"caseId":"DR-CLR-001","primaryCohort":"CLEAR_ASSESSMENT","scenarioTags":["palpitations","negated_red_flags","evidence_gap_probe"],"coverageHint":["cardiology"],"candidateEvidenceIds":[],"knownOpenDecision":"DL-03/DL-19"},
+    {"caseId":"DR-CLR-002","primaryCohort":"CLEAR_ASSESSMENT","scenarioTags":["recurrent_headache","photophobia","negated_red_flags"],"coverageHint":["neurology"],"candidateEvidenceIds":["DOC-AAFP-HEADACHE-2022"],"knownOpenDecision":"DL-03/DL-19"},
+    {"caseId":"DR-CLR-003","primaryCohort":"CLEAR_ASSESSMENT","scenarioTags":["chronic_cough","sputum","progressive_dyspnea","smoking_history"],"coverageHint":["pulmonology"],"candidateEvidenceIds":["DOC-BYT-COPD-2023","DOC-GOLD-COPD-2026","DOC-NICE-COPD-NG115"],"knownOpenDecision":"DL-03/DL-10/DL-19"},
+    {"caseId":"DR-CLR-004","primaryCohort":"CLEAR_ASSESSMENT","scenarioTags":["heartburn","regurgitation","meal_related","negated_alarm_features"],"coverageHint":["gastroenterology"],"candidateEvidenceIds":["DOC-ACG-GERD-2022","DOC-NICE-GERD-CG184"],"knownOpenDecision":"DL-03/DL-10/DL-19"},
+    {"caseId":"DR-CLR-005","primaryCohort":"CLEAR_ASSESSMENT","scenarioTags":["mechanical_low_back_pain","lifting_trigger","negated_red_flags"],"coverageHint":["orthopedics"],"candidateEvidenceIds":["DOC-BYT-MSK","DOC-NICE-LBP-NG59"],"knownOpenDecision":"DL-03/DL-10/DL-19"},
+    {"caseId":"DR-XSP-001","primaryCohort":"CROSS_SPECIALTY_AMBIGUOUS","scenarioTags":["heartburn","exertional_chest_tightness","ambiguous"],"coverageHint":["cardiology","gastroenterology"],"candidateEvidenceIds":["DOC-AHA-CHEST-2021","DOC-NICE-CHEST-CG95","DOC-ACG-GERD-2022","DOC-NICE-GERD-CG184"],"knownOpenDecision":"DL-08/DL-09"},
+    {"caseId":"DR-XSP-002","primaryCohort":"CROSS_SPECIALTY_AMBIGUOUS","scenarioTags":["chronic_cough","exertional_dyspnea","palpitations","ambiguous"],"coverageHint":["pulmonology","cardiology"],"candidateEvidenceIds":["DOC-GOLD-COPD-2026","DOC-NICE-COPD-NG115","DOC-AHA-CHEST-2021"],"knownOpenDecision":"DL-03/DL-19"},
+    {"caseId":"DR-XSP-003","primaryCohort":"CROSS_SPECIALTY_AMBIGUOUS","scenarioTags":["low_back_pain","radicular_pain","paresthesia","ambiguous"],"coverageHint":["orthopedics","neurology"],"candidateEvidenceIds":["DOC-BYT-MSK","DOC-NICE-LBP-NG59","DOC-NICE-NEURO-NG127"],"knownOpenDecision":"DL-03/DL-19"},
+    {"caseId":"DR-INS-001","primaryCohort":"INSUFFICIENT_INFORMATION","scenarioTags":["chest_pain","missing_character","missing_severity","missing_red_flags"],"coverageHint":[],"candidateEvidenceIds":["DOC-AHA-CHEST-2021","DOC-NICE-CHEST-CG95"],"knownOpenDecision":"minimum_information_policy"},
+    {"caseId":"DR-INS-002","primaryCohort":"INSUFFICIENT_INFORMATION","scenarioTags":["headache","dizziness","missing_onset","missing_neurologic_status"],"coverageHint":[],"candidateEvidenceIds":["DOC-AAFP-HEADACHE-2022","DOC-NICE-NEURO-NG127"],"knownOpenDecision":"minimum_information_policy"},
+    {"caseId":"DR-OOS-001","primaryCohort":"OUT_OF_CATALOG_CONTEXT","scenarioTags":["other_person_symptom","subject_context"],"coverageHint":[],"candidateEvidenceIds":[],"knownOpenDecision":"subject_handling_policy"},
+    {"caseId":"DR-OOS-002","primaryCohort":"OUT_OF_CATALOG_CONTEXT","scenarioTags":["dental","out_of_selected_catalog"],"coverageHint":[],"candidateEvidenceIds":[],"knownOpenDecision":"DL-03/DL-19"}
+  ]
+}

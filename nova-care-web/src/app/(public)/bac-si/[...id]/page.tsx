@@ -9,6 +9,7 @@ import { Star, MapPin, Clock, Award, ChevronRight, Loader2, Stethoscope, Users, 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { formatPrice } from '@/lib/utils';
+import { ReviewStatsSection } from '@/components/reviews/ReviewStatsSection';
 
 export default function DoctorDetailPage() {
   const params = useParams();
@@ -94,9 +95,13 @@ export default function DoctorDetailPage() {
                   {/* Rating & Lượt khám & Giá tiền */}
                   <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-gray-100">
                     <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100">
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <span className="font-bold text-sm text-gray-800">{doctor.rating || 4.8}</span>
-                      <span className="text-xs text-gray-500">({doctor.reviewCount || 10} đánh giá)</span>
+                      <Star className="h-4 w-4 text-amber-500 fill-amber-400" />
+                      <span className="font-bold text-sm text-gray-800">
+                        {doctor.rating ? doctor.rating.toFixed(1) : 'Chưa có đánh giá'}
+                      </span>
+                      {doctor.reviewCount ? (
+                        <span className="text-xs text-gray-500">({doctor.reviewCount} đánh giá)</span>
+                      ) : null}
                     </div>
 
                     <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">
@@ -180,6 +185,19 @@ export default function DoctorDetailPage() {
               ))}
             </CardContent>
           </Card>
+
+          {/* Reviews Section */}
+          <div className="space-y-4 pt-2">
+            <h3 className="text-xl font-bold text-secondary flex items-center gap-2">
+              <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
+              Đánh giá từ người bệnh
+            </h3>
+            <ReviewStatsSection
+              targetType="DOCTOR"
+              targetId={doctor.id}
+              targetTitle={doctor.fullName}
+            />
+          </div>
         </div>
 
         {/* Sidebar */}

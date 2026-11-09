@@ -1,0 +1,163 @@
+
+@startuml 12_SiteMap_Tong_The
+
+!theme plain
+
+' =========================
+' CẤU HÌNH CHUNG
+' =========================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam defaultFontColor #000000
+
+skinparam ArrowColor #000000
+skinparam ArrowThickness 1
+
+skinparam linetype ortho
+skinparam nodesep 25
+skinparam ranksep 40
+skinparam padding 10
+
+' =========================
+' CẤU HÌNH CÁC Ô
+' =========================
+skinparam rectangle {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    BorderThickness 1
+    FontColor #000000
+    FontSize 12
+    FontStyle bold
+    RoundCorner 0
+    MinimumWidth 150
+    MaximumWidth 150
+}
+
+' =========================
+' CẤU HÌNH PACKAGE
+' =========================
+skinparam package {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    BorderThickness 1
+    FontColor #000000
+    FontSize 12
+    FontStyle bold
+    Style rectangle
+}
+
+title SƠ ĐỒ SITE MAP TỔNG THỂ HỆ THỐNG Y TẾ SỐ NOVACARE\n(HỆ THỐNG ĐA KÊNH)
+
+' =========================
+' ROOT
+' =========================
+rectangle "HỆ THỐNG\nY TẾ SỐ\nNOVACARE" as Root
+
+' =========================
+' 1. CỔNG WEB CÔNG CỘNG
+' =========================
+package "1. Cổng Web Công cộng" as P_Public {
+    rectangle "Trang chủ\n& Tra cứu" as Pub_1
+    rectangle "Mạng lưới\nCơ sở Y tế" as Pub_2
+    rectangle "Danh bạ Bác sĩ\n& Chuyên khoa" as Pub_3
+    rectangle "Dịch vụ\n& Gói khám\nSức khỏe" as Pub_4
+    rectangle "Tin tức\n& Hợp tác\nDoanh nghiệp" as Pub_5
+}
+
+' =========================
+' 2. CỔNG WEB NGƯỜI BỆNH
+' =========================
+package "2. Cổng Web Người bệnh" as P_Patient {
+    rectangle "Hồ sơ Bệnh nhân\n& Hộ chiếu Y tế" as Pat_1
+    rectangle "Đặt lịch\n& Quản lý\nCa khám" as Pat_2
+    rectangle "Lịch sử Khám\n& Bệnh án EMR" as Pat_3
+    rectangle "Khám bệnh\nTừ xa\nTelemedicine" as Pat_4
+    rectangle "Đánh giá Dịch vụ\n& Phản hồi" as Pat_5
+}
+
+' =========================
+' 3. ỨNG DỤNG DI ĐỘNG
+' =========================
+package "3. Ứng dụng Di động Bệnh nhân" as P_Mobile {
+    rectangle "Xác thực\nTài khoản\n& OTP" as Mob_1
+    rectangle "Trang chủ\n& Tìm kiếm\nY tế" as Mob_2
+    rectangle "Sàng lọc\nTiền khám\nbằng AI" as Mob_3
+    rectangle "Đặt lịch khám\n& Thanh toán" as Mob_4
+    rectangle "Khám từ xa\n& Hồ sơ\nSức khỏe" as Mob_5
+}
+
+' =========================
+' 4. CỔNG QUẢN TRỊ CƠ SỞ Y TẾ
+' =========================
+package "4. Cổng Quản trị Cơ sở Y tế" as P_Hospital {
+    rectangle "Dashboard\nVận hành\nCơ sở" as Hosp_1
+    rectangle "Tiếp đón\n& Quản lý\nLịch khám" as Hosp_2
+    rectangle "Quản lý\nBác sĩ\n& Phòng khám" as Hosp_3
+    rectangle "Lịch trực\n& Suất khám\n(Slots)" as Hosp_4
+    rectangle "Dịch vụ\n& Tích hợp\nHIS" as Hosp_5
+}
+
+' =========================
+' 5. CỔNG QUẢN TRỊ TOÀN SÀN
+' =========================
+package "5. Cổng Quản trị Toàn sàn" as P_Admin {
+    rectangle "Dashboard\nThống kê\nToàn hệ thống" as Adm_1
+    rectangle "Quản lý\nTài khoản\n& Phân quyền" as Adm_2
+    rectangle "Quản trị\nMạng lưới CSYT\n& Đối tác" as Adm_3
+    rectangle "Danh mục Y tế\nChuẩn hóa\nToàn quốc" as Adm_4
+    rectangle "Giao dịch\nTài chính\n& Kiểm toán" as Adm_5
+}
+
+' =========================
+' KẾT NỐI ROOT
+' =========================
+Root -down-> P_Public
+Root -down-> P_Patient
+Root -down-> P_Mobile
+Root -down-> P_Hospital
+Root -down-> P_Admin
+
+' =========================
+' KẾT NỐI CỔNG WEB CÔNG CỘNG
+' =========================
+Pub_1 -down-> Pub_2
+Pub_2 -down-> Pub_3
+Pub_3 -down-> Pub_4
+Pub_4 -down-> Pub_5
+
+' =========================
+' KẾT NỐI CỔNG WEB NGƯỜI BỆNH
+' =========================
+Pat_1 -down-> Pat_2
+Pat_2 -down-> Pat_3
+Pat_3 -down-> Pat_4
+Pat_4 -down-> Pat_5
+
+' =========================
+' KẾT NỐI ỨNG DỤNG DI ĐỘNG
+' =========================
+Mob_1 -down-> Mob_2
+Mob_2 -down-> Mob_3
+Mob_3 -down-> Mob_4
+Mob_4 -down-> Mob_5
+
+' =========================
+' KẾT NỐI CỔNG QUẢN TRỊ CƠ SỞ
+' =========================
+Hosp_1 -down-> Hosp_2
+Hosp_2 -down-> Hosp_3
+Hosp_3 -down-> Hosp_4
+Hosp_4 -down-> Hosp_5
+
+' =========================
+' KẾT NỐI CỔNG QUẢN TRỊ TOÀN SÀN
+' =========================
+Adm_1 -down-> Adm_2
+Adm_2 -down-> Adm_3
+Adm_3 -down-> Adm_4
+Adm_4 -down-> Adm_5
+
+@enduml

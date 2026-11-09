@@ -1,0 +1,34 @@
+# EVIDENCE–CASE MAPPING V1.1 – EX-01 ĐẾN EX-10
+
+**Ngày audit:** 09/11/2026  
+**Registry tham chiếu:** `EVIDENCE_REGISTRY_V1.1.md`  
+**Nguyên tắc:** Mọi nhãn vẫn `NEEDS_REVIEW`; bảng không adjudicate triage, specialty hoặc safety taxonomy.
+
+## 1. Mapping theo nhiệm vụ
+
+| Case | Triage reference | Specialty applicability | SYMPTOM_RECOGNITION | TRIAGE | SPECIALTY_ASSESSMENT | REFERRAL_ROUTING | Excerpt và locator truy ngược | Inference/giới hạn | Labeling status và adjudication |
+|---|---|---|---|---|---|---|---|---|---|
+| EX-01 | `EMERGENCY` đề xuất | `DEFERRED_AFTER_TRIAGE` | DOC-BYT-ACS-2019 §1.2.1.b; DOC-AHA-CHEST-2021 Top Things #1 | DOC-AHA-CHEST-2021 Top Things #3; DOC-NICE-CHEST-CG95 1.2.1.7 | DOC-BYT-ACS-2019; DOC-NICE-CHEST-CG95 1.2.1.3 | DOC-NICE-CHEST-CG95 hỗ trợ hospital emergency referral, không hỗ trợ outpatient Cardiology | BYT: “Lan lên cổ, hàm dưới, vai trái hoặc bờ trụ tay trái.”; NICE 1.2.1.7 xem Registry | `EMERGENCY` là mapping taxonomy cần duyệt; không suy outpatient specialty | `NEEDS_REVIEW`; duyệt safety override và terminology mapping |
+| EX-02 | `EMERGENCY` đề xuất | `DEFERRED_AFTER_TRIAGE` | DOC-CDC-STROKE-2026 “Signs and symptoms” lines 41–45; DOC-NICE-NEURO-NG127 1.7.1 | DOC-CDC-STROKE-2026 lines 47, 58–67 | DOC-NICE-NEURO-NG127 hỗ trợ stroke pathway; DOC-BYT-STROKE-2024 chỉ contextual | Không có specialty routing được chấp nhận cho lần sàng lọc bị safety override | CDC: “Sudden confusion, trouble speaking, or difficulty understanding speech.”; locator đã có trong Registry V1.1 | BYT Stroke chưa có excerpt/locator chính thức; `EMERGENCY` chưa được tự phê duyệt | `NEEDS_REVIEW`; xác minh BYT Stroke và safety mapping |
+| EX-03 | `EMERGENCY` đề xuất | `DEFERRED_AFTER_TRIAGE` | DOC-AAFP-HEADACHE-2022 Abstract red flags; DOC-CDC-STROKE-2026 severe headache bullet | DOC-AAFP-HEADACHE-2022 Abstract immediate evaluation | DOC-AAFP-HEADACHE-2022 chỉ hỗ trợ diagnostic evaluation, không Neurology routing | `NONE` cho outpatient specialty | AAFP: “acute thunderclap headache”; “warrant immediate evaluation.” | Immediate evaluation không tự xác định Neurology hoặc chẩn đoán xuất huyết | `NEEDS_REVIEW`; duyệt triage taxonomy |
+| EX-04 | `CONSULT` đề xuất | `APPLICABLE` đề xuất | DOC-BYT-COPD-2023 1.2.1; DOC-GOLD-COPD-2026 Ch.2 pp.21–22 | Không có nguồn trong mapping chứng minh riêng label `CONSULT` | DOC-BYT-COPD-2023; DOC-GOLD-COPD-2026; DOC-NICE-COPD-NG115 1.1.28–1.1.30 | DOC-NICE-COPD-NG115/Table 5 hỗ trợ specialist advice; mapping sang Pulmonology chỉ `PARTIAL` | GOLD: “dyspnea, chronic cough or sputum production”; NICE: “refer people for specialist advice.” | `CONSULT` và mã Pulmonology là inference cần adjudication/catalog | `NEEDS_REVIEW`; duyệt code, sufficiency và triage |
+| EX-05 | `CONSULT` đề xuất | `APPLICABLE` đề xuất | DOC-ACG-GERD-2022 Diagnosis rec.1; DOC-NICE-GERD-CG184 1.4.1 | Không có nguồn chứng minh riêng `CONSULT` cho đúng case | DOC-ACG-GERD-2022 rec.1/4/6; DOC-NICE-GERD-CG184 1.4.1 | DOC-NICE-GERD-CG184 1.11.1 chỉ referral khi non-responsive/unexplained; EX-05 chưa thỏa | ACG: “classic GERD symptoms of heartburn and regurgitation”; NICE locator 1.11.1 | Gastroenterology referral là inference; assessment không đồng nghĩa referral | `NEEDS_REVIEW`; adjudicate specialty và triage |
+| EX-06 | `CONSULT` đề xuất | `APPLICABLE` đề xuất | DOC-BYT-MSK pp.134–136 §3.1/3.3; DOC-NICE-LBP-NG59 1.1.1 | Không có nguồn chứng minh riêng `CONSULT` cho đúng case | DOC-BYT-MSK; DOC-NICE-LBP-NG59 | NICE NG59 hỗ trợ specialist/surgical referral theo điều kiện khác; không hỗ trợ referral EX-06 | BYT: “đau xuất hiện đột ngột sau bê vật nặng, sau hoạt động sai tư thế”. | Orthopedics code và non-urgent triage là inference; cần khóa equivalence catalog | `NEEDS_REVIEW`; adjudicate specialty, triage, catalog |
+| EX-07 | `EMERGENCY` đề xuất | `DEFERRED_AFTER_TRIAGE` | DOC-AHA-CHEST-2021 slide p.22 và p.29; DOC-NICE-CHEST-CG95 1.2.2.8 | DOC-AHA-CHEST-2021 pp.28–31; DOC-NICE-CHEST-CG95 1.2.2.8 hỗ trợ loại trừ life-threatening alternatives | AHA hỗ trợ cardiac/pulmonary differential, không tạo multi-specialty label | AHA p.31 hỗ trợ urgent ED transport khi có life-threatening cause; không outpatient routing | AHA p.29: “PE Tachycardia + dyspnea—>90% of patients; pain with inspiration” | Suy ra cần safety review từ acute dyspnea/pleuritic pain; không chẩn đoán PE và không chấm specialty | `NEEDS_REVIEW`; duyệt red-flag và taxonomy |
+| EX-08 | `URGENT` đề xuất | `NEEDS_REVIEW` | DOC-NICE-CHEST-CG95 1.3.3.1; DOC-ACG-GERD-2022 rec.1/4 | Chưa có evidence đủ để chọn `URGENT` cho mô tả hiện tại | Cardiac và GERD assessment đều có căn cứ theo điều kiện | DOC-NICE-GERD-CG184 1.11.1 không áp dụng trực tiếp nếu chưa non-responsive/unexplained | NICE CG95: “precipitated by physical exertion”; CG184 1.3.3: “Think about the possibility of cardiac or biliary disease as part of the differential diagnosis.” | Multi-specialty và `URGENT` vẫn là inference; nên hỏi thêm | `NEEDS_REVIEW`; bác sĩ/cố vấn an toàn adjudicate |
+| EX-09 | `REVIEW_REQUIRED` theo protocol | `NEEDS_REVIEW` | DOC-AHA-CHEST-2021 slide p.20; DOC-NICE-CHEST-CG95 1.3.2.1 cho minimum history | `REVIEW_REQUIRED` do protocol định nghĩa, không phải clinical triage từ guideline | Chưa đủ thông tin để specialty assessment | `NONE` | AHA p.20: “a focused history that includes characteristics and duration of symptoms”; NICE: “Take a detailed clinical history”. | Evidence chỉ hỗ trợ hỏi thêm; không hỗ trợ triage hoặc specialty label | `NEEDS_REVIEW`; duyệt minimum information set |
+| EX-10 | `EMERGENCY` đề xuất | `DEFERRED_AFTER_TRIAGE` | DOC-NICE-NEURO-NG127 1.7.3; DOC-BYT-MSK p.135 về rối loạn cơ tròn | DOC-NICE-NEURO-NG127 hỗ trợ “refer immediately” | NG127/BYT MSK hỗ trợ cauda-equina assessment context, không chẩn đoán | NG127 hỗ trợ immediate local pathway; specialty code vẫn `PARTIAL` | NICE 1.7.3: “Refer immediately ... new-onset disturbance of bladder, bowel or sexual function, or new-onset perineal numbness”. | Ánh xạ “refer immediately” thành `EMERGENCY` và chọn Neurology/Orthopedics đều chưa được duyệt | `NEEDS_REVIEW`; chuyên gia an toàn adjudicate |
+
+## 2. Kiểm tra traceability
+
+- Mọi excerpt trong bảng đều xuất hiện trong hồ sơ nguồn tương ứng của `EVIDENCE_REGISTRY_V1.1.md`.
+- Mọi locator cụ thể đều được khai báo trong Registry V1.1; DOC-BYT-STROKE-2024 chỉ được nhắc như contextual gap và không cung cấp excerpt.
+- DOC-GOLD-COPD-2025 không được sử dụng.
+- Không case nào được nâng lên `LITERATURE_SUPPORTED`.
+
+## 3. Nhãn phải tiếp tục NEEDS_REVIEW
+
+- **Triage taxonomy:** EX-01, EX-02, EX-03, EX-07, EX-08 và EX-10.
+- **Specialty/applicability:** EX-04, EX-05, EX-06 và EX-08; EX-01/02/03/07/10 chờ duyệt policy `DEFERRED_AFTER_TRIAGE`.
+- **Information sufficiency/ask-more:** EX-09.
+- **Evidence provenance:** DOC-BYT-STROKE-2024 và mọi nguồn chưa có independent reviewer.

@@ -43,6 +43,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatPrice, getDoctorSpecialtyName } from '@/lib/utils';
+import { ReviewStatsSection } from '@/components/reviews/ReviewStatsSection';
 
 interface PageProps {
   params: Promise<{ id: string | string[] }>;
@@ -352,10 +353,18 @@ export default function HospitalDetailPage({ params }: PageProps) {
 
               <TabsTrigger
                 value="specialties"
-                className="text-xs font-extrabold py-2.5 rounded-xl data-[state=active]:bg-[#0c4b39] data-[state=active]:text-white transition-all flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1"
+                className="text-xs font-extrabold py-2.5 rounded-xl data-[state=active]:bg-[#0c4b39] data-[state=active]:text-white transition-all flex items-center justify-center gap-1.5"
               >
                 <Activity className="w-3.5 h-3.5" />
                 <span>Chuyên khoa ({specialties.length})</span>
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="reviews"
+                className="text-xs font-extrabold py-2.5 rounded-xl data-[state=active]:bg-[#0c4b39] data-[state=active]:text-white transition-all flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                <span>Đánh giá {hospital.reviewCount ? `(${hospital.reviewCount})` : ''}</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -973,6 +982,17 @@ export default function HospitalDetailPage({ params }: PageProps) {
                 )}
               </div>
             </Card>
+          </TabsContent>
+
+          {/* ==================================================
+              TAB 6: ĐÁNH GIÁ (REVIEWS)
+             ================================================== */}
+          <TabsContent value="reviews" className="space-y-6">
+            <ReviewStatsSection
+              targetType="HOSPITAL"
+              targetId={id}
+              targetTitle={hospital.name}
+            />
           </TabsContent>
         </Tabs>
       </div>

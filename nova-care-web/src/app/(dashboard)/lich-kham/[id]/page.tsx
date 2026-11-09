@@ -43,12 +43,16 @@ import {
   HeartPulse,
   ShieldCheck,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Star,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
+import { reviewService } from '@/services/review.service';
+import { ReviewModal } from '@/components/reviews/ReviewModal';
+import { ReviewTargetType } from '@/types/review.types';
 
 const statusConfig: Record<string, { label: string; style: string; icon: React.ReactNode }> = {
   PENDING: {
@@ -72,7 +76,7 @@ const statusConfig: Record<string, { label: string; style: string; icon: React.R
     icon: <CheckCircle2 className="h-3.5 w-3.5" />
   },
   COMPLETED: {
-    label: 'Mô phỏng kết quả khám (Demo)',
+    label: 'Đã hoàn thành',
     style: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
     icon: <CheckCircle2 className="h-3.5 w-3.5" />
   },
@@ -123,6 +127,39 @@ export default function AppointmentDetailPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // Review states
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewTargetType, setReviewTargetType] = useState<ReviewTargetType>('DOCTOR');
+  const [reviewTargetName, setReviewTargetName] = useState('');
+  const [reviewTargetSubtitle, setReviewTargetSubtitle] = useState('');
+  const [existingReviewData, setExistingReviewData] = useState<any>(null);
+
+  const isCompleted = appointment?.status === 'COMPLETED';
+
+  const { data: eligibility, refetch: refetchEligibility } = useQuery({
+    queryKey: ['review-eligibility', appointmentId],
+    queryFn: () => reviewService.getEligibility(appointmentId),
+    enabled: !!isCompleted,
+  });
+
+  const handleOpenDoctorReview = () => {
+    const doc = appointment?.slot?.doctorWorkplace?.doctor;
+    setReviewTargetType('DOCTOR');
+    setReviewTargetName(doc ? `${doc.title ? doc.title + ' ' : ''}${doc.fullName}` : 'Bác sĩ phụ trách');
+    setReviewTargetSubtitle(appointment?.slot?.doctorWorkplace?.specialty?.name || 'Khám chuyên khoa');
+    setExistingReviewData(eligibility?.doctorReview || null);
+    setReviewModalOpen(true);
+  };
+
+  const handleOpenHospitalReview = () => {
+    const hosp = appointment?.slot?.doctorWorkplace?.hospital;
+    setReviewTargetType('HOSPITAL');
+    setReviewTargetName(hosp?.name || 'Cơ sở y tế');
+    setReviewTargetSubtitle(hosp?.address || '');
+    setExistingReviewData(eligibility?.hospitalReview || null);
+    setReviewModalOpen(true);
   };
 
   if (isLoading) {
@@ -467,7 +504,92 @@ export default function AppointmentDetailPage() {
           </Card>
         </div>
 
-        {/* 7. Cancel Action */}
+        {/* 7. Review Section (for COMPLETED appointments) */}
+        {isCompleted && (
+          <Card className="border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/30 shadow-sm rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-emerald-100/60 bg-emerald-50/40">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
+                  Đánh giá trải nghiệm khám bệnh
+                </CardTitle>
+                <Link
+                  href="/danh-gia"
+                  className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 hover:underline"
+                >
+                  Đánh giá của tôi <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+              <CardDescription className="text-xs text-slate-600">
+                Ý kiến đóng góp chân thực của bạn giúp nâng cao chất lượng khám chữa bệnh và giúp người bệnh khác đưa ra quyết định phù hợp.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Doctor review action */}
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                  <div className="space-y-1 mb-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                      Đánh giá Bác sĩ
+                    </span>
+                    <p className="font-extrabold text-sm text-slate-900 line-clamp-1">
+                      {appointment.slot?.doctorWorkplace?.doctor?.fullName || 'Bác sĩ phụ trách'}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {eligibility?.doctorReview
+                        ? `Bạn đã gửi đánh giá (${eligibility.doctorReview.rating}★)`
+                        : 'Chưa gửi đánh giá bác sĩ'}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleOpenDoctorReview}
+                    size="sm"
+                    className={`w-full text-xs font-bold gap-1 rounded-xl cursor-pointer ${
+                      eligibility?.doctorReview
+                        ? 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                    }`}
+                  >
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                    {eligibility?.doctorReview ? 'Xem lại / Sửa đánh giá BS' : 'Viết đánh giá Bác sĩ'}
+                  </Button>
+                </div>
+
+                {/* Hospital review action */}
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                  <div className="space-y-1 mb-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                      Đánh giá Cơ sở y tế
+                    </span>
+                    <p className="font-extrabold text-sm text-slate-900 line-clamp-1">
+                      {appointment.slot?.doctorWorkplace?.hospital?.name || 'Cơ sở khám NovaCare'}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {eligibility?.hospitalReview
+                        ? `Bạn đã gửi đánh giá (${eligibility.hospitalReview.rating}★)`
+                        : 'Chưa gửi đánh giá cơ sở'}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleOpenHospitalReview}
+                    size="sm"
+                    variant="outline"
+                    className={`w-full text-xs font-bold gap-1 rounded-xl cursor-pointer ${
+                      eligibility?.hospitalReview
+                        ? 'bg-blue-50 text-blue-900 border border-blue-300 hover:bg-blue-100'
+                        : 'border-[#0c4b39] text-[#0c4b39] hover:bg-emerald-50'
+                    }`}
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-[#0c4b39]" />
+                    {eligibility?.hospitalReview ? 'Xem lại / Sửa đánh giá Viện' : 'Viết đánh giá Cơ sở'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 8. Cancel Action */}
         {['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'PAID'].includes(appointment.status) && (
           <Card className="border-slate-200 shadow-sm bg-white rounded-2xl">
             <CardContent className="p-4">
@@ -509,6 +631,23 @@ export default function AppointmentDetailPage() {
           </Card>
         )}
       </div>
+
+      {/* Review Modal Dialog */}
+      {isCompleted && (
+        <ReviewModal
+          isOpen={reviewModalOpen}
+          onClose={() => setReviewModalOpen(false)}
+          onSuccess={() => {
+            refetchEligibility();
+          }}
+          appointmentId={appointment.id}
+          bookingCode={appointment.bookingCode}
+          targetType={reviewTargetType}
+          targetName={reviewTargetName}
+          targetSubtitle={reviewTargetSubtitle}
+          existingReview={existingReviewData}
+        />
+      )}
     </div>
   );
 }

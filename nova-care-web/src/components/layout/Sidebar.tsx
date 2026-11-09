@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Calendar, Bell, UserCheck, LogOut, X, Activity, PanelLeftClose } from 'lucide-react';
+import { User, Calendar, Bell, UserCheck, LogOut, X, Activity, PanelLeftClose, Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +38,11 @@ export function Sidebar({ open, setOpen, collapsed, setCollapsed }: SidebarProps
       label: 'Sổ sức khỏe điện tử',
       href: '/lich-su-kham',
       icon: Activity,
+    },
+    {
+      label: 'Đánh giá của tôi',
+      href: '/danh-gia',
+      icon: Star,
     },
     {
       label: 'Thông báo',

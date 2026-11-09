@@ -1,0 +1,146 @@
+@startuml 07_ERD_Lich_Hen_Thanh_Toan
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam defaultFontColor #000000
+
+skinparam ArrowColor #000000
+skinparam ArrowFontColor #000000
+skinparam ArrowThickness 1
+
+skinparam ClassBackgroundColor #87CEEB
+skinparam ClassHeaderBackgroundColor #87CEEB
+skinparam ClassBorderColor #000000
+skinparam ClassBorderThickness 1
+skinparam ClassFontColor #000000
+skinparam ClassFontSize 12
+skinparam ClassFontStyle bold
+skinparam ClassAttributeFontColor #000000
+skinparam ClassAttributeFontSize 11
+skinparam ClassAttributeFontName Arial
+
+skinparam EntityBackgroundColor #87CEEB
+skinparam EntityHeaderBackgroundColor #87CEEB
+skinparam EntityBorderColor #000000
+skinparam EntityBorderThickness 1
+skinparam EntityFontColor #000000
+skinparam EntityFontSize 12
+skinparam EntityFontStyle bold
+skinparam EntityAttributeFontColor #000000
+skinparam EntityAttributeFontSize 11
+skinparam EntityAttributeFontName Arial
+
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageBorderColor #000000
+skinparam packageBorderThickness 1
+skinparam packageFontColor #000000
+skinparam packageFontSize 12
+skinparam packageFontStyle bold
+skinparam packageStyle rectangle
+
+skinparam nodesep 50
+skinparam ranksep 50
+skinparam linetype ortho
+
+hide circle
+
+title ERD PHÂN HỆ SUẤT KHÁM, LỊCH HẸN & THANH TOÁN (6 THỰC THỂ)
+
+entity "AppointmentSlot" as AppointmentSlot {
+    * id : String <<PK>>
+    --
+    doctorWorkplaceId : String <<FK>>
+    date : DateTime
+    startTime : Time
+    endTime : Time
+    status : SlotStatus
+    maxCapacity : Int
+    currentBooked : Int
+    version : Int
+    createdAt : DateTime
+    updatedAt : DateTime
+}
+
+entity "AppointmentSlotBooking" as AppointmentSlotBooking {
+    * id : String <<PK>>
+    --
+    slotId : String <<FK>>
+    appointmentId : String <<FK>>
+    bookedAt : DateTime
+}
+
+entity "Appointment" as Appointment {
+    * id : String <<PK>>
+    --
+    appointmentCode : String <<UK>>
+    userId : String <<FK>>
+    patientProfileId : String <<FK>>
+    hospitalId : String <<FK>>
+    doctorId : String <<FK>>
+    doctorWorkplaceId : String <<FK>>
+    slotId : String <<FK>>
+    preExamSessionId : String <<FK>>
+    appointmentDate : DateTime
+    bookingType : BookingType
+    status : AppointmentStatus
+    checkinAt : DateTime
+    totalAmount : Decimal
+    reason : String
+    cancellationReason : String
+    cancelledAt : DateTime
+    createdAt : DateTime
+    updatedAt : DateTime
+}
+
+entity "AppointmentStatusHistory" as AppointmentStatusHistory {
+    * id : String <<PK>>
+    --
+    appointmentId : String <<FK>>
+    fromStatus : AppointmentStatus
+    toStatus : AppointmentStatus
+    changedBy : String
+    reason : String
+    createdAt : DateTime
+}
+
+entity "AppointmentContactLog" as AppointmentContactLog {
+    * id : String <<PK>>
+    --
+    appointmentId : String <<FK>>
+    channel : String
+    outcome : String
+    notes : String
+    contactedAt : DateTime
+    staffId : String
+}
+
+entity "PaymentTransaction" as PaymentTransaction {
+    * id : String <<PK>>
+    --
+    appointmentId : String <<FK>>
+    userId : String <<FK>>
+    txnRef : String <<UK>>
+    vnpTransactionNo : String
+    amount : Decimal
+    paymentMethod : PaymentMethod
+    status : PaymentStatus
+    bankCode : String
+    orderInfo : String
+    payDate : DateTime
+    secureHash : String
+    createdAt : DateTime
+    updatedAt : DateTime
+}
+
+AppointmentSlot ||--o{ AppointmentSlotBooking : "ánh xạ suất"
+Appointment ||--o{ AppointmentSlotBooking : "giữ chỗ qua booking"
+Appointment ||--o| AppointmentSlot : "tham chiếu suất chính"
+Appointment ||--o{ AppointmentStatusHistory : "dòng thời gian trạng thái"
+Appointment ||--o{ AppointmentContactLog : "nhật ký liên lạc bệnh nhân"
+Appointment ||--o| PaymentTransaction : "thanh toán viện phí (1-1)"
+
+@enduml
+

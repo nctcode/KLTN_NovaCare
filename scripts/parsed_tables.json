@@ -1,0 +1,5473 @@
+{
+  "User": {
+    "model_name": "User",
+    "db_table_name": "users",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "authVersion",
+        "prisma_field": "authVersion",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "email",
+        "prisma_field": "email",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "phone",
+        "prisma_field": "phone",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "passwordHash",
+        "prisma_field": "passwordHash",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "fullName",
+        "prisma_field": "fullName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "role",
+        "prisma_field": "role",
+        "db_type": "enum(Role)",
+        "constraint": "",
+        "default": "PATIENT",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "lastLoginAt",
+        "prisma_field": "lastLoginAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deletedAt",
+        "prisma_field": "deletedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "resetPasswordToken",
+        "prisma_field": "resetPasswordToken",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "resetPasswordExpiresAt",
+        "prisma_field": "resetPasswordExpiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "activationToken",
+        "prisma_field": "activationToken",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "activationExpiresAt",
+        "prisma_field": "activationExpiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "otpCode",
+        "prisma_field": "otpCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "otpExpiresAt",
+        "prisma_field": "otpExpiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "otpVerified",
+        "prisma_field": "otpVerified",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "RefreshToken": {
+    "model_name": "RefreshToken",
+    "db_table_name": "refresh_tokens",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "userId",
+        "deviceInfo"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "tokenHash",
+        "prisma_field": "tokenHash",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "expiresAt",
+        "prisma_field": "expiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deviceInfo",
+        "prisma_field": "deviceInfo",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "ipAddress",
+        "prisma_field": "ipAddress",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "isRevoked",
+        "prisma_field": "isRevoked",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PasswordResetChallenge": {
+    "model_name": "PasswordResetChallenge",
+    "db_table_name": "password_reset_challenges",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "otpHash",
+        "prisma_field": "otpHash",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "destination",
+        "prisma_field": "destination",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "expiresAt",
+        "prisma_field": "expiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "requestedAt",
+        "prisma_field": "requestedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "attempts",
+        "prisma_field": "attempts",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "windowStart",
+        "prisma_field": "windowStart",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "sendCount",
+        "prisma_field": "sendCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "verificationTokenHash",
+        "prisma_field": "verificationTokenHash",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "verificationExpiresAt",
+        "prisma_field": "verificationExpiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "RegistrationOtpChallenge": {
+    "model_name": "RegistrationOtpChallenge",
+    "db_table_name": "registration_otp_challenges",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "phone",
+        "prisma_field": "phone",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "otpHash",
+        "prisma_field": "otpHash",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "expiresAt",
+        "prisma_field": "expiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "requestedAt",
+        "prisma_field": "requestedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "attempts",
+        "prisma_field": "attempts",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "windowStart",
+        "prisma_field": "windowStart",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "sendCount",
+        "prisma_field": "sendCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "verificationTokenHash",
+        "prisma_field": "verificationTokenHash",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "verificationExpiresAt",
+        "prisma_field": "verificationExpiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "DeviceToken": {
+    "model_name": "DeviceToken",
+    "db_table_name": "device_tokens",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deviceToken",
+        "prisma_field": "deviceToken",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deviceType",
+        "prisma_field": "deviceType",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "AuditLog": {
+    "model_name": "AuditLog",
+    "db_table_name": "audit_logs",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "action",
+        "prisma_field": "action",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "entityType",
+        "prisma_field": "entityType",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "entityId",
+        "prisma_field": "entityId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "oldValue",
+        "prisma_field": "oldValue",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "newValue",
+        "prisma_field": "newValue",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "ipAddress",
+        "prisma_field": "ipAddress",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "userAgent",
+        "prisma_field": "userAgent",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "Notification": {
+    "model_name": "Notification",
+    "db_table_name": "notifications",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "title",
+        "prisma_field": "title",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "content",
+        "prisma_field": "content",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "type",
+        "prisma_field": "type",
+        "db_type": "enum(NotificationType)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isRead",
+        "prisma_field": "isRead",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "readAt",
+        "prisma_field": "readAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "data",
+        "prisma_field": "data",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "channel",
+        "prisma_field": "channel",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "externalId",
+        "prisma_field": "externalId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "NotificationLog": {
+    "model_name": "NotificationLog",
+    "db_table_name": "notification_logs",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "appointmentId",
+        "prisma_field": "appointmentId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "type",
+        "prisma_field": "type",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "channel",
+        "prisma_field": "channel",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "errorMessage",
+        "prisma_field": "errorMessage",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "sentAt",
+        "prisma_field": "sentAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PatientProfile": {
+    "model_name": "PatientProfile",
+    "db_table_name": "patient_profiles",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "patient_code",
+        "prisma_field": "patientCode",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "fullName",
+        "prisma_field": "fullName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "gender",
+        "prisma_field": "gender",
+        "db_type": "enum(Gender)",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "dateOfBirth",
+        "prisma_field": "dateOfBirth",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "phone",
+        "prisma_field": "phone",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "address",
+        "prisma_field": "address",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "relation",
+        "prisma_field": "relation",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "identityNumber",
+        "prisma_field": "identityNumber",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "healthInsurance",
+        "prisma_field": "healthInsurance",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "bhyt_initial_hospital_code",
+        "prisma_field": "bhytInitialHospitalCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "bhyt_valid_from",
+        "prisma_field": "bhytValidFrom",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "bhyt_valid_to",
+        "prisma_field": "bhytValidTo",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "province_code",
+        "prisma_field": "provinceCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "district_code",
+        "prisma_field": "districtCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "ward_code",
+        "prisma_field": "wardCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "blood_type",
+        "prisma_field": "bloodType",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "ethnicity",
+        "prisma_field": "ethnicity",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'Kinh'",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "nationality",
+        "prisma_field": "nationality",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'Việt Nam'",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "occupation",
+        "prisma_field": "occupation",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "guardianName",
+        "prisma_field": "guardianName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "familyMedicalHistory",
+        "prisma_field": "familyMedicalHistory",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "lifestyleRiskFactors",
+        "prisma_field": "lifestyleRiskFactors",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "currentMedications",
+        "prisma_field": "currentMedications",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "medicalHistory",
+        "prisma_field": "medicalHistory",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "allergies",
+        "prisma_field": "allergies",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "emergencyContact",
+        "prisma_field": "emergencyContact",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "emergencyPhone",
+        "prisma_field": "emergencyPhone",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "isDefault",
+        "prisma_field": "isDefault",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "security_pin",
+        "prisma_field": "securityPin",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deletedAt",
+        "prisma_field": "deletedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "MedicalPassport": {
+    "model_name": "MedicalPassport",
+    "db_table_name": "medical_passports",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id), UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "summary",
+        "prisma_field": "summary",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "version",
+        "prisma_field": "version",
+        "db_type": "int",
+        "constraint": "",
+        "default": "1",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "MedicalPassportShare": {
+    "model_name": "MedicalPassportShare",
+    "db_table_name": "medical_passport_shares",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "passportId",
+        "prisma_field": "passportId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → MedicalPassport(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "shareToken",
+        "prisma_field": "shareToken",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "qrCode",
+        "prisma_field": "qrCode",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "pinCode",
+        "prisma_field": "pinCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "allowedSections",
+        "prisma_field": "allowedSections",
+        "db_type": "text[]",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "validUntil",
+        "prisma_field": "validUntil",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "lastAccessedAt",
+        "prisma_field": "lastAccessedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "accessCount",
+        "prisma_field": "accessCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "sharedWith",
+        "prisma_field": "sharedWith",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "revokedAt",
+        "prisma_field": "revokedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "MedicalPassportAccessLog": {
+    "model_name": "MedicalPassportAccessLog",
+    "db_table_name": "medical_passport_access_logs",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "shareId",
+        "prisma_field": "shareId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → MedicalPassportShare(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "ipAddress",
+        "prisma_field": "ipAddress",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "userAgent",
+        "prisma_field": "userAgent",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "accessedAt",
+        "prisma_field": "accessedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PatientConsent": {
+    "model_name": "PatientConsent",
+    "db_table_name": "patient_consents",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "patientProfileId",
+        "sourceHospitalId",
+        "targetHospitalId"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "patientProfileId",
+        "prisma_field": "patientProfileId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → PatientProfile(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "sourceHospitalId",
+        "prisma_field": "sourceHospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "targetHospitalId",
+        "prisma_field": "targetHospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(ConsentStatus)",
+        "constraint": "",
+        "default": "GRANTED",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "grantedAt",
+        "prisma_field": "grantedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "expiresAt",
+        "prisma_field": "expiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "revokedAt",
+        "prisma_field": "revokedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "scope",
+        "prisma_field": "scope",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "purpose",
+        "prisma_field": "purpose",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'TREATMENT'",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "confirmedAt",
+        "prisma_field": "confirmedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "policyVersion",
+        "prisma_field": "policyVersion",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'novacare-consent-v1'",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PatientHospitalLink": {
+    "model_name": "PatientHospitalLink",
+    "db_table_name": "patient_hospital_links",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "patientProfileId",
+        "hospitalId"
+      ],
+      [
+        "hospitalId",
+        "externalPatientId"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "patientProfileId",
+        "prisma_field": "patientProfileId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → PatientProfile(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "externalPatientId",
+        "prisma_field": "externalPatientId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "matchingStatus",
+        "prisma_field": "matchingStatus",
+        "db_type": "enum(MatchingStatus)",
+        "constraint": "",
+        "default": "MATCHED",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "Hospital": {
+    "model_name": "Hospital",
+    "db_table_name": "hospitals",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "name",
+        "prisma_field": "name",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "address",
+        "prisma_field": "address",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "city",
+        "prisma_field": "city",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "phone",
+        "prisma_field": "phone",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "hotline",
+        "prisma_field": "hotline",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "emergencyHotline",
+        "prisma_field": "emergencyHotline",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "description",
+        "prisma_field": "description",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "logoUrl",
+        "prisma_field": "logoUrl",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "coverImageUrl",
+        "prisma_field": "coverImageUrl",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "images",
+        "prisma_field": "images",
+        "db_type": "text[]",
+        "constraint": "",
+        "default": "[]",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "website",
+        "prisma_field": "website",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "email",
+        "prisma_field": "email",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "operatingHours",
+        "prisma_field": "operatingHours",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "googleMapUrl",
+        "prisma_field": "googleMapUrl",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "latitude",
+        "prisma_field": "latitude",
+        "db_type": "float",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "longitude",
+        "prisma_field": "longitude",
+        "db_type": "float",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "establishedYear",
+        "prisma_field": "establishedYear",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "bedCount",
+        "prisma_field": "bedCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "type",
+        "prisma_field": "type",
+        "db_type": "enum(HospitalType)",
+        "constraint": "",
+        "default": "PUBLIC",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(PartnershipStatus)",
+        "constraint": "",
+        "default": "ACTIVE",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "rating",
+        "prisma_field": "rating",
+        "db_type": "float",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reviewCount",
+        "prisma_field": "reviewCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospital_code",
+        "prisma_field": "hospitalCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "externalId",
+        "prisma_field": "externalId",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "source",
+        "prisma_field": "source",
+        "db_type": "enum(DataSource)",
+        "constraint": "",
+        "default": "MANUAL",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deletedAt",
+        "prisma_field": "deletedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "HospitalBookingConfig": {
+    "model_name": "HospitalBookingConfig",
+    "db_table_name": "hospital_booking_configs",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "hospitalId",
+        "bookingType"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "bookingType",
+        "prisma_field": "bookingType",
+        "db_type": "enum(BookingType)",
+        "constraint": "",
+        "default": "ALL",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "maxAdvanceDays",
+        "prisma_field": "maxAdvanceDays",
+        "db_type": "int",
+        "constraint": "",
+        "default": "30",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "allowSaturday",
+        "prisma_field": "allowSaturday",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "allowSunday",
+        "prisma_field": "allowSunday",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "minAdvanceMinutes",
+        "prisma_field": "minAdvanceMinutes",
+        "db_type": "int",
+        "constraint": "",
+        "default": "60",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "defaultSlotDuration",
+        "prisma_field": "defaultSlotDuration",
+        "db_type": "int",
+        "constraint": "",
+        "default": "30",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "scheduleSource",
+        "prisma_field": "scheduleSource",
+        "db_type": "enum(ScheduleSource)",
+        "constraint": "",
+        "default": "INTERNAL",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "gracePeriodMinutes",
+        "prisma_field": "gracePeriodMinutes",
+        "db_type": "int",
+        "constraint": "",
+        "default": "15",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "minContactAttempts",
+        "prisma_field": "minContactAttempts",
+        "db_type": "int",
+        "constraint": "",
+        "default": "2",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "minContactIntervalMinutes",
+        "prisma_field": "minContactIntervalMinutes",
+        "db_type": "int",
+        "constraint": "",
+        "default": "5",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "autoNoShowEnabled",
+        "prisma_field": "autoNoShowEnabled",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "HospitalBranch": {
+    "model_name": "HospitalBranch",
+    "db_table_name": "hospital_branches",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "name",
+        "prisma_field": "name",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "address",
+        "prisma_field": "address",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "phone",
+        "prisma_field": "phone",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "latitude",
+        "prisma_field": "latitude",
+        "db_type": "float",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "longitude",
+        "prisma_field": "longitude",
+        "db_type": "float",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deletedAt",
+        "prisma_field": "deletedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "Specialty": {
+    "model_name": "Specialty",
+    "db_table_name": "specialties",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "name",
+        "prisma_field": "name",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "description",
+        "prisma_field": "description",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "icon",
+        "prisma_field": "icon",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "coverImageUrl",
+        "prisma_field": "coverImageUrl",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "HospitalSpecialty": {
+    "model_name": "HospitalSpecialty",
+    "db_table_name": "hospital_specialties",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "hospitalId",
+        "specialtyId"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "specialtyId",
+        "prisma_field": "specialtyId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Specialty(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "MedicalService": {
+    "model_name": "MedicalService",
+    "db_table_name": "medical_services",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "specialtyId",
+        "prisma_field": "specialtyId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Specialty(id)",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "name",
+        "prisma_field": "name",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "description",
+        "prisma_field": "description",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "price",
+        "prisma_field": "price",
+        "db_type": "decimal(10,2)",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "duration",
+        "prisma_field": "duration",
+        "db_type": "int",
+        "constraint": "",
+        "default": "30",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ClinicRoom": {
+    "model_name": "ClinicRoom",
+    "db_table_name": "clinic_rooms",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "hospitalId",
+        "code"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "specialtyId",
+        "prisma_field": "specialtyId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "code",
+        "prisma_field": "code",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "name",
+        "prisma_field": "name",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ClinicRoomSession": {
+    "model_name": "ClinicRoomSession",
+    "db_table_name": "clinic_room_sessions",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "roomId",
+        "prisma_field": "roomId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → ClinicRoom(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "medicalServiceId",
+        "prisma_field": "medicalServiceId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → MedicalService(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "slotId",
+        "prisma_field": "slotId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → AppointmentSlot(id), UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "mode",
+        "prisma_field": "mode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "HealthPackage": {
+    "model_name": "HealthPackage",
+    "db_table_name": "health_packages",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "specialtyId",
+        "prisma_field": "specialtyId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Specialty(id)",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "name",
+        "prisma_field": "name",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "thumbnailUrl",
+        "prisma_field": "thumbnailUrl",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "price",
+        "prisma_field": "price",
+        "db_type": "decimal(10,2)",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "originalPrice",
+        "prisma_field": "originalPrice",
+        "db_type": "decimal(10,2)",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "description",
+        "prisma_field": "description",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "duration",
+        "prisma_field": "duration",
+        "db_type": "int",
+        "constraint": "",
+        "default": "60",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "services",
+        "prisma_field": "services",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "preparationNote",
+        "prisma_field": "preparationNote",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "estimatedResultTime",
+        "prisma_field": "estimatedResultTime",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PartnerRequest": {
+    "model_name": "PartnerRequest",
+    "db_table_name": "partner_requests",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "type",
+        "prisma_field": "type",
+        "db_type": "enum(PartnerType)",
+        "constraint": "",
+        "default": "HOSPITAL",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "contactName",
+        "prisma_field": "contactName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "titleOrRole",
+        "prisma_field": "titleOrRole",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "phone",
+        "prisma_field": "phone",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "email",
+        "prisma_field": "email",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalName",
+        "prisma_field": "hospitalName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "specialty",
+        "prisma_field": "specialty",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "notes",
+        "prisma_field": "notes",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(PartnerRequestStatus)",
+        "constraint": "",
+        "default": "PENDING",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "adminNote",
+        "prisma_field": "adminNote",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "approvedAt",
+        "prisma_field": "approvedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdHospitalId",
+        "prisma_field": "createdHospitalId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdUserId",
+        "prisma_field": "createdUserId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "Doctor": {
+    "model_name": "Doctor",
+    "db_table_name": "doctors",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "fullName",
+        "prisma_field": "fullName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "title",
+        "prisma_field": "title",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "avatarUrl",
+        "prisma_field": "avatarUrl",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "qualification",
+        "prisma_field": "qualification",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "yearsOfExperience",
+        "prisma_field": "yearsOfExperience",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "gender",
+        "prisma_field": "gender",
+        "db_type": "enum(Gender)",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "bio",
+        "prisma_field": "bio",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "externalId",
+        "prisma_field": "externalId",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "source",
+        "prisma_field": "source",
+        "db_type": "enum(DataSource)",
+        "constraint": "",
+        "default": "MANUAL",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "rating",
+        "prisma_field": "rating",
+        "db_type": "float",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reviewCount",
+        "prisma_field": "reviewCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "consultationCount",
+        "prisma_field": "consultationCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deletedAt",
+        "prisma_field": "deletedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id), UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "DoctorWorkplace": {
+    "model_name": "DoctorWorkplace",
+    "db_table_name": "doctor_workplaces",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "doctorId",
+        "hospitalId",
+        "specialtyId"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorId",
+        "prisma_field": "doctorId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Doctor(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "branchId",
+        "prisma_field": "branchId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → HospitalBranch(id)",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "specialtyId",
+        "prisma_field": "specialtyId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Specialty(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "consultationFee",
+        "prisma_field": "consultationFee",
+        "db_type": "decimal(10,2)",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "position",
+        "prisma_field": "position",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "joinedAt",
+        "prisma_field": "joinedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "isPrimary",
+        "prisma_field": "isPrimary",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "DoctorSchedule": {
+    "model_name": "DoctorSchedule",
+    "db_table_name": "doctor_schedules",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorWorkplaceId",
+        "prisma_field": "doctorWorkplaceId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → DoctorWorkplace(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "bookingType",
+        "prisma_field": "bookingType",
+        "db_type": "enum(BookingType)",
+        "constraint": "",
+        "default": "ALL",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "dayOfWeek",
+        "prisma_field": "dayOfWeek",
+        "db_type": "int",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "startTime",
+        "prisma_field": "startTime",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "endTime",
+        "prisma_field": "endTime",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "breakStart",
+        "prisma_field": "breakStart",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "breakEnd",
+        "prisma_field": "breakEnd",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "slotDuration",
+        "prisma_field": "slotDuration",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "capacity",
+        "prisma_field": "capacity",
+        "db_type": "int",
+        "constraint": "",
+        "default": "1",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "effectiveFrom",
+        "prisma_field": "effectiveFrom",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "effectiveTo",
+        "prisma_field": "effectiveTo",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "DoctorScheduleService": {
+    "model_name": "DoctorScheduleService",
+    "db_table_name": "doctor_schedule_services",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "scheduleId",
+        "medicalServiceId"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "scheduleId",
+        "prisma_field": "scheduleId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → DoctorSchedule(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "medicalServiceId",
+        "prisma_field": "medicalServiceId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → MedicalService(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ScheduleException": {
+    "model_name": "ScheduleException",
+    "db_table_name": "schedule_exceptions",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorWorkplaceId",
+        "prisma_field": "doctorWorkplaceId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → DoctorWorkplace(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "date",
+        "prisma_field": "date",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "startTime",
+        "prisma_field": "startTime",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "endTime",
+        "prisma_field": "endTime",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "exceptionType",
+        "prisma_field": "exceptionType",
+        "db_type": "enum(ScheduleExceptionType)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reason",
+        "prisma_field": "reason",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "AppointmentSlot": {
+    "model_name": "AppointmentSlot",
+    "db_table_name": "appointment_slots",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "doctorWorkplaceId",
+        "startTime"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorWorkplaceId",
+        "prisma_field": "doctorWorkplaceId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → DoctorWorkplace(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "date",
+        "prisma_field": "date",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "startTime",
+        "prisma_field": "startTime",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "endTime",
+        "prisma_field": "endTime",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "capacity",
+        "prisma_field": "capacity",
+        "db_type": "int",
+        "constraint": "",
+        "default": "1",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "bookedCount",
+        "prisma_field": "bookedCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isAvailable",
+        "prisma_field": "isAvailable",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isActive",
+        "prisma_field": "isActive",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(SlotStatus)",
+        "constraint": "",
+        "default": "AVAILABLE",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "version",
+        "prisma_field": "version",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "AppointmentSlotBooking": {
+    "model_name": "AppointmentSlotBooking",
+    "db_table_name": "appointment_slot_bookings",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "appointmentId",
+        "slotId"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "appointmentId",
+        "prisma_field": "appointmentId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Appointment(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "slotId",
+        "prisma_field": "slotId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → AppointmentSlot(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "Appointment": {
+    "model_name": "Appointment",
+    "db_table_name": "appointments",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "clinicRoomId",
+        "prisma_field": "clinicRoomId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "serviceBookingMode",
+        "prisma_field": "serviceBookingMode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "bookingCode",
+        "prisma_field": "bookingCode",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "patientProfileId",
+        "prisma_field": "patientProfileId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → PatientProfile(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "slotId",
+        "prisma_field": "slotId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → AppointmentSlot(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "medicalServiceId",
+        "prisma_field": "medicalServiceId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → MedicalService(id)",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(AppointmentStatus)",
+        "constraint": "",
+        "default": "PENDING",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reason",
+        "prisma_field": "reason",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "symptoms",
+        "prisma_field": "symptoms",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "totalPrice",
+        "prisma_field": "totalPrice",
+        "db_type": "decimal(10,2)",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "consultationFee",
+        "prisma_field": "consultationFee",
+        "db_type": "decimal(10,2)",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "serviceFee",
+        "prisma_field": "serviceFee",
+        "db_type": "decimal(10,2)",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "idempotencyKey",
+        "prisma_field": "idempotencyKey",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "expiresAt",
+        "prisma_field": "expiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "cancelledAt",
+        "prisma_field": "cancelledAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "completedAt",
+        "prisma_field": "completedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "reminderSentAt",
+        "prisma_field": "reminderSentAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "reminderCount",
+        "prisma_field": "reminderCount",
+        "db_type": "int",
+        "constraint": "",
+        "default": "0",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "checkInAt",
+        "prisma_field": "checkInAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "noShowAt",
+        "prisma_field": "noShowAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "AppointmentStatusHistory": {
+    "model_name": "AppointmentStatusHistory",
+    "db_table_name": "appointment_status_histories",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "appointmentId",
+        "prisma_field": "appointmentId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Appointment(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(AppointmentStatus)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "note",
+        "prisma_field": "note",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "AppointmentContactLog": {
+    "model_name": "AppointmentContactLog",
+    "db_table_name": "appointment_contact_logs",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "appointmentId",
+        "prisma_field": "appointmentId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Appointment(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "staffId",
+        "prisma_field": "staffId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "staffName",
+        "prisma_field": "staffName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "channel",
+        "prisma_field": "channel",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'PHONE'",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "outcome",
+        "prisma_field": "outcome",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'NO_ANSWER'",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "note",
+        "prisma_field": "note",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "contactedAt",
+        "prisma_field": "contactedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PaymentTransaction": {
+    "model_name": "PaymentTransaction",
+    "db_table_name": "payment_transactions",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "appointmentId",
+        "prisma_field": "appointmentId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Appointment(id), UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "amount",
+        "prisma_field": "amount",
+        "db_type": "decimal(10,2)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "paymentMethod",
+        "prisma_field": "paymentMethod",
+        "db_type": "enum(PaymentMethod)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "transactionCode",
+        "prisma_field": "transactionCode",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(PaymentStatus)",
+        "constraint": "",
+        "default": "PENDING",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "vnpResponseCode",
+        "prisma_field": "vnpResponseCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "vnpTransactionNo",
+        "prisma_field": "vnpTransactionNo",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "callbackData",
+        "prisma_field": "callbackData",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "paidAt",
+        "prisma_field": "paidAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PreExamSession": {
+    "model_name": "PreExamSession",
+    "db_table_name": "pre_exam_sessions",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'IN_PROGRESS'",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "startedAt",
+        "prisma_field": "startedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "completedAt",
+        "prisma_field": "completedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "initialText",
+        "prisma_field": "initialText",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "voiceTranscript",
+        "prisma_field": "voiceTranscript",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "bodyDiagramData",
+        "prisma_field": "bodyDiagramData",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "imageAnalysis",
+        "prisma_field": "imageAnalysis",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "uploadedFiles",
+        "prisma_field": "uploadedFiles",
+        "db_type": "text[]",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "structuredData",
+        "prisma_field": "structuredData",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "recommendations",
+        "prisma_field": "recommendations",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "riskLevel",
+        "prisma_field": "riskLevel",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "expiresAt",
+        "prisma_field": "expiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PreExamQuestion": {
+    "model_name": "PreExamQuestion",
+    "db_table_name": "pre_exam_questions",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "sessionId",
+        "prisma_field": "sessionId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → PreExamSession(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "question",
+        "prisma_field": "question",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "answer",
+        "prisma_field": "answer",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "order",
+        "prisma_field": "order",
+        "db_type": "int",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "context",
+        "prisma_field": "context",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "ScreeningMedia": {
+    "model_name": "ScreeningMedia",
+    "db_table_name": "screening_media",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "sessionId",
+        "prisma_field": "sessionId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → PreExamSession(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "type",
+        "prisma_field": "type",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "storageKey",
+        "prisma_field": "storageKey",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "mimeType",
+        "prisma_field": "mimeType",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "sizeBytes",
+        "prisma_field": "sizeBytes",
+        "db_type": "int",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "durationMs",
+        "prisma_field": "durationMs",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "scriptId",
+        "prisma_field": "scriptId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'DEFAULT_VOICE_SAMPLE'",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "processingStatus",
+        "prisma_field": "processingStatus",
+        "db_type": "text",
+        "constraint": "",
+        "default": "'PROCESSING'",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "transcript",
+        "prisma_field": "transcript",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ConsultationSession": {
+    "model_name": "ConsultationSession",
+    "db_table_name": "consultation_sessions",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "patientProfileId",
+        "prisma_field": "patientProfileId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → PatientProfile(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorId",
+        "prisma_field": "doctorId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Doctor(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorWorkplaceId",
+        "prisma_field": "doctorWorkplaceId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → DoctorWorkplace(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "specialtyId",
+        "prisma_field": "specialtyId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Specialty(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "appointmentId",
+        "prisma_field": "appointmentId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Appointment(id), UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdByUserId",
+        "prisma_field": "createdByUserId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "idempotencyKey",
+        "prisma_field": "idempotencyKey",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "requestMode",
+        "prisma_field": "requestMode",
+        "db_type": "enum(ConsultationRequestMode)",
+        "constraint": "",
+        "default": "SCHEDULED",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "channel",
+        "prisma_field": "channel",
+        "db_type": "enum(ConsultationChannel)",
+        "constraint": "",
+        "default": "CHAT",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(ConsultationStatus)",
+        "constraint": "",
+        "default": "SCHEDULED",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "topic",
+        "prisma_field": "topic",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "description",
+        "prisma_field": "description",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "scheduledStartAt",
+        "prisma_field": "scheduledStartAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "scheduledEndAt",
+        "prisma_field": "scheduledEndAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "chatOpenAt",
+        "prisma_field": "chatOpenAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "acceptedAt",
+        "prisma_field": "acceptedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "startedAt",
+        "prisma_field": "startedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "completedAt",
+        "prisma_field": "completedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "cancelledAt",
+        "prisma_field": "cancelledAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "expiresAt",
+        "prisma_field": "expiresAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "followUpUntil",
+        "prisma_field": "followUpUntil",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "videoEnabled",
+        "prisma_field": "videoEnabled",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ConsultationMessage": {
+    "model_name": "ConsultationMessage",
+    "db_table_name": "consultation_messages",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "senderUserId",
+        "clientMessageId"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "consultationId",
+        "prisma_field": "consultationId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → ConsultationSession(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "senderUserId",
+        "prisma_field": "senderUserId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "senderType",
+        "prisma_field": "senderType",
+        "db_type": "enum(ConsultationSenderType)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "messageType",
+        "prisma_field": "messageType",
+        "db_type": "enum(ConsultationMessageType)",
+        "constraint": "",
+        "default": "TEXT",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "clientMessageId",
+        "prisma_field": "clientMessageId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "text",
+        "prisma_field": "text",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "sentAt",
+        "prisma_field": "sentAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "deliveredAt",
+        "prisma_field": "deliveredAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "readAt",
+        "prisma_field": "readAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ConsultationAttachment": {
+    "model_name": "ConsultationAttachment",
+    "db_table_name": "consultation_attachments",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "consultationId",
+        "prisma_field": "consultationId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → ConsultationSession(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "messageId",
+        "prisma_field": "messageId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → ConsultationMessage(id)",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "uploadedByUserId",
+        "prisma_field": "uploadedByUserId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(ConsultationAttachmentStatus)",
+        "constraint": "",
+        "default": "PENDING",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "type",
+        "prisma_field": "type",
+        "db_type": "enum(ConsultationMessageType)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "fileName",
+        "prisma_field": "fileName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "mimeType",
+        "prisma_field": "mimeType",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "sizeBytes",
+        "prisma_field": "sizeBytes",
+        "db_type": "int",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "storageKey",
+        "prisma_field": "storageKey",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "thumbnailKey",
+        "prisma_field": "thumbnailKey",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "MedicalEncounter": {
+    "model_name": "MedicalEncounter",
+    "db_table_name": "medical_encounters",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "patientProfileId",
+        "prisma_field": "patientProfileId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → PatientProfile(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "appointmentId",
+        "prisma_field": "appointmentId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Appointment(id), UNIQUE",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "externalEncounterId",
+        "prisma_field": "externalEncounterId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "encounterCode",
+        "prisma_field": "encounterCode",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "encounterDate",
+        "prisma_field": "encounterDate",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorName",
+        "prisma_field": "doctorName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorTitle",
+        "prisma_field": "doctorTitle",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "specialtyName",
+        "prisma_field": "specialtyName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "chiefComplaint",
+        "prisma_field": "chiefComplaint",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "clinicalSummary",
+        "prisma_field": "clinicalSummary",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "physicalExamination",
+        "prisma_field": "physicalExamination",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "organSystemsExam",
+        "prisma_field": "organSystemsExam",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "specialtyExam",
+        "prisma_field": "specialtyExam",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "admissionSource",
+        "prisma_field": "admissionSource",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "admissionAt",
+        "prisma_field": "admissionAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "dischargeType",
+        "prisma_field": "dischargeType",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "treatmentDays",
+        "prisma_field": "treatmentDays",
+        "db_type": "int",
+        "constraint": "",
+        "default": "1",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "initialDiagnosis",
+        "prisma_field": "initialDiagnosis",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "differentialDiagnosis",
+        "prisma_field": "differentialDiagnosis",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "treatmentPlan",
+        "prisma_field": "treatmentPlan",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "doctorNotes",
+        "prisma_field": "doctorNotes",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "conclusion",
+        "prisma_field": "conclusion",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "treatmentResult",
+        "prisma_field": "treatmentResult",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "revisitDate",
+        "prisma_field": "revisitDate",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "prognosisNear",
+        "prisma_field": "prognosisNear",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "prognosisFar",
+        "prisma_field": "prognosisFar",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "careLevel",
+        "prisma_field": "careLevel",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "dietaryRegimen",
+        "prisma_field": "dietaryRegimen",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "departmentHeadName",
+        "prisma_field": "departmentHeadName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "hospitalDirectorName",
+        "prisma_field": "hospitalDirectorName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "digitalSignature",
+        "prisma_field": "digitalSignature",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(EncounterStatus)",
+        "constraint": "",
+        "default": "PUBLISHED",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "Diagnosis": {
+    "model_name": "Diagnosis",
+    "db_table_name": "diagnoses",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "encounterId",
+        "prisma_field": "encounterId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → MedicalEncounter(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "icdCode",
+        "prisma_field": "icdCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "diseaseName",
+        "prisma_field": "diseaseName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isPrimary",
+        "prisma_field": "isPrimary",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "true",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isComplication",
+        "prisma_field": "isComplication",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "diagnosisType",
+        "prisma_field": "diagnosisType",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "note",
+        "prisma_field": "note",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "Observation": {
+    "model_name": "Observation",
+    "db_table_name": "observations",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "encounterId",
+        "prisma_field": "encounterId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → MedicalEncounter(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "category",
+        "prisma_field": "category",
+        "db_type": "enum(ObservationCategory)",
+        "constraint": "",
+        "default": "VITAL_SIGNS",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "code",
+        "prisma_field": "code",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "name",
+        "prisma_field": "name",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "value",
+        "prisma_field": "value",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "unit",
+        "prisma_field": "unit",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "referenceRange",
+        "prisma_field": "referenceRange",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "interpretation",
+        "prisma_field": "interpretation",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "observedAt",
+        "prisma_field": "observedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "Prescription": {
+    "model_name": "Prescription",
+    "db_table_name": "prescriptions",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "encounterId",
+        "prisma_field": "encounterId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → MedicalEncounter(id), UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "prescriptionCode",
+        "prisma_field": "prescriptionCode",
+        "db_type": "text",
+        "constraint": "UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "prescribedAt",
+        "prisma_field": "prescribedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "note",
+        "prisma_field": "note",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "PrescriptionItem": {
+    "model_name": "PrescriptionItem",
+    "db_table_name": "prescription_items",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "prescriptionId",
+        "prisma_field": "prescriptionId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Prescription(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "drugName",
+        "prisma_field": "drugName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "active_ingredient_code",
+        "prisma_field": "activeIngredientCode",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "dosage",
+        "prisma_field": "dosage",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "usageInstruction",
+        "prisma_field": "usageInstruction",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "quantity",
+        "prisma_field": "quantity",
+        "db_type": "int",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "unit",
+        "prisma_field": "unit",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "duration",
+        "prisma_field": "duration",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "note",
+        "prisma_field": "note",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "Review": {
+    "model_name": "Review",
+    "db_table_name": "reviews",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "appointmentId",
+        "targetType"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "appointmentId",
+        "prisma_field": "appointmentId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Appointment(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "userId",
+        "prisma_field": "userId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "targetType",
+        "prisma_field": "targetType",
+        "db_type": "enum(ReviewTargetType)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorId",
+        "prisma_field": "doctorId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Doctor(id)",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "hospitalId",
+        "prisma_field": "hospitalId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Hospital(id)",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "rating",
+        "prisma_field": "rating",
+        "db_type": "int",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "comment",
+        "prisma_field": "comment",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isAnonymous",
+        "prisma_field": "isAnonymous",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "status",
+        "prisma_field": "status",
+        "db_type": "enum(ReviewStatus)",
+        "constraint": "",
+        "default": "PENDING",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "moderationReason",
+        "prisma_field": "moderationReason",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "moderatedBy",
+        "prisma_field": "moderatedBy",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "moderatedAt",
+        "prisma_field": "moderatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "editWindowUntil",
+        "prisma_field": "editWindowUntil",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "isEdited",
+        "prisma_field": "isEdited",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "editedAt",
+        "prisma_field": "editedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ReviewCriteriaScore": {
+    "model_name": "ReviewCriteriaScore",
+    "db_table_name": "review_criteria_scores",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reviewId",
+        "prisma_field": "reviewId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Review(id), UNIQUE",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "doctorAttitude",
+        "prisma_field": "doctorAttitude",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "doctorExplanation",
+        "prisma_field": "doctorExplanation",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "doctorDedication",
+        "prisma_field": "doctorDedication",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "doctorCommunication",
+        "prisma_field": "doctorCommunication",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "hospitalFacility",
+        "prisma_field": "hospitalFacility",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "hospitalHygiene",
+        "prisma_field": "hospitalHygiene",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "hospitalReception",
+        "prisma_field": "hospitalReception",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "hospitalWaitingTime",
+        "prisma_field": "hospitalWaitingTime",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "hospitalStaffAttitude",
+        "prisma_field": "hospitalStaffAttitude",
+        "db_type": "int",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      }
+    ]
+  },
+  "ReviewResponse": {
+    "model_name": "ReviewResponse",
+    "db_table_name": "review_responses",
+    "compound_id": [],
+    "compound_uniques": [
+      [
+        "reviewId",
+        "responderId"
+      ]
+    ],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reviewId",
+        "prisma_field": "reviewId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Review(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "responderId",
+        "prisma_field": "responderId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → User(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "responderRole",
+        "prisma_field": "responderRole",
+        "db_type": "enum(Role)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "responderName",
+        "prisma_field": "responderName",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "responseContent",
+        "prisma_field": "responseContent",
+        "db_type": "text",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "updatedAt",
+        "prisma_field": "updatedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ReviewModerationLog": {
+    "model_name": "ReviewModerationLog",
+    "db_table_name": "review_moderation_logs",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reviewId",
+        "prisma_field": "reviewId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Review(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "adminUserId",
+        "prisma_field": "adminUserId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "previousStatus",
+        "prisma_field": "previousStatus",
+        "db_type": "enum(ReviewStatus)",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "newStatus",
+        "prisma_field": "newStatus",
+        "db_type": "enum(ReviewStatus)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reason",
+        "prisma_field": "reason",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "snapshotContent",
+        "prisma_field": "snapshotContent",
+        "db_type": "jsonb",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  },
+  "ReviewReport": {
+    "model_name": "ReviewReport",
+    "db_table_name": "review_reports",
+    "compound_id": [],
+    "compound_uniques": [],
+    "columns": [
+      {
+        "col_name": "id",
+        "prisma_field": "id",
+        "db_type": "text",
+        "constraint": "PRIMARY KEY",
+        "default": "uuid(",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reviewId",
+        "prisma_field": "reviewId",
+        "db_type": "text",
+        "constraint": "FOREIGN KEY → Review(id)",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "reporterId",
+        "prisma_field": "reporterId",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "reason",
+        "prisma_field": "reason",
+        "db_type": "enum(ReportReason)",
+        "constraint": "",
+        "default": "",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "description",
+        "prisma_field": "description",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "isResolved",
+        "prisma_field": "isResolved",
+        "db_type": "boolean",
+        "constraint": "",
+        "default": "false",
+        "allow_null": "KHÔNG"
+      },
+      {
+        "col_name": "resolvedAt",
+        "prisma_field": "resolvedAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "resolvedBy",
+        "prisma_field": "resolvedBy",
+        "db_type": "text",
+        "constraint": "",
+        "default": "NULL",
+        "allow_null": "CÓ"
+      },
+      {
+        "col_name": "createdAt",
+        "prisma_field": "createdAt",
+        "db_type": "timestamp",
+        "constraint": "",
+        "default": "now(",
+        "allow_null": "KHÔNG"
+      }
+    ]
+  }
+}

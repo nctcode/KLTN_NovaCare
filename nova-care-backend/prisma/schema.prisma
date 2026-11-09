@@ -214,6 +214,8 @@ model User {
   consultationAttachments ConsultationAttachment[]
   hospitalId              String?
   hospital                Hospital?                @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  reviews                 Review[]
+  reviewResponses         ReviewResponse[]
 
   @@map("users")
 }
@@ -345,6 +347,7 @@ model Appointment {
   payment          PaymentTransaction?
   medicalEncounter MedicalEncounter?
   consultation     ConsultationSession?
+  reviews          Review[]
 
   @@map("appointments")
 }
@@ -546,6 +549,7 @@ model Hospital {
   targetConsents      PatientConsent[]        @relation("TargetHospitalConsents")
   users               User[]
   bookingConfigs      HospitalBookingConfig[]
+  reviews             Review[]
 
   @@map("hospitals")
 }
@@ -650,6 +654,7 @@ model Doctor {
   user          User?                 @relation("DoctorUser", fields: [userId], references: [id], onDelete: SetNull)
   workPlaces    DoctorWorkplace[]
   consultations ConsultationSession[]
+  reviews       Review[]
 
   @@map("doctors")
 }
@@ -1199,4 +1204,137 @@ model PartnerRequest {
   updatedAt          DateTime             @updatedAt
 
   @@map("partner_requests")
+}
+
+// ============================================
+// Module Đánh giá Bác sĩ & Cơ sở Y tế (Reviews)
+// ============================================
+
+enum ReviewTargetType {
+  DOCTOR
+  HOSPITAL
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+enum ReportReason {
+  INAPPROPRIATE_LANGUAGE
+  FALSE_INFORMATION
+  SPAM_ADVERTISEMENT
+  PRIVACY_VIOLATION
+  OTHER
+}
+
+model Review {
+  id               String            @id @default(uuid())
+  appointmentId    String
+  userId           String
+  targetType       ReviewTargetType
+  doctorId         String?
+  hospitalId       String?
+
+  rating           Int
+  comment          String            @db.Text
+  isAnonymous      Boolean           @default(false)
+
+  status           ReviewStatus      @default(PENDING)
+  moderationReason String?
+  moderatedBy      String?
+  moderatedAt      DateTime?
+
+  editWindowUntil  DateTime
+  isEdited         Boolean           @default(false)
+  editedAt         DateTime?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  appointment      Appointment       @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctor           Doctor?           @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  hospital         Hospital?         @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+
+  criteriaScore    ReviewCriteriaScore?
+  responses        ReviewResponse[]
+  reports          ReviewReport[]
+  moderationLogs   ReviewModerationLog[]
+
+  @@unique([appointmentId, targetType])
+  @@index([doctorId, status])
+  @@index([hospitalId, status])
+  @@index([userId, createdAt])
+  @@map("reviews")
+}
+
+model ReviewCriteriaScore {
+  id                    String   @id @default(uuid())
+  reviewId              String   @unique
+
+  doctorAttitude        Int?
+  doctorExplanation     Int?
+  doctorDedication      Int?
+  doctorCommunication   Int?
+
+  hospitalFacility      Int?
+  hospitalHygiene       Int?
+  hospitalReception     Int?
+  hospitalWaitingTime   Int?
+  hospitalStaffAttitude Int?
+
+  review                Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_criteria_scores")
+}
+
+model ReviewResponse {
+  id              String   @id @default(uuid())
+  reviewId        String
+  responderId     String
+  responderRole   Role
+  responderName   String
+  responseContent String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  review          Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  responder       User     @relation(fields: [responderId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, responderId])
+  @@map("review_responses")
+}
+
+model ReviewModerationLog {
+  id              String        @id @default(uuid())
+  reviewId        String
+  adminUserId     String?
+  previousStatus  ReviewStatus?
+  newStatus       ReviewStatus
+  reason          String?
+  snapshotContent Json?
+  createdAt       DateTime      @default(now())
+
+  review          Review        @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_moderation_logs")
+}
+
+model ReviewReport {
+  id          String       @id @default(uuid())
+  reviewId    String
+  reporterId  String?
+  reason      ReportReason
+  description String?
+  isResolved  Boolean      @default(false)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  createdAt   DateTime     @default(now())
+
+  review      Review       @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_reports")
 }

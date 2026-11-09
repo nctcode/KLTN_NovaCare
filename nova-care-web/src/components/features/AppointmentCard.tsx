@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,11 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Calendar, Clock, MapPin, User, ChevronRight, CheckCircle2, AlertCircle, XCircle, Loader2, FileText, Ban } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, ChevronRight, CheckCircle2, AlertCircle, XCircle, Loader2, FileText, Ban, Star, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Appointment } from '@/types/appointment.types';
 import { appointmentService } from '@/services/appointment.service';
+import { reviewService } from '@/services/review.service';
+import { ReviewModal } from '@/components/reviews/ReviewModal';
+import { ReviewTargetType } from '@/types/review.types';
 import { toast } from 'sonner';
 import { VietnamEMRModal, MedicalEncounterData } from '@/components/emr/VietnamEMRModal';
 
@@ -41,6 +44,39 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
 
   const [isEMRModalOpen, setIsEMRModalOpen] = useState(false);
   const [activeEncounter, setActiveEncounter] = useState<MedicalEncounterData | null>(null);
+
+  // Review states
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewTargetType, setReviewTargetType] = useState<ReviewTargetType>('DOCTOR');
+  const [reviewTargetName, setReviewTargetName] = useState('');
+  const [reviewTargetSubtitle, setReviewTargetSubtitle] = useState('');
+  const [existingReviewData, setExistingReviewData] = useState<any>(null);
+
+  const isCompleted = appointment.status === 'COMPLETED';
+
+  const { data: eligibility, refetch: refetchEligibility } = useQuery({
+    queryKey: ['review-eligibility', appointment.id],
+    queryFn: () => reviewService.getEligibility(appointment.id),
+    enabled: isCompleted,
+  });
+
+  const handleOpenDoctorReview = () => {
+    const doc = appointment.slot?.doctorWorkplace?.doctor;
+    setReviewTargetType('DOCTOR');
+    setReviewTargetName(doc ? `${doc.title ? doc.title + ' ' : ''}${doc.fullName}` : 'Bác sĩ phụ trách');
+    setReviewTargetSubtitle(appointment.slot?.doctorWorkplace?.specialty?.name || 'Khám chuyên khoa');
+    setExistingReviewData(eligibility?.doctorReview || null);
+    setReviewModalOpen(true);
+  };
+
+  const handleOpenHospitalReview = () => {
+    const hosp = appointment.slot?.doctorWorkplace?.hospital;
+    setReviewTargetType('HOSPITAL');
+    setReviewTargetName(hosp?.name || 'Cơ sở y tế');
+    setReviewTargetSubtitle(hosp?.address || '');
+    setExistingReviewData(eligibility?.hospitalReview || null);
+    setReviewModalOpen(true);
+  };
 
   const status = statusConfig[appointment.status] || { label: appointment.status, style: 'bg-slate-100 text-slate-700 border-slate-200', icon: null };
   const startTime = appointment.slot?.startTime ? new Date(appointment.slot.startTime) : null;
@@ -194,6 +230,42 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
                 </Button>
               )}
 
+              {isCompleted && (
+                <>
+                  <Button
+                    onClick={handleOpenDoctorReview}
+                    size="sm"
+                    variant="outline"
+                    className={`text-xs font-bold gap-1 cursor-pointer rounded-xl border ${
+                      eligibility?.doctorReview
+                        ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                        : 'border-slate-300 text-slate-800 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                    {eligibility?.doctorReview
+                      ? `Đã đánh giá BS (${eligibility.doctorReview.rating}★)`
+                      : 'Đánh giá Bác sĩ'}
+                  </Button>
+
+                  <Button
+                    onClick={handleOpenHospitalReview}
+                    size="sm"
+                    variant="outline"
+                    className={`text-xs font-bold gap-1 cursor-pointer rounded-xl border ${
+                      eligibility?.hospitalReview
+                        ? 'border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100'
+                        : 'border-slate-300 text-slate-800 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-[#0c4b39]" />
+                    {eligibility?.hospitalReview
+                      ? `Đã đánh giá Viện (${eligibility.hospitalReview.rating}★)`
+                      : 'Đánh giá Cơ sở'}
+                  </Button>
+                </>
+              )}
+
               <Button asChild size="sm" className="bg-slate-900 hover:bg-slate-800 text-white text-xs gap-1">
                 <Link href={`/lich-kham/${appointment.id}`}>
                   Chi tiết
@@ -204,6 +276,24 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Review Modal */}
+      {isCompleted && (
+        <ReviewModal
+          isOpen={reviewModalOpen}
+          onClose={() => setReviewModalOpen(false)}
+          onSuccess={() => {
+            refetchEligibility();
+            queryClient.invalidateQueries({ queryKey: ['review-eligibility', appointment.id] });
+          }}
+          appointmentId={appointment.id}
+          bookingCode={appointment.bookingCode}
+          targetType={reviewTargetType}
+          targetName={reviewTargetName}
+          targetSubtitle={reviewTargetSubtitle}
+          existingReview={existingReviewData}
+        />
+      )}
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>

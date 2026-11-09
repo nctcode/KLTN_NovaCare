@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://novacare.local/research/dry-run-label-v0.1.schema.json",
+  "title": "NovaCare Dry Run Annotation V0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "caseId",
+    "annotatorId",
+    "annotationRound",
+    "triageReferenceLabel",
+    "specialtyApplicability",
+    "specialtyLabelType",
+    "acceptableSpecialties",
+    "informationSufficiency",
+    "evidenceDocumentIds",
+    "evidenceLocators",
+    "labelRationale",
+    "labelingStatus",
+    "limitations",
+    "startedAt",
+    "completedAt"
+  ],
+  "properties": {
+    "caseId": { "type": "string", "pattern": "^DR-[A-Z]{3}-[0-9]{3}$" },
+    "annotatorId": { "type": "string" },
+    "annotationRound": { "type": "integer", "minimum": 1 },
+    "triageReferenceLabel": { "type": ["string", "null"], "enum": ["CONSULT", "URGENT", "EMERGENCY", "REVIEW_REQUIRED", null] },
+    "specialtyApplicability": { "type": ["string", "null"], "enum": ["APPLICABLE", "DEFERRED_AFTER_TRIAGE", "NOT_APPLICABLE", "NEEDS_REVIEW", null] },
+    "specialtyLabelType": { "type": ["string", "null"], "enum": ["ONE", "MULTI_ACCEPTABLE", "INSUFFICIENT_INFORMATION", "OUT_OF_CATALOG", "NONE", null] },
+    "acceptableSpecialties": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["cardiology", "neurology", "pulmonology", "gastroenterology", "orthopedics"] }
+    },
+    "informationSufficiency": { "type": ["string", "null"], "enum": ["SUFFICIENT", "INSUFFICIENT", "AMBIGUOUS", null] },
+    "evidenceDocumentIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^DOC-" } },
+    "evidenceLocators": { "type": "array", "items": { "type": "string" } },
+    "labelRationale": { "type": "string" },
+    "labelingStatus": { "enum": ["PROVISIONAL_SINGLE_ANNOTATOR", "NEEDS_REVIEW"] },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "startedAt": { "type": ["string", "null"], "format": "date-time" },
+    "completedAt": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

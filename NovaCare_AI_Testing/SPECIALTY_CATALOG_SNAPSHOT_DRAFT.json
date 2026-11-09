@@ -1,0 +1,59 @@
+{
+  "snapshotVersion": "draft-0.1",
+  "createdAt": "2026-11-09T00:00:00+07:00",
+  "status": "DRAFT_UNAPPROVED",
+  "scopeDecision": "DL-03_OPEN",
+  "catalogDecision": "DL-19_OPEN",
+  "databaseIdsResolved": false,
+  "sourceAnchors": [
+    "nova-care-backend/prisma/seed.ts:295",
+    "nova-care-backend/src/modules/pre-exam-v2/engines/screening-routing.ts:9"
+  ],
+  "limitations": [
+    "Tên hiển thị lấy từ seed; ID database được tạo động nên chưa khóa.",
+    "Alias lấy từ V3 routing source; chưa được người nghiên cứu phê duyệt.",
+    "Snapshot này chỉ phục vụ chuẩn bị dry run, không dùng làm catalog frozen cho experiment."
+  ],
+  "specialties": [
+    {
+      "code": "cardiology",
+      "displayName": "Tim mạch",
+      "databaseId": null,
+      "active": null,
+      "aliases": ["tim mach", "noi tim mach"],
+      "status": "DRAFT"
+    },
+    {
+      "code": "neurology",
+      "displayName": "Thần kinh",
+      "databaseId": null,
+      "active": null,
+      "aliases": ["than kinh", "noi than kinh"],
+      "status": "DRAFT"
+    },
+    {
+      "code": "pulmonology",
+      "displayName": "Hô hấp",
+      "databaseId": null,
+      "active": null,
+      "aliases": ["ho hap", "noi ho hap", "phoi"],
+      "status": "DRAFT"
+    },
+    {
+      "code": "gastroenterology",
+      "displayName": "Tiêu hóa",
+      "databaseId": null,
+      "active": null,
+      "aliases": ["tieu hoa", "noi tieu hoa"],
+      "status": "DRAFT"
+    },
+    {
+      "code": "orthopedics",
+      "displayName": "Cơ xương khớp",
+      "databaseId": null,
+      "active": null,
+      "aliases": ["co xuong khop", "chan thuong chinh hinh", "chinh hinh"],
+      "status": "DRAFT"
+    }
+  ]
+}

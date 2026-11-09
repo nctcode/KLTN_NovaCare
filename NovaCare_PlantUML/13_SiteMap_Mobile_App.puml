@@ -1,0 +1,193 @@
+
+@startuml 13_SiteMap_Mobile_App
+
+!theme plain
+
+' =========================
+' CẤU HÌNH CHUNG
+' =========================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam defaultFontColor #000000
+
+skinparam ArrowColor #000000
+skinparam ArrowThickness 1
+
+skinparam linetype ortho
+skinparam nodesep 20
+skinparam ranksep 30
+skinparam padding 8
+
+' =========================
+' CẤU HÌNH CÁC Ô
+' =========================
+skinparam rectangle {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    BorderThickness 1
+    FontColor #000000
+    FontSize 12
+    FontStyle bold
+    RoundCorner 0
+    MinimumWidth 145
+    MaximumWidth 145
+}
+
+' =========================
+' CẤU HÌNH PACKAGE
+' =========================
+skinparam package {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    BorderThickness 1
+    FontColor #000000
+    FontSize 12
+    FontStyle bold
+    Style rectangle
+}
+
+' =========================
+' ROOT
+' =========================
+rectangle "ỨNG DỤNG DI ĐỘNG\nNOVACARE" as App_Root
+
+' =========================
+' 1. XÁC THỰC TÀI KHOẢN
+' =========================
+package "1. Xác thực tài khoản" as P_Auth {
+    rectangle "Đăng nhập" as Auth_Login
+    rectangle "Đăng ký\n& Xác thực OTP" as Auth_Register
+    rectangle "Quên mật khẩu\n& Đặt lại" as Auth_Forgot
+}
+
+' =========================
+' 2. TRANG CHỦ
+' =========================
+package "2. Trang chủ & Điều hướng" as P_Home {
+    rectangle "Trang chủ\nứng dụng" as Home_Main
+    rectangle "Dịch vụ\nnổi bật" as Home_Services
+    rectangle "Tiện ích\ny tế" as Home_Shortcuts
+}
+
+' =========================
+' 3. TÌM KIẾM Y TẾ
+' =========================
+package "3. Tìm kiếm y tế" as P_Search {
+    rectangle "Tìm kiếm\ncơ sở y tế" as Search_Hosp
+    rectangle "Tìm bác sĩ\n& chuyên khoa" as Search_Doctor
+    rectangle "Bộ lọc\nkhu vực & giá" as Search_Filter
+}
+
+' =========================
+' 4. SÀNG LỌC SỨC KHỎE AI
+' =========================
+package "4. Sàng lọc sức khỏe bằng AI" as P_AI {
+    rectangle "Khai báo triệu chứng\n& Vị trí đau" as AI_Input
+    rectangle "Phân tích\nđa phương thức AI" as AI_Analysis
+    rectangle "Phân tầng nguy cơ\n& Gợi ý chuyên khoa" as AI_Result
+}
+
+' =========================
+' 5. ĐẶT LỊCH & THANH TOÁN
+' =========================
+package "5. Đặt lịch & Thanh toán" as P_Booking {
+    rectangle "Chọn cơ sở\n& Bác sĩ" as Book_Select
+    rectangle "Chọn lịch khám\n& Hồ sơ" as Book_Slot
+    rectangle "Thanh toán\ntrực tuyến" as Book_Pay
+    rectangle "Phiếu khám\n& QR Check-in" as Book_Ticket
+}
+
+' =========================
+' 6. KHÁM TỪ XA
+' =========================
+package "6. Khám bệnh từ xa" as P_Tele {
+    rectangle "Danh sách\nca tư vấn" as Tele_List
+    rectangle "Kiểm tra\nCamera & Mic" as Tele_Precheck
+    rectangle "Phòng khám\nVideo Call" as Tele_Room
+    rectangle "Tin nhắn\n& Tài liệu" as Tele_Chat
+}
+
+' =========================
+' 7. HỒ SƠ SỨC KHỎE
+' =========================
+package "7. Hồ sơ sức khỏe" as P_Profile {
+    rectangle "Hồ sơ\nngười bệnh" as Prof_Family
+    rectangle "Hộ chiếu y tế\n& QR cá nhân" as Prof_Passport
+    rectangle "Lịch sử khám\n& Đơn thuốc" as Prof_History
+}
+
+' =========================
+' 8. LỊCH HẸN & THÔNG BÁO
+' =========================
+package "8. Lịch hẹn & Thông báo" as P_Appt {
+    rectangle "Danh sách\nlịch hẹn" as Appt_List
+    rectangle "Chi tiết\n& Hủy lịch" as Appt_Detail
+    rectangle "Thông báo\n& Nhắc lịch" as Appt_Notif
+}
+
+' =========================
+' KẾT NỐI ROOT
+' =========================
+App_Root -down-> P_Auth
+App_Root -down-> P_Home
+App_Root -down-> P_Search
+App_Root -down-> P_AI
+App_Root -down-> P_Booking
+App_Root -down-> P_Tele
+App_Root -down-> P_Profile
+App_Root -down-> P_Appt
+
+' =========================
+' KẾT NỐI XÁC THỰC
+' =========================
+Auth_Login -down-> Auth_Register
+Auth_Login -down-> Auth_Forgot
+
+' =========================
+' KẾT NỐI TRANG CHỦ
+' =========================
+Home_Main -down-> Home_Services
+Home_Services -down-> Home_Shortcuts
+
+' =========================
+' KẾT NỐI TÌM KIẾM
+' =========================
+Search_Hosp -down-> Search_Doctor
+Search_Doctor -down-> Search_Filter
+
+' =========================
+' KẾT NỐI SÀNG LỌC AI
+' =========================
+AI_Input -down-> AI_Analysis
+AI_Analysis -down-> AI_Result
+
+' =========================
+' KẾT NỐI ĐẶT LỊCH
+' =========================
+Book_Select -down-> Book_Slot
+Book_Slot -down-> Book_Pay
+Book_Pay -down-> Book_Ticket
+
+' =========================
+' KẾT NỐI KHÁM TỪ XA
+' =========================
+Tele_List -down-> Tele_Precheck
+Tele_Precheck -down-> Tele_Room
+Tele_Room -down-> Tele_Chat
+
+' =========================
+' KẾT NỐI HỒ SƠ SỨC KHỎE
+' =========================
+Prof_Family -down-> Prof_Passport
+Prof_Passport -down-> Prof_History
+
+' =========================
+' KẾT NỐI LỊCH HẸN
+' =========================
+Appt_List -down-> Appt_Detail
+Appt_Detail -down-> Appt_Notif
+
+@enduml

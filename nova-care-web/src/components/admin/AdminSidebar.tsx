@@ -26,6 +26,7 @@ import {
   Network,
   UserPlus,
   MapPin,
+  Star,
 } from 'lucide-react';
 
 interface SubMenuItem {
@@ -105,6 +106,12 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
     icon: Users,
     href: '/admin/users',
   },
+  {
+    id: 'reviews-moderation',
+    label: 'Kiểm duyệt đánh giá',
+    icon: Star,
+    href: '/admin/reviews',
+  },
 ];
 
 function AdminSidebarInner() {
@@ -173,6 +180,12 @@ function AdminSidebarInner() {
           label: 'Hồ sơ Cơ sở Y tế',
           icon: Building2,
           href: `/admin/hospitals/${hospitalId}`,
+        },
+        {
+          id: 'reviews-moderation',
+          label: 'Đánh giá & Phản hồi',
+          icon: Star,
+          href: '/admin/reviews',
         },
       ]
     : ADMIN_MENU_CONFIG;
