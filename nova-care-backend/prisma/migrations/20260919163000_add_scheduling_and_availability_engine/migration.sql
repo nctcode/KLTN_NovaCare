@@ -35,7 +35,64 @@ ALTER TABLE "doctor_schedules" ADD COLUMN IF NOT EXISTS "bookingType" "BookingTy
 ADD COLUMN IF NOT EXISTS "capacity" INTEGER NOT NULL DEFAULT 1,
 ADD COLUMN IF NOT EXISTS "effectiveFrom" DATE DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN IF NOT EXISTS "effectiveTo" DATE,
-ADD COLUMN IF NOT EXISTS "slotDuration" INTEGER;
+ADD COLUMN IF NOT EXISTS "slotDuration" INTEGER,
+ADD COLUMN IF NOT EXISTS "breakStart" TEXT,
+ADD COLUMN IF NOT EXISTS "breakEnd" TEXT,
+ADD COLUMN IF NOT EXISTS "doctorWorkplaceId" TEXT;
+
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM "doctor_schedules" ds
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM "doctor_workplaces" dw
+      WHERE dw."doctorId" = ds."doctorId"
+    )
+  ) THEN
+    RAISE EXCEPTION 'Cannot migrate doctor schedules: a scheduled doctor has no workplace';
+  END IF;
+END $$;
+
+UPDATE "doctor_schedules" ds
+SET "doctorWorkplaceId" = (
+  SELECT dw."id"
+  FROM "doctor_workplaces" dw
+  WHERE dw."doctorId" = ds."doctorId"
+  ORDER BY dw."id"
+  LIMIT 1
+)
+WHERE ds."doctorWorkplaceId" IS NULL;
+
+-- Preserve doctor-level schedules for every workplace during the model change.
+INSERT INTO "doctor_schedules" (
+    "id",
+    "doctorId",
+    "doctorWorkplaceId",
+    "dayOfWeek",
+    "startTime",
+    "endTime",
+    "isActive",
+    "createdAt",
+    "updatedAt"
+)
+SELECT
+    gen_random_uuid()::text,
+    ds."doctorId",
+    dw."id",
+    ds."dayOfWeek",
+    ds."startTime",
+    ds."endTime",
+    ds."isActive",
+    ds."createdAt",
+    ds."updatedAt"
+FROM "doctor_schedules" ds
+JOIN "doctor_workplaces" dw ON dw."doctorId" = ds."doctorId"
+WHERE dw."id" <> ds."doctorWorkplaceId";
+
+ALTER TABLE "doctor_schedules" DROP CONSTRAINT IF EXISTS "doctor_schedules_doctorId_fkey";
+ALTER TABLE "doctor_schedules" DROP COLUMN IF EXISTS "doctorId";
+ALTER TABLE "doctor_schedules" ALTER COLUMN "doctorWorkplaceId" SET NOT NULL;
 
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "appointment_slot_bookings" (
@@ -116,6 +173,9 @@ ALTER TABLE "hospital_booking_configs" ADD CONSTRAINT "hospital_booking_configs_
 
 ALTER TABLE "schedule_exceptions" DROP CONSTRAINT IF EXISTS "schedule_exceptions_doctorWorkplaceId_fkey";
 ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_doctorWorkplaceId_fkey" FOREIGN KEY ("doctorWorkplaceId") REFERENCES "doctor_workplaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "doctor_schedules" DROP CONSTRAINT IF EXISTS "doctor_schedules_doctorWorkplaceId_fkey";
+ALTER TABLE "doctor_schedules" ADD CONSTRAINT "doctor_schedules_doctorWorkplaceId_fkey" FOREIGN KEY ("doctorWorkplaceId") REFERENCES "doctor_workplaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "doctor_schedule_services" DROP CONSTRAINT IF EXISTS "doctor_schedule_services_scheduleId_fkey";
 ALTER TABLE "doctor_schedule_services" ADD CONSTRAINT "doctor_schedule_services_scheduleId_fkey" FOREIGN KEY ("scheduleId") REFERENCES "doctor_schedules"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -68,6 +68,8 @@ export const adminService = {
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.search) query.append('search', params.search);
     if (params?.role) query.append('role', params.role);
+    if (params?.status === 'ACTIVE') query.append('isActive', 'true');
+    if (params?.status === 'LOCKED') query.append('isActive', 'false');
 
     const response = await apiClient.get<any>(`/admin/users?${query.toString()}`);
     return extractData(response);
@@ -160,12 +162,12 @@ export const adminService = {
     return extractData(response);
   },
 
+  // Doctor Schedules (Lịch làm việc bác sĩ)
   async cancelAppointment(id: string, reason: string): Promise<any> {
     const response = await apiClient.delete<any>(`/admin/appointments/${id}`, { data: { reason } });
     return extractData(response);
   },
 
-  // Doctor Schedules (Lịch làm việc bác sĩ)
   async getDoctorSchedules(params?: {
     search?: string;
     hospitalId?: string;

@@ -163,6 +163,13 @@ export class AdminUsersService {
             },
           },
         },
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+          include: {
+            user: { select: { fullName: true, email: true } },
+          },
+        },
       },
     });
 

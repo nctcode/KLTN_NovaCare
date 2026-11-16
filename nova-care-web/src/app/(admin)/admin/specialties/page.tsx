@@ -67,10 +67,10 @@ export default function AdminSpecialtiesPage() {
   });
   const hospitals = hospitalsData?.items || [];
 
-  const isHospitalScope = isHospitalAdmin || (selectedHospitalId !== 'ALL' && !!selectedHospitalId);
-  const effectiveHospitalId = isHospitalAdmin
-    ? (user?.hospitalId || '')
-    : (selectedHospitalId !== 'ALL' ? selectedHospitalId : '');
+  // Platform Admin manages the global specialty catalog only.
+  // Hospital Admin works with the acceptance status of its own hospital.
+  const isHospitalScope = isHospitalAdmin;
+  const effectiveHospitalId = isHospitalAdmin ? (user?.hospitalId || '') : '';
 
   const selectedHospitalName = isHospitalAdmin
     ? (user?.hospital?.name || (user as any)?.hospitalName || 'Bệnh viện của bạn')
@@ -183,6 +183,7 @@ export default function AdminSpecialtiesPage() {
   // Submit Assign Specialty to Hospital
   const handleAssignSpecialtySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isHospitalAdmin || !effectiveHospitalId) return;
     if (!selectedAssignSpecialtyId) {
       alert('Vui lòng chọn chuyên khoa cần tiếp nhận');
       return;
@@ -476,11 +477,11 @@ export default function AdminSpecialtiesPage() {
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
               {isHospitalScope ? 'Bác sĩ tại viện' : 'Bệnh viện áp dụng'}
             </span>
-            <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400">
               {isHospitalScope ? <UserCheck className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
             </div>
           </div>
-          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+          <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">
             {isHospitalScope ? (stats.totalDoctorsUsing || 0) : stats.totalHospitalsUsing}
           </p>
           <p className="text-[11px] text-slate-400 mt-0.5">
@@ -655,7 +656,7 @@ export default function AdminSpecialtiesPage() {
                           <span>{spec.doctorCount || 0} Bác sĩ</span>
                         </Link>
                       ) : (
-                        <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           {spec.hospitalCount || 0} BV
                         </span>
                       )}
@@ -691,24 +692,24 @@ export default function AdminSpecialtiesPage() {
                         {/* Xem chi tiết */}
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => handleOpenDetailModal(spec, false)}
-                          className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                          className="h-7 px-2 gap-1 text-[11px] text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-slate-300 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
                           title="Xem chi tiết"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-3.5 h-3.5" /> Xem
                         </Button>
 
                         {/* Chỉnh sửa (chỉ cho Platform Admin) */}
                         {!isHospitalAdmin && (
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             onClick={() => handleOpenDetailModal(spec, true)}
-                            className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                            className="h-7 px-2 gap-1 text-[11px] text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-slate-300 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
                             title="Chỉnh sửa"
                           >
-                            <Pencil className="w-3.5 h-3.5" />
+                            <Pencil className="w-3.5 h-3.5" /> Sửa
                           </Button>
                         )}
 
@@ -716,22 +717,25 @@ export default function AdminSpecialtiesPage() {
                         {spec.isActive ? (
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             onClick={() => handleOpenDeactivateModal(spec)}
-                            className="h-7 w-7 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                            className="h-7 px-2 gap-1 text-[11px] text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
                             title={isHospitalScope ? 'Tạm ngưng tiếp nhận' : 'Ngừng hoạt động'}
                           >
-                            <Power className="w-3.5 h-3.5" />
+                            <Power className="w-3.5 h-3.5" /> {isHospitalScope ? 'Tạm ngưng nhận' : 'Tạm ngưng'}
                           </Button>
                         ) : (
                           <Button
                             variant="ghost"
-                            size="icon"
-                            onClick={() => handleConfirmToggleStatus(true)}
-                            className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSpecialty(spec);
+                              handleConfirmToggleStatus(true);
+                            }}
+                            className="h-7 px-2 gap-1 text-[11px] text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
                             title={isHospitalScope ? 'Kích hoạt tiếp nhận lại' : 'Kích hoạt lại'}
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {isHospitalScope ? 'Tiếp nhận lại' : 'Kích hoạt'}
                           </Button>
                         )}
                       </div>
@@ -780,7 +784,7 @@ export default function AdminSpecialtiesPage() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className={`max-w-xl p-6 rounded-3xl ${isLight ? 'bg-white text-slate-950' : 'bg-slate-950 text-white'}`}>
           <DialogHeader className="border-b pb-3 border-slate-200 dark:border-slate-800">
-            <DialogTitle className="text-lg font-black flex items-center gap-2.5 text-purple-600 dark:text-purple-400">
+            <DialogTitle className="text-lg font-black flex items-center gap-2.5 text-emerald-700 dark:text-emerald-400">
               <Stethoscope className="w-5 h-5 stroke-[2.5]" />
               Thêm Chuyên khoa mới vào CSDL
             </DialogTitle>
@@ -824,14 +828,14 @@ export default function AdminSpecialtiesPage() {
                   <button
                     type="button"
                     onClick={() => setIconMode('url')}
-                    className={`px-2 py-0.5 rounded-lg ${iconMode === 'url' ? 'bg-purple-600 text-white' : 'text-slate-400'}`}
+                    className={`px-2 py-0.5 rounded-lg ${iconMode === 'url' ? 'bg-emerald-700 text-white' : 'text-slate-400'}`}
                   >
                     Đường dẫn URL
                   </button>
                   <button
                     type="button"
                     onClick={() => setIconMode('file')}
-                    className={`px-2 py-0.5 rounded-lg ${iconMode === 'file' ? 'bg-purple-600 text-white' : 'text-slate-400'}`}
+                    className={`px-2 py-0.5 rounded-lg ${iconMode === 'file' ? 'bg-emerald-700 text-white' : 'text-slate-400'}`}
                   >
                     Tải ảnh lên
                   </button>
@@ -865,7 +869,7 @@ export default function AdminSpecialtiesPage() {
 
               {addForm.icon && (
                 <div className="flex items-center gap-3 pt-2">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-purple-500/10 border flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-emerald-500/10 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center">
                     {addForm.icon.startsWith('http') || addForm.icon.startsWith('data:') ? (
                       <img src={addForm.icon} alt="Icon Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -887,14 +891,14 @@ export default function AdminSpecialtiesPage() {
                   <button
                     type="button"
                     onClick={() => setCoverMode('url')}
-                    className={`px-2 py-0.5 rounded-lg ${coverMode === 'url' ? 'bg-purple-600 text-white' : 'text-slate-400'}`}
+                    className={`px-2 py-0.5 rounded-lg ${coverMode === 'url' ? 'bg-emerald-700 text-white' : 'text-slate-400'}`}
                   >
                     Đường dẫn URL
                   </button>
                   <button
                     type="button"
                     onClick={() => setCoverMode('file')}
-                    className={`px-2 py-0.5 rounded-lg ${coverMode === 'file' ? 'bg-purple-600 text-white' : 'text-slate-400'}`}
+                    className={`px-2 py-0.5 rounded-lg ${coverMode === 'file' ? 'bg-emerald-700 text-white' : 'text-slate-400'}`}
                   >
                     Tải ảnh lên
                   </button>
@@ -927,7 +931,7 @@ export default function AdminSpecialtiesPage() {
               )}
 
               {addForm.coverImageUrl && (
-                <div className="mt-2 rounded-2xl overflow-hidden h-24 border border-purple-500/30 relative">
+                <div className="mt-2 rounded-2xl overflow-hidden h-24 border border-emerald-500/30 relative">
                   <img src={addForm.coverImageUrl} alt="Banner Preview" className="w-full h-full object-cover" />
                   <span className="absolute bottom-1 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">
                     Xem trước Banner
@@ -976,7 +980,7 @@ export default function AdminSpecialtiesPage() {
               <Button
                 type="submit"
                 disabled={submittingAdd}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl px-6 shadow-md flex items-center gap-2"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl px-6 shadow-md flex items-center gap-2"
               >
                 {submittingAdd ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Thêm chuyên khoa'}
               </Button>
@@ -1119,13 +1123,13 @@ export default function AdminSpecialtiesPage() {
 
                 {/* Banner Content Info */}
                 <div className="absolute bottom-4 left-6 right-6 z-10 flex items-center gap-4">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-white p-1 shadow-lg border border-white/30 shrink-0 flex items-center justify-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-white p-1 shadow-lg border border-emerald-200/50 shrink-0 flex items-center justify-center">
                     {selectedSpecialty.icon && selectedSpecialty.icon.startsWith('http') ? (
                       <img src={selectedSpecialty.icon} alt={selectedSpecialty.name} className="w-full h-full object-cover rounded-xl" />
                     ) : selectedSpecialty.icon ? (
                       <span className="text-2xl sm:text-3xl">{selectedSpecialty.icon}</span>
                     ) : (
-                      <Stethoscope className="w-8 h-8 text-purple-600" />
+                      <Stethoscope className="w-8 h-8 text-emerald-700" />
                     )}
                   </div>
 
@@ -1143,7 +1147,7 @@ export default function AdminSpecialtiesPage() {
                       )}
                     </div>
                     <p className="text-[11px] text-slate-300 font-medium">
-                      Mã ID: <code className="font-mono text-purple-300">{selectedSpecialty.id}</code> • Áp dụng tại{' '}
+                      Mã ID: <code className="font-mono text-emerald-300">{selectedSpecialty.id}</code> • Áp dụng tại{' '}
                       <strong className="text-white">{appliedHospitals.length || selectedSpecialty.hospitalCount || 0}</strong> Bệnh viện CSDL
                     </p>
                   </div>
@@ -1155,11 +1159,11 @@ export default function AdminSpecialtiesPage() {
                 <Tabs value={detailTab} onValueChange={setDetailTab} className="w-full">
                   <TabsList className={`grid grid-cols-2 w-full p-1 rounded-2xl ${isLight ? 'bg-slate-100' : 'bg-slate-900'}`}>
                     <TabsTrigger value="info" className="text-xs font-extrabold py-2 rounded-xl flex items-center justify-center gap-2">
-                      <FileText className="w-4 h-4 text-purple-600" />
+                      <FileText className="w-4 h-4 text-emerald-700" />
                       Tab 1: Thông tin chuyên khoa
                     </TabsTrigger>
                     <TabsTrigger value="hospitals" className="text-xs font-extrabold py-2 rounded-xl flex items-center justify-center gap-2">
-                      {isHospitalScope ? <UserCheck className="w-4 h-4 text-emerald-600" /> : <Building2 className="w-4 h-4 text-blue-600" />}
+                      {isHospitalScope ? <UserCheck className="w-4 h-4 text-emerald-600" /> : <Building2 className="w-4 h-4 text-emerald-700" />}
                       {isHospitalScope ? `Tab 2: Bác sĩ tại viện (${hospitalDoctors.length})` : `Tab 2: Bệnh viện đang áp dụng (${appliedHospitals.length})`}
                     </TabsTrigger>
                   </TabsList>
@@ -1265,7 +1269,7 @@ export default function AdminSpecialtiesPage() {
                       /* READONLY DETAILS */
                       <div className="space-y-4">
                         <div className={`p-4 rounded-2xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'} space-y-3`}>
-                          <h4 className="text-xs font-black uppercase text-purple-600 dark:text-purple-400">Mô tả chuyên khoa</h4>
+                          <h4 className="text-xs font-black uppercase text-emerald-700 dark:text-emerald-400">Mô tả chuyên khoa</h4>
                           <p className="text-xs leading-relaxed font-medium">
                             {selectedSpecialty.description || 'Chưa cập nhật mô tả chi tiết cho chuyên khoa này.'}
                           </p>
@@ -1359,7 +1363,7 @@ export default function AdminSpecialtiesPage() {
 
                         {isLoadingDetail ? (
                           <div className="py-8 text-center text-slate-500 flex items-center justify-center gap-2 text-xs">
-                            <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                            <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
                             <span>Đang tải danh sách bệnh viện từ CSDL...</span>
                           </div>
                         ) : appliedHospitals.length === 0 ? (
@@ -1379,7 +1383,7 @@ export default function AdminSpecialtiesPage() {
                                     {hosp.hospitalLogoUrl && hosp.hospitalLogoUrl.trim() ? (
                                       <img src={hosp.hospitalLogoUrl.trim()} alt={hosp.hospitalName} className="w-full h-full object-cover rounded-lg" />
                                     ) : (
-                                      <Building2 className="w-5 h-5 text-purple-600" />
+                                      <Building2 className="w-5 h-5 text-emerald-700" />
                                     )}
                                   </div>
                                   <div className="min-w-0">
@@ -1395,7 +1399,7 @@ export default function AdminSpecialtiesPage() {
                                   <Link
                                     href={`/admin/hospitals/${hosp.hospitalId || hosp.id}`}
                                     target="_blank"
-                                    className="text-xs font-extrabold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+                                    className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
                                   >
                                     <span>Xem Bệnh viện</span>
                                     <ExternalLink className="w-3 h-3" />

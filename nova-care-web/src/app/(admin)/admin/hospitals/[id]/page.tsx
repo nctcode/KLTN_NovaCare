@@ -1385,12 +1385,12 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                   Quản lý danh sách các chi nhánh khám chữa bệnh của bệnh viện.
                 </p>
               </div>
-              <Button
+              {isHospitalAdmin && <Button
                 onClick={() => setIsAddBranchOpen(true)}
                 className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl flex items-center gap-1.5 shadow-sm shrink-0"
               >
                 <Plus className="w-4 h-4" /> Thêm cơ sở mới
-              </Button>
+              </Button>}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1445,7 +1445,7 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                     className={`pl-9 text-xs rounded-xl ${isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
                   />
                 </div>
-                <Button
+                {isHospitalAdmin && <Button
                   onClick={() => {
                     setDoctorForm(prev => ({
                       ...prev,
@@ -1457,7 +1457,7 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                   className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl flex items-center gap-1.5 shadow-sm shrink-0"
                 >
                   <Plus className="w-4 h-4" /> Thêm Bác sĩ
-                </Button>
+                </Button>}
               </div>
             </div>
 
@@ -1543,12 +1543,12 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                 </p>
               </div>
 
-              <Button
+              {isHospitalAdmin && <Button
                 onClick={handleOpenAddSpecialtyModal}
                 className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Thêm Chuyên khoa
-              </Button>
+              </Button>}
             </div>
 
             {/* Display Active Hospital Specialties */}
@@ -1558,13 +1558,13 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                 <p className={`text-xs font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
                   Bệnh viện chưa được gán chuyên khoa nào
                 </p>
-                <Button
+                {isHospitalAdmin && <Button
                   onClick={handleOpenAddSpecialtyModal}
                   variant="outline"
                   className="text-xs rounded-xl mt-2"
                 >
                   <Plus className="w-4 h-4 mr-1" /> Chọn Chuyên khoa ngay
-                </Button>
+                </Button>}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -1588,7 +1588,7 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                         </div>
                       </div>
 
-                      <Button
+                      {isHospitalAdmin && <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveSpecialty(spec.id)}
@@ -1596,7 +1596,7 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                         title="Gỡ chuyên khoa"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      </Button>}
                     </div>
 
                     {spec.description && (
@@ -1629,12 +1629,12 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                 </div>
               </div>
 
-              <Button
+              {isHospitalAdmin && <Button
                 onClick={handleOpenAddPackage}
                 className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl px-4 py-2 flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" /> Thêm Gói khám mới
-              </Button>
+              </Button>}
             </div>
 
             {/* Filter bar inside Hospital Packages Tab */}
@@ -1748,22 +1748,22 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                           >
                             <Eye className="w-3.5 h-3.5 mr-1" /> Chi tiết
                           </Button>
-                          <Button
+                          {isHospitalAdmin && <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleOpenEditPackage(pkg)}
                             className="h-7 px-2 text-xs"
                           >
                             <Pencil className="w-3.5 h-3.5 mr-1" /> Sửa
-                          </Button>
-                          <Button
+                          </Button>}
+                          {isHospitalAdmin && <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeletePackage(pkg)}
                             className="h-7 px-2 text-xs text-rose-500 hover:text-rose-700"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          </Button>}
                         </div>
                       </div>
                     );
@@ -1787,12 +1787,12 @@ function HospitalDetailPageContent({ id }: { id: string }) {
               </p>
             </div>
 
-            <Button
+            {isHospitalAdmin && <Button
               onClick={handleOpenAddService}
               className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl px-4 py-2 flex items-center gap-1.5 shadow-sm"
             >
               <Plus className="w-4 h-4" /> Thêm Dịch vụ mới
-            </Button>
+            </Button>}
           </div>
 
           <Card className={`${cardBg} rounded-xl p-5 border`}>
@@ -1800,9 +1800,9 @@ function HospitalDetailPageContent({ id }: { id: string }) {
               <div className="py-12 text-center space-y-2">
                 <Activity className="w-10 h-10 text-slate-400 mx-auto opacity-60" />
                 <p className="text-xs text-slate-500">Bệnh viện chưa niêm yết dịch vụ y tế lẻ nào.</p>
-                <Button onClick={handleOpenAddService} variant="outline" className="text-xs rounded-xl">
+                {isHospitalAdmin && <Button onClick={handleOpenAddService} variant="outline" className="text-xs rounded-xl">
                   <Plus className="w-4 h-4 mr-1" /> Thêm Dịch vụ đầu tiên
-                </Button>
+                </Button>}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1843,7 +1843,7 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                         </td>
 
                         <td className="p-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                          {isHospitalAdmin && <div className="flex items-center justify-end gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1862,7 +1862,7 @@ function HospitalDetailPageContent({ id }: { id: string }) {
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
-                          </div>
+                          </div>}
                         </td>
                       </tr>
                     ))}

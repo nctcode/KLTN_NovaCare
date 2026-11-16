@@ -146,27 +146,6 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
       }),
   });
 
-  const updateStatusMutation = useMutation({
-    onError: (error: Error) => toast.error(error.message || 'Không thể cập nhật trạng thái'),
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      adminService.updateAppointmentStatus(id, status),
-    onSuccess: () => {
-      toast.success('Cập nhật trạng thái thành công');
-      queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
-    },
-  });
-
-  const cancelMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      adminService.cancelAppointment(id, reason),
-    onSuccess: () => {
-      toast.success('Hủy lịch khám thành công');
-      queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
-    },
-  });
-
   const checkInMutation = useMutation({
     mutationFn: (id: string) => adminService.checkInAppointment(id, { note: 'Tiếp đón tại quầy' }),
     onSuccess: () => {
@@ -178,14 +157,6 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
       toast.error(error?.response?.data?.message || error.message || 'Không thể check-in tiếp đón');
     },
   });
-
-  const handleCancelClick = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const reason = prompt('Nhập lý do hủy lịch khám:');
-    if (reason !== null) {
-      cancelMutation.mutate({ id, reason: reason || 'Admin hủy lịch' });
-    }
-  };
 
   const handleResetFilters = () => {
     setSearch('');
@@ -215,7 +186,9 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
               ? 'Theo dõi và quản lý danh sách bệnh nhân có lịch hẹn khám trong ngày hôm nay.'
               : initialMode === 'history'
                 ? 'Tra cứu và kiểm tra lịch sử các lượt khám bệnh đã hoàn tất trên hệ thống.'
-                : 'Theo dõi và quản lý các lịch hẹn khám được đặt trên nền tảng NovaCare.')}
+                : isHospitalAdmin
+                  ? 'Theo dõi và xử lý lịch hẹn khám tại cơ sở y tế của bạn.'
+                  : 'Giám sát các lịch hẹn khám được đặt trên nền tảng NovaCare.')}
           </p>
         </div>
 
@@ -586,7 +559,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                           <td className="py-2.5 px-3 text-right align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
                               {/* Quick Check-in button */}
-                              {!appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                              {isHospitalAdmin && !appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -600,7 +573,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                               )}
 
                               {/* Contact Log button */}
-                              {['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                              {isHospitalAdmin && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -613,7 +586,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                               )}
 
                               {/* Confirm NO_SHOW button */}
-                              {slotStart && slotStart.getTime() < Date.now() && !appt.checkInAt && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                              {isHospitalAdmin && slotStart && slotStart.getTime() < Date.now() && !appt.checkInAt && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -626,7 +599,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                               )}
 
                               {/* Revert NO_SHOW button */}
-                              {appt.status === 'NO_SHOW' && (
+                              {isHospitalAdmin && appt.status === 'NO_SHOW' && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -783,24 +756,24 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
       />
 
       {/* Reception Modals */}
-      <RecordContactModal
+      {isHospitalAdmin && <RecordContactModal
         appointment={contactModalAppt}
         open={!!contactModalAppt}
         onClose={() => setContactModalAppt(null)}
-      />
+      />}
 
-      <NoShowConfirmModal
+      {isHospitalAdmin && <NoShowConfirmModal
         appointment={noShowModalAppt}
         open={!!noShowModalAppt}
         onClose={() => setNoShowModalAppt(null)}
         onOpenContactLog={(appt) => setContactModalAppt(appt)}
-      />
+      />}
 
-      <RevertNoShowModal
+      {isHospitalAdmin && <RevertNoShowModal
         appointment={revertModalAppt}
         open={!!revertModalAppt}
         onClose={() => setRevertModalAppt(null)}
-      />
+      />}
     </div>
   );
 }

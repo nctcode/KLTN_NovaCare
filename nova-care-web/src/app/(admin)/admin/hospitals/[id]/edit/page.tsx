@@ -196,6 +196,20 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
     e.preventDefault();
     if (!validate()) return;
 
+    const currentStatus = hospital?.status === 'ACTIVE' ? 'Hoạt động'
+      : hospital?.status === 'PAUSED' ? 'Tạm ngưng'
+        : hospital?.status === 'TERMINATED' ? 'Ngừng hợp tác' : hospital?.status;
+    if (currentStatus && formData.status !== currentStatus) {
+      const confirmed = window.confirm(
+        formData.status === 'Hoạt động'
+          ? 'Bạn có chắc muốn kích hoạt lại bệnh viện này không? Bệnh viện có thể tiếp tục nhận lịch.'
+          : formData.status === 'Tạm ngưng'
+            ? 'Bạn có chắc muốn ngừng nhận lịch của bệnh viện này không?'
+            : 'Bạn có chắc muốn ngừng hợp tác với bệnh viện này không?'
+      );
+      if (!confirmed) return;
+    }
+
     const payload = {
       ...formData,
       logoUrl: logoPreview || formData.logoUrl,
@@ -637,9 +651,9 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
                   isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                 }`}
               >
-                <option value="Hoạt động">Hoạt động (Active)</option>
-                <option value="Tạm ngưng">Tạm ngưng (Paused)</option>
-                <option value="Ngừng hợp tác">Ngừng hợp tác (Terminated)</option>
+                {formData.status !== 'Hoạt động' && <option value="Hoạt động">Hoạt động (Active)</option>}
+                {formData.status !== 'Tạm ngưng' && <option value="Tạm ngưng">Tạm ngưng (Paused)</option>}
+                {formData.status !== 'Ngừng hợp tác' && <option value="Ngừng hợp tác">Ngừng hợp tác (Terminated)</option>}
               </select>
             </div>
 

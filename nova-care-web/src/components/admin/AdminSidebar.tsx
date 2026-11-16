@@ -27,6 +27,7 @@ import {
   UserPlus,
   MapPin,
   Star,
+  CreditCard,
 } from 'lucide-react';
 
 interface SubMenuItem {
@@ -54,7 +55,7 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
   },
   {
     id: 'hospitals-partner',
-    label: 'Bệnh viện đối tác',
+    label: 'Quản lý Cơ sở y tế',
     icon: Building2,
     href: '/admin/hospitals',
   },
@@ -66,7 +67,7 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
   },
   {
     id: 'hospital-admins',
-    label: 'Tài khoản Quản trị viện',
+    label: 'Quản lý vai trò và phân quyền người dùng',
     icon: ShieldCheck,
     href: '/admin/users/roles',
   },
@@ -95,6 +96,12 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
     href: '/admin/audit-logs',
   },
   {
+    id: 'payments',
+    label: 'Thanh toán & giao dịch',
+    icon: CreditCard,
+    href: '/admin/payments',
+  },
+  {
     id: 'master-specialties',
     label: 'Cấu hình & Danh mục chuẩn',
     icon: Stethoscope,
@@ -102,7 +109,7 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
   },
   {
     id: 'users-list',
-    label: 'Người dùng & Bệnh nhân',
+    label: 'Quản lý người dùng',
     icon: Users,
     href: '/admin/users',
   },

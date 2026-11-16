@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/stores/auth.store';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -33,6 +34,8 @@ interface AppointmentDetailDrawerProps {
 
 export function AppointmentDetailDrawer({ appointmentId, open, onClose }: AppointmentDetailDrawerProps) {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuthStore();
+  const canOperateAppointments = currentUser?.role === 'HOSPITAL_ADMIN';
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
 
@@ -407,7 +410,7 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
         <DialogFooter className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Check-in */}
-            {appt && !appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+            {canOperateAppointments && appt && !appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
               <Button
                 type="button"
                 size="sm"
@@ -421,7 +424,7 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
             )}
 
             {/* Record contact */}
-            {appt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+            {canOperateAppointments && appt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
               <Button
                 type="button"
                 size="sm"
@@ -434,7 +437,7 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
             )}
 
             {/* Mark NO_SHOW */}
-            {appt && slotStartTime && slotStartTime.getTime() < Date.now() && !appt.checkInAt && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+            {canOperateAppointments && appt && slotStartTime && slotStartTime.getTime() < Date.now() && !appt.checkInAt && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
               <Button
                 type="button"
                 size="sm"
@@ -447,7 +450,7 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
             )}
 
             {/* Revert NO_SHOW */}
-            {appt && appt.status === 'NO_SHOW' && (
+            {canOperateAppointments && appt && appt.status === 'NO_SHOW' && (
               <Button
                 type="button"
                 size="sm"
@@ -471,24 +474,24 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
         </DialogFooter>
 
         {/* Modals for actions */}
-        <RecordContactModal
+        {canOperateAppointments && <RecordContactModal
           appointment={appt}
           open={showContactModal}
           onClose={() => setShowContactModal(false)}
-        />
+        />}
 
-        <NoShowConfirmModal
+        {canOperateAppointments && <NoShowConfirmModal
           appointment={appt}
           open={showNoShowModal}
           onClose={() => setShowNoShowModal(false)}
           onOpenContactLog={() => setShowContactModal(true)}
-        />
+        />}
 
-        <RevertNoShowModal
+        {canOperateAppointments && <RevertNoShowModal
           appointment={appt}
           open={showRevertModal}
           onClose={() => setShowRevertModal(false)}
-        />
+        />}
       </DialogContent>
     </Dialog>
   );

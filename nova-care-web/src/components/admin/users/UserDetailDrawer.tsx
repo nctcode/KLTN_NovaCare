@@ -8,11 +8,8 @@ import {
   CreditCard,
   Lock,
   Unlock,
-  KeyRound,
-  Bell,
   Users,
   Loader2,
-  Send,
 } from 'lucide-react';
 import { AdminUserItem, AccountStatus } from './types';
 import { Button } from '@/components/ui/button';
@@ -23,8 +20,6 @@ interface UserDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onToggleStatus: (userId: string, currentStatus: AccountStatus) => void;
-  onResetPassword: (userId: string) => void;
-  onSendNotification: (userId: string, title: string, message: string) => void;
   onAddInternalNote: (userId: string, note: string) => void;
   isLight?: boolean;
 }
@@ -34,8 +29,6 @@ export const UserDetailDrawer: React.FC<UserDetailModalProps> = ({
   isOpen,
   onClose,
   onToggleStatus,
-  onResetPassword,
-  onSendNotification,
   onAddInternalNote,
   isLight = true,
 }) => {
@@ -43,12 +36,7 @@ export const UserDetailDrawer: React.FC<UserDetailModalProps> = ({
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   // Sub-modals
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [showNotifModal, setShowNotifModal] = useState(false);
-  const [notifTitle, setNotifTitle] = useState('');
-  const [notifMessage, setNotifMessage] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user?.patientProfiles && user.patientProfiles.length > 0) {
@@ -68,20 +56,6 @@ export const UserDetailDrawer: React.FC<UserDetailModalProps> = ({
     if (!newNoteContent.trim()) return;
     onAddInternalNote(user.id, newNoteContent.trim());
     setNewNoteContent('');
-  };
-
-  const handleSendNotif = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!notifTitle.trim() || !notifMessage.trim()) return;
-    setIsSubmitting(true);
-    try {
-      await onSendNotification(user.id, notifTitle.trim(), notifMessage.trim());
-      setShowNotifModal(false);
-      setNotifTitle('');
-      setNotifMessage('');
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   // Common table styles
@@ -428,6 +402,25 @@ export const UserDetailDrawer: React.FC<UserDetailModalProps> = ({
                     </div>
                   )}
                 </div>
+                <div className={tableContainerClass}>
+                  <div className={sectionHeaderClass}>Lịch sử hoạt động hệ thống</div>
+                  {!user.accountLogs || user.accountLogs.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500">Chưa có hoạt động được ghi nhận.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {user.accountLogs.map((log) => (
+                        <div key={log.id} className="p-3 text-xs">
+                          <div className="flex items-center justify-between text-slate-500 text-[11px] mb-1">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">{log.title}</span>
+                            <span className="font-mono">{new Date(log.timestamp).toLocaleString('vi-VN')}</span>
+                          </div>
+                          <p className="text-slate-700 dark:text-slate-300">{log.description}</p>
+                          <p className="text-[11px] text-slate-500 mt-1">Thực hiện bởi: {log.actor}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -515,23 +508,6 @@ export const UserDetailDrawer: React.FC<UserDetailModalProps> = ({
                 )}
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowResetModal(true)}
-                className="text-xs h-8 px-2.5 rounded-lg border-slate-200 dark:border-slate-800"
-              >
-                <KeyRound className="w-3.5 h-3.5 mr-1 text-slate-500" /> Reset mật khẩu
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowNotifModal(true)}
-                className="text-xs h-8 px-2.5 rounded-lg border-slate-200 dark:border-slate-800"
-              >
-                <Bell className="w-3.5 h-3.5 mr-1 text-slate-500" /> Gửi thông báo
-              </Button>
             </div>
 
             <Button
@@ -546,8 +522,8 @@ export const UserDetailDrawer: React.FC<UserDetailModalProps> = ({
         </div>
       </div>
 
-      {/* Modal 1: Reset Password Confirmation */}
-      {showResetModal && (
+      {/* Removed reset-password and notification dialogs from the admin UI. */}
+      {false && showResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="max-w-md w-full p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white space-y-3">
             <div className="flex items-center gap-2 font-bold text-sm">
@@ -582,7 +558,7 @@ export const UserDetailDrawer: React.FC<UserDetailModalProps> = ({
       )}
 
       {/* Modal 2: Send Notification */}
-      {showNotifModal && (
+      {false && showNotifModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="max-w-md w-full p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white space-y-3">
             <div className="flex items-center justify-between">

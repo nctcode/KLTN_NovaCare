@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Patch,
-  Delete,
   Param,
   Query,
   Body,
@@ -20,13 +19,13 @@ import { Roles } from '@/common/decorators/roles.decorator';
 import { AdminAppointmentsService } from './admin-appointments.service';
 import { AppointmentStatus } from '@prisma/client';
 
-@ApiTags('Admin - Quản lý Lịch khám')
+@ApiTags('Admin - Giám sát Lịch khám')
 @ApiBearerAuth('access-token')
 @Controller('api/v1/admin/appointments')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN', 'HOSPITAL_ADMIN')
 export class AdminAppointmentsController {
-  constructor(private readonly service: AdminAppointmentsService) { }
+  constructor(private readonly service: AdminAppointmentsService) {}
 
   @Get('stats')
   @ApiOperation({ summary: 'Thống kê tổng quan lịch khám hôm nay và trạng thái' })
@@ -65,7 +64,7 @@ export class AdminAppointmentsController {
     @Query('doctorId') doctorId?: string,
     @Query('specialtyId') specialtyId?: string,
     @Query('medicalServiceId') medicalServiceId?: string,
-    @Query('date') date?: string,
+    @Query('date') date?: string
   ) {
     let scopedHospitalId = hospitalId;
     if (req.user?.role === 'HOSPITAL_ADMIN') {
@@ -90,74 +89,92 @@ export class AdminAppointmentsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Chi tiết lịch khám & Dòng thời gian lịch sử' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const appointment = await this.service.findOne(id);
+    await this.assertHospitalAppointmentAccess(req.user, id, appointment);
+    return appointment;
   }
 
   @Patch(':id/status')
+  @Roles('HOSPITAL_ADMIN')
   @ApiOperation({ summary: 'Cập nhật trạng thái lịch khám (Confirm, Complete, Paid, v.v.)' })
-  updateStatus(
+  async updateStatus(
     @Param('id') id: string,
     @Body('status') status: AppointmentStatus,
     @Body('note') note: string,
     @Req() req: any,
     @Ip() ip: string,
-    @Headers('user-agent') ua: string,
+    @Headers('user-agent') ua: string
   ) {
+    await this.assertHospitalAppointmentAccess(req.user, id);
     return this.service.updateStatus(id, status, note, req.user.id, ip, ua);
   }
 
   @Get(':id/no-show-eligibility')
   @ApiOperation({ summary: 'Kiểm tra điều kiện xác nhận NO_SHOW theo chính sách cơ sở' })
-  checkNoShowEligibility(@Param('id') id: string) {
+  async checkNoShowEligibility(@Param('id') id: string, @Req() req: any) {
+    await this.assertHospitalAppointmentAccess(req.user, id);
     return this.service.validateNoShowEligibility(id);
   }
 
   @Patch(':id/check-in')
+  @Roles('HOSPITAL_ADMIN')
   @ApiOperation({ summary: 'Tiếp nhận / Check-in bệnh nhân có mặt tại cơ sở y tế' })
-  checkIn(
+  async checkIn(
     @Param('id') id: string,
     @Body('note') note: string,
     @Req() req: any,
     @Ip() ip: string,
-    @Headers('user-agent') ua: string,
+    @Headers('user-agent') ua: string
   ) {
+    await this.assertHospitalAppointmentAccess(req.user, id);
     return this.service.checkIn(id, { note }, req.user?.id, req.user?.fullName, ip, ua);
   }
 
   @Patch(':id/revert-no-show')
+  @Roles('HOSPITAL_ADMIN')
   @ApiOperation({ summary: 'Khôi phục lịch khám bị ghi nhận nhầm hoặc bệnh nhân đến muộn' })
-  revertNoShow(
+  async revertNoShow(
     @Param('id') id: string,
     @Body('reason') reason: string,
     @Req() req: any,
     @Ip() ip: string,
-    @Headers('user-agent') ua: string,
+    @Headers('user-agent') ua: string
   ) {
+    await this.assertHospitalAppointmentAccess(req.user, id);
     return this.service.revertNoShow(id, { reason }, req.user?.id, ip, ua);
   }
 
   @Post(':id/contact-logs')
+  @Roles('HOSPITAL_ADMIN')
   @ApiOperation({ summary: 'Ghi nhận lịch sử liên hệ với bệnh nhân (gọi điện, SMS...)' })
-  recordContactLog(
+  async recordContactLog(
     @Param('id') id: string,
     @Body() body: { channel: string; outcome: string; note?: string },
     @Req() req: any,
     @Ip() ip: string,
-    @Headers('user-agent') ua: string,
+    @Headers('user-agent') ua: string
   ) {
+    await this.assertHospitalAppointmentAccess(req.user, id);
     return this.service.recordContactLog(id, body, req.user?.id, req.user?.fullName, ip, ua);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Hủy lịch khám (ghi lý do)' })
-  cancel(
-    @Param('id') id: string,
-    @Body('reason') reason: string,
-    @Req() req: any,
-    @Ip() ip: string,
-    @Headers('user-agent') ua: string,
+  private async assertHospitalAppointmentAccess(
+    user: any,
+    appointmentId: string,
+    existingAppointment?: any
   ) {
-    return this.service.cancelAppointment(id, reason, req.user.id, ip, ua);
+    if (user?.role !== 'HOSPITAL_ADMIN') {
+      return;
+    }
+
+    if (!user.hospitalId) {
+      throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+    }
+
+    const appointment = existingAppointment || (await this.service.findOne(appointmentId));
+    if (appointment.slot?.doctorWorkplace?.hospitalId !== user.hospitalId) {
+      throw new ForbiddenException('Bạn chỉ có quyền thao tác trên lịch hẹn thuộc cơ sở của mình');
+    }
   }
 }

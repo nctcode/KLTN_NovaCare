@@ -544,39 +544,106 @@ export class HospitalAdminService {
       );
     }
 
+    const cancellationReason = note?.trim();
+    if (newStatus === AppointmentStatus.CANCELLED) {
+      if (!cancellationReason) {
+        throw new BadRequestException('Vui lòng nhập lý do hủy lịch hẹn');
+      }
+      if (appointment.status === AppointmentStatus.CANCELLED) {
+        return appointment;
+      }
+      if (
+        (
+          [
+            AppointmentStatus.COMPLETED,
+            AppointmentStatus.NO_SHOW,
+            AppointmentStatus.EXPIRED,
+            AppointmentStatus.FAILED,
+            AppointmentStatus.REFUNDED,
+          ] as AppointmentStatus[]
+        ).includes(appointment.status)
+      ) {
+        throw new BadRequestException(`Không thể hủy lịch hẹn ở trạng thái ${appointment.status}`);
+      }
+      if (appointment.medicalEncounter && appointment.medicalEncounter.status !== 'CANCELLED') {
+        throw new BadRequestException(
+          'Không thể hủy lịch đã phát sinh hồ sơ khám; cần xử lý hồ sơ theo quy trình riêng'
+        );
+      }
+    }
+    if (
+      newStatus !== AppointmentStatus.CANCELLED &&
+      appointment.status === AppointmentStatus.CANCELLED
+    ) {
+      throw new BadRequestException('Không thể đổi trạng thái lịch hẹn đã hủy');
+    }
+
     if (newStatus === AppointmentStatus.NO_SHOW) {
       if (appointment.status === AppointmentStatus.NO_SHOW) {
         return appointment; // Idempotent no-op
       }
       const eligibility = await this.validateNoShowEligibility(hospitalId, appointmentId);
       if (!eligibility.eligible) {
-        throw new BadRequestException(`Không đủ điều kiện xác nhận NO_SHOW: ${eligibility.reasons.join('. ')}`);
+        throw new BadRequestException(
+          `Không đủ điều kiện xác nhận NO_SHOW: ${eligibility.reasons.join('. ')}`
+        );
       }
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.appointment.update({
-        where: { id: appointmentId },
-        data: {
-          status: newStatus,
-          noShowAt: newStatus === AppointmentStatus.NO_SHOW ? new Date() : appointment.noShowAt,
-          ...(newStatus === AppointmentStatus.COMPLETED
-            ? { completedAt: new Date() }
-            : {}),
-          ...(newStatus === AppointmentStatus.CANCELLED
-            ? { cancelledAt: new Date() }
-            : {}),
-        },
-      });
+      let updated: Prisma.AppointmentGetPayload<{}>;
+      if (newStatus === AppointmentStatus.CANCELLED) {
+        const result = await tx.appointment.updateMany({
+          where: { id: appointmentId, status: appointment.status },
+          data: { status: newStatus, cancelledAt: new Date() },
+        });
+        if (result.count !== 1) {
+          throw new BadRequestException('Lịch hẹn đã được cập nhật bởi thao tác khác');
+        }
+
+        updated = await tx.appointment.findUniqueOrThrow({
+          where: { id: appointmentId },
+        });
+
+        if (appointment.slotId) {
+          await tx.appointmentSlot.updateMany({
+            where: { id: appointment.slotId, bookedCount: { gt: 0 } },
+            data: { bookedCount: { decrement: 1 } },
+          });
+          const slot = await tx.appointmentSlot.findUnique({
+            where: { id: appointment.slotId },
+            select: { bookedCount: true, capacity: true },
+          });
+          if (slot) {
+            await tx.appointmentSlot.update({
+              where: { id: appointment.slotId },
+              data: { isAvailable: slot.bookedCount < slot.capacity },
+            });
+          }
+        }
+      } else {
+        updated = await tx.appointment.update({
+          where: { id: appointmentId },
+          data: {
+            status: newStatus,
+            noShowAt: newStatus === AppointmentStatus.NO_SHOW ? new Date() : appointment.noShowAt,
+            ...(newStatus === AppointmentStatus.COMPLETED ? { completedAt: new Date() } : {}),
+          },
+        });
+      }
 
       // Lưu vết lịch sử trạng thái
       await tx.appointmentStatusHistory.create({
         data: {
           appointmentId,
           status: newStatus,
-          note: note || (newStatus === AppointmentStatus.NO_SHOW
-            ? 'Xác nhận bệnh nhân không đến khám (đã quá giờ ân hạn và hoàn tất liên hệ)'
-            : `Cập nhật bởi Quản trị viên Bệnh viện`),
+          note:
+            newStatus === AppointmentStatus.CANCELLED
+              ? `Bệnh viện hủy lịch hẹn: ${cancellationReason}`
+              : note ||
+                (newStatus === AppointmentStatus.NO_SHOW
+                  ? 'Xác nhận bệnh nhân không đến khám (đã quá giờ ân hạn và hoàn tất liên hệ)'
+                  : `Cập nhật bởi Quản trị viên Bệnh viện`),
         },
       });
 
@@ -585,10 +652,14 @@ export class HospitalAdminService {
           data: {
             userId: appointment.userId,
             type: newStatus === AppointmentStatus.CANCELLED ? 'CANCELLED' : 'SYSTEM',
-            title: newStatus === AppointmentStatus.NO_SHOW ? 'Thông báo lịch khám' : 'Cơ sở cập nhật lịch khám',
-            content: newStatus === AppointmentStatus.NO_SHOW
-              ? `Cơ sở y tế đã ghi nhận bạn không đến khám theo lịch hẹn ${appointment.bookingCode}. Nếu có nhầm lẫn hoặc cần hỗ trợ, vui lòng liên hệ cơ sở y tế.`
-              : `Lịch ${appointment.bookingCode} đã được cập nhật: ${note || newStatus}.`,
+            title:
+              newStatus === AppointmentStatus.NO_SHOW
+                ? 'Thông báo lịch khám'
+                : 'Cơ sở cập nhật lịch khám',
+            content:
+              newStatus === AppointmentStatus.NO_SHOW
+                ? `Cơ sở y tế đã ghi nhận bạn không đến khám theo lịch hẹn ${appointment.bookingCode}. Nếu có nhầm lẫn hoặc cần hỗ trợ, vui lòng liên hệ cơ sở y tế.`
+                : `Lịch ${appointment.bookingCode} đã được cập nhật: ${note || newStatus}.`,
             data: { appointmentId, status: newStatus },
           },
         });
@@ -606,36 +677,32 @@ export class HospitalAdminService {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [
-      totalDoctors,
-      todayAppointments,
-      completedAppointments,
-      pendingAppointments,
-    ] = await Promise.all([
-      this.prisma.doctorWorkplace.count({
-        where: { hospitalId, isActive: true },
-      }),
-      this.prisma.appointment.count({
-        where: {
-          slot: {
-            doctorWorkplace: { hospitalId },
-            startTime: { gte: today, lt: tomorrow },
+    const [totalDoctors, todayAppointments, completedAppointments, pendingAppointments] =
+      await Promise.all([
+        this.prisma.doctorWorkplace.count({
+          where: { hospitalId, isActive: true },
+        }),
+        this.prisma.appointment.count({
+          where: {
+            slot: {
+              doctorWorkplace: { hospitalId },
+              startTime: { gte: today, lt: tomorrow },
+            },
           },
-        },
-      }),
-      this.prisma.appointment.count({
-        where: {
-          slot: { doctorWorkplace: { hospitalId } },
-          status: AppointmentStatus.COMPLETED,
-        },
-      }),
-      this.prisma.appointment.count({
-        where: {
-          slot: { doctorWorkplace: { hospitalId } },
-          status: AppointmentStatus.PENDING,
-        },
-      }),
-    ]);
+        }),
+        this.prisma.appointment.count({
+          where: {
+            slot: { doctorWorkplace: { hospitalId } },
+            status: AppointmentStatus.COMPLETED,
+          },
+        }),
+        this.prisma.appointment.count({
+          where: {
+            slot: { doctorWorkplace: { hospitalId } },
+            status: AppointmentStatus.PENDING,
+          },
+        }),
+      ]);
 
     return {
       totalDoctors,
@@ -760,8 +827,8 @@ export class HospitalAdminService {
       ...(params?.specialtyId ? { specialtyId: params.specialtyId } : {}),
       ...(params?.search
         ? {
-          name: { contains: params.search, mode: 'insensitive' },
-        }
+            name: { contains: params.search, mode: 'insensitive' },
+          }
         : {}),
     };
 
@@ -922,7 +989,9 @@ export class HospitalAdminService {
         ...(rawCatalog.address ? { address: rawCatalog.address } : {}),
         ...(rawCatalog.city ? { city: rawCatalog.city } : {}),
         ...(rawCatalog.website ? { website: rawCatalog.website } : {}),
-        ...(rawCatalog.established_year ? { establishedYear: Number(rawCatalog.established_year) } : {}),
+        ...(rawCatalog.established_year
+          ? { establishedYear: Number(rawCatalog.established_year) }
+          : {}),
         ...(rawCatalog.bed_count ? { bedCount: Number(rawCatalog.bed_count) } : {}),
         ...(rawCatalog.operating_hours ? { operatingHours: rawCatalog.operating_hours } : {}),
       },
@@ -949,7 +1018,10 @@ export class HospitalAdminService {
 
       if (!matchedSpecialtyId) {
         // 1. Tìm theo bảng quy đổi hoặc Heuristics từ khóa
-        const defaultSpecialtyName = this.catalogNormalizer.resolveSpecialtyName(dept.dept_code, dept.dept_name);
+        const defaultSpecialtyName = this.catalogNormalizer.resolveSpecialtyName(
+          dept.dept_code,
+          dept.dept_name
+        );
         if (defaultSpecialtyName) {
           matchedSpecialtyId = specialtyMapByName.get(defaultSpecialtyName.toLowerCase().trim());
         }
@@ -967,7 +1039,9 @@ export class HospitalAdminService {
 
       // 3. TẦNG AUTO-PROVISIONING: Tự động khởi tạo Chuyên khoa mới nếu chưa từng có
       if (!matchedSpecialtyId) {
-        const cleanName = this.catalogNormalizer.cleanDepartmentName(dept.dept_name || dept.dept_code);
+        const cleanName = this.catalogNormalizer.cleanDepartmentName(
+          dept.dept_name || dept.dept_code
+        );
         let existingSpec = await this.prisma.specialty.findFirst({
           where: { name: { equals: cleanName, mode: 'insensitive' } },
         });
@@ -980,7 +1054,9 @@ export class HospitalAdminService {
               isActive: true,
             },
           });
-          this.logger.log(`[Auto-Provisioning] Tự động tạo Chuyên khoa mới từ HIS: "${cleanName}" (${existingSpec.id})`);
+          this.logger.log(
+            `[Auto-Provisioning] Tự động tạo Chuyên khoa mới từ HIS: "${cleanName}" (${existingSpec.id})`
+          );
         }
 
         matchedSpecialtyId = existingSpec.id;
@@ -1011,9 +1087,10 @@ export class HospitalAdminService {
 
     // 4. Chuẩn hóa & Lọc danh sách bác sĩ
     const normDoctors = this.catalogNormalizer.normalizeDoctors(rawCatalog.doctors || []);
-    const doctorsToSync = dto.selectedDoctorIds && dto.selectedDoctorIds.length > 0
-      ? normDoctors.filter((doc) => dto.selectedDoctorIds!.includes(doc.externalId))
-      : normDoctors;
+    const doctorsToSync =
+      dto.selectedDoctorIds && dto.selectedDoctorIds.length > 0
+        ? normDoctors.filter((doc) => dto.selectedDoctorIds!.includes(doc.externalId))
+        : normDoctors;
 
     let createdCount = 0;
     let updatedCount = 0;
@@ -1027,7 +1104,9 @@ export class HospitalAdminService {
       let targetSpecialtyId = deptToSpecialtyIdMap.get(deptCode);
 
       if (!targetSpecialtyId) {
-        targetSpecialtyId = specialtyMapByName.get(doc.targetSpecialtyName.toLowerCase().trim()) || existingSpecialties[0]?.id;
+        targetSpecialtyId =
+          specialtyMapByName.get(doc.targetSpecialtyName.toLowerCase().trim()) ||
+          existingSpecialties[0]?.id;
       }
 
       // Đảm bảo HospitalSpecialty được kích hoạt

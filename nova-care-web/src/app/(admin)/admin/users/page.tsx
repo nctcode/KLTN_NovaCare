@@ -41,6 +41,21 @@ function AdminUsersContent() {
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'PATIENT':
+        return 'Bệnh nhân';
+      case 'HOSPITAL_ADMIN':
+        return 'Quản trị viên bệnh viện';
+      case 'DOCTOR':
+        return 'Bác sĩ';
+      case 'ADMIN':
+        return 'Quản trị nền tảng';
+      default:
+        return role || 'Chưa xác định';
+    }
+  };
+
   // Filters State
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -54,10 +69,10 @@ function AdminUsersContent() {
   const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
 
   // Local state for optimistic updates
-  const [localUsers, setLocalUsers] = useState<AdminUserItem[]>(MOCK_ADMIN_USERS);
+  const [localUsers, setLocalUsers] = useState<AdminUserItem[]>([]);
 
   // API Query for real users
-  const { data: apiData, isLoading, refetch } = useQuery({
+  const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-users', page, search, statusFilter],
     queryFn: () =>
       adminService.getUsers({
@@ -81,7 +96,7 @@ function AdminUsersContent() {
   const displayedUsers = useMemo(() => {
     let list = [...localUsers];
 
-    if (apiData?.items && Array.isArray(apiData.items) && apiData.items.length > 0) {
+    if (apiData?.items && Array.isArray(apiData.items)) {
       const apiUsers: AdminUserItem[] = apiData.items.map((u: any, idx: number) => {
         const mockFallback = MOCK_ADMIN_USERS[idx % MOCK_ADMIN_USERS.length];
         return {
@@ -93,7 +108,9 @@ function AdminUsersContent() {
           createdAt: u.createdAt || new Date().toISOString(),
           lastLogin: u.lastLoginAt || u.updatedAt || u.createdAt || new Date().toISOString(),
           status: u.isActive === false ? 'LOCKED' : 'ACTIVE',
-          role: u.role || 'PATIENT',
+          // Role is read from the backend user record; do not mislabel
+          // an account as PATIENT when the API omits the field.
+          role: u.role ?? 'UNKNOWN',
           hospital: u.hospital,
           totalBookings: u._count?.appointments ?? 0,
           hasPendingBooking: false,
@@ -126,12 +143,36 @@ function AdminUsersContent() {
             : [],
           activitySummary: mockFallback.activitySummary,
           bookingHistory: mockFallback.bookingHistory,
-          paymentRecords: mockFallback.paymentRecords,
-          accountLogs: mockFallback.accountLogs,
-          internalNotes: mockFallback.internalNotes,
+          paymentRecords: (u.appointments || [])
+            .filter((appointment: any) => appointment.payment)
+            .map((appointment: any) => ({
+              id: appointment.payment.id,
+              transactionId: appointment.payment.transactionCode,
+              paymentDate: appointment.payment.paidAt || appointment.payment.createdAt,
+              method: appointment.payment.paymentMethod,
+              amount: Number(appointment.payment.amount),
+              status: appointment.payment.status === 'PAID'
+                ? 'SUCCESS'
+                : appointment.payment.status,
+            })),
+          accountLogs: (u.auditLogs || []).map((log: any) => ({
+            id: log.id,
+            action: log.action,
+            title: log.action,
+            description: log.newValue
+              ? JSON.stringify(log.newValue)
+              : 'Thao tác được ghi nhận trong hệ thống',
+            actor: log.user?.fullName || log.user?.email || 'Hệ thống',
+            timestamp: log.createdAt,
+            ipAddress: log.ipAddress,
+          })),
+          // No internal-note persistence API/model exists yet; never show mock notes.
+          internalNotes: [],
         };
       });
       list = apiUsers;
+    } else if (!isError) {
+      list = [];
     }
 
     // Filter by tab
@@ -156,7 +197,7 @@ function AdminUsersContent() {
 
       return true;
     });
-  }, [apiData, localUsers, search, statusFilter, pendingFilter, currentTab]);
+  }, [apiData, isError, localUsers, search, statusFilter, pendingFilter, currentTab]);
 
   const totalUsersCount = apiData?.total ?? displayedUsers.length;
   const activeUsersCount = useMemo(() => displayedUsers.filter((u) => u.status === 'ACTIVE').length, [displayedUsers]);
@@ -203,6 +244,28 @@ function AdminUsersContent() {
                   ...prev,
                   patientProfilesCount: profiles.length,
                   patientProfiles: profiles,
+                  paymentRecords: (detail.appointments || [])
+                    .filter((appointment: any) => appointment.payment)
+                    .map((appointment: any) => ({
+                      id: appointment.payment.id,
+                      transactionId: appointment.payment.transactionCode,
+                      paymentDate: appointment.payment.paidAt || appointment.payment.createdAt,
+                      method: appointment.payment.paymentMethod,
+                      amount: Number(appointment.payment.amount),
+                      status: appointment.payment.status === 'PAID' ? 'SUCCESS' : appointment.payment.status,
+                    })),
+                  accountLogs: (detail.auditLogs || []).map((log: any) => ({
+                    id: log.id,
+                    action: log.action,
+                    title: log.action,
+                    description: log.newValue
+                      ? JSON.stringify(log.newValue)
+                      : 'Thao tác được ghi nhận trong hệ thống',
+                    actor: log.user?.fullName || log.user?.email || 'Hệ thống',
+                    timestamp: log.createdAt,
+                    ipAddress: log.ipAddress,
+                  })),
+                  internalNotes: [],
                 }
               : prev
           );
@@ -215,6 +278,13 @@ function AdminUsersContent() {
 
   const handleToggleStatus = (userId: string, currentStatus: AccountStatus) => {
     const newStatus: AccountStatus = currentStatus === 'LOCKED' ? 'ACTIVE' : 'LOCKED';
+
+    if (newStatus === 'LOCKED') {
+      const confirmed = window.confirm(
+        'Bạn có chắc chắn muốn khóa tài khoản người dùng này không? Tài khoản sẽ không thể đăng nhập cho đến khi được mở khóa.'
+      );
+      if (!confirmed) return;
+    }
     
     toggleStatusMutation.mutate(userId);
 
@@ -246,14 +316,6 @@ function AdminUsersContent() {
     toast.success(
       newStatus === 'LOCKED' ? 'Đã khóa tài khoản thành công' : 'Đã mở khóa tài khoản thành công'
     );
-  };
-
-  const handleResetPassword = (userId: string) => {
-    toast.success('Đã reset mật khẩu ngẫu nhiên và gửi tới SĐT/Email của người dùng');
-  };
-
-  const handleSendNotification = (userId: string, title: string, message: string) => {
-    toast.success(`Đã gửi thông báo "${title}" tới người dùng`);
   };
 
   const handleAddInternalNote = (userId: string, noteContent: string) => {
@@ -444,11 +506,19 @@ function AdminUsersContent() {
                       <td className="py-2.5 px-3 align-middle">
                         {user.role === 'ADMIN' ? (
                           <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                            Platform Admin
+                            {getRoleLabel(user.role)}
+                          </span>
+                        ) : user.role === 'HOSPITAL_ADMIN' ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            {getRoleLabel(user.role)}
+                          </span>
+                        ) : user.role === 'DOCTOR' ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            {getRoleLabel(user.role)}
                           </span>
                         ) : (
                           <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                            Bệnh nhân
+                            {getRoleLabel(user.role)}
                           </span>
                         )}
                       </td>
@@ -556,8 +626,6 @@ function AdminUsersContent() {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         onToggleStatus={handleToggleStatus}
-        onResetPassword={handleResetPassword}
-        onSendNotification={handleSendNotification}
         onAddInternalNote={handleAddInternalNote}
         isLight={isLight}
       />

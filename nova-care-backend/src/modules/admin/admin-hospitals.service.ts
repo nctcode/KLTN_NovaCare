@@ -88,7 +88,7 @@ export class AdminHospitalsService {
         bedCount: item.bedCount || null,
         establishedYear: item.establishedYear || null,
         doctorCount: item.workPlaces.length,
-        specialtyCount: count > 0 ? count : 4,
+        specialtyCount: count,
         status: item.status === 'ACTIVE' ? 'Hoạt động' : item.status === 'PAUSED' ? 'Tạm ngưng' : 'Ngừng hợp tác',
         rawStatus: item.status,
         source: item.source,
@@ -146,6 +146,8 @@ export class AdminHospitalsService {
     const hospital = await this.prisma.hospital.create({
       data: {
         name: createPayload.name,
+        hospitalCode: createPayload.hospitalCode || null,
+        externalId: createPayload.externalId || null,
         type: createPayload.type || 'PUBLIC',
         establishedYear: createPayload.establishedYear ? Number(createPayload.establishedYear) : undefined,
         bedCount: createPayload.bedCount ? Number(createPayload.bedCount) : undefined,
