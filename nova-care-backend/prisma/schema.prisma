@@ -539,6 +539,7 @@ model Hospital {
   deletedAt        DateTime?
 
   branches            HospitalBranch[]
+  integrationConfig   HospitalIntegrationConfig?
   workPlaces          DoctorWorkplace[]
   services            MedicalService[]
   packages            HealthPackage[]
@@ -576,6 +577,18 @@ model HospitalBookingConfig {
   @@unique([hospitalId, bookingType])
   @@index([hospitalId])
   @@map("hospital_booking_configs")
+}
+
+model HospitalIntegrationConfig {
+  hospitalId  String   @id @map("hospital_id")
+  endpointUrl String   @map("endpoint_url")
+  authType    String   @default("none") @map("auth_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@map("hospital_integration_configs")
 }
 
 model HospitalBranch {
@@ -1197,6 +1210,9 @@ model PartnerRequest {
   notes              String?
   status             PartnerRequestStatus @default(PENDING)
   adminNote          String?
+  approvalDocumentName String?
+  approvalDocumentMimeType String?
+  approvalDocumentData String?
   approvedAt         DateTime?
   createdHospitalId  String?
   createdUserId      String?

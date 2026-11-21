@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
@@ -30,29 +29,29 @@ import {
 import { hospitalAdminService } from '@/services/hospital-admin.service';
 import { toast } from 'sonner';
 
+type HisAuthType = 'api_key' | 'bearer';
+
 interface ConnectionTestModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultEndpointUrl?: string;
-  defaultAuthType?: 'none' | 'api_key' | 'bearer';
+  defaultAuthType?: HisAuthType;
   defaultAuthToken?: string;
   hospitalName?: string;
   hospitalCode?: string;
-  onProceedToSync?: () => void;
 }
 
 export function ConnectionTestModal({
   open,
   onOpenChange,
-  defaultEndpointUrl = 'http://localhost:5055/api/hospital-catalog',
-  defaultAuthType = 'none',
+  defaultEndpointUrl = '',
+  defaultAuthType = 'api_key',
   defaultAuthToken = '',
-  hospitalName = 'Bệnh viện An Bình',
-  hospitalCode = 'HIS_BV_ANBINH',
-  onProceedToSync,
+  hospitalName = 'Cơ sở y tế',
+  hospitalCode = 'Chưa có mã HIS',
 }: ConnectionTestModalProps) {
   const [endpointUrl, setEndpointUrl] = useState(defaultEndpointUrl);
-  const [authType, setAuthType] = useState<'none' | 'api_key' | 'bearer'>(defaultAuthType);
+  const [authType, setAuthType] = useState<HisAuthType>(defaultAuthType);
   const [authToken, setAuthToken] = useState(defaultAuthToken);
 
   // States: 'idle' | 'testing' | 'success' | 'error'
@@ -64,15 +63,20 @@ export function ConnectionTestModal({
   // Reset or initialize when modal opens
   useEffect(() => {
     if (open) {
-      setEndpointUrl(defaultEndpointUrl || 'http://localhost:5055/api/hospital-catalog');
-      setAuthType(defaultAuthType || 'none');
+      setEndpointUrl(defaultEndpointUrl);
+      setAuthType(defaultAuthType || 'api_key');
       setAuthToken(defaultAuthToken || '');
-      // Start test automatically when opening modal
-      handleRunTest(defaultEndpointUrl || 'http://localhost:5055/api/hospital-catalog', defaultAuthType || 'none', defaultAuthToken || '');
+      if (defaultEndpointUrl.trim()) {
+        handleRunTest(defaultEndpointUrl, defaultAuthType || 'api_key', defaultAuthToken || '');
+      } else {
+        setTestState('idle');
+        setTestResult(null);
+        setTestError(null);
+      }
     }
   }, [open]);
 
-  const handleRunTest = async (urlToTest?: string, authTypeToTest?: string, tokenToTest?: string) => {
+  const handleRunTest = async (urlToTest?: string, authTypeToTest?: HisAuthType, tokenToTest?: string) => {
     const targetUrl = (urlToTest !== undefined ? urlToTest : endpointUrl).trim();
     if (!targetUrl) {
       toast.error('Vui lòng nhập đường dẫn Endpoint URL của hệ thống HIS');
@@ -91,21 +95,18 @@ export function ConnectionTestModal({
     try {
       // Giữ nhịp tối thiểu 1.2s để người dùng quan sát rõ màn hình "Đang kiểm tra"
       const minDelay = new Promise((resolve) => setTimeout(resolve, 1200));
-
-      const [res] = await Promise.all([
-        hospitalAdminService.testHandshake({
-          endpointUrl: targetUrl,
-          authType: currentAuthType,
-          authToken: currentToken.trim(),
-        }),
-        minDelay,
-      ]);
-
+      const res = await hospitalAdminService.testHandshake({
+        endpointUrl: targetUrl,
+        authType: currentAuthType,
+        authToken: currentToken.trim(),
+      });
       const elapsed = Math.round(performance.now() - startTime);
-      setLatencyMs(Math.max(16, elapsed));
+      await minDelay;
+
+      setLatencyMs(elapsed);
       setTestResult(res);
       setTestState('success');
-      toast.success(`Kiểm tra thành công! Máy chủ HIS phản hồi tốt (HTTP 200 OK)`);
+      toast.success('Kiểm tra kết nối HIS thành công.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Không thể kết nối đến máy chủ HIS ngoài (fetch failed)';
       setTestError(msg);
@@ -123,14 +124,14 @@ export function ConnectionTestModal({
             <div>
               <div className="flex items-center gap-2">
                 <DialogTitle className="text-lg font-black text-slate-900 tracking-tight">
-                  Kiểm tra kết nối HIS & Thẩm định API
+                  Kiểm tra kết nối HIS
                 </DialogTitle>
-                <Badge variant="outline" className="border-slate-300 text-slate-600 text-[10px] font-mono">
-                  NC-SPEC-2026
+                <Badge variant="outline" className="border-slate-300 text-slate-600 text-[10px]">
+                  Kiểm tra
                 </Badge>
               </div>
               <DialogDescription className="text-xs text-slate-500 mt-1">
-                Giao diện kiểm thử độc lập: Gửi yêu cầu thẩm định tính sẵn sàng và hợp chuẩn kỹ thuật của cổng liên thông trước khi đồng bộ.
+                Chỉ kiểm tra endpoint và phản hồi cơ bản từ HIS; thao tác này không lưu cấu hình hoặc đồng bộ danh mục.
               </DialogDescription>
             </div>
           </div>
@@ -219,38 +220,40 @@ export function ConnectionTestModal({
 
                 {/* Subtitle Announcement */}
                 <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200/70 text-emerald-950 text-xs leading-relaxed space-y-0.5">
-                  <strong className="block font-bold">API đạt chuẩn hợp đồng kỹ thuật! Phản hồi tốt từ máy chủ HIS.</strong>
+                  <strong className="block font-bold">Kiểm tra kết nối thành công.</strong>
                   <p className="text-slate-600">
-                    Hệ thống đã hoàn tất thẩm định mã trạng thái, chữ ký bảo mật và cấu trúc dữ liệu JSON. Dữ liệu sẵn sàng để đưa vào đợt đồng bộ.
+                    Kết nối đã được kiểm tra. Danh mục HIS chưa được lưu hoặc đồng bộ vào NovaCare.
                   </p>
                 </div>
 
                 {/* Technical Inspection Result Cards (Theo quy định hợp đồng) */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Trạng thái HTTP</span>
-                    <div className="text-sm font-bold font-mono text-emerald-700 mt-0.5">200 OK</div>
-                    <span className="text-[10px] text-slate-400">REST JSON</span>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Kết nối</span>
+                    <div className="text-sm font-bold text-emerald-700 mt-0.5">Phản hồi thành công</div>
+                    <span className="text-[10px] text-slate-400">Đã nhận JSON cơ bản</span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Thời gian phản hồi</span>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Thời gian kiểm tra</span>
                     <div className="text-sm font-bold font-mono text-blue-700 mt-0.5">{latencyMs} ms</div>
-                    <span className="text-[10px] text-slate-400">Đạt chuẩn &lt; 2000ms</span>
+                    <span className="text-[10px] text-slate-400">Từ giao diện qua backend đến khi nhận kết quả</span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Xác thực bảo mật</span>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Phương thức gửi</span>
                     <div className="text-sm font-bold text-slate-800 mt-0.5 truncate">
                       {authType === 'api_key' ? 'X-API-KEY' : authType === 'bearer' ? 'Bearer Token' : 'Public API'}
                     </div>
-                    <span className="text-[10px] text-emerald-600 font-medium">Hợp lệ</span>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      {authType === 'none' ? 'Không gửi thông tin xác thực' : 'Request được gửi với header này'}
+                    </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Chuẩn Schema</span>
-                    <div className="text-sm font-bold text-slate-800 mt-0.5">Hợp đồng V1</div>
-                    <span className="text-[10px] text-emerald-600 font-medium">Khớp cấu trúc</span>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Dữ liệu bắt buộc</span>
+                    <div className="text-sm font-bold text-slate-800 mt-0.5">Payload cơ bản hợp lệ</div>
+                    <span className="text-[10px] text-slate-500 font-medium">Có mã bệnh viện và danh sách bác sĩ</span>
                   </div>
                 </div>
 
@@ -264,7 +267,7 @@ export function ConnectionTestModal({
                       <Layers className="w-4 h-4 text-emerald-600 shrink-0" />
                       <div>
                         <div className="font-bold text-slate-900">{testResult.totalDepartments || testResult.departments?.length || 0} Khoa phòng</div>
-                        <span className="text-[10px] text-slate-500">Sẵn sàng ánh xạ</span>
+                        <span className="text-[10px] text-slate-500">Đã nhận từ HIS</span>
                       </div>
                     </div>
 
@@ -272,7 +275,7 @@ export function ConnectionTestModal({
                       <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
                       <div>
                         <div className="font-bold text-slate-900">{testResult.totalDoctors || testResult.doctors?.length || 0} Bác sĩ</div>
-                        <span className="text-[10px] text-slate-500">Đầy đủ ca trực & giá khám</span>
+                        <span className="text-[10px] text-slate-500">Chưa ghi vào NovaCare</span>
                       </div>
                     </div>
 
@@ -310,19 +313,6 @@ export function ConnectionTestModal({
                       Đóng
                     </Button>
 
-                    {onProceedToSync && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          onOpenChange(false);
-                          onProceedToSync();
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl gap-1.5 shadow-sm shadow-emerald-600/20"
-                      >
-                        Tiến hành đồng bộ ngay
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -378,7 +368,7 @@ export function ConnectionTestModal({
                     <ul className="list-disc pl-4 space-y-1 text-[11px]">
                       <li>Kiểm tra máy chủ HIS có đang chạy và mở route <code className="font-mono text-rose-700">/api/hospital-catalog</code> không.</li>
                       <li>Kiểm tra cổng kết nối mạng (Port), tường lửa (Firewall) hoặc cấu hình CORS.</li>
-                      <li>Kiểm tra cấu trúc JSON phản hồi có đúng quy định: <code className="font-mono text-rose-700">{`{ status: 200, data: { departments: [], doctors: [] } }`}</code> không.</li>
+                      <li>Đảm bảo HIS trả JSON có mã bệnh viện và danh sách bác sĩ theo cấu trúc backend đang kiểm tra.</li>
                     </ul>
                   </div>
                 </div>
@@ -425,7 +415,7 @@ export function ConnectionTestModal({
                     <Input
                       value={endpointUrl}
                       onChange={(e) => setEndpointUrl(e.target.value)}
-                      placeholder="http://localhost:5055/api/hospital-catalog"
+                      placeholder="https://his.benhvien.vn/api/hospital-catalog"
                       className="font-mono text-xs bg-white"
                     />
                   </div>
@@ -437,7 +427,6 @@ export function ConnectionTestModal({
                       onChange={(e: any) => setAuthType(e.target.value)}
                       className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-xl h-9 px-3"
                     >
-                      <option value="none">Không xác thực (Public/Testing)</option>
                       <option value="api_key">X-API-KEY (Header)</option>
                       <option value="bearer">Bearer Token (Authorization)</option>
                     </select>

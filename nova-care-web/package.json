@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
   "dev": "next dev --webpack -p 3001",
-  "build": "next build",
+  "build": "next build --webpack",
   "start": "next start",
-  "lint": "eslint"
+  "lint": "eslint",
+  "test:e2e": "playwright test"
 },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -49,6 +50,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

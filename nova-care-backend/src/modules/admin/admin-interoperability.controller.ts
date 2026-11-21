@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
@@ -12,6 +12,12 @@ import { AdminInteroperabilityService } from './admin-interoperability.service';
 @Roles('ADMIN', 'HOSPITAL_ADMIN')
 export class AdminInteroperabilityController {
   constructor(private readonly service: AdminInteroperabilityService) {}
+
+  @Post('test-gateway')
+  @ApiOperation({ summary: 'Kiểm tra kết nối thật tới endpoint HIS của bệnh viện' })
+  testGateway(@Body() body: { endpointUrl?: string; authType?: string; authToken?: string }) {
+    return this.service.testHisGateway(body.endpointUrl || '', body.authType, body.authToken);
+  }
 
   @Get('overview')
   @ApiOperation({ summary: 'Thống kê tổng quan KPIs giám sát liên thông' })

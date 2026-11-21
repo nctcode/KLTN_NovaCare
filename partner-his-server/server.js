@@ -10,7 +10,7 @@
 const http = require('http');
 const url = require('url');
 
-const PORT = 5056;
+const PORT = Number(process.env.PORT) || 5056;
 const PARTNER_API_KEY = 'hoanmy_partner_key_2026';
 
 // 1. Danh mục Khoa phòng đối tác (Chuẩn DepartmentItem theo NC-HIS-SPEC-2026-V1)
@@ -118,6 +118,36 @@ const DOCTORS = [
       { day_of_week: 5, start_time: '08:30', end_time: '11:30', break_start: null, break_end: null },
     ],
   },
+  {
+    staff_id: 'HM_DOC_107',
+    full_name: 'Trần Minh Anh',
+    gender: 'FEMALE',
+    academic_degree: 'ThS.BS',
+    qualification_title: 'Thạc sĩ Y khoa, Bác sĩ Chuyên khoa Tim Mạch',
+    dept_code: 'K_TIM_MACH_HM',
+    consultation_fee: 420000,
+    experience_years: 9,
+    avatar_url: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&auto=format&fit=crop&q=80',
+    weekly_shifts: [
+      { day_of_week: 2, start_time: '08:00', end_time: '12:00', break_start: null, break_end: null },
+      { day_of_week: 4, start_time: '13:30', end_time: '17:00', break_start: null, break_end: null },
+    ],
+  },
+  {
+    staff_id: 'HM_DOC_108',
+    full_name: 'Nguyễn Hoàng Phúc',
+    gender: 'MALE',
+    academic_degree: 'BS.CKI',
+    qualification_title: 'Bác sĩ Chuyên khoa I, Chuyên khoa Mắt',
+    dept_code: 'K_MAT_HM',
+    consultation_fee: 380000,
+    experience_years: 11,
+    avatar_url: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&auto=format&fit=crop&q=80',
+    weekly_shifts: [
+      { day_of_week: 1, start_time: '08:00', end_time: '12:00', break_start: null, break_end: null },
+      { day_of_week: 4, start_time: '13:30', end_time: '17:00', break_start: null, break_end: null },
+    ],
+  },
 ];
 
 // Khởi tạo HTTP Server
@@ -137,15 +167,26 @@ const server = http.createServer((req, res) => {
 
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
-  const incomingApiKey = req.headers['x-api-key'] || req.headers['authorization'];
+  const authHeader = req.headers['x-api-key'] || req.headers['authorization'];
+  const incomingApiKey = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+  const normalizedApiKey = incomingApiKey?.replace(/^Bearer\s+/i, '').trim();
 
   console.log(`[${new Date().toLocaleTimeString()}] [HIS HOÀN MỸ (Port ${PORT})] Nhận yêu cầu: ${req.method} ${req.url}`);
   if (incomingApiKey) {
-    console.log(`[${new Date().toLocaleTimeString()}] [HIS HOÀN MỸ] 🔐 Phát hiện xác thực: "${incomingApiKey}"`);
+    console.log(`[${new Date().toLocaleTimeString()}] [HIS HOÀN MỸ] 🔐 Nhận yêu cầu có thông tin xác thực`);
   }
 
   // 1. Endpoint liên thông chuẩn: /api/hospital-catalog
   if (pathname === '/api/hospital-catalog') {
+    if (!authHeader || normalizedApiKey !== PARTNER_API_KEY) {
+      res.writeHead(401);
+      res.end(JSON.stringify({
+        status: 401,
+        message: 'API Key hoặc Bearer Token không hợp lệ',
+      }));
+      return;
+    }
+
     res.writeHead(200);
     res.end(JSON.stringify({
       status: 200,
@@ -197,6 +238,6 @@ server.listen(PORT, () => {
   console.log(` 🌐 Cổng kết nối (PORT): ${PORT}`);
   console.log(` 🔗 Endpoint Catalog: http://localhost:${PORT}/api/hospital-catalog`);
   console.log(` 🔑 Mã bảo mật tùy chọn (X-API-KEY): ${PARTNER_API_KEY}`);
-  console.log(` 📋 Dữ liệu sẵn sàng: 6 Chuyên khoa · 6 Bác sĩ · Lịch trực tuần`);
+  console.log(` 📋 Dữ liệu sẵn sàng: 6 Chuyên khoa · ${DOCTORS.length} Bác sĩ · Lịch trực tuần`);
   console.log(`================================================================`);
 });

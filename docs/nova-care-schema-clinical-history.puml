@@ -1,0 +1,189 @@
+@startuml NovaCare_clinical_history
+title NovaCare - Clinical Records and Health Data Interoperability
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend right
+  |= Notation |= Meaning |
+  | `?` | Optional Prisma field |
+  | `[]` | Prisma list/array field |
+  | `<<PK>>` | Primary key |
+  | `<<FK>>` | Foreign key scalar field |
+  | `<<supporting>>` | Backend record used by a current UI workflow; not independently managed |
+  | `<<reference>>` | Related model shown in another domain diagram; only its identifier is shown |
+  | Multiplicity | `1`, `0..1`, `0..*` |
+  Scope: models are included only when a current UI flow uses them or they support that flow.
+  Attributes are schema fields; a UI may expose only a subset of them.
+endlegend
+
+package "Enums" {
+  enum ConsentStatus {
+    PENDING
+    GRANTED
+    REVOKED
+    EXPIRED
+  }
+  enum EncounterStatus {
+    IN_PROGRESS
+    COMPLETED
+    PUBLISHED
+    CANCELLED
+  }
+  enum ObservationCategory {
+    VITAL_SIGNS
+    LAB_RESULT
+    IMAGING
+  }
+}
+
+package "Clinical Records and Health Data Interoperability" {
+  class Appointment <<reference>> {
+    +id: String
+  }
+  class Diagnosis {
+    +id: String <<PK>>
+    +encounterId: String <<FK>>
+    +icdCode: String
+    +diseaseName: String
+    +isPrimary: Boolean
+    +isComplication: Boolean
+    +diagnosisType: String?
+    +note: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +encounter: MedicalEncounter <<relation>>
+  }
+  class Hospital <<reference>> {
+    +id: String
+  }
+  class MedicalEncounter {
+    +id: String <<PK>>
+    +patientProfileId: String <<FK>>
+    +hospitalId: String <<FK>>
+    +appointmentId: String? <<FK>>
+    +externalEncounterId: String?
+    +encounterCode: String
+    +encounterDate: DateTime
+    +doctorName: String
+    +doctorTitle: String?
+    +specialtyName: String
+    +chiefComplaint: String?
+    +clinicalSummary: String?
+    +physicalExamination: String?
+    +organSystemsExam: Json?
+    +specialtyExam: Json?
+    +admissionSource: String?
+    +admissionAt: DateTime?
+    +dischargeType: String?
+    +treatmentDays: Int?
+    +initialDiagnosis: String?
+    +differentialDiagnosis: String?
+    +treatmentPlan: String?
+    +doctorNotes: String?
+    +conclusion: String?
+    +treatmentResult: String?
+    +revisitDate: DateTime?
+    +prognosisNear: String?
+    +prognosisFar: String?
+    +careLevel: String?
+    +dietaryRegimen: String?
+    +departmentHeadName: String?
+    +hospitalDirectorName: String?
+    +digitalSignature: Json?
+    +status: EncounterStatus
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +patientProfile: PatientProfile <<relation>>
+    +hospital: Hospital <<relation>>
+    +appointment: Appointment? <<relation>>
+    +diagnoses: Diagnosis[] <<relation>>
+    +observations: Observation[] <<relation>>
+    +prescription: Prescription? <<relation>>
+  }
+  class Observation {
+    +id: String <<PK>>
+    +encounterId: String <<FK>>
+    +category: ObservationCategory
+    +code: String?
+    +name: String
+    +value: String
+    +unit: String?
+    +referenceRange: String?
+    +interpretation: String?
+    +observedAt: DateTime
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +encounter: MedicalEncounter <<relation>>
+  }
+  class PatientConsent {
+    +id: String <<PK>>
+    +patientProfileId: String <<FK>>
+    +sourceHospitalId: String <<FK>>
+    +targetHospitalId: String <<FK>>
+    +status: ConsentStatus
+    +grantedAt: DateTime?
+    +expiresAt: DateTime?
+    +revokedAt: DateTime?
+    +scope: Json?
+    +purpose: String
+    +confirmedAt: DateTime?
+    +policyVersion: String
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +patientProfile: PatientProfile <<relation>>
+    +sourceHospital: Hospital <<relation>>
+    +targetHospital: Hospital <<relation>>
+  }
+  class PatientProfile <<reference>> {
+    +id: String
+  }
+  class Prescription {
+    +id: String <<PK>>
+    +encounterId: String <<FK>>
+    +prescriptionCode: String
+    +prescribedAt: DateTime
+    +note: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +encounter: MedicalEncounter <<relation>>
+    +items: PrescriptionItem[] <<relation>>
+  }
+  class PrescriptionItem {
+    +id: String <<PK>>
+    +prescriptionId: String <<FK>>
+    +drugName: String
+    +activeIngredientCode: String?
+    +dosage: String
+    +usageInstruction: String
+    +quantity: Int
+    +unit: String?
+    +duration: String?
+    +note: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +prescription: Prescription <<relation>>
+  }
+}
+
+PatientProfile "1" <-- "0..*" MedicalEncounter : patientProfile
+Hospital "1" <-- "0..*" MedicalEncounter : hospital
+Appointment "0..1" <-- "0..1" MedicalEncounter : appointment
+MedicalEncounter "1" <-- "0..*" Diagnosis : encounter
+MedicalEncounter "1" <-- "0..*" Observation : encounter
+MedicalEncounter "1" <-- "0..1" Prescription : encounter
+Prescription "1" <-- "0..*" PrescriptionItem : prescription
+PatientProfile "1" <-- "0..*" PatientConsent : patientProfile
+Hospital "1" <-- "0..*" PatientConsent : sourceHospital
+Hospital "1" <-- "0..*" PatientConsent : targetHospital
+
+note bottom
+  PatientHospitalLink is omitted from this UI-facing view:
+  identity matching is API-backed, with no direct UI flow evidenced.
+  Clinical history is shown in the UI; some views may derive
+  an encounter from appointment data when no persisted encounter exists.
+end note
+
+@enduml

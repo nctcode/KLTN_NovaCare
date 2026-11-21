@@ -30,6 +30,8 @@ services:
       target: development
     container_name: novacare_api
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/nova_care?schema=public
       NODE_ENV: development
@@ -49,8 +51,9 @@ services:
     ports:
       - '3000:3000'
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - /app/dist
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,7 +61,7 @@ services:
         condition: service_started
     networks:
       - novacare_network
-    command: npm run start:dev
+    command: ['sh', '-c', 'npx prisma generate && npm run start:dev']
 
   # ── Prisma Studio (tuỳ chọn) ─────────────────────────────────────────
   prisma-studio:

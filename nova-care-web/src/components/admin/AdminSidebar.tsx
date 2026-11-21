@@ -61,7 +61,7 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
   },
   {
     id: 'partner-requests',
-    label: 'Đăng ký hợp tác',
+    label: 'Quản lý danh sách đăng ký hợp tác ',
     icon: UserPlus,
     href: '/admin/partner-requests',
   },

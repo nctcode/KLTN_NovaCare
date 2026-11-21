@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import {
   ArrowLeft,
   Building2,
@@ -35,6 +36,33 @@ import { useRouter } from 'next/navigation';
 interface PageProps {
   params: Promise<{ id: string }>;
 }
+
+const hospitalTypeLabels: Record<string, string> = {
+  PUBLIC: 'Công',
+  PRIVATE: 'Tư nhân',
+  INTERNATIONAL: 'Quốc tế',
+};
+
+const hospitalStatusLabels: Record<string, string> = {
+  ACTIVE: 'Hoạt động',
+  PAUSED: 'Tạm ngưng',
+  TERMINATED: 'Ngừng hợp tác',
+};
+
+const hospitalTypeValues: Record<string, string> = {
+  Công: 'PUBLIC',
+  'Tư nhân': 'PRIVATE',
+  'Quốc tế': 'INTERNATIONAL',
+};
+
+const hospitalStatusValues: Record<string, string> = {
+  'Hoạt động': 'ACTIVE',
+  'Tạm ngưng': 'PAUSED',
+  'Ngừng hợp tác': 'TERMINATED',
+};
+
+const toHospitalLabel = (value: string | undefined, labels: Record<string, string>, fallback: string) =>
+  value ? labels[value] || value : fallback;
 
 export default function AdminEditHospitalPage({ params }: PageProps) {
   const router = useRouter();
@@ -146,8 +174,8 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
     if (hospital) {
       setFormData({
         name: hospital.name || '',
-        type: hospital.type || 'Công',
-        status: hospital.status || 'Hoạt động',
+        type: toHospitalLabel(hospital.type, hospitalTypeLabels, 'Công'),
+        status: toHospitalLabel(hospital.status, hospitalStatusLabels, 'Hoạt động'),
         isActive: hospital.isActive !== false,
         description: hospital.description || '',
         logoUrl: hospital.logoUrl || '',
@@ -177,18 +205,15 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
   };
 
   const updateMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      try {
-        return await adminService.updateHospital(id, payload);
-      } catch (err) {
-        console.warn('Backend update endpoint fallback:', err);
-        return payload;
-      }
-    },
+    mutationFn: (payload: any) => adminService.updateHospital(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-hospital-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['admin-hospitals'] });
+      toast.success('Cập nhật hồ sơ cơ sở y tế thành công');
       router.push(`/admin/hospitals/${id}`);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || err?.message || 'Không thể cập nhật hồ sơ cơ sở y tế');
     },
   });
 
@@ -196,9 +221,7 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
     e.preventDefault();
     if (!validate()) return;
 
-    const currentStatus = hospital?.status === 'ACTIVE' ? 'Hoạt động'
-      : hospital?.status === 'PAUSED' ? 'Tạm ngưng'
-        : hospital?.status === 'TERMINATED' ? 'Ngừng hợp tác' : hospital?.status;
+    const currentStatus = toHospitalLabel(hospital?.status, hospitalStatusLabels, 'Hoạt động');
     if (currentStatus && formData.status !== currentStatus) {
       const confirmed = window.confirm(
         formData.status === 'Hoạt động'
@@ -212,6 +235,8 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
 
     const payload = {
       ...formData,
+      type: hospitalTypeValues[formData.type] || formData.type,
+      status: hospitalStatusValues[formData.status] || formData.status,
       logoUrl: logoPreview || formData.logoUrl,
       coverImage: coverPreview || formData.coverImage,
       phone: formData.phone || formData.hotline,
@@ -651,9 +676,9 @@ export default function AdminEditHospitalPage({ params }: PageProps) {
                   isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                 }`}
               >
-                {formData.status !== 'Hoạt động' && <option value="Hoạt động">Hoạt động (Active)</option>}
-                {formData.status !== 'Tạm ngưng' && <option value="Tạm ngưng">Tạm ngưng (Paused)</option>}
-                {formData.status !== 'Ngừng hợp tác' && <option value="Ngừng hợp tác">Ngừng hợp tác (Terminated)</option>}
+                <option value="Hoạt động">Hoạt động (Active)</option>
+                <option value="Tạm ngưng">Tạm ngưng (Paused)</option>
+                <option value="Ngừng hợp tác">Ngừng hợp tác (Terminated)</option>
               </select>
             </div>
 

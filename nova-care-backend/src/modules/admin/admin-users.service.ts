@@ -3,13 +3,16 @@ import { PrismaService } from '@/database/prisma.service';
 import { AuditLogService } from '@/common/services/audit-log.service';
 import { Role } from '@prisma/client';
 import * as argon2 from 'argon2';
+import * as crypto from 'crypto';
 import { CreateHospitalAdminDto } from './dto/create-hospital-admin.dto';
+import { EmailService } from '@/modules/email/email.service';
 
 @Injectable()
 export class AdminUsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
+    private readonly emailService: EmailService,
   ) { }
 
   async findAll(params: {
@@ -18,6 +21,8 @@ export class AdminUsersService {
     search?: string;
     role?: Role;
     isActive?: boolean;
+    startDate?: string;
+    endDate?: string;
   }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
@@ -38,6 +43,24 @@ export class AdminUsersService {
         { email: { contains: params.search, mode: 'insensitive' } },
         { phone: { contains: params.search, mode: 'insensitive' } },
       ];
+    }
+
+    if (params.startDate || params.endDate) {
+      const createdAt: { gte?: Date; lte?: Date } = {};
+
+      if (params.startDate) {
+        const start = new Date(`${params.startDate}T00:00:00+07:00`);
+        if (!Number.isNaN(start.getTime())) createdAt.gte = start;
+      }
+
+      if (params.endDate) {
+        const end = new Date(`${params.endDate}T23:59:59.999+07:00`);
+        if (!Number.isNaN(end.getTime())) createdAt.lte = end;
+      }
+
+      if (createdAt.gte || createdAt.lte) {
+        where.createdAt = createdAt;
+      }
     }
 
     const [items, total] = await Promise.all([
@@ -99,8 +122,11 @@ export class AdminUsersService {
       throw new ConflictException('Email này đã được sử dụng trong hệ thống');
     }
 
-    // 3. Hash mật khẩu
-    const passwordHash = await argon2.hash(dto.password);
+    // 3. Tạo token kích hoạt; tài khoản chưa được đăng nhập cho đến khi
+    // người quản trị cơ sở hoàn tất thiết lập mật khẩu qua email.
+    const activationToken = crypto.randomBytes(32).toString('hex');
+    const activationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const passwordHash = await argon2.hash(`${crypto.randomUUID()}!A1`);
 
     // 4. Tạo User role HOSPITAL_ADMIN
     const newUser = await this.prisma.user.create({
@@ -111,7 +137,9 @@ export class AdminUsersService {
         passwordHash,
         role: Role.HOSPITAL_ADMIN,
         hospitalId: dto.hospitalId,
-        isActive: true,
+        isActive: false,
+        activationToken,
+        activationExpiresAt,
       },
       select: {
         id: true,
@@ -140,7 +168,19 @@ export class AdminUsersService {
       userAgent,
     });
 
-    return newUser;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const activationUrl = `${frontendUrl}/dang-nhap?token=${activationToken}`;
+    if (!newUser.email) {
+      throw new BadRequestException('Email quản trị viên bệnh viện là bắt buộc để gửi liên kết kích hoạt');
+    }
+    await this.emailService.sendHospitalActivationEmail(
+      newUser.email,
+      hospital.name,
+      newUser.fullName,
+      activationUrl,
+    );
+
+    return { ...newUser, message: 'Đã tạo tài khoản và gửi email kích hoạt' };
   }
 
   async findOne(id: string) {

@@ -49,6 +49,30 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+const normalizePackageServices = (services: unknown): string[] => {
+  let parsed: unknown = services;
+
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return parsed.trim() ? [parsed.trim()] : [];
+    }
+  }
+
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map((item) => {
+      if (typeof item === 'string') return item.trim();
+      if (item && typeof item === 'object' && 'name' in item) {
+        return String((item as { name?: unknown }).name || '').trim();
+      }
+      return '';
+    })
+    .filter(Boolean);
+};
+
 export default function AdminHealthPackagesPage() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -182,14 +206,6 @@ export default function AdminHealthPackagesPage() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => adminService.deleteHealthPackage(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-health-packages'] });
-      if (isViewDetailOpen) setIsViewDetailOpen(false);
-    },
-  });
-
   const resetForm = () => {
     setFormData({
       hospitalId: isHospitalAdmin ? (user?.hospitalId || '') : (hospitals[0]?.id || ''),
@@ -228,11 +244,7 @@ export default function AdminHealthPackagesPage() {
 
   const handleOpenEdit = (pkg: any) => {
     setEditingPackage(pkg);
-    const parsedServices = Array.isArray(pkg.services)
-      ? pkg.services
-      : typeof pkg.services === 'string'
-        ? JSON.parse(pkg.services)
-        : [];
+    const parsedServices = normalizePackageServices(pkg.services);
 
     setFormData({
       hospitalId: pkg.hospitalId || '',
@@ -694,17 +706,17 @@ export default function AdminHealthPackagesPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              disabled={deleteMutation.isPending}
+                              disabled={toggleStatusMutation.isPending}
                               onClick={() => {
-                                if (confirm(`Bạn có chắc chắn muốn xóa gói khám "${pkg.name}"?`)) {
-                                  deleteMutation.mutate(pkg.id);
+                                if (confirm(`${pkg.isActive ? 'Tạm ngưng' : 'Kích hoạt'} gói khám "${pkg.name}"?`)) {
+                                  toggleStatusMutation.mutate({ id: pkg.id, isActive: !pkg.isActive });
                                 }
                               }}
                               className={`h-7 px-2 text-xs font-medium rounded-lg border ${isLight ? 'bg-white border-slate-200 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-slate-800 text-rose-400 hover:bg-slate-800'
                                 }`}
-                              title="Xóa gói khám"
+                              title={pkg.isActive ? 'Tạm ngưng gói khám' : 'Kích hoạt gói khám'}
                             >
-                              <Trash2 className="w-3.5 h-3.5 mr-1 text-rose-600" /> Xóa
+                              {pkg.isActive ? 'Tạm ngưng' : 'Kích hoạt'}
                             </Button>
                           </div>
                         </td>
@@ -1149,12 +1161,7 @@ export default function AdminHealthPackagesPage() {
                   <Tag className="w-4 h-4 text-[#0c4b39] dark:text-[#66FF33]" /> Các dịch vụ đi kèm trong gói:
                 </h4>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium">
-                  {(Array.isArray(viewingPackage.services)
-                    ? viewingPackage.services
-                    : typeof viewingPackage.services === 'string'
-                      ? JSON.parse(viewingPackage.services)
-                      : []
-                  ).map((item: string, idx: number) => (
+                  {normalizePackageServices(viewingPackage.services).map((item, idx) => (
                     <li key={idx} className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#0c4b39] dark:text-[#66FF33] shrink-0" />
                       <span>{item}</span>

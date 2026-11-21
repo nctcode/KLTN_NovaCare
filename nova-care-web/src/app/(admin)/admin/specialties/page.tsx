@@ -304,29 +304,32 @@ export default function AdminSpecialtiesPage() {
   };
 
   // Toggle or Confirm Deactivate
-  const handleConfirmToggleStatus = async (targetActive: boolean) => {
-    if (!selectedSpecialty) return;
+  const handleConfirmToggleStatus = async (
+    targetActive: boolean,
+    specialty = selectedSpecialty
+  ) => {
+    if (!specialty) return;
 
     try {
       if (isHospitalScope && effectiveHospitalId) {
-        await adminService.toggleHospitalSpecialtyStatus(selectedSpecialty.id, targetActive, effectiveHospitalId);
+        await adminService.toggleHospitalSpecialtyStatus(specialty.id, targetActive, effectiveHospitalId);
       } else {
-        await adminService.toggleSpecialtyStatus(selectedSpecialty.id, targetActive);
+        await adminService.toggleSpecialtyStatus(specialty.id, targetActive);
       }
 
-      setSelectedSpecialty({ ...selectedSpecialty, isActive: targetActive });
+      setSelectedSpecialty({ ...specialty, isActive: targetActive });
       queryClient.invalidateQueries({ queryKey: ['admin-specialties'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-specialty-detail', selectedSpecialty.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-specialty-detail', specialty.id] });
 
       setIsDeactivateDialogOpen(false);
       showToast(
         targetActive
           ? (isHospitalScope
-              ? `Đã kích hoạt lại tiếp nhận chuyên khoa "${selectedSpecialty.name}"`
-              : `Đã kích hoạt lại chuyên khoa "${selectedSpecialty.name}"`)
+              ? `Đã kích hoạt lại tiếp nhận chuyên khoa "${specialty.name}"`
+              : `Đã kích hoạt lại chuyên khoa "${specialty.name}"`)
           : (isHospitalScope
-              ? `Đã tạm ngưng tiếp nhận chuyên khoa "${selectedSpecialty.name}" tại cơ sở y tế`
-              : `Đã ngừng hoạt động chuyên khoa "${selectedSpecialty.name}"`)
+              ? `Đã tạm ngưng tiếp nhận chuyên khoa "${specialty.name}" tại cơ sở y tế`
+              : `Đã ngừng hoạt động chuyên khoa "${specialty.name}"`)
       );
     } catch (err: any) {
       alert('Không thể thay đổi trạng thái: ' + (err.response?.data?.message || err.message || 'Lỗi kết nối'));
@@ -729,8 +732,7 @@ export default function AdminSpecialtiesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setSelectedSpecialty(spec);
-                              handleConfirmToggleStatus(true);
+                              handleConfirmToggleStatus(true, spec);
                             }}
                             className="h-7 px-2 gap-1 text-[11px] text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
                             title={isHospitalScope ? 'Kích hoạt tiếp nhận lại' : 'Kích hoạt lại'}

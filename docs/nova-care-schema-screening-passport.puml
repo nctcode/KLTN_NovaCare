@@ -1,0 +1,100 @@
+@startuml NovaCare_screening_passport
+title NovaCare - Pre-Examination AI and Medical Passport
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend right
+  |= Notation |= Meaning |
+  | `?` | Optional Prisma field |
+  | `[]` | Prisma list/array field |
+  | `<<PK>>` | Primary key |
+  | `<<FK>>` | Foreign key scalar field |
+  | `<<supporting>>` | Backend record used by a current UI workflow; not independently managed |
+  | `<<reference>>` | Related model shown in another domain diagram; only its identifier is shown |
+  | Multiplicity | `1`, `0..1`, `0..*` |
+  Scope: models are included only when a current UI flow uses them or they support that flow.
+  Attributes are schema fields; a UI may expose only a subset of them.
+endlegend
+
+package "Pre-Examination AI and Medical Passport" {
+  class MedicalPassport {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +summary: Json
+    +version: Int
+    +updatedAt: DateTime
+    +user: User <<relation>>
+    +shares: MedicalPassportShare[] <<relation>>
+  }
+  class MedicalPassportAccessLog {
+    +id: String <<PK>>
+    +shareId: String <<FK>>
+    +ipAddress: String?
+    +userAgent: String?
+    +accessedAt: DateTime
+    +share: MedicalPassportShare <<relation>>
+  }
+  class MedicalPassportShare {
+    +id: String <<PK>>
+    +passportId: String <<FK>>
+    +shareToken: String
+    +qrCode: String
+    +pinCode: String?
+    +allowedSections: String[]
+    +validUntil: DateTime
+    +isActive: Boolean
+    +lastAccessedAt: DateTime?
+    +accessCount: Int
+    +sharedWith: String?
+    +createdAt: DateTime
+    +revokedAt: DateTime?
+    +medicalPassport: MedicalPassport <<relation>>
+    +accessLogs: MedicalPassportAccessLog[] <<relation>>
+  }
+  class PreExamQuestion {
+    +id: String <<PK>>
+    +sessionId: String <<FK>>
+    +question: String
+    +answer: String?
+    +order: Int
+    +context: Json?
+    +preExamSession: PreExamSession <<relation>>
+  }
+  class PreExamSession {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +status: String
+    +startedAt: DateTime
+    +completedAt: DateTime?
+    +initialText: String?
+    +voiceTranscript: String?
+    +bodyDiagramData: Json?
+    +imageAnalysis: Json?
+    +uploadedFiles: String[]
+    +structuredData: Json?
+    +recommendations: Json?
+    +riskLevel: String?
+    +expiresAt: DateTime
+    +user: User <<relation>>
+    +questions: PreExamQuestion[] <<relation>>
+  }
+  class User <<reference>> {
+    +id: String
+  }
+}
+
+User "1" <-- "0..*" PreExamSession : user
+PreExamSession "1" <-- "0..*" PreExamQuestion : preExamSession
+User "1" <-- "0..1" MedicalPassport : user
+MedicalPassport "1" <-- "0..*" MedicalPassportShare : medicalPassport
+MedicalPassportShare "1" <-- "0..*" MedicalPassportAccessLog : share
+
+note bottom
+  ScreeningMedia is omitted: backend upload endpoints exist,
+  but no active UI upload flow was found in the reviewed paths.
+end note
+
+@enduml

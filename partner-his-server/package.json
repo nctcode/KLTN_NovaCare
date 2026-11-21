@@ -4,7 +4,8 @@
   "description": "Máy chủ HIS đối tác độc lập tuân thủ đặc tả kỹ thuật NovaCare NC-HIS-SPEC-2026-V1",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:thaonhu": "node thaonhu-server.js"
   },
   "keywords": ["his", "novacare", "interoperability", "mock"],
   "author": "NovaCare Partner Interoperability",

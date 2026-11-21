@@ -160,7 +160,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Thiết lập mật khẩu và hoàn tất kích hoạt tài khoản Quản trị bệnh viện' })
   async activateHospitalAccount(@Body() dto: ActivateAccountDto) {
-    const data = await this.authService.activateHospitalAccount(dto.token, dto.password);
+    const data = await this.authService.activateHospitalAccount(dto.token, dto.password, dto.email);
     return {
       statusCode: HttpStatus.OK,
       message: 'Kích hoạt tài khoản thành công',

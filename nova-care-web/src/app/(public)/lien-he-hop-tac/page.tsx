@@ -265,9 +265,7 @@ function PartnerPageContent() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
-                  <p className="text-[11px] text-slate-500 font-normal">
-                    Email này sẽ được dùng làm tài khoản quản trị viện & nhận liên kết kích hoạt.
-                  </p>
+                 
                 </div>
 
               </>

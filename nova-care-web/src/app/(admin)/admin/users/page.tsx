@@ -67,20 +67,57 @@ function AdminUsersContent() {
   const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
+  const [unlockConfirmationUser, setUnlockConfirmationUser] = useState<AdminUserItem | null>(null);
 
   // Local state for optimistic updates
   const [localUsers, setLocalUsers] = useState<AdminUserItem[]>([]);
 
+  const getRegistrationDateRange = () => {
+    if (dateRangeFilter === 'all') return {};
+
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endDate = formatDate(today);
+
+    if (dateRangeFilter === 'today') {
+      return { startDate: endDate, endDate };
+    }
+    if (dateRangeFilter === '7days') {
+      const start = new Date(today);
+      start.setDate(start.getDate() - 6);
+      return { startDate: formatDate(start), endDate };
+    }
+    if (dateRangeFilter === '30days') {
+      const start = new Date(today);
+      start.setDate(start.getDate() - 29);
+      return { startDate: formatDate(start), endDate };
+    }
+    if (dateRangeFilter === 'this_month') {
+      return { startDate: formatDate(new Date(today.getFullYear(), today.getMonth(), 1)), endDate };
+    }
+    return {};
+  };
+
   // API Query for real users
   const { data: apiData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['admin-users', page, search, statusFilter],
-    queryFn: () =>
-      adminService.getUsers({
+    queryKey: ['admin-users', page, search, statusFilter, dateRangeFilter],
+    queryFn: () => {
+      const dateRange = getRegistrationDateRange();
+      return adminService.getUsers({
         page,
         limit: 10,
         search,
         status: statusFilter !== 'all' ? statusFilter : undefined,
-      }),
+        ...dateRange,
+      });
+    },
   });
 
   // Toggle user status mutation
@@ -279,6 +316,12 @@ function AdminUsersContent() {
   const handleToggleStatus = (userId: string, currentStatus: AccountStatus) => {
     const newStatus: AccountStatus = currentStatus === 'LOCKED' ? 'ACTIVE' : 'LOCKED';
 
+    if (newStatus === 'ACTIVE') {
+      const user = displayedUsers.find((item) => item.id === userId);
+      if (user) setUnlockConfirmationUser(user);
+      return;
+    }
+
     if (newStatus === 'LOCKED') {
       const confirmed = window.confirm(
         'Bạn có chắc chắn muốn khóa tài khoản người dùng này không? Tài khoản sẽ không thể đăng nhập cho đến khi được mở khóa.'
@@ -316,6 +359,18 @@ function AdminUsersContent() {
     toast.success(
       newStatus === 'LOCKED' ? 'Đã khóa tài khoản thành công' : 'Đã mở khóa tài khoản thành công'
     );
+  };
+
+  const confirmUnlockUser = () => {
+    if (!unlockConfirmationUser) return;
+    const userId = unlockConfirmationUser.id;
+    setUnlockConfirmationUser(null);
+    toggleStatusMutation.mutate(userId);
+    setLocalUsers((prev) => prev.map((item) => item.id === userId ? { ...item, status: 'ACTIVE' } : item));
+    if (selectedUser?.id === userId) {
+      setSelectedUser((prev) => (prev ? { ...prev, status: 'ACTIVE' } : null));
+    }
+    toast.success('Đã mở khóa tài khoản thành công');
   };
 
   const handleAddInternalNote = (userId: string, noteContent: string) => {
@@ -636,6 +691,26 @@ function AdminUsersContent() {
         onOpenChange={setIsCreateAdminOpen}
         onSuccess={() => refetch()}
       />
+
+      {unlockConfirmationUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="unlock-confirmation-title">
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-emerald-100 p-2 text-emerald-700"><Unlock className="h-5 w-5" /></div>
+              <div>
+                <h2 id="unlock-confirmation-title" className="text-base font-bold text-slate-900">Xác nhận mở khóa tài khoản</h2>
+                <p className="mt-2 text-sm leading-5 text-slate-600">Bạn có chắc muốn mở khóa tài khoản <strong>{unlockConfirmationUser.fullName}</strong>? Người dùng sẽ có thể đăng nhập lại vào hệ thống.</p>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setUnlockConfirmationUser(null)} className="rounded-lg">Hủy</Button>
+              <Button size="sm" onClick={confirmUnlockUser} disabled={toggleStatusMutation.isPending} className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+                {toggleStatusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'OK'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

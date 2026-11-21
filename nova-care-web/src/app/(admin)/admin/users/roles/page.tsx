@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { CreateHospitalAdminDialog } from '@/components/admin/CreateHospitalAdminDialog';
 import {
   ShieldCheck,
   Users,
@@ -35,7 +36,6 @@ import {
   ChevronRight,
   UserCog,
 } from 'lucide-react';
-import { CreateHospitalAdminDialog } from '@/components/admin/CreateHospitalAdminDialog';
 
 interface PermissionMatrixItem {
   category: string;
@@ -154,8 +154,8 @@ export default function AdminRolesPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
   const [selectedUserForRole, setSelectedUserForRole] = useState<any | null>(null);
+  const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
   const [newSelectedRole, setNewSelectedRole] = useState<string>('PATIENT');
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>('');
 
@@ -279,7 +279,7 @@ export default function AdminRolesPage() {
           className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold gap-2 shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          Tạo Quản trị Bệnh viện
+          Kích hoạt tài khoản quản trị cơ sở
         </Button>
       </div>
 
@@ -654,14 +654,12 @@ export default function AdminRolesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Hospital Admin Modal */}
       <CreateHospitalAdminDialog
         open={isCreateAdminOpen}
         onOpenChange={setIsCreateAdminOpen}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['admin-roles-users'] });
-        }}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['admin-roles-users'] })}
       />
+
     </div>
   );
 }

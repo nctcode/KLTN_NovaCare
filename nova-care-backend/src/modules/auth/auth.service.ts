@@ -249,7 +249,7 @@ export class AuthService {
   /**
    * Kích hoạt tài khoản: Thiết lập mật khẩu mới và tự động đăng nhập
    */
-  async activateHospitalAccount(token: string, password: string): Promise<AuthResponse> {
+  async activateHospitalAccount(token: string, password: string, email?: string): Promise<AuthResponse> {
     if (!token) {
       throw new BadRequestException('Mã token kích hoạt không được để trống');
     }
@@ -282,12 +282,23 @@ export class AuthService {
     }
 
     // Băm mật khẩu người dùng tự đặt
+    const nextEmail = email?.trim().toLowerCase();
+    if (!nextEmail) {
+      throw new BadRequestException('Email đăng nhập không được để trống');
+    }
+    if (nextEmail !== user.email) {
+      const emailTaken = await this.prisma.user.findUnique({ where: { email: nextEmail } });
+      if (emailTaken && emailTaken.id !== user.id) {
+        throw new ConflictException('Email mới đã được sử dụng. Vui lòng chọn email khác.');
+      }
+    }
     const passwordHash = await argon2.hash(password);
 
     // Cập nhật trạng thái người dùng
     const updatedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: {
+        email: nextEmail,
         passwordHash,
         isActive: true,
         activationToken: null,

@@ -1,0 +1,162 @@
+@startuml NovaCare_telemedicine
+title NovaCare - Telemedicine
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend right
+  |= Notation |= Meaning |
+  | `?` | Optional Prisma field |
+  | `[]` | Prisma list/array field |
+  | `<<PK>>` | Primary key |
+  | `<<FK>>` | Foreign key scalar field |
+  | `<<supporting>>` | Backend record used by a current UI workflow; not independently managed |
+  | `<<reference>>` | Related model shown in another domain diagram; only its identifier is shown |
+  | Multiplicity | `1`, `0..1`, `0..*` |
+  Scope: models are included only when a current UI flow uses them or they support that flow.
+  Attributes are schema fields; a UI may expose only a subset of them.
+endlegend
+
+package "Enums" {
+  enum ConsultationAttachmentStatus {
+    PENDING
+    READY
+    FAILED
+    DELETED
+  }
+  enum ConsultationChannel {
+    CHAT
+    VIDEO
+  }
+  enum ConsultationMessageType {
+    TEXT
+    IMAGE
+    DOCUMENT
+    SYSTEM
+  }
+  enum ConsultationRequestMode {
+    SCHEDULED
+    ON_DEMAND
+  }
+  enum ConsultationSenderType {
+    PATIENT
+    DOCTOR
+    SYSTEM
+  }
+  enum ConsultationStatus {
+    SCHEDULED
+    WAITING
+    ACCEPTED
+    ACTIVE
+    COMPLETED
+    CANCELLED
+    EXPIRED
+  }
+}
+
+package "Telemedicine" {
+  class Appointment <<reference>> {
+    +id: String
+  }
+  class ConsultationAttachment {
+    +id: String <<PK>>
+    +consultationId: String <<FK>>
+    +messageId: String? <<FK>>
+    +uploadedByUserId: String <<FK>>
+    +status: ConsultationAttachmentStatus
+    +type: ConsultationMessageType
+    +fileName: String
+    +mimeType: String
+    +sizeBytes: Int
+    +storageKey: String
+    +thumbnailKey: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +consultation: ConsultationSession <<relation>>
+    +message: ConsultationMessage? <<relation>>
+    +uploadedBy: User <<relation>>
+  }
+  class ConsultationMessage {
+    +id: String <<PK>>
+    +consultationId: String <<FK>>
+    +senderUserId: String <<FK>>
+    +senderType: ConsultationSenderType
+    +messageType: ConsultationMessageType
+    +clientMessageId: String
+    +text: String?
+    +sentAt: DateTime
+    +deliveredAt: DateTime?
+    +readAt: DateTime?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +consultation: ConsultationSession <<relation>>
+    +sender: User <<relation>>
+    +attachments: ConsultationAttachment[] <<relation>>
+  }
+  class ConsultationSession {
+    +id: String <<PK>>
+    +patientProfileId: String <<FK>>
+    +doctorId: String <<FK>>
+    +doctorWorkplaceId: String <<FK>>
+    +specialtyId: String <<FK>>
+    +appointmentId: String? <<FK>>
+    +createdByUserId: String <<FK>>
+    +idempotencyKey: String
+    +requestMode: ConsultationRequestMode
+    +channel: ConsultationChannel
+    +status: ConsultationStatus
+    +topic: String
+    +description: String
+    +scheduledStartAt: DateTime?
+    +scheduledEndAt: DateTime?
+    +chatOpenAt: DateTime?
+    +acceptedAt: DateTime?
+    +startedAt: DateTime?
+    +completedAt: DateTime?
+    +cancelledAt: DateTime?
+    +expiresAt: DateTime?
+    +followUpUntil: DateTime?
+    +videoEnabled: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +patientProfile: PatientProfile <<relation>>
+    +doctor: Doctor <<relation>>
+    +doctorWorkplace: DoctorWorkplace <<relation>>
+    +specialty: Specialty <<relation>>
+    +appointment: Appointment? <<relation>>
+    +createdBy: User <<relation>>
+    +messages: ConsultationMessage[] <<relation>>
+    +attachments: ConsultationAttachment[] <<relation>>
+  }
+  class Doctor <<reference>> {
+    +id: String
+  }
+  class DoctorWorkplace <<reference>> {
+    +id: String
+  }
+  class PatientProfile <<reference>> {
+    +id: String
+  }
+  class Specialty <<reference>> {
+    +id: String
+  }
+  class User <<reference>> {
+    +id: String
+  }
+}
+
+PatientProfile "1" <-- "0..*" ConsultationSession : patientProfile
+Doctor "1" <-- "0..*" ConsultationSession : doctor
+DoctorWorkplace "1" <-- "0..*" ConsultationSession : doctorWorkplace
+Specialty "1" <-- "0..*" ConsultationSession : specialty
+Appointment "0..1" <-- "0..1" ConsultationSession : appointment
+User "1" <-- "0..*" ConsultationSession : createdBy
+ConsultationSession "1" <-- "0..*" ConsultationMessage : consultation
+User "1" <-- "0..*" ConsultationMessage : sender
+ConsultationSession "1" <-- "0..*" ConsultationAttachment : consultation
+ConsultationMessage "0..1" <-- "0..*" ConsultationAttachment : message
+User "1" <-- "0..*" ConsultationAttachment : uploadedBy
+
+@enduml

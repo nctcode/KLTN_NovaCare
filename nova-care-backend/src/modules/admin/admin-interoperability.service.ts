@@ -1,11 +1,28 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
+import { CatalogSyncService } from '@/modules/integration/catalog-sync/catalog-sync.service';
 
 @Injectable()
 export class AdminInteroperabilityService {
   private readonly logger = new Logger(AdminInteroperabilityService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly catalogSyncService: CatalogSyncService,
+  ) { }
+
+  async testHisGateway(endpointUrl: string, authType?: string, authToken?: string) {
+    const startedAt = Date.now();
+    const catalog = await this.catalogSyncService.fetchHisCatalog(endpointUrl, authType, authToken);
+    return {
+      success: true,
+      latencyMs: Date.now() - startedAt,
+      hospitalCode: catalog.hospital_code,
+      hospitalName: catalog.hospital_name,
+      totalDoctors: catalog.doctors.length,
+      totalDepartments: catalog.departments?.length || 0,
+    };
+  }
 
   /**
    * Helper: Parse structured info from MedicalPassportAccessLog.userAgent

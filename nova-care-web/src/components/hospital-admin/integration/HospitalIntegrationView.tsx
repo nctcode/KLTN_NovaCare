@@ -44,9 +44,12 @@ import { IntegrationContractModal } from '@/components/hospital-admin/integratio
 import { ImplementationGuideModal } from '@/components/hospital-admin/integration/ImplementationGuideModal';
 import { FullContinuousGuideModal } from '@/components/hospital-admin/integration/FullContinuousGuideModal';
 import { ConnectionTestModal } from '@/components/hospital-admin/integration/ConnectionTestModal';
+import { useAuthStore } from '@/stores/auth.store';
 
 export function HospitalIntegrationView() {
   const queryClient = useQueryClient();
+  const hospitalId = useAuthStore((state) => state.user?.hospitalId || 'unknown');
+  const storageKey = (name: string) => `novacare_his_${hospitalId}_${name}`;
 
   // Modals
   const [showContractModal, setShowContractModal] = useState(false);
@@ -56,7 +59,7 @@ export function HospitalIntegrationView() {
 
   // Status query
   const { data: statusData, isLoading: loadingStatus } = useQuery({
-    queryKey: ['hospital-admin-integration-status'],
+    queryKey: ['hospital-admin-integration-status', hospitalId],
     queryFn: hospitalAdminService.getIntegrationStatus,
   });
 
@@ -71,7 +74,7 @@ export function HospitalIntegrationView() {
 
   // Existing Hospital Doctors query for reconciliation in Step 4 & 5
   const { data: existingDoctorsData } = useQuery({
-    queryKey: ['hospital-admin-existing-doctors'],
+    queryKey: ['hospital-admin-existing-doctors', hospitalId],
     queryFn: () => hospitalAdminService.getDoctors({ limit: 100 }),
   });
   const existingDoctorsList: any[] = Array.isArray(existingDoctorsData)
@@ -83,6 +86,7 @@ export function HospitalIntegrationView() {
 
   // Toggle for simulation / resetting flow
   const [isTestingNewOnboarding, setIsTestingNewOnboarding] = useState(false);
+  const [isEditingConfig, setIsEditingConfig] = useState(false);
 
   // Onboarding Wizard Stepper:
   // 'landing' -> 'method_select' -> 'guide' -> 'validation' -> 'formal_connect'
@@ -99,46 +103,60 @@ export function HospitalIntegrationView() {
   // Form states for API Testing & Handshake (Empty by default, user enters or clicks quick template)
   const [endpointUrl, setEndpointUrl] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('novacare_his_endpoint_url');
+      const saved = localStorage.getItem(storageKey('endpoint_url'));
       if (saved) return saved;
     }
     return '';
   });
-  const [authType, setAuthType] = useState<'none' | 'api_key' | 'bearer'>(() => {
+  const [authType, setAuthType] = useState<'api_key' | 'bearer'>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('novacare_his_auth_type') as any) || 'none';
+      return localStorage.getItem(storageKey('auth_type')) === 'bearer' ? 'bearer' : 'api_key';
     }
-    return 'none';
+    return 'api_key';
   });
   const [authToken, setAuthToken] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('novacare_his_auth_token') || '';
+      return localStorage.getItem(storageKey('auth_token')) || '';
     }
     return '';
   });
+  React.useEffect(() => {
+    if (statusData?.endpointUrl) setEndpointUrl(statusData.endpointUrl);
+    if (statusData?.authType) setAuthType(statusData.authType);
+  }, [statusData?.endpointUrl, statusData?.authType]);
   const [handshakeResult, setHandshakeResult] = useState<any>(null);
   const [handshakeError, setHandshakeError] = useState<string | null>(null);
+  const hospitalDisplayName =
+    handshakeResult?.hospitalName ||
+    statusData?.hospital?.name ||
+    (loadingStatus ? 'Đang tải thông tin cơ sở...' : 'Chưa có thông tin cơ sở');
+  const hospitalCodeDisplay =
+    handshakeResult?.hospitalCode || statusData?.externalId || 'Chưa có mã HIS';
+  const configuredEndpointUrl =
+    endpointUrl.trim() || statusData?.endpointUrl?.trim() || '';
   const [testLatencyMs, setTestLatencyMs] = useState<number>(0);
-  const [testStartTime, setTestStartTime] = useState<number>(0);
+  const testStartTimeRef = React.useRef<number | null>(null);
   const [showRawJson, setShowRawJson] = useState<boolean>(false);
 
   // Dashboard testing connection status
   const [isTestingDashboardConnection, setIsTestingDashboardConnection] = useState(false);
   const [dashboardTestStatus, setDashboardTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [dashboardTestError, setDashboardTestError] = useState<string | null>(null);
+  const [dashboardTestAt, setDashboardTestAt] = useState<Date | null>(null);
 
   // Keep endpointUrl, authType, authToken persisted in localStorage
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
+      if (isEditingConfig) return;
       if (endpointUrl && endpointUrl.trim()) {
-        localStorage.setItem('novacare_his_endpoint_url', endpointUrl.trim());
+        localStorage.setItem(storageKey('endpoint_url'), endpointUrl.trim());
       } else {
-        localStorage.removeItem('novacare_his_endpoint_url');
+        localStorage.removeItem(storageKey('endpoint_url'));
       }
-      localStorage.setItem('novacare_his_auth_type', authType);
-      localStorage.setItem('novacare_his_auth_token', authToken.trim());
+      localStorage.setItem(storageKey('auth_type'), authType);
+      localStorage.setItem(storageKey('auth_token'), authToken.trim());
     }
-  }, [endpointUrl, authType, authToken]);
+  }, [endpointUrl, authType, authToken, isEditingConfig, hospitalId]);
 
   // Mapping & Selection states
   const [specialtyMappings, setSpecialtyMappings] = useState<Record<string, string>>({});
@@ -150,22 +168,7 @@ export function HospitalIntegrationView() {
   const [syncExecutionState, setSyncExecutionState] = useState<'ready' | 'running' | 'completed'>('ready');
   const [isPlanConfirmed, setIsPlanConfirmed] = useState(false);
   const [syncRunCode, setSyncRunCode] = useState<string>('');
-  const [syncProgress, setSyncProgress] = useState<{
-    processed: number;
-    total: number;
-    success: number;
-    error: number;
-    pending: number;
-    currentDoctorName?: string;
-  }>({
-    processed: 0,
-    total: 0,
-    success: 0,
-    error: 0,
-    pending: 0,
-  });
   const [syncFinalReport, setSyncFinalReport] = useState<any>(null);
-  const [isExecutionStopped, setIsExecutionStopped] = useState(false);
 
   // Smart helper to match department name to master specialties
   const findBestSpecialtyMatch = (deptName: string, specs: any[]) => {
@@ -312,14 +315,34 @@ export function HospitalIntegrationView() {
 
   // Mutation: Test Handshake
   const handshakeMutation = useMutation({
-    mutationFn: (payload: { endpointUrl: string; authType?: string; authToken?: string }) =>
+    mutationFn: (payload: {
+      endpointUrl: string;
+      authType?: string;
+      authToken?: string;
+      persistConfig?: boolean;
+    }) =>
       hospitalAdminService.testHandshake(payload),
-    onSuccess: (data) => {
-      const elapsed = testStartTime > 0 ? Math.round(performance.now() - testStartTime) : 28;
-      setTestLatencyMs(Math.max(16, elapsed));
+    onSuccess: (data, variables) => {
+      const elapsed = testStartTimeRef.current === null
+        ? 0
+        : Math.round(performance.now() - testStartTimeRef.current);
+      testStartTimeRef.current = null;
+      setTestLatencyMs(elapsed);
       setHandshakeResult(data);
       setHandshakeError(null);
-      toast.success('Kiểm tra API thành công! Dữ liệu đạt chuẩn hợp đồng.');
+      toast.success(
+        variables.persistConfig
+          ? 'Kiểm tra thành công và đã lưu cấu hình kết nối.'
+          : 'Kiểm tra kết nối HIS thành công.'
+      );
+      if (variables.persistConfig) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(storageKey('endpoint_url'), variables.endpointUrl.trim());
+          localStorage.setItem(storageKey('auth_type'), variables.authType || 'none');
+          localStorage.setItem(storageKey('auth_token'), variables.authToken?.trim() || '');
+        }
+        queryClient.invalidateQueries({ queryKey: ['hospital-admin-integration-status', hospitalId] });
+      }
 
       // Smart initial department mapping
       const initialMappings: Record<string, string> = {};
@@ -336,8 +359,11 @@ export function HospitalIntegrationView() {
       }
     },
     onError: (err: any) => {
-      const elapsed = testStartTime > 0 ? Math.round(performance.now() - testStartTime) : 40;
-      setTestLatencyMs(Math.max(20, elapsed));
+      const elapsed = testStartTimeRef.current === null
+        ? 0
+        : Math.round(performance.now() - testStartTimeRef.current);
+      testStartTimeRef.current = null;
+      setTestLatencyMs(elapsed);
       setHandshakeResult(null);
       const msg = err?.response?.data?.message || err?.message || 'Không thể kết nối đến API Bệnh viện';
       setHandshakeError(msg);
@@ -364,28 +390,21 @@ export function HospitalIntegrationView() {
       queryClient.invalidateQueries({ queryKey: ['hospital-admin-specialties'] });
       queryClient.invalidateQueries({ queryKey: ['hospital-admin-schedules'] });
 
-      if (setupStep === 'formal_connect' && formalStep === 5) {
-        setSyncFinalReport(data);
-        setSyncExecutionState('completed');
-      } else {
-        setIsTestingNewOnboarding(false);
-        setSetupStep('landing');
-      }
+      setSyncFinalReport(data);
+      setSyncExecutionState('completed');
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message || err?.message || 'Lỗi khi đồng bộ dữ liệu vào hệ thống';
       toast.error(msg);
-      if (setupStep === 'formal_connect' && formalStep === 5) {
-        setSyncFinalReport({
-          error: true,
-          errorMessage: msg,
-          createdCount: 0,
-          updatedCount: 0,
-          unchangedCount: 0,
-          errorCount: 1,
-        });
-        setSyncExecutionState('completed');
-      }
+      setSyncFinalReport({
+        error: true,
+        errorMessage: msg,
+        createdCount: 0,
+        updatedCount: 0,
+        unchangedCount: 0,
+        errorCount: 1,
+      });
+      setSyncExecutionState('completed');
     },
   });
 
@@ -394,26 +413,19 @@ export function HospitalIntegrationView() {
       toast.error('Vui lòng tích chọn xác nhận thực thi kế hoạch trước khi bắt đầu.');
       return;
     }
-    const runCode = `SYNC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
-    setSyncRunCode(runCode);
-    setSyncExecutionState('running');
-    setIsExecutionStopped(false);
-
     const targetUrl = endpointUrl.trim();
     if (!targetUrl) {
       toast.error('Endpoint URL không hợp lệ.');
       return;
     }
+    if (selectedDoctorIds.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một bác sĩ để đồng bộ.');
+      return;
+    }
 
-    const totalDocs = selectedDoctorIds.length;
-    setSyncProgress({
-      processed: 0,
-      total: totalDocs,
-      success: 0,
-      error: 0,
-      pending: totalDocs,
-      currentDoctorName: 'Đang kết nối API HIS và thẩm định schema...',
-    });
+    const runCode = `SYNC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
+    setSyncRunCode(runCode);
+    setSyncExecutionState('running');
 
     syncMutation.mutate({
       endpointUrl: targetUrl,
@@ -423,32 +435,6 @@ export function HospitalIntegrationView() {
       selectedDoctorIds,
     });
   };
-
-  // Live progressive simulation during Step 5 'running' state
-  React.useEffect(() => {
-    let timer: any;
-    if (syncExecutionState === 'running' && syncMutation.isPending && !isExecutionStopped) {
-      const docsToSync = handshakeResult?.doctors?.filter((d: any) => selectedDoctorIds.includes(d.staffId)) || [];
-      const total = docsToSync.length || 1;
-      let currentStep = 0;
-
-      timer = setInterval(() => {
-        currentStep++;
-        if (currentStep <= total) {
-          const doc = docsToSync[currentStep - 1];
-          setSyncProgress({
-            processed: currentStep,
-            total,
-            success: currentStep,
-            error: 0,
-            pending: Math.max(0, total - currentStep),
-            currentDoctorName: doc ? `${doc.academicDegree ? `${doc.academicDegree} ` : ''}${doc.fullName} (${doc.staffId})` : undefined,
-          });
-        }
-      }, 700);
-    }
-    return () => clearInterval(timer);
-  }, [syncExecutionState, syncMutation.isPending, isExecutionStopped, handshakeResult, selectedDoctorIds]);
 
   const handleTestHandshake = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -460,37 +446,67 @@ export function HospitalIntegrationView() {
       toast.error(`Vui lòng nhập mã khóa xác thực ${authType === 'api_key' ? 'X-API-KEY' : 'Bearer Token'}`);
       return;
     }
+    setHandshakeResult(null);
     setHandshakeError(null);
-    setTestStartTime(performance.now());
+    testStartTimeRef.current = performance.now();
     handshakeMutation.mutate({
       endpointUrl: endpointUrl.trim(),
       authType,
       authToken: authToken.trim(),
+      persistConfig: isEditingConfig,
     });
   };
 
+  const finishConfigEditing = (saved: boolean) => {
+    if (!saved && typeof window !== 'undefined') {
+      setEndpointUrl(
+        statusData?.endpointUrl || localStorage.getItem(storageKey('endpoint_url')) || ''
+      );
+      setAuthType(
+        (statusData?.authType || localStorage.getItem(storageKey('auth_type')) || 'none') as
+          | 'none'
+          | 'api_key'
+          | 'bearer'
+      );
+      setAuthToken(localStorage.getItem(storageKey('auth_token')) || '');
+    }
+    setHandshakeResult(null);
+    setHandshakeError(null);
+    setIsEditingConfig(false);
+    setIsTestingNewOnboarding(false);
+    setSetupStep('landing');
+  };
+
   const handleRunDashboardConnectionTest = async () => {
+    const targetUrl = configuredEndpointUrl;
+    if (!targetUrl) {
+      const message = 'Chưa có endpoint HIS. Vui lòng nhập và kiểm tra URL HIS trước.';
+      setDashboardTestStatus('error');
+      setDashboardTestError(message);
+      toast.error(message);
+      return;
+    }
+
     setIsTestingDashboardConnection(true);
     setDashboardTestStatus('testing');
+    setDashboardTestAt(null);
     const start = performance.now();
-    const targetUrl = endpointUrl.trim() || 'http://localhost:5055/api/hospital-catalog';
 
     try {
       const minDelay = new Promise((resolve) => setTimeout(resolve, 1200));
-      const [res] = await Promise.all([
-        hospitalAdminService.testHandshake({
-          endpointUrl: targetUrl,
-          authType,
-          authToken: authToken.trim(),
-        }),
-        minDelay,
-      ]);
+      const res = await hospitalAdminService.testHandshake({
+        endpointUrl: targetUrl,
+        authType,
+        authToken: authToken.trim(),
+      });
       const elapsed = Math.round(performance.now() - start);
-      setTestLatencyMs(Math.max(16, elapsed));
+      await minDelay;
+      setTestLatencyMs(elapsed);
       setHandshakeResult(res);
       setDashboardTestStatus('success');
       setDashboardTestError(null);
-      toast.success(`Máy chủ HIS ${res?.hospitalName || ''} phản hồi tốt (HTTP 200 OK)`);
+      setDashboardTestAt(new Date());
+      toast.success(`Máy chủ HIS ${res?.hospitalName || ''} phản hồi thành công.`);
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Không thể kết nối đến máy chủ HIS ngoài';
       setDashboardTestStatus('error');
@@ -499,28 +515,6 @@ export function HospitalIntegrationView() {
     } finally {
       setIsTestingDashboardConnection(false);
     }
-  };
-
-  const handleSyncSubmit = () => {
-    if (!endpointUrl || !endpointUrl.trim()) {
-      toast.error('Vui lòng nhập đường dẫn Endpoint URL của bệnh viện');
-      return;
-    }
-    if (authType !== 'none' && (!authToken || !authToken.trim())) {
-      toast.error(`Vui lòng nhập mã khóa xác thực ${authType === 'api_key' ? 'X-API-KEY' : 'Bearer Token'}`);
-      return;
-    }
-    if (selectedDoctorIds.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một bác sĩ để đồng bộ');
-      return;
-    }
-    syncMutation.mutate({
-      endpointUrl: endpointUrl.trim(),
-      authType,
-      authToken: authToken.trim(),
-      specialtyMappings,
-      selectedDoctorIds,
-    });
   };
 
   const toggleDoctorSelection = (staffId: string) => {
@@ -538,7 +532,6 @@ export function HospitalIntegrationView() {
     }
   };
 
-
   // Determine view mode:
   // If already connected and not currently trying out the setup wizard -> Show Connected Dashboard
   const isAlreadyConnected = !!statusData?.isConnected && !isTestingNewOnboarding;
@@ -552,22 +545,11 @@ export function HospitalIntegrationView() {
       <ConnectionTestModal
         open={showConnectionTestModal}
         onOpenChange={setShowConnectionTestModal}
-        defaultEndpointUrl={endpointUrl.trim() || 'http://localhost:5055/api/hospital-catalog'}
-        defaultAuthType={authType}
+        defaultEndpointUrl={configuredEndpointUrl}
+        defaultAuthType={statusData?.authType || authType}
         defaultAuthToken={authToken}
-        hospitalName={statusData?.hospitalName || handshakeResult?.hospitalName || 'Bệnh viện An Bình'}
-        hospitalCode={statusData?.externalId || handshakeResult?.hospitalCode || 'HIS_BV_ANBINH'}
-        onProceedToSync={() => {
-          const targetUrl = endpointUrl.trim() || 'http://localhost:5055/api/hospital-catalog';
-          toast.loading('Đang kích hoạt đồng bộ dữ liệu mới nhất từ HIS...');
-          syncMutation.mutate({
-            endpointUrl: targetUrl,
-            authType,
-            authToken: authToken.trim(),
-            specialtyMappings,
-            selectedDoctorIds: [],
-          });
-        }}
+        hospitalName={hospitalDisplayName}
+        hospitalCode={hospitalCodeDisplay}
       />
 
       {/* Top Banner */}
@@ -618,7 +600,7 @@ export function HospitalIntegrationView() {
                     Kết nối HIS
                   </h3>
                   <p className="text-sm text-slate-500 mt-1">
-                    {statusData?.hospitalName || handshakeResult?.hospitalName || 'Bệnh viện An Bình'} · {statusData?.externalId || 'HIS_BV_ANBINH'}
+                    {hospitalDisplayName} · {hospitalCodeDisplay}
                   </p>
                 </div>
 
@@ -637,7 +619,7 @@ export function HospitalIntegrationView() {
                 <div>
                   <span className="text-slate-400 block mb-1">Endpoint đang kiểm tra</span>
                   <code className="font-mono text-xs bg-slate-100 text-slate-800 px-2.5 py-1 rounded border border-slate-200/50 inline-block font-normal">
-                    {endpointUrl.trim() || 'http://localhost:5055/api/hospital-catalog'}
+                    {configuredEndpointUrl || 'Chưa cấu hình endpoint HIS'}
                   </code>
                 </div>
 
@@ -653,7 +635,7 @@ export function HospitalIntegrationView() {
               <div className="border-t border-slate-100 pt-1" />
 
               <p className="text-[11px] text-slate-400 italic">
-                Đây là trạng thái minh họa; giao diện thật chỉ hiển thị khi yêu cầu kiểm tra đang chạy.
+                Yêu cầu kiểm tra đang chờ phản hồi; thao tác này không ghi danh mục HIS vào NovaCare.
               </p>
             </Card>
           ) : dashboardTestStatus === 'error' ? (
@@ -668,7 +650,7 @@ export function HospitalIntegrationView() {
                     Kết nối HIS
                   </h3>
                   <p className="text-sm text-slate-500 mt-1">
-                    {statusData?.hospitalName || handshakeResult?.hospitalName || 'Bệnh viện An Bình'} · {statusData?.externalId || 'HIS_BV_ANBINH'}
+                    {hospitalDisplayName} · {hospitalCodeDisplay}
                   </p>
                 </div>
 
@@ -687,13 +669,13 @@ export function HospitalIntegrationView() {
                 <div>
                   <span className="text-slate-400 block mb-1">Endpoint đang kiểm tra</span>
                   <code className="font-mono text-xs bg-rose-50 text-rose-800 px-2.5 py-1 rounded border border-rose-200/60 inline-block font-normal">
-                    {endpointUrl.trim() || 'http://localhost:5055/api/hospital-catalog'}
+                    {configuredEndpointUrl || 'Chưa cấu hình endpoint HIS'}
                   </code>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-rose-50/60 border border-rose-200 text-rose-900 space-y-2">
                   <p className="font-semibold text-rose-800">
-                    Kiểm tra thất bại: API chưa đạt chuẩn hợp đồng
+                    Kiểm tra kết nối thất bại
                   </p>
                   <p className="text-slate-600">
                     Chi tiết lỗi: <strong>{dashboardTestError}</strong>
@@ -702,7 +684,7 @@ export function HospitalIntegrationView() {
                     <span className="font-bold text-slate-800 block">Gợi ý khắc phục:</span>
                     <ul className="list-disc pl-4 space-y-0.5">
                       <li>Kiểm tra máy chủ HIS có đang chạy và mở route <code className="font-mono text-rose-700">/api/hospital-catalog</code> không.</li>
-                      <li>Kiểm tra phản hồi có đúng cấu trúc <code className="font-mono text-rose-700">{`{ status: 200, data: { departments: [], doctors: [] } }`}</code> không.</li>
+                      <li>Kiểm tra phản hồi JSON có mã bệnh viện và danh sách bác sĩ hay không.</li>
                     </ul>
                   </div>
                 </div>
@@ -726,7 +708,11 @@ export function HospitalIntegrationView() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      setIsEditingConfig(true);
                       setIsTestingNewOnboarding(true);
+                      setHandshakeResult(null);
+                      setHandshakeError(null);
+                      setTestLatencyMs(0);
                       setSetupStep('validation');
                     }}
                     className="border-slate-200 text-slate-800 hover:bg-slate-50 font-medium text-xs h-9 px-5 rounded-full"
@@ -736,7 +722,7 @@ export function HospitalIntegrationView() {
                 </div>
 
                 <p className="text-[11px] text-slate-400 mt-3">
-                  Giao diện minh họa. Trạng thái thực tế phải lấy từ backend.
+                  Kiểm tra kết nối không lưu cấu hình hoặc đồng bộ danh mục.
                 </p>
               </div>
             </Card>
@@ -752,7 +738,7 @@ export function HospitalIntegrationView() {
                     Kết nối HIS
                   </h3>
                   <p className="text-sm text-slate-500 mt-1">
-                    {statusData?.hospitalName || handshakeResult?.hospitalName || 'Bệnh viện An Bình'}
+                    {hospitalDisplayName}
                   </p>
                 </div>
 
@@ -771,7 +757,7 @@ export function HospitalIntegrationView() {
                 <div>
                   <span className="text-slate-400 block mb-1">Mã bệnh viện</span>
                   <span className="font-bold text-slate-900 text-sm">
-                    {statusData?.externalId || 'HIS_BV_ANBINH'}
+                    {hospitalCodeDisplay}
                   </span>
                 </div>
 
@@ -787,7 +773,7 @@ export function HospitalIntegrationView() {
                 <div className="sm:col-span-2">
                   <span className="text-slate-400 block mb-1">API Endpoint</span>
                   <code className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-1 rounded border border-slate-200/50 inline-block font-normal">
-                    {endpointUrl.trim() || 'http://localhost:5055/api/hospital-catalog'}
+                    {configuredEndpointUrl || 'Chưa cấu hình endpoint HIS'}
                   </code>
                 </div>
 
@@ -816,7 +802,7 @@ export function HospitalIntegrationView() {
                         const year = d.getFullYear();
                         return `${time} · ${day}/${month}/${year}`;
                       })()
-                      : '14:47:45 · 10/10/2026'}
+                      : 'Chưa có lần đồng bộ'}
                   </span>
                 </div>
               </div>
@@ -826,18 +812,23 @@ export function HospitalIntegrationView() {
                 <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-wrap items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2 text-emerald-900 font-semibold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Kiểm tra kết nối thành công: API đạt chuẩn hợp đồng kỹ thuật</span>
+                    <span>Kiểm tra kết nối thành công; cấu hình và danh mục chưa được lưu</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="bg-white border-emerald-200 text-emerald-700 font-bold text-[10px]">
-                      HTTP 200 OK
+                      Phản hồi thành công
                     </Badge>
                     <Badge variant="outline" className="bg-white border-emerald-200 text-emerald-700 font-bold text-[10px]">
-                      {testLatencyMs || 28}ms
+                      Kiểm tra: {testLatencyMs}ms
                     </Badge>
                     <Badge variant="outline" className="bg-white border-emerald-200 text-emerald-700 font-bold text-[10px]">
-                      {handshakeResult?.totalDepartments || 5} khoa · {handshakeResult?.totalDoctors || 6} bác sĩ
+                      {handshakeResult?.totalDepartments ?? 0} khoa · {handshakeResult?.totalDoctors ?? 0} bác sĩ nhận được
                     </Badge>
+                    {dashboardTestAt && (
+                      <span className="text-[10px] text-slate-600">
+                        Lúc {dashboardTestAt.toLocaleTimeString('vi-VN')}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -850,15 +841,12 @@ export function HospitalIntegrationView() {
                   <Button
                     size="sm"
                     onClick={() => {
-                      const targetUrl = endpointUrl.trim() || 'http://localhost:5055/api/hospital-catalog';
-                      toast.loading('Đang kích hoạt đồng bộ dữ liệu mới nhất từ HIS...');
-                      syncMutation.mutate({
-                        endpointUrl: targetUrl,
-                        authType,
-                        authToken: authToken.trim(),
-                        specialtyMappings,
-                        selectedDoctorIds: [],
-                      });
+                      setIsEditingConfig(false);
+                      setIsTestingNewOnboarding(true);
+                      setHandshakeResult(null);
+                      setHandshakeError(null);
+                      setTestLatencyMs(0);
+                      setSetupStep('validation');
                     }}
                     disabled={syncMutation.isPending}
                     className="bg-black hover:bg-slate-900 text-white font-bold text-xs h-9 px-6 rounded-full shadow-xs"
@@ -866,7 +854,7 @@ export function HospitalIntegrationView() {
                     {syncMutation.isPending && (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
                     )}
-                    Đồng bộ ngay
+                    Đồng bộ theo quy trình
                   </Button>
 
                   <Button
@@ -882,7 +870,11 @@ export function HospitalIntegrationView() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      setIsEditingConfig(true);
                       setIsTestingNewOnboarding(true);
+                      setHandshakeResult(null);
+                      setHandshakeError(null);
+                      setTestLatencyMs(0);
                       setSetupStep('validation');
                     }}
                     className="border-slate-200 text-slate-800 hover:bg-slate-50 font-medium text-xs h-9 px-5 rounded-full"
@@ -892,7 +884,7 @@ export function HospitalIntegrationView() {
                 </div>
 
                 <p className="text-[11px] text-slate-400 mt-3">
-                  Giao diện minh họa. Trạng thái thực tế phải lấy từ backend.
+                  Cấu hình chỉ được lưu sau khi kết nối kiểm tra thành công; thao tác này không đồng bộ danh mục.
                 </p>
               </div>
             </Card>
@@ -1355,18 +1347,30 @@ export function HospitalIntegrationView() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSetupStep('guide')}
+                    onClick={() => {
+                      if (isEditingConfig) {
+                        finishConfigEditing(false);
+                      } else {
+                        setSetupStep('guide');
+                      }
+                    }}
                     className="h-8 w-8 p-0 rounded-lg text-slate-500 hover:text-slate-800"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </Button>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">Kiểm tra kết nối & Thẩm định API (Handshake Test)</h3>
-                    <p className="text-xs text-slate-500">Hệ thống sẽ gửi yêu cầu thử nghiệm để xác thực tính toàn vẹn của dữ liệu</p>
+                    <h3 className="text-base font-bold text-slate-900">
+                      {isEditingConfig ? 'Cấu hình kết nối HIS' : 'Kiểm tra kết nối HIS'}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      {isEditingConfig
+                        ? 'Cấu hình chỉ được lưu sau khi endpoint và thông tin xác thực kiểm tra thành công.'
+                        : 'Gửi yêu cầu kiểm tra endpoint và nhận danh mục xem trước; chưa ghi dữ liệu vào NovaCare.'}
+                    </p>
                   </div>
                 </div>
                 <Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-600 text-xs">
-                  Bước 3 / 3
+                  {isEditingConfig ? 'Cấu hình' : 'Bước 3 / 3'}
                 </Badge>
               </div>
 
@@ -1385,7 +1389,7 @@ export function HospitalIntegrationView() {
                       className="bg-slate-50 border-slate-200 text-slate-900 text-xs h-10 rounded-xl focus:bg-white font-mono"
                     />
                     <div className="flex items-center justify-between text-[11px] text-slate-500">
-                      <span>Ví dụ: <code className="font-mono text-emerald-700 font-bold">http://localhost:5055/api/hospital-catalog</code></span>
+                      <span>Nhập URL endpoint HIS do bệnh viện cung cấp.</span>
                       <div className="flex items-center gap-3">
                         {endpointUrl && (
                           <button
@@ -1396,8 +1400,8 @@ export function HospitalIntegrationView() {
                               setHandshakeResult(null);
                               setHandshakeError(null);
                               if (typeof window !== 'undefined') {
-                                localStorage.removeItem('novacare_his_endpoint_url');
-                                localStorage.removeItem('novacare_his_auth_token');
+                                localStorage.removeItem(storageKey('endpoint_url'));
+                                localStorage.removeItem(storageKey('auth_token'));
                               }
                               toast.info('Đã xóa trống cấu hình Endpoint');
                             }}
@@ -1418,18 +1422,6 @@ export function HospitalIntegrationView() {
                         >
 
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEndpointUrl('http://localhost:5055/api/hospital-catalog');
-                            setAuthType('api_key');
-                            setAuthToken('tamanh_secret_2026');
-                            toast.info('Đã điền thông số mẫu của HIS Server Độc lập (Port 5055)');
-                          }}
-                          className="text-teal-600 hover:text-teal-700 font-bold hover:underline"
-                        >
-                          ⚡ Standalone HIS (Port 5055)
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -1441,14 +1433,13 @@ export function HospitalIntegrationView() {
                       onChange={(e: any) => setAuthType(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl h-10 px-3 outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500"
                     >
-                      <option value="none">Không xác thực (Public/Testing)</option>
                       <option value="api_key">X-API-KEY (Header)</option>
                       <option value="bearer">Bearer Token (Authorization)</option>
                     </select>
                   </div>
                 </div>
 
-                {authType !== 'none' && (
+                {(
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                       <Lock className="w-3.5 h-3.5 text-amber-600" />
@@ -1478,7 +1469,7 @@ export function HospitalIntegrationView() {
                     ) : (
                       <>
                         <PlayCircle className="w-4 h-4" />
-                        Kiểm Tra API Ngay
+                        {isEditingConfig ? 'Kiểm tra và lưu cấu hình' : 'Kiểm Tra API Ngay'}
                       </>
                     )}
                   </Button>
@@ -1495,7 +1486,7 @@ export function HospitalIntegrationView() {
                         Kết nối HIS
                       </h4>
                       <p className="text-sm text-slate-500 mt-1">
-                        {statusData?.hospitalName || handshakeResult?.hospitalName || 'Bệnh viện An Bình'} · {statusData?.externalId || 'HIS_BV_ANBINH'}
+                        {hospitalDisplayName} · {hospitalCodeDisplay}
                       </p>
                     </div>
 
@@ -1514,7 +1505,7 @@ export function HospitalIntegrationView() {
                     <div>
                       <span className="text-slate-400 block mb-1">Endpoint đang kiểm tra</span>
                       <code className="font-mono text-xs bg-slate-100 text-slate-800 px-2.5 py-1 rounded border border-slate-200/50 inline-block font-normal">
-                        {endpointUrl.trim() || 'http://localhost:5055/api/hospital-catalog'}
+                        {configuredEndpointUrl || 'Chưa cấu hình endpoint HIS'}
                       </code>
                     </div>
 
@@ -1530,7 +1521,7 @@ export function HospitalIntegrationView() {
                   <div className="border-t border-slate-100 pt-1" />
 
                   <p className="text-[11px] text-slate-400 italic">
-                    Đây là trạng thái minh họa; giao diện thật chỉ hiển thị khi yêu cầu kiểm tra đang chạy.
+                    Yêu cầu kiểm tra đang chờ phản hồi; thao tác này không ghi danh mục HIS vào NovaCare.
                   </p>
                 </div>
               )}
@@ -1540,9 +1531,7 @@ export function HospitalIntegrationView() {
                 <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 space-y-3">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
-                    <h4 className="font-bold text-sm text-rose-800">
-                      Kiểm tra thất bại: API chưa đạt chuẩn hợp đồng
-                    </h4>
+                    <h4 className="font-bold text-sm text-rose-800">Kiểm tra kết nối thất bại</h4>
                   </div>
                   <p className="text-xs text-rose-700 leading-relaxed">
                     Chi tiết lỗi: <strong>{handshakeError}</strong>
@@ -1551,7 +1540,7 @@ export function HospitalIntegrationView() {
                     <span className="font-bold block">Gợi ý khắc phục:</span>
                     <ul className="list-disc pl-4 space-y-0.5">
                       <li>Kiểm tra máy chủ HIS có đang chạy và mở route <code className="font-mono">/api/hospital-catalog</code> không.</li>
-                      <li>Kiểm tra phản hồi có đúng cấu trúc <code className="font-mono">{`{ status: 200, data: { departments: [], doctors: [] } }`}</code> không.</li>
+                      <li>Kiểm tra phản hồi JSON có mã bệnh viện và danh sách bác sĩ hay không.</li>
                     </ul>
                   </div>
                   <Button
@@ -1574,120 +1563,74 @@ export function HospitalIntegrationView() {
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                       <div>
                         <h4 className="font-bold text-sm text-emerald-950">
-                          API đạt chuẩn hợp đồng kỹ thuật! Kết nối và thẩm định thành công.
+                          {isEditingConfig
+                            ? 'Kết nối thành công và cấu hình đã được lưu.'
+                            : 'Kiểm tra kết nối HIS thành công.'}
                         </h4>
                         <p className="text-[11px] text-emerald-700 mt-0.5">
-                          Hệ thống đã hoàn tất quét và đánh giá toàn diện 5 tầng tiêu chuẩn kỹ thuật liên thông.
+                          {isEditingConfig
+                            ? 'Endpoint và phương thức xác thực đã được lưu. Danh mục HIS chưa được đồng bộ.'
+                            : 'HIS đã phản hồi; danh mục chỉ được ghi vào NovaCare khi chạy quy trình đồng bộ.'}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge className="bg-emerald-600 text-white font-bold text-xs py-1 px-2.5">
-                        HTTP 200 OK
+                        Kết nối thành công
                       </Badge>
                       <Badge variant="outline" className="border-emerald-300 text-emerald-800 bg-white font-bold text-xs py-1 px-2.5">
-                        Hợp Lệ (Valid)
+                        Payload cơ bản hợp lệ
                       </Badge>
                     </div>
                   </div>
 
-                  {/* BẢNG KẾT QUẢ THẨM ĐỊNH KỸ THUẬT (TECHNICAL INSPECTION METRICS) */}
+                  {/* Kết quả kiểm tra thực tế từ yêu cầu handshake */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {/* 1. HTTP Status */}
                     <div className="p-3 rounded-xl bg-white border border-emerald-200/80 shadow-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500 uppercase font-bold">Mã trạng thái HTTP</span>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold">Kết nối</span>
                         <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
                       </div>
-                      <div className="font-mono font-bold text-emerald-700 text-base mt-1">200 OK</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">Giao thức: REST JSON</div>
+                      <div className="font-bold text-emerald-700 text-sm mt-1">Phản hồi thành công</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">HIS trả dữ liệu vượt qua kiểm tra cơ bản</div>
                     </div>
 
-                    {/* 2. Authentication */}
                     <div className="p-3 rounded-xl bg-white border border-emerald-200/80 shadow-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500 uppercase font-bold">Xác thực bảo mật</span>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold">Phương thức gửi</span>
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                       </div>
                       <div className="font-bold text-slate-900 text-xs mt-1 truncate">
                         {authType === 'api_key' ? 'X-API-KEY' : authType === 'bearer' ? 'Bearer Token' : 'Public API'}
                       </div>
-                      <div className="text-[10px] text-emerald-600 font-medium mt-0.5">Chữ ký hợp lệ</div>
+                      <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                        {authType === 'none' ? 'Không gửi thông tin xác thực' : 'Đã gửi request với header này'}
+                      </div>
                     </div>
 
-                    {/* 3. Latency / Response Time */}
                     <div className="p-3 rounded-xl bg-white border border-emerald-200/80 shadow-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500 uppercase font-bold">Thời gian phản hồi</span>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold">Thời gian kiểm tra</span>
                         <Clock className="w-3.5 h-3.5 text-blue-600" />
                       </div>
                       <div className="font-mono font-bold text-slate-900 text-base mt-1">
-                        {testLatencyMs || 28} <span className="text-xs font-normal text-slate-500">ms</span>
+                        {testLatencyMs} <span className="text-xs font-normal text-slate-500">ms</span>
                       </div>
-                      <div className="text-[10px] text-emerald-600 font-medium mt-0.5">
-                        {testLatencyMs < 60 ? 'Rất nhanh (< 60ms)' : 'Đạt chuẩn (< 200ms)'}
-                      </div>
+                      <div className="text-[10px] text-slate-500 font-medium mt-0.5">Từ giao diện qua backend đến khi nhận kết quả</div>
                     </div>
 
-                    {/* 4. JSON Schema Validation */}
                     <div className="p-3 rounded-xl bg-white border border-emerald-200/80 shadow-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500 uppercase font-bold">Thẩm định Schema</span>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold">Dữ liệu bắt buộc</span>
                         <FileCode2 className="w-3.5 h-3.5 text-purple-600" />
                       </div>
-                      <div className="font-bold text-slate-900 text-xs mt-1">NC-SPEC-2026</div>
-                      <div className="text-[10px] text-emerald-600 font-medium mt-0.5">100% Khớp đặc tả</div>
+                      <div className="font-bold text-slate-900 text-xs mt-1">Đã nhận mã bệnh viện và danh sách bác sĩ</div>
+                      <div className="text-[10px] text-slate-500 font-medium mt-0.5">Chưa thẩm định toàn bộ trường theo đặc tả</div>
                     </div>
                   </div>
 
-                  {/* DANH MỤC 5 TIÊU CHUẨN ĐÃ THẨM ĐỊNH (COMPLIANCE CHECKLIST) */}
-                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200/80 space-y-2 text-xs shadow-xs">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center justify-between pb-1 border-b border-slate-100">
-                      <span className="flex items-center gap-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                        Chi tiết các tiêu chuẩn kỹ thuật đã kiểm tra
-                      </span>
-                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                        5 / 5 Đạt chuẩn
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] pt-1">
-                      <div className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-slate-800">1. Kết nối HTTP & Khả dụng:</strong>
-                          <p className="text-slate-500">Máy chủ HIS phản hồi HTTP 200 OK trong {testLatencyMs || 28}ms.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-slate-800">2. Xác thực & Phân quyền:</strong>
-                          <p className="text-slate-500">Header {authType === 'api_key' ? 'X-API-KEY' : 'Token'} hợp lệ, không bị từ chối 401/403.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-slate-800">3. Schema Khoa phòng:</strong>
-                          <p className="text-slate-500">Đầy đủ dept_code, dept_name ({handshakeResult.totalDepartments} khoa).</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-slate-800">4. Schema Bác sĩ & Giá khám:</strong>
-                          <p className="text-slate-500">Đầy đủ staff_id, học vị và giá khám ({handshakeResult.totalDoctors} bác sĩ).</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 md:col-span-2">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-slate-800">5. Định dạng Lịch khám & Ca trực:</strong>
-                          <p className="text-slate-500">Định dạng 24h (HH:mm) và ngày trong tuần (0-6) hợp lệ ({handshakeResult.doctors?.reduce((acc: number, d: any) => acc + (d.shiftsCount || 0), 0)} ca trực tuần).</p>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+                    Backend hiện chỉ kiểm tra endpoint trả JSON, có mã bệnh viện và danh sách bác sĩ. Các trường khoa phòng, thông tin bác sĩ và ca trực chưa được xác thực đầy đủ theo NC-HIS-SPEC-2026.
                   </div>
 
                   {/* Toggle Xem Raw JSON */}
@@ -1752,13 +1695,22 @@ export function HospitalIntegrationView() {
                     <span className="text-xs text-slate-600">
                       Cơ sở y tế: <strong>{handshakeResult.hospitalName}</strong>
                     </span>
-                    <Button
-                      onClick={() => setSetupStep('formal_connect')}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-6 rounded-xl gap-2 shadow-sm shadow-emerald-600/20"
-                    >
-                      Tiến hành Kết nối & Ánh xạ chính thức
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
+                    {isEditingConfig ? (
+                      <Button
+                        onClick={() => finishConfigEditing(true)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-6 rounded-xl"
+                      >
+                        Hoàn tất cấu hình
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => setSetupStep('formal_connect')}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-6 rounded-xl gap-2 shadow-sm shadow-emerald-600/20"
+                      >
+                        Tiếp tục xem trước và ánh xạ
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1841,9 +1793,9 @@ export function HospitalIntegrationView() {
                       </Badge>
                     </div>
                     <div className="p-3 rounded-xl bg-white border border-slate-200 font-mono text-xs text-slate-900 font-bold break-all flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <span>{endpointUrl || 'http://localhost:5055/api/hospital-catalog'}</span>
+                      <span>{configuredEndpointUrl || 'Chưa cấu hình endpoint HIS'}</span>
                       <Badge variant="outline" className="font-mono text-[10px] bg-slate-50 text-slate-600 border-slate-200 w-fit shrink-0">
-                        HTTP 200 OK
+                        Phản hồi thành công
                       </Badge>
                     </div>
                   </div>
@@ -1856,7 +1808,7 @@ export function HospitalIntegrationView() {
                         Mã bệnh viện HIS
                       </span>
                       <div className="text-sm font-bold font-mono text-slate-900 flex items-center gap-2">
-                        <span>{handshakeResult?.hospitalCode || statusData?.externalId || 'BV_AB'}</span>
+                        <span>{hospitalCodeDisplay}</span>
                         <Badge variant="outline" className="text-[10px] border-slate-200 text-slate-500 bg-slate-50 font-normal">
                           Mã định danh
                         </Badge>
@@ -1870,7 +1822,7 @@ export function HospitalIntegrationView() {
                         Cơ sở y tế
                       </span>
                       <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        <span>{handshakeResult?.hospitalName || statusData?.hospitalName || 'Bệnh viện Đa khoa An Bình'}</span>
+                        <span>{hospitalDisplayName}</span>
                         <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold">
                           Khớp hợp đồng
                         </Badge>
@@ -2182,7 +2134,7 @@ export function HospitalIntegrationView() {
                             </Badge>
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
-                            <strong className="text-slate-800 font-semibold">{handshakeResult?.hospitalName || statusData?.hospitalName || 'Bệnh viện An Bình'}</strong> · Dữ liệu lấy từ HIS
+                            <strong className="text-slate-800 font-semibold">{hospitalDisplayName}</strong> · Dữ liệu lấy từ HIS
                           </p>
                         </div>
                       </div>
@@ -2412,7 +2364,7 @@ export function HospitalIntegrationView() {
                             </Badge>
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
-                            <strong className="text-slate-800 font-semibold">{handshakeResult?.hospitalName || statusData?.hospitalName || 'Bệnh viện An Bình'}</strong> · Nguồn HIS đã kết nối
+                            <strong className="text-slate-800 font-semibold">{hospitalDisplayName}</strong> · Nguồn HIS đã kết nối
                           </p>
                         </div>
                       </div>
@@ -2682,7 +2634,7 @@ export function HospitalIntegrationView() {
                                 </Badge>
                               </div>
                               <p className="text-xs text-slate-500 mt-1">
-                                <strong className="text-slate-800 font-semibold">{handshakeResult?.hospitalName || statusData?.hospitalName || 'Bệnh viện An Bình'}</strong> · Sẵn sàng thực thi
+                                <strong className="text-slate-800 font-semibold">{hospitalDisplayName}</strong> · Sẵn sàng thực thi
                               </p>
                             </div>
                           </div>
@@ -2809,88 +2761,18 @@ export function HospitalIntegrationView() {
                           </div>
                         </div>
 
-                        {/* Card Tiến độ xử lý */}
-                        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs uppercase tracking-wider text-slate-700">
-                              Tiến độ xử lý
-                            </span>
-                            <span className="font-mono text-xs font-bold text-slate-900">
-                              {syncProgress.processed} / {syncProgress.total} bản ghi
-                            </span>
+                        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                            <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                            Backend đang xử lý yêu cầu đồng bộ
                           </div>
-
-                          {/* Progress bar */}
-                          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                            <div
-                              className="h-full bg-emerald-600 transition-all duration-300 rounded-full"
-                              style={{
-                                width: `${syncProgress.total > 0 ? Math.min(100, Math.round((syncProgress.processed / syncProgress.total) * 100)) : 0}%`,
-                              }}
-                            />
-                          </div>
-
-                          <div className="text-xs text-slate-500 flex items-center gap-2">
-                            <Loader2 className="w-3 h-3 animate-spin text-emerald-600 shrink-0" />
-                            <span>
-                              {syncProgress.currentDoctorName || 'Đang xác thực thông tin và cập nhật ca trực...'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* 3 Real-time KPI Stats: Thành công, Lỗi, Chưa xử lý */}
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="p-3.5 rounded-2xl bg-white border border-emerald-200 shadow-xs space-y-1 text-center sm:text-left">
-                            <div className="text-2xl font-black text-emerald-700 font-mono">
-                              {syncProgress.success}
-                            </div>
-                            <div className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                              Thành công
-                            </div>
-                            <p className="text-[11px] text-slate-400 hidden sm:block">Đã ghi nhận an toàn</p>
-                          </div>
-
-                          <div className="p-3.5 rounded-2xl bg-white border border-rose-200 shadow-xs space-y-1 text-center sm:text-left">
-                            <div className="text-2xl font-black text-rose-600 font-mono">
-                              {syncProgress.error}
-                            </div>
-                            <div className="text-xs font-bold uppercase tracking-wider text-rose-800">
-                              Lỗi
-                            </div>
-                            <p className="text-[11px] text-slate-400 hidden sm:block">Cần rà soát lại</p>
-                          </div>
-
-                          <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1 text-center sm:text-left">
-                            <div className="text-2xl font-black text-slate-700 font-mono">
-                              {syncProgress.pending}
-                            </div>
-                            <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                              Chưa xử lý
-                            </div>
-                            <p className="text-[11px] text-slate-400 hidden sm:block">Đang đợi trong hàng đợi</p>
-                          </div>
-                        </div>
-
-                        {/* Operating safety notices */}
-                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-600 text-xs space-y-1 leading-relaxed">
-                          <p>• Hệ thống đang thực thi đồng bộ tuần tự, hiển thị tiến độ và trạng thái chi tiết của từng tác vụ.</p>
-                          <p>• Thao tác chạy lại tạm khóa trong khi tiến trình đang diễn ra nhằm tránh xung đột dữ liệu.</p>
-                          <p>• Khi người dùng rời trang, tác vụ backend vẫn tiếp tục hoàn thành và lưu vào lịch sử kiểm toán.</p>
-                        </div>
-
-                        {/* Action stop button */}
-                        <div className="flex items-center justify-end pt-2 border-t border-slate-100">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setIsExecutionStopped(true);
-                              toast.info('Đã gửi yêu cầu dừng các bản ghi chưa xử lý.');
-                            }}
-                            className="border-slate-300 text-slate-700 hover:bg-slate-100 text-xs rounded-xl"
-                          >
-                            Dừng các bản ghi chưa xử lý
-                          </Button>
+                          <p className="text-xs leading-relaxed text-slate-600">
+                            Hệ thống sẽ hiển thị số bản ghi tạo mới, cập nhật, không thay đổi và lỗi khi backend hoàn tất.
+                            Tiến độ từng bác sĩ chưa được backend cung cấp nên không hiển thị số đếm ước lượng.
+                          </p>
+                          <p className="text-[11px] text-slate-500 border-t border-slate-100 pt-3">
+                            Yêu cầu hiện chạy trong phiên này; nếu rời hoặc tải lại trang, giao diện chưa thể khôi phục trạng thái tiến trình.
+                          </p>
                         </div>
                       </div>
                     )}

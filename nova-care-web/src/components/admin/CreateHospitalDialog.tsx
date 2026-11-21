@@ -40,8 +40,6 @@ interface CreateHospitalDialogProps {
 
 const initialFormData = {
   name: '',
-  hospitalCode: '',
-  externalId: '',
   type: 'Công',
   establishedYear: '',
   bedCount: '',
@@ -155,6 +153,14 @@ export function CreateHospitalDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+    if (submitter?.dataset.action !== 'create-hospital') {
+      if (step < 3) goNext();
+      return;
+    }
+    if (step < 3) {
+      return;
+    }
     if (!validateStep(1) || !validateStep(2)) return;
 
     const typeMap: Record<string, string> = {
@@ -170,8 +176,6 @@ export function CreateHospitalDialog({
 
     const payload = {
       name: formData.name.trim(),
-      hospitalCode: formData.hospitalCode.trim() || undefined,
-      externalId: formData.externalId.trim() || undefined,
       type: typeMap[formData.type] || formData.type,
       establishedYear: formData.establishedYear
         ? parseInt(formData.establishedYear, 10)
@@ -374,26 +378,6 @@ export function CreateHospitalDialog({
                     <option value="Tư nhân">Tư nhân</option>
                     <option value="Quốc tế">Quốc tế</option>
                   </select>
-                </div>
-                <div>
-                  <Label>Mã bệnh viện</Label>
-                  <Input
-                    type="text"
-                    value={formData.hospitalCode}
-                    onChange={(e) => updateField('hospitalCode', e.target.value)}
-                    placeholder="Mã nội bộ: BV-001"
-                    className={fieldClass}
-                  />
-                </div>
-                <div>
-                  <Label>Mã đối tác / HIS</Label>
-                  <Input
-                    type="text"
-                    value={formData.externalId}
-                    onChange={(e) => updateField('externalId', e.target.value)}
-                    placeholder="Mã HIS: HIS-001"
-                    className={fieldClass}
-                  />
                 </div>
                 <div>
                   <Label>Năm thành lập</Label>
@@ -838,6 +822,7 @@ export function CreateHospitalDialog({
             ) : (
               <Button
                 type="submit"
+                data-action="create-hospital"
                 disabled={createMutation.isPending}
                 className="min-w-36 bg-emerald-800 text-white hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600"
               >

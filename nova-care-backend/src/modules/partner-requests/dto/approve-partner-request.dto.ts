@@ -33,4 +33,19 @@ export class ApprovePartnerRequestDto {
   @IsString()
   @IsOptional()
   adminNote?: string;
+
+  @ApiPropertyOptional({ description: 'Tên file PDF văn bản chấp thuận' })
+  @IsString()
+  @IsOptional()
+  approvalDocumentName?: string;
+
+  @ApiPropertyOptional({ description: 'MIME type của văn bản chấp thuận' })
+  @IsString()
+  @IsOptional()
+  approvalDocumentMimeType?: string;
+
+  @ApiPropertyOptional({ description: 'Nội dung PDF dạng Base64, tối đa 5MB' })
+  @IsString()
+  @IsOptional()
+  approvalDocumentData?: string;
 }

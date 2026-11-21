@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:3001",
+      "localStorage": [
+        {
+          "name": "auth-storage",
+          "value": "{\"state\":{\"user\":{\"authVersion\":0,\"id\":\"97ee24f7-8163-4536-829b-2b009c3c5d33\",\"email\":\"admin@novacare.vn\",\"phone\":\"0909090909\",\"fullName\":\"Quản trị viên NovaCare\",\"role\":\"ADMIN\",\"isActive\":true,\"lastLoginAt\":\"2026-11-18T20:03:27.944Z\",\"createdAt\":\"2026-09-18T10:48:28.035Z\",\"updatedAt\":\"2026-11-18T20:03:27.952Z\",\"deletedAt\":null,\"resetPasswordToken\":null,\"resetPasswordExpiresAt\":null,\"activationToken\":null,\"activationExpiresAt\":null,\"otpCode\":null,\"otpExpiresAt\":null,\"otpVerified\":false,\"hospitalId\":null,\"hospital\":null},\"accessToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5N2VlMjRmNy04MTYzLTQ1MzYtODI5Yi0yYjAwOWMzYzVkMzMiLCJhdXRoVmVyc2lvbiI6MCwiZW1haWwiOiJhZG1pbkBub3ZhY2FyZS52biIsInJvbGUiOiJBRE1JTiIsImhvc3BpdGFsSWQiOm51bGwsImlhdCI6MTc5NTAzMjM0NCwiZXhwIjoxNzk1MDMzMjQ0fQ.j1hTJfKL7k8vGh2cU8vcWCTKIg15a-YwMzI9toEjDU8\",\"refreshToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5N2VlMjRmNy04MTYzLTQ1MzYtODI5Yi0yYjAwOWMzYzVkMzMiLCJhdXRoVmVyc2lvbiI6MCwiZW1haWwiOiJhZG1pbkBub3ZhY2FyZS52biIsInJvbGUiOiJBRE1JTiIsImhvc3BpdGFsSWQiOm51bGwsImlhdCI6MTc5NTAzMjM0NCwiZXhwIjoxNzk1NjM3MTQ0fQ.UmFWbIGYlnEFFLpgtB9IAUorgmA6p5Q7vElZl8s_rn4\",\"isAuthenticated\":true},\"version\":0}"
+        }
+      ]
+    }
+  ]
+}

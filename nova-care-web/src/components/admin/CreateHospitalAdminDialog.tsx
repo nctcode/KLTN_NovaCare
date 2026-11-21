@@ -38,8 +38,8 @@ export function CreateHospitalAdminDialog({
 
   const [formData, setFormData] = useState({
     hospitalId: '',
+    fullName: '',
     email: '',
-    password: '',
   });
 
   // Query hospitals list for dropdown
@@ -55,16 +55,16 @@ export function CreateHospitalAdminDialog({
     mutationFn: (data: typeof formData) =>
       adminService.createHospitalAdmin({
         ...data,
-        fullName: 'Quản trị viên Bệnh viện',
+        fullName: data.fullName,
       }),
     onSuccess: () => {
-      toast.success('Cấp tài khoản Quản trị viên Bệnh viện thành công!');
+      toast.success('Đã tạo tài khoản và gửi link kích hoạt thành công!');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-recent-audit-logs'] });
       setFormData({
         hospitalId: '',
+        fullName: '',
         email: '',
-        password: '',
       });
       onOpenChange(false);
       onSuccess?.();
@@ -84,10 +84,6 @@ export function CreateHospitalAdminDialog({
       toast.error('Vui lòng nhập tài khoản / email đăng nhập');
       return;
     }
-    if (!formData.password.trim() || formData.password.length < 6) {
-      toast.error('Mật khẩu khởi tạo phải có ít nhất 6 ký tự');
-      return;
-    }
     createMutation.mutate(formData);
   };
 
@@ -102,7 +98,7 @@ export function CreateHospitalAdminDialog({
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold text-white tracking-tight">
-                  Cấp Tài Khoản Quản Trị Viện (Hospital Admin)
+                  Kích hoạt tài khoản quản trị 
                 </DialogTitle>
                 <DialogDescription className="text-xs text-emerald-200/90 mt-0.5">
                   Chỉ định cơ sở y tế, tài khoản đăng nhập và mật khẩu khởi tạo.
@@ -139,6 +135,11 @@ export function CreateHospitalAdminDialog({
             )}
           </div>
 
+          <div className="space-y-1.5">
+            <label className="font-semibold text-slate-300">Họ và tên quản trị viên <span className="text-rose-400">*</span></label>
+            <Input value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} placeholder="Nhập họ và tên" className="bg-slate-950 border-slate-700 text-white text-xs h-10" required />
+          </div>
+
           {/* 2. Tài khoản / Email */}
           <div className="space-y-1.5">
             <label className="font-semibold text-slate-300 flex items-center gap-1.5">
@@ -155,23 +156,7 @@ export function CreateHospitalAdminDialog({
             />
           </div>
 
-          {/* 3. Mật khẩu khởi tạo */}
-          <div className="space-y-1.5">
-            <label className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-emerald-400" />
-              Mật khẩu khởi tạo <span className="text-rose-400">*</span>
-            </label>
-            <Input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="Tối thiểu 6 ký tự"
-              className="bg-slate-950 border-slate-700 text-white text-xs h-10"
-              required
-              minLength={6}
-            />
-          </div>
-
+          {/* Mật khẩu được thiết lập bởi người nhận qua liên kết email */}
           <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] leading-relaxed">
             * Tài khoản này được tự động gán quyền <strong>HOSPITAL_ADMIN</strong> và chỉ được phép quản lý dữ liệu nội bộ thuộc cơ sở y tế được chọn.
           </div>
@@ -198,7 +183,7 @@ export function CreateHospitalAdminDialog({
               ) : (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                  Cấp tài khoản
+                  Tạo và gửi link kích hoạt
                 </>
               )}
             </Button>

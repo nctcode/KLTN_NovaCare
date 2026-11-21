@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '@/database/prisma.module';
 import { AuditLogService } from '@/common/services/audit-log.service';
+import { EmailModule } from '@/modules/email/email.module';
+import { IntegrationModule } from '@/modules/integration/integration.module';
 
 import { AdminDashboardService } from './admin-dashboard.service';
 import { AdminDashboardController } from './admin-dashboard.controller';
@@ -33,7 +35,7 @@ import { AdminInteroperabilityService } from './admin-interoperability.service';
 import { AdminInteroperabilityController } from './admin-interoperability.controller';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, EmailModule, IntegrationModule],
   controllers: [
     AdminDashboardController,
     AdminUsersController,

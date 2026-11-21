@@ -209,4 +209,43 @@ export class EmailService {
 
     return this.sendMail(email, subject, html, undefined, undefined, 'hospital_activation');
   }
+
+  async sendPartnerApprovalConfirmationEmail(
+    email: string,
+    hospitalName: string,
+    contactName: string,
+    adminNote?: string,
+  ): Promise<boolean> {
+    const subject = `[NovaCare] Xác nhận duyệt yêu cầu hợp tác - ${hospitalName}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+        <h2 style="color:#0c4b39">NovaCare xác nhận duyệt yêu cầu hợp tác</h2>
+        <p>Kính gửi ${contactName || 'Quý đối tác'},</p>
+        <p>Yêu cầu hợp tác của <strong>${hospitalName}</strong> đã được NovaCare phê duyệt.</p>
+        ${adminNote ? `<p><strong>Ghi chú:</strong> ${adminNote}</p>` : ''}
+        <p>Email này chỉ là thông báo xác nhận kết quả xử lý yêu cầu hợp tác.</p>
+        <p>Trân trọng,<br/>Đội ngũ NovaCare</p>
+      </div>
+    `;
+    return this.sendMail(email, subject, html, undefined, undefined, 'partner_approval_confirmation');
+  }
+
+  async sendPartnerRejectionEmail(
+    email: string,
+    hospitalName: string,
+    contactName: string,
+    reason: string,
+  ): Promise<boolean> {
+    const subject = `[NovaCare] Thông báo kết quả yêu cầu hợp tác - ${hospitalName}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+        <h2 style="color:#9f1239">Thông báo kết quả yêu cầu hợp tác</h2>
+        <p>Kính gửi ${contactName || 'Quý đối tác'},</p>
+        <p>Yêu cầu hợp tác của <strong>${hospitalName}</strong> hiện chưa đáp ứng điều kiện để được phê duyệt.</p>
+        <p><strong>Lý do:</strong> ${reason}</p>
+        <p>Trân trọng,<br/>Đội ngũ NovaCare</p>
+      </div>
+    `;
+    return this.sendMail(email, subject, html, undefined, undefined, 'partner_rejection_notice');
+  }
 }

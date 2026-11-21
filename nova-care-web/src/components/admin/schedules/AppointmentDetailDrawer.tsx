@@ -7,7 +7,7 @@ import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Phone, RotateCcw } from 'lucide-react';
+import { Loader2, Phone, RotateCcw, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { RecordContactModal } from './RecordContactModal';
 import { NoShowConfirmModal } from './NoShowConfirmModal';
@@ -42,6 +42,9 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
   const [showContactModal, setShowContactModal] = useState(false);
   const [showNoShowModal, setShowNoShowModal] = useState(false);
   const [showRevertModal, setShowRevertModal] = useState(false);
+  const [showStatusEditor, setShowStatusEditor] = useState(false);
+  const [nextStatus, setNextStatus] = useState('');
+  const [statusNote, setStatusNote] = useState('');
 
   const { data: appt, isLoading } = useQuery({
     queryKey: ['admin-appointment-detail', appointmentId],
@@ -62,6 +65,19 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
     },
   });
 
+  const statusMutation = useMutation({
+    mutationFn: () => adminService.updateAppointmentStatus(appointmentId!, nextStatus, statusNote.trim() || undefined),
+    onSuccess: () => {
+      toast.success('Cập nhật trạng thái lịch hẹn thành công');
+      setShowStatusEditor(false);
+      setStatusNote('');
+      queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-appointment-detail', appointmentId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || err.message || 'Không thể cập nhật trạng thái'),
+  });
+
   const st = appt ? STATUS_BADGE[appt.status] || { label: appt.status, styleDark: 'bg-slate-800 text-slate-300 border-slate-700', styleLight: 'bg-slate-100 text-slate-700 border-slate-200' } : null;
 
   const slot = appt?.slot;
@@ -73,6 +89,9 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
   const user = appt?.user;
   const payment = appt?.payment;
   const service = appt?.medicalService;
+
+  const editableStatuses = ['PENDING', 'CONFIRMED', 'PAID', 'COMPLETED', 'CANCELLED'];
+  const requiresStatusNote = nextStatus === 'CANCELLED';
 
   const slotStartTime = slot?.startTime ? new Date(slot.startTime) : null;
   const slotEndTime = slot?.endTime ? new Date(slot.endTime) : null;
@@ -407,8 +426,59 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
           </div>
         )}
 
+        {canOperateAppointments && appt && showStatusEditor && (
+          <div className={`mb-3 rounded-lg border p-3 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-900'}`}>
+            <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+              <label className="flex-1 w-full text-xs font-semibold">
+                Trạng thái mới
+                <select
+                  value={nextStatus}
+                  onChange={(e) => setNextStatus(e.target.value)}
+                  className="mt-1 w-full h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 text-xs font-normal"
+                >
+                  <option value="">Chọn trạng thái</option>
+                  {editableStatuses.filter((status) => status !== appt.status).map((status) => (
+                    <option key={status} value={status}>{STATUS_BADGE[status]?.label || status}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex-1 w-full text-xs font-semibold">
+                Ghi chú / lý do {requiresStatusNote ? '(bắt buộc)' : '(tùy chọn)'}
+                <input
+                  value={statusNote}
+                  onChange={(e) => setStatusNote(e.target.value)}
+                  placeholder="Nhập lý do cập nhật..."
+                  className="mt-1 w-full h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 text-xs font-normal"
+                />
+              </label>
+              <Button
+                size="sm"
+                disabled={!nextStatus || (requiresStatusNote && !statusNote.trim()) || statusMutation.isPending}
+                onClick={() => statusMutation.mutate()}
+                className="h-9 rounded-md bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+              >
+                {statusMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Lưu'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setShowStatusEditor(false)} className="h-9 rounded-md text-xs">
+                Hủy
+              </Button>
+            </div>
+          </div>
+        )}
+
         <DialogFooter className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
+            {canOperateAppointments && appt && !showStatusEditor && editableStatuses.includes(appt.status) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => { setNextStatus(''); setStatusNote(''); setShowStatusEditor(true); }}
+                className="text-xs text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 font-medium rounded-lg gap-1"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Cập nhật trạng thái
+              </Button>
+            )}
             {/* Check-in */}
             {canOperateAppointments && appt && !appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
               <Button
