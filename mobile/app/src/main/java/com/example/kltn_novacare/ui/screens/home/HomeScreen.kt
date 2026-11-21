@@ -339,7 +339,7 @@ fun HomeScreen(
                             icon = Icons.Outlined.PersonSearch,
                             tint = Color(0xFF059669),
                             bgTint = Color(0xFFECFDF5)
-                        ) { navController.navigate(Screen.Search.route) }
+                        ) { navController.navigate(Screen.DoctorBooking.route) }
 
                         QuickActionItem(
                             label = "Đặt khám\ncơ sở",
@@ -371,18 +371,11 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
                         QuickActionItem(
-                            label = "Tư vấn\nchat",
-                            icon = Icons.Outlined.Forum,
-                            tint = Color(0xFF0891B2),
-                            bgTint = Color(0xFFECFEFF)
-                        ) { navController.navigate(Screen.Consultations.route) }
-
-                        QuickActionItem(
                             label = "Gọi video\nbác sĩ",
                             icon = Icons.Outlined.Videocam,
                             tint = Color(0xFFDB2777),
                             bgTint = Color(0xFFFDF2F8)
-                        ) { navController.navigate(Screen.Consultations.route) }
+                        ) { navController.navigate(Screen.VideoDoctors.route) }
 
                         QuickActionItem(
                             label = "Hồ sơ\nsức khỏe",
@@ -598,46 +591,52 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val sampleSpecs = listOf(
-                        Triple("Dị ứng - Miễn dịch", Icons.Outlined.Shield, Color(0xFF059669)),
-                        Triple("Y học cổ truyền", Icons.Outlined.Spa, Color(0xFFD97706)),
-                        Triple("Hô hấp - Phổi", Icons.Outlined.Air, Color(0xFF0284C7)),
-                        Triple("Cơ xương khớp", Icons.Outlined.AccessibilityNew, Color(0xFF7C3AED)),
-                        Triple("Sản phụ khoa", Icons.Outlined.ChildCare, Color(0xFFDB2777)),
-                        Triple("Nhãn khoa", Icons.Outlined.Visibility, Color(0xFF0D9488)),
-                        Triple("Tim mạch", Icons.Outlined.FavoriteBorder, Color(0xFFE11D48)),
-                        Triple("Thần kinh", Icons.Outlined.Psychology, Color(0xFF4F46E5))
+                    val homeSpecialties = (specialtiesState as? NetworkState.Success)?.data.orEmpty().take(8)
+                    val specialtyVisuals = listOf(
+                        Icons.Outlined.Shield to Color(0xFF059669),
+                        Icons.Outlined.Spa to Color(0xFFD97706),
+                        Icons.Outlined.Air to Color(0xFF0284C7),
+                        Icons.Outlined.AccessibilityNew to Color(0xFF7C3AED),
+                        Icons.Outlined.ChildCare to Color(0xFFDB2777),
+                        Icons.Outlined.Visibility to Color(0xFF0D9488),
+                        Icons.Outlined.FavoriteBorder to Color(0xFFE11D48),
+                        Icons.Outlined.Psychology to Color(0xFF4F46E5)
                     )
 
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        sampleSpecs.chunked(4).forEach { row ->
+                        homeSpecialties.chunked(4).forEachIndexed { rowIndex, row ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                row.forEach { (name, icon, color) ->
+                                row.forEachIndexed { columnIndex, specialty ->
+                                    val visual = specialtyVisuals[(rowIndex * 4 + columnIndex) % specialtyVisuals.size]
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier
                                             .weight(1f)
-                                            .clickable { navController.navigate(Screen.Search.route) }
+                                            .clickable {
+                                                navController.navigate(
+                                                    Screen.SpecialtyResults.createRoute(specialty.id, specialty.name)
+                                                )
+                                            }
                                     ) {
                                         Box(
                                             modifier = Modifier
                                                 .size(48.dp)
-                                                .background(color.copy(alpha = 0.1f), RoundedCornerShape(14.dp)),
+                                                .background(visual.second.copy(alpha = 0.1f), RoundedCornerShape(14.dp)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
-                                                icon,
-                                                contentDescription = name,
-                                                tint = color,
+                                                visual.first,
+                                                contentDescription = specialty.name,
+                                                tint = visual.second,
                                                 modifier = Modifier.size(24.dp)
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(6.dp))
                                         Text(
-                                            name,
+                                            specialty.name,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = TextPrimary,
@@ -647,6 +646,12 @@ fun HomeScreen(
                                         )
                                     }
                                 }
+                                repeat(4 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
+                            }
+                        }
+                        if (specialtiesState is NetworkState.Loading || specialtiesState is NetworkState.Idle) {
+                            Box(Modifier.fillMaxWidth().height(116.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = Primary, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
                             }
                         }
                     }
@@ -654,7 +659,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(18.dp))
 
                     OutlinedButton(
-                        onClick = { navController.navigate(Screen.Search.route) },
+                        onClick = { navController.navigate(Screen.SpecialtyCatalog.route) },
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, PrimaryBorder),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryDark),

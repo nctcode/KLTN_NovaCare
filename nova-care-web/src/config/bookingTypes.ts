@@ -47,7 +47,7 @@ export interface BookingTypeConfig {
 export const BOOKING_TYPES_CONFIG: Record<BookingType, BookingTypeConfig> = {
   SERVICE: {
     id: 'SERVICE',
-    title: 'Khám Dịch Vụ',
+    title: 'Khám dịch vụ',
     badge: 'Gói khám & Xét nghiệm',
     description: 'Đăng ký các gói khám tổng quát, xét nghiệm máu, chẩn đoán hình ảnh kỹ thuật cao.',
     icon: FileText,
@@ -146,7 +146,7 @@ export const BOOKING_TYPES_CONFIG: Record<BookingType, BookingTypeConfig> = {
 
   DOCTOR: {
     id: 'DOCTOR',
-    title: 'Khám Theo Bác Sĩ',
+    title: 'Khám theo bác sĩ',
     badge: 'Khuyên dùng • Lựa chọn Bác sĩ',
     description: 'Chủ động lựa chọn Bác sĩ chuyên khoa giỏi, xem học vị, lịch khám và giữ khung giờ hẹn.',
     icon: UserCheck,
@@ -170,17 +170,17 @@ export const BOOKING_TYPES_CONFIG: Record<BookingType, BookingTypeConfig> = {
 
   OUT_OF_HOURS: {
     id: 'OUT_OF_HOURS',
-    title: 'Khám Ngoài Giờ',
-    badge: 'Buổi tối & Cuối tuần',
-    description: 'Đăng ký các ca khám ngoài giờ hành chính (buổi tối và các ngày cuối tuần).',
+    title: 'Khám ngoài giờ',
+    badge: 'Thứ bảy và chủ nhật',
+    description: 'Đăng ký khám ngoài giờ tại các chuyên khoa được bệnh viện cấu hình.',
     icon: Clock,
     color: 'border-indigo-500 bg-indigo-50/60',
     iconBg: 'bg-indigo-100 text-indigo-800',
     badgeColor: 'bg-indigo-700 text-white',
     features: [
-      'Ca khám buổi tối (17h00 - 20h00)',
-      'Lịch khám ngày Thứ 7 & Chủ Nhật',
-      'Phù hợp với người đi làm & bận rộn',
+      'Dịch vụ ngoài giờ chung 270.000đ',
+      'Chỉ hiển thị lịch thứ bảy và chủ nhật',
+      'Khung giờ do bệnh viện thiết lập',
     ],
     requiresFacility: true,
     requiresDepartment: true,

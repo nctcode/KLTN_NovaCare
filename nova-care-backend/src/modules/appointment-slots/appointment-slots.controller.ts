@@ -17,6 +17,8 @@ import { UpdateSlotDto } from './dto/update-slot.dto';
 import { GenerateSlotsDto } from './dto/generate-slots.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { Public } from '@/common/decorators/public.decorator';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { RolesGuard } from '@/common/guards/roles.guard';
 
 @ApiTags('Khung giờ khám')
 @Controller('api/v1/appointment-slots')
@@ -58,7 +60,8 @@ export class AppointmentSlotsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Tạo khung giờ khám đơn lẻ' })
   async create(@Body() createDto: CreateSlotDto) {
@@ -71,7 +74,8 @@ export class AppointmentSlotsController {
   }
 
   @Post('generate')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Tự động tạo các khung giờ khám từ lịch làm việc cố định' })
   async generateSlots(@Body() generateDto: GenerateSlotsDto) {
@@ -92,7 +96,8 @@ export class AppointmentSlotsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Cập nhật khung giờ khám (Sức chứa, Khóa/Mở, Kích hoạt)' })
   async updateSlot(@Param('id') id: string, @Body() updateDto: UpdateSlotDto) {
@@ -134,7 +139,8 @@ export class AppointmentSlotsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Xóa khung giờ khám' })
   async remove(@Param('id') id: string) {

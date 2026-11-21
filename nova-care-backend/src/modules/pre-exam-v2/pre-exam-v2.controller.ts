@@ -11,7 +11,9 @@ import {
   UploadedFile,
   BadRequestException,
   ServiceUnavailableException,
+  StreamableFile,
 } from '@nestjs/common';
+import { createReadStream } from 'fs';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ScreeningLLMService } from '@/modules/ai/services/screening-llm.service';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
@@ -50,24 +52,27 @@ export class PreExamV2Controller {
     return { data: { sessionId } };
   }
 
-  @Public()
   @Post('sessions/:id/media')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Tải lên video/audio recording cho phiên sàng lọc (Video & Voice)' })
   async uploadMedia(
+    @CurrentUser() user: any,
     @Param('id') id: string,
     @UploadedFile() file: any,
     @Body() dto: { durationMs?: number; scriptId?: string; type?: string },
   ) {
+    await this.service.getSession(id, user.id);
     const result = await this.mediaService.saveMedia(id, file, dto);
     return { data: result };
   }
 
-  @Public()
   @Delete('sessions/:id/media/:mediaId')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Xóa video/audio recording khỏi hệ thống' })
-  async deleteMedia(@Param('id') id: string, @Param('mediaId') mediaId: string) {
+  async deleteMedia(@CurrentUser() user: any, @Param('id') id: string, @Param('mediaId') mediaId: string) {
+    await this.service.getSession(id, user.id);
     const result = await this.mediaService.deleteMedia(id, mediaId);
     return { data: result };
   }
@@ -111,11 +116,22 @@ export class PreExamV2Controller {
   }
 
   @Get(':id')
-  @Public()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy thông tin chi tiết phiếu tiền khám' })
-  async getDetail(@Param('id') id: string) {
-    const session = await this.service.getSession(id);
+  async getDetail(@CurrentUser() user: any, @Param('id') id: string) {
+    const session = await this.service.getSession(id, user.id);
     return { data: session };
+  }
+
+  @Get('sessions/:id/media/:mediaId/file')
+  @UseGuards(JwtAuthGuard)
+  async getMediaFile(@CurrentUser() user: any, @Param('id') id: string, @Param('mediaId') mediaId: string) {
+    const { media, filePath } = await this.mediaService.getAuthorizedMedia(id, mediaId, user);
+    return new StreamableFile(createReadStream(filePath), {
+      type: media.mimeType,
+      disposition: `inline; filename="${media.id}"`,
+      length: media.sizeBytes,
+    });
   }
 
   @Public()
@@ -130,9 +146,8 @@ export class PreExamV2Controller {
     catch { throw new ServiceUnavailableException('Chưa thể chuyển giọng nói thành văn bản. Vui lòng thử lại hoặc nhập mô tả.'); }
   }
 
-  @Public()
   @Post('analyze-smartphone')
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseInterceptors(
     FileFieldsInterceptor([
@@ -143,13 +158,14 @@ export class PreExamV2Controller {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Phân tích sàng lọc 100% Smartphone (PPG nhịp tim, BMI, Voice, Vision & Triage 3 cấp)' })
   async analyzeSmartphone(
+    @CurrentUser() user: any,
     @Body() dto: any,
     @UploadedFiles() files: { voice?: any[]; images?: any[] },
   ) {
     const voiceFile = files?.voice && files.voice.length > 0 ? files.voice[0] : undefined;
     const imageFiles = files?.images || [];
 
-    const result = await this.service.analyzeSmartphoneInputs(dto, { voiceFile, imageFiles });
+    const result = await this.service.analyzeSmartphoneInputs(user.id, dto, { voiceFile, imageFiles });
     return { data: result };
   }
 

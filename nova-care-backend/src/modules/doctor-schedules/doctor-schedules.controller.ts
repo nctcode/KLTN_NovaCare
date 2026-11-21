@@ -16,6 +16,8 @@ import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { Public } from '@/common/decorators/public.decorator';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { RolesGuard } from '@/common/guards/roles.guard';
 
 @ApiTags('Lịch làm việc cố định của bác sĩ')
 @Controller('api/v1/doctor-schedules')
@@ -23,7 +25,8 @@ export class DoctorSchedulesController {
   constructor(private readonly service: DoctorSchedulesService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Tạo lịch làm việc cố định mới' })
   async create(@Body() createDto: CreateScheduleDto) {
@@ -100,7 +103,8 @@ export class DoctorSchedulesController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Cập nhật lịch làm việc cố định' })
   async update(@Param('id') id: string, @Body() updateDto: UpdateScheduleDto) {
@@ -113,7 +117,8 @@ export class DoctorSchedulesController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Xóa lịch làm việc cố định (vô hiệu hóa)' })
   async remove(@Param('id') id: string) {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -60,22 +61,18 @@ data class HospitalBookingMode(
     val badge: String? = null
 )
 
+@Suppress("UNUSED_PARAMETER")
 fun getAvailableBookingModesForHospital(hospital: Hospital): List<HospitalBookingMode> {
-    val modes = mutableListOf<HospitalBookingMode>()
-
-    modes.add(
+    return listOf(
         HospitalBookingMode(
             id = "DOCTOR",
-            title = "Khám Theo Bác Sĩ",
-            description = "Chủ động lựa chọn Bác sĩ chuyên khoa, xem học vị & khung giờ trống.",
+            title = "Khám theo bác sĩ",
+            description = "Chủ động lựa chọn bác sĩ chuyên khoa, xem học vị và khung giờ trống.",
             icon = Icons.Default.Person,
             iconBgColor = Color(0xFFECFDF5),
             iconTint = Color(0xFF0C4B39),
             badge = "Khuyên dùng"
-        )
-    )
-
-    modes.add(
+        ),
         HospitalBookingMode(
             id = "SERVICE",
             title = "Khám dịch vụ",
@@ -84,48 +81,16 @@ fun getAvailableBookingModesForHospital(hospital: Hospital): List<HospitalBookin
             iconBgColor = Color(0xFFEFF6FF),
             iconTint = Color(0xFF2563EB),
             badge = null
-        )
-    )
-
-    modes.add(
+        ),
         HospitalBookingMode(
             id = "AFTER_HOURS",
             title = "Khám ngoài giờ",
-            description = "Chọn phòng khám và lịch cuối tuần còn chỗ.",
+            description = "Chọn dịch vụ, phòng khám và lịch cuối tuần còn chỗ.",
             icon = Icons.Default.MedicalServices,
             iconBgColor = Color(0xFFEAF8F2),
             iconTint = Color(0xFF075E47)
         )
     )
-
-    if (hospital.name.contains("Đa khoa") || hospital.name.contains("Y Dược") || hospital.name.contains("Tân Bình") || hospital.name.contains("Sài Gòn")) {
-        modes.add(
-            HospitalBookingMode(
-                id = "SPECIALTY",
-                title = "Khám Theo Chuyên Khoa",
-                description = "Đăng ký khám theo khoa tiêu chuẩn, hệ thống tự động xếp Bác sĩ trực ca.",
-                icon = Icons.Default.LocalHospital,
-                iconBgColor = Color(0xFFFAF5FF),
-                iconTint = Color(0xFF9333EA)
-            )
-        )
-    }
-
-    if (hospital.name.contains("Quốc tế") || hospital.name.contains("Sài Gòn") || hospital.name.contains("Sản Nhi") || hospital.name.contains("Central")) {
-        modes.add(
-            HospitalBookingMode(
-                id = "PACKAGE",
-                title = "Gói Khám Sức Khỏe Tổng Quát",
-                description = "Gói khám sức khỏe định kỳ toàn diện, tầm soát ung thư & tim mạch.",
-                icon = Icons.Default.HealthAndSafety,
-                iconBgColor = Color(0xFFFEF3C7),
-                iconTint = Color(0xFFD97706),
-                badge = "Ưu đãi"
-            )
-        )
-    }
-
-    return modes
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -133,31 +98,50 @@ fun getAvailableBookingModesForHospital(hospital: Hospital): List<HospitalBookin
 fun HospitalFacilityBookingScreen(
     initialHospitalId: String?, navController: NavController, bookingViewModel: BookingViewModel,
     doctorViewModel: DoctorViewModel, patientViewModel: PatientViewModel,
-    initialSpecialtyId: String? = null, initialReason: String? = null
+    initialSpecialtyId: String? = null, initialSpecialtyName: String? = null,
+    initialReason: String? = null, initialDoctorId: String? = null
 ) {
-    var choosingHospital by rememberSaveable { mutableStateOf(true) }
+    var choosingHospital by rememberSaveable { mutableStateOf(initialHospitalId == null) }
     var initialized by rememberSaveable { mutableStateOf(false) }
     var appliedInitial by rememberSaveable { mutableStateOf(false) }
+    var appliedSuggestion by rememberSaveable { mutableStateOf(false) }
+    var appliedDoctor by rememberSaveable { mutableStateOf(false) }
+
     val hospitals by doctorViewModel.hospitals.collectAsState()
     val specialties by doctorViewModel.specialties.collectAsState()
-    var appliedSuggestion by rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         if (!initialized) {
-            bookingViewModel.resetBooking()
+            if (bookingViewModel.uiState.value.screeningSessionId == null) bookingViewModel.resetBooking()
             initialized = true
         }
         doctorViewModel.loadHospitals()
-        if (initialSpecialtyId != null) doctorViewModel.loadSpecialties()
+        doctorViewModel.loadSpecialties()
     }
-    LaunchedEffect(appliedInitial, specialties, initialSpecialtyId) {
-        if (appliedInitial && !appliedSuggestion && initialSpecialtyId != null) {
-            (specialties as? NetworkState.Success)?.data?.find { it.id == initialSpecialtyId }?.let {
-                bookingViewModel.selectSpecialty(it)
-                bookingViewModel.setDetails(initialReason.orEmpty(), "")
-                appliedSuggestion = true
+
+    LaunchedEffect(specialties, initialSpecialtyId, initialSpecialtyName) {
+        if (!appliedSuggestion && (!initialSpecialtyId.isNullOrBlank() || !initialSpecialtyName.isNullOrBlank())) {
+            val specList = (specialties as? NetworkState.Success)?.data.orEmpty()
+            if (specList.isNotEmpty()) {
+                val found = specList.find { spec ->
+                    (!initialSpecialtyId.isNullOrBlank() && spec.id.equals(initialSpecialtyId, ignoreCase = true)) ||
+                    (!initialSpecialtyName.isNullOrBlank() && (
+                        spec.name.equals(initialSpecialtyName, ignoreCase = true) ||
+                        spec.name.contains(initialSpecialtyName, ignoreCase = true) ||
+                        initialSpecialtyName.contains(spec.name, ignoreCase = true)
+                    ))
+                }
+                if (found != null) {
+                    bookingViewModel.selectSpecialty(found)
+                    if (bookingViewModel.uiState.value.screeningSessionId == null && !initialReason.isNullOrBlank()) {
+                        bookingViewModel.setDetails(initialReason, "")
+                    }
+                    appliedSuggestion = true
+                }
             }
         }
     }
+
     LaunchedEffect(hospitals, initialHospitalId) {
         if (!appliedInitial && initialHospitalId != null) {
             (hospitals as? NetworkState.Success)?.data?.find { it.id == initialHospitalId }?.let {
@@ -167,6 +151,24 @@ fun HospitalFacilityBookingScreen(
             }
         }
     }
+
+    LaunchedEffect(initialDoctorId, initialHospitalId) {
+        if (!appliedDoctor && !initialDoctorId.isNullOrBlank()) {
+            try {
+                val doctorRepo = com.example.kltn_novacare.data.repository.DoctorRepository()
+                val docRes = doctorRepo.getDoctorById(initialDoctorId)
+                docRes.onSuccess { doc ->
+                    val wp = doc.workPlaces?.find { it.hospitalId == initialHospitalId }
+                        ?: doc.workPlaces?.firstOrNull()
+                    if (wp != null) {
+                        bookingViewModel.selectDoctor(doc, wp)
+                        appliedDoctor = true
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
     if (choosingHospital) {
         Scaffold(topBar = { TopAppBar(title = { Text("Đặt khám theo cơ sở") },
             navigationIcon = { IconButton(onClick = { navController.popBackStack() }) {
@@ -177,19 +179,7 @@ fun HospitalFacilityBookingScreen(
                     bookingViewModel.selectHospital(hospital)
                     bookingViewModel.setBookingType(mode)
                     choosingHospital = false
-                }
-            }
-        }
-    } else if (initialSpecialtyId != null && !appliedSuggestion) {
-        Scaffold(topBar = { TopAppBar(title = { Text("Kiểm tra chuyên khoa gợi ý") }) }) { padding ->
-            Column(Modifier.padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                when (specialties) {
-                    is NetworkState.Loading, is NetworkState.Idle -> CircularProgressIndicator()
-                    else -> {
-                        Text("Chưa xác nhận được chuyên khoa gợi ý trong danh mục hiện tại. Bạn có thể thử lại hoặc tự chọn khi đặt khám.")
-                        Button(onClick = { doctorViewModel.loadSpecialties() }) { Text("Thử lại") }
-                        TextButton(onClick = { appliedSuggestion = true }) { Text("Tự chọn thông tin khám") }
-                    }
+                    appliedInitial = true
                 }
             }
         }
@@ -210,6 +200,17 @@ fun DoctorSelectionModal(
 ) {
     val doctorsState by doctorViewModel.doctors.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var showFilterDialog by remember { mutableStateOf(false) }
+    var selectedGender by rememberSaveable { mutableStateOf<String?>(null) }
+    var minimumExperience by rememberSaveable { mutableStateOf<Int?>(null) }
+    var maximumFee by rememberSaveable { mutableStateOf<Double?>(null) }
+    var sortOption by rememberSaveable { mutableStateOf("RECOMMENDED") }
+    val activeFilterCount = listOfNotNull(
+        selectedGender,
+        minimumExperience,
+        maximumFee,
+        sortOption.takeUnless { it == "RECOMMENDED" }
+    ).size
 
     LaunchedEffect(hospital?.id, specialtyId) {
         doctorViewModel.searchDoctors(hospitalId = hospital?.id, specialtyId = specialtyId)
@@ -286,17 +287,28 @@ fun DoctorSelectionModal(
                     Surface(
                         modifier = Modifier
                             .height(52.dp)
-                            .clickable { /* Filter */ },
+                            .clickable { showFilterDialog = true },
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF8FAFC)
+                        color = if (activeFilterCount > 0) NovaCareGreenLight else Color(0xFFF8FAFC),
+                        border = if (activeFilterCount > 0) BorderStroke(1.dp, NovaCareGreenBorder) else null
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(Icons.Default.Tune, contentDescription = "Lọc", tint = Color(0xFF475569), modifier = Modifier.size(18.dp))
-                            Text("Lọc", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MedproTextDark)
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = "Lọc",
+                                tint = if (activeFilterCount > 0) NovaCareGreen else Color(0xFF475569),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                if (activeFilterCount > 0) "Lọc ($activeFilterCount)" else "Lọc",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = if (activeFilterCount > 0) NovaCareGreenDark else MedproTextDark
+                            )
                         }
                     }
                 }
@@ -311,28 +323,73 @@ fun DoctorSelectionModal(
                     }
                     is NetworkState.Success -> {
                         val doctors = (doctorsState as NetworkState.Success<List<Doctor>>).data
-                        val filteredDoctors = remember(doctors, searchQuery, hospital?.id, specialtyId) {
-                            doctors.filter { doc ->
-                                doc.workPlaces.orEmpty().any { (hospital == null || it.hospitalId == hospital.id) && (specialtyId == null || (it.specialtyId ?: it.specialty?.id) == specialtyId) } &&
-                                        (searchQuery.isBlank() ||
-                                        doc.displayFullNameWithTitle.contains(searchQuery, ignoreCase = true) ||
-                                        doc.displaySpecialty.contains(searchQuery, ignoreCase = true))
+                        val filteredDoctors = remember(
+                            doctors, searchQuery, hospital?.id, specialtyId,
+                            selectedGender, minimumExperience, maximumFee, sortOption
+                        ) {
+                            val matches = doctors.mapNotNull { doc ->
+                                val workplace = doc.workPlaces.orEmpty().firstOrNull {
+                                    (hospital == null || it.hospitalId == hospital.id) &&
+                                        (specialtyId == null || (it.specialtyId ?: it.specialty?.id) == specialtyId)
+                                } ?: return@mapNotNull null
+                                val fee = workplace.consultationFee ?: workplace.price ?: doc.displayPrice
+                                val matchesSearch = searchQuery.isBlank() ||
+                                    doc.displayFullNameWithTitle.contains(searchQuery, ignoreCase = true) ||
+                                    doc.displaySpecialty.contains(searchQuery, ignoreCase = true) ||
+                                    workplace.hospital?.name?.contains(searchQuery, ignoreCase = true) == true
+                                val matchesGender = selectedGender == null || doc.gender?.uppercase() == selectedGender
+                                val matchesExperience = minimumExperience == null ||
+                                    (doc.yearsOfExperience ?: 0) >= minimumExperience!!
+                                val matchesFee = maximumFee == null || fee <= maximumFee!!
+                                if (matchesSearch && matchesGender && matchesExperience && matchesFee) doc to workplace else null
+                            }
+                            when (sortOption) {
+                                "RATING" -> matches.sortedByDescending { it.first.displayRating }
+                                "EXPERIENCE" -> matches.sortedByDescending { it.first.yearsOfExperience ?: 0 }
+                                "PRICE_ASC" -> matches.sortedBy {
+                                    it.second.consultationFee ?: it.second.price ?: it.first.displayPrice
+                                }
+                                else -> matches
                             }
                         }
 
                         if (filteredDoctors.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("Không tìm thấy bác sĩ nào.", color = MedproSubText, fontSize = 14.sp)
+                            Column(
+                                modifier = Modifier.fillMaxSize().padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.PersonSearch,
+                                    contentDescription = null,
+                                    tint = Color(0xFF94A3B8),
+                                    modifier = Modifier.size(38.dp)
+                                )
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    if (activeFilterCount > 0) "Không có bác sĩ phù hợp với bộ lọc" else "Không tìm thấy bác sĩ nào.",
+                                    color = MedproSubText,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.Center
+                                )
+                                if (activeFilterCount > 0) {
+                                    TextButton(onClick = {
+                                        selectedGender = null
+                                        minimumExperience = null
+                                        maximumFee = null
+                                        sortOption = "RECOMMENDED"
+                                    }) {
+                                        Text("Xóa bộ lọc", color = NovaCareGreen, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
                         } else {
                             LazyColumn(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(filteredDoctors) { doc ->
-                                    val workplace = doc.workPlaces?.firstOrNull {
-                                        (hospital == null || it.hospitalId == hospital.id) && (specialtyId == null || (it.specialtyId ?: it.specialty?.id) == specialtyId)
-                                    } ?: return@items
+                                items(filteredDoctors, key = { "${it.first.id}-${it.second.id}" }) { (doc, workplace) ->
 
                                     OutlinedCard(
                                         onClick = { onDoctorSelected(doc, workplace) },
@@ -383,7 +440,7 @@ fun DoctorSelectionModal(
                                                 )
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
-                                                    text = "Giá khám: ${NumberFormat.getCurrencyInstance(Locale("vi", "VN")).format(doc.displayPrice)}",
+                                                    text = "Giá khám: ${NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN")).format(workplace.consultationFee ?: workplace.price ?: doc.displayPrice)}",
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 13.sp,
                                                     color = MedproTextDark
@@ -402,6 +459,168 @@ fun DoctorSelectionModal(
                     }
                     else -> {}
                 }
+            }
+        }
+    }
+
+    if (showFilterDialog) {
+        DoctorFilterDialog(
+            selectedGender = selectedGender,
+            minimumExperience = minimumExperience,
+            maximumFee = maximumFee,
+            sortOption = sortOption,
+            onDismiss = { showFilterDialog = false },
+            onApply = { gender, experience, fee, sort ->
+                selectedGender = gender
+                minimumExperience = experience
+                maximumFee = fee
+                sortOption = sort
+                showFilterDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun DoctorFilterDialog(
+    selectedGender: String?,
+    minimumExperience: Int?,
+    maximumFee: Double?,
+    sortOption: String,
+    onDismiss: () -> Unit,
+    onApply: (String?, Int?, Double?, String) -> Unit
+) {
+    var gender by rememberSaveable { mutableStateOf(selectedGender) }
+    var experience by rememberSaveable { mutableStateOf(minimumExperience) }
+    var fee by rememberSaveable { mutableStateOf(maximumFee) }
+    var sort by rememberSaveable { mutableStateOf(sortOption) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.92f).wrapContentHeight(),
+            shape = RoundedCornerShape(22.dp),
+            color = Color.White
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Lọc bác sĩ", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MedproTextDark)
+                        Text("Chọn tiêu chí phù hợp với nhu cầu", fontSize = 12.sp, color = MedproSubText)
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Đóng", tint = Color(0xFF64748B))
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                DoctorFilterSection("Giới tính") {
+                    FilterChoiceRow(
+                        options = listOf(null to "Tất cả", "MALE" to "Nam", "FEMALE" to "Nữ"),
+                        selected = gender,
+                        onSelect = { gender = it }
+                    )
+                }
+
+                DoctorFilterSection("Kinh nghiệm") {
+                    FilterChoiceRow(
+                        options = listOf(null to "Tất cả", 5 to "Từ 5 năm", 10 to "Từ 10 năm", 15 to "Từ 15 năm"),
+                        selected = experience,
+                        onSelect = { experience = it }
+                    )
+                }
+
+                DoctorFilterSection("Mức phí khám") {
+                    FilterChoiceRow(
+                        options = listOf(
+                            null to "Tất cả",
+                            300_000.0 to "≤ 300.000đ",
+                            500_000.0 to "≤ 500.000đ",
+                            1_000_000.0 to "≤ 1 triệu"
+                        ),
+                        selected = fee,
+                        onSelect = { fee = it }
+                    )
+                }
+
+                DoctorFilterSection("Sắp xếp theo") {
+                    FilterChoiceRow(
+                        options = listOf(
+                            "RECOMMENDED" to "Đề xuất",
+                            "RATING" to "Đánh giá cao",
+                            "EXPERIENCE" to "Kinh nghiệm",
+                            "PRICE_ASC" to "Phí thấp"
+                        ),
+                        selected = sort,
+                        onSelect = { sort = it }
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            gender = null
+                            experience = null
+                            fee = null
+                            sort = "RECOMMENDED"
+                        },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, NovaCareGreenBorder)
+                    ) {
+                        Text("Đặt lại", color = NovaCareGreenDark, fontWeight = FontWeight.Bold)
+                    }
+                    Button(
+                        onClick = { onApply(gender, experience, fee, sort) },
+                        modifier = Modifier.weight(1.35f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NovaCareGreen)
+                    ) {
+                        Text("Áp dụng", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DoctorFilterSection(title: String, content: @Composable () -> Unit) {
+    Text(title, color = MedproTextDark, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(8.dp))
+    content()
+    Spacer(Modifier.height(16.dp))
+}
+
+@Composable
+private fun <T> FilterChoiceRow(
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(options) { (value, label) ->
+            val isSelected = selected == value
+            Surface(
+                modifier = Modifier.clickable { onSelect(value) },
+                shape = RoundedCornerShape(10.dp),
+                color = if (isSelected) NovaCareGreenLight else Color(0xFFF8FAFC),
+                border = BorderStroke(1.dp, if (isSelected) NovaCareGreen else Color(0xFFE2E8F0))
+            ) {
+                Text(
+                    label,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                    color = if (isSelected) NovaCareGreenDark else Color(0xFF475569),
+                    fontSize = 12.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                )
             }
         }
     }
@@ -466,7 +685,7 @@ fun StepSelectHospital(
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(
-            "Bước 1: Chọn Cơ sở Y tế / Bệnh viện",
+                "Bước 1: Chọn cơ sở y tế hoặc bệnh viện",
             fontWeight = FontWeight.ExtraBold,
             fontSize = 17.sp,
             color = Color(0xFF0F172A)
@@ -523,7 +742,7 @@ fun StepSelectHospital(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Bộ lọc theo Tỉnh thành & Quận huyện có cơ sở:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF334155))
+                Text("Bộ lọc theo tỉnh/thành và quận/huyện có cơ sở:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF334155))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -544,7 +763,7 @@ fun StepSelectHospital(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = selectedProvince ?: "Tất cả Tỉnh/Thành",
+                                    text = selectedProvince ?: "Tất cả tỉnh/thành",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = if (selectedProvince != null) Color(0xFF0C4B39) else Color(0xFF334155),
@@ -560,7 +779,7 @@ fun StepSelectHospital(
                                 onDismissRequest = { provinceExpanded = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Tất cả Tỉnh/Thành", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            text = { Text("Tất cả tỉnh/thành", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
                                     onClick = {
                                         selectedProvince = null
                                         selectedDistrict = null
@@ -595,7 +814,7 @@ fun StepSelectHospital(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = selectedDistrict ?: "Tất cả Quận/Huyện",
+                                    text = selectedDistrict ?: "Tất cả quận/huyện",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = if (selectedDistrict != null) Color(0xFF0C4B39) else Color(0xFF334155),
@@ -611,7 +830,7 @@ fun StepSelectHospital(
                                 onDismissRequest = { districtExpanded = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Tất cả Quận/Huyện", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            text = { Text("Tất cả quận/huyện", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
                                     onClick = {
                                         selectedDistrict = null
                                         districtExpanded = false

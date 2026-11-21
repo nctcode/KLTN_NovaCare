@@ -571,4 +571,42 @@ export const adminService = {
     const response = await apiClient.post<any>('/hospital-admin/integration/test-handshake', data);
     return extractData(response);
   },
+
+  async getAfterHoursConfig(hospitalId?: string): Promise<any> {
+    const query = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : '';
+    const response = await apiClient.get<any>(`/clinic-rooms/after-hours-config${query}`);
+    return extractData(response);
+  },
+
+  async getClinicRoomManagement(hospitalId: string | undefined, mode: 'SERVICE' | 'AFTER_HOURS'): Promise<any> {
+    const params = new URLSearchParams({ mode });
+    if (hospitalId) params.set('hospitalId', hospitalId);
+    const response = await apiClient.get<any>(`/clinic-rooms/management?${params.toString()}`);
+    return extractData(response);
+  },
+
+  async saveAfterHoursSpecialties(hospitalId: string, specialtyIds: string[]): Promise<any> {
+    const response = await apiClient.post<any>('/clinic-rooms/after-hours-config', { hospitalId, specialtyIds });
+    return extractData(response);
+  },
+
+  async createClinicRoom(data: { hospitalId: string; specialtyId: string; code: string; name: string }): Promise<any> {
+    const response = await apiClient.post<any>('/clinic-rooms', data);
+    return extractData(response);
+  },
+
+  async assignAfterHoursSession(data: { roomId: string; medicalServiceId: string; slotId: string; capacity: number }): Promise<any> {
+    const response = await apiClient.post<any>('/clinic-rooms/sessions', { ...data, mode: 'AFTER_HOURS' });
+    return extractData(response);
+  },
+
+  async assignClinicRoomSession(data: { roomId: string; medicalServiceId: string; slotId: string; capacity: number; mode: 'SERVICE' | 'AFTER_HOURS' }): Promise<any> {
+    const response = await apiClient.post<any>('/clinic-rooms/sessions', data);
+    return extractData(response);
+  },
+
+  async deleteAfterHoursSession(id: string): Promise<any> {
+    const response = await apiClient.delete<any>(`/clinic-rooms/sessions/${id}`);
+    return extractData(response);
+  },
 };

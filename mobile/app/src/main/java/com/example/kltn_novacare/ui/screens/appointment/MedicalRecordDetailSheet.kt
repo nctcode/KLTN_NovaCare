@@ -163,7 +163,7 @@ fun MedicalRecordDetailSheet(
                 }
 
                 // 6. Đơn thuốc (Prescription)
-                val prescriptionItems = encounter.prescription?.getAsJsonArray("items")
+                val prescriptionItems = encounter.prescription?.get("items")?.takeIf { it.isJsonArray }?.asJsonArray
                 val prescriptionNote = encounter.prescription?.text("note")?.trim().orEmpty()
 
                 if ((prescriptionItems != null && prescriptionItems.size() > 0) || prescriptionNote.isNotBlank()) {

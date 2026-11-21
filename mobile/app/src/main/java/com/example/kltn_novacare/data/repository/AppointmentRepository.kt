@@ -1,6 +1,7 @@
 package com.example.kltn_novacare.data.repository
 
 import com.example.kltn_novacare.data.model.Appointment
+import com.example.kltn_novacare.data.model.AppointmentScreening
 import com.example.kltn_novacare.data.model.Notification
 import com.example.kltn_novacare.data.remote.*
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +22,8 @@ class AppointmentRepository(private val apiService: ApiService = ApiClient.getSe
             requireNotNull(it.data) { "Máy chủ chưa trả về kết quả thanh toán" }
         }
 
-    suspend fun createAppointment(request: CreateAppointmentRequest): Result<Appointment> =
-        healthApiResult("Đặt lịch khám thất bại", { apiService.createAppointment(request) }) {
+    suspend fun createAppointment(request: CreateAppointmentRequest, bookingType: String? = null): Result<Appointment> =
+        healthApiResult("Đặt lịch khám thất bại", { apiService.createAppointment(bookingType, request) }) {
             requireNotNull(it.data) { "Máy chủ chưa trả về lịch khám" }
         }
 
@@ -81,6 +82,11 @@ class AppointmentRepository(private val apiService: ApiService = ApiClient.getSe
             Result.failure(e)
         }
     }
+
+    suspend fun getAppointmentScreening(id: String): Result<AppointmentScreening> =
+        healthApiResult("Không thể tải phiếu sàng lọc AI", { apiService.getAppointmentScreening(id) }) {
+            requireNotNull(it.data)
+        }
 
     suspend fun cancelAppointment(id: String, reason: String): Result<Appointment> = withContext(Dispatchers.IO) {
         try {

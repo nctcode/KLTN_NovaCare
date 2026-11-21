@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Headers, Param, Post, RawBodyRequest, Req, BadRequestException, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Header, Headers, Param, Post, RawBodyRequest, Req, BadRequestException, ParseUUIDPipe, HttpStatus, HttpCode } from '@nestjs/common';
 import { Request } from 'express';
 import { User } from '@prisma/client';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
@@ -10,12 +10,18 @@ export class ConsultationVideoController {
   constructor(private readonly video: ConsultationVideoService) {}
 
   @Get('capabilities')
-  capabilities() { return { data: { videoEnabled: this.video.isConfigured() } }; }
+  capabilities() { return { statusCode: HttpStatus.OK, success: true, data: { videoEnabled: this.video.isConfigured() } }; }
 
   @Post(':id/join')
+  @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
   async join(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser() user: User) {
-    return { data: await this.video.join(id, user.id) };
+    return {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Tham gia phòng video thành công',
+      data: await this.video.join(id, user.id),
+    };
   }
 
   @Public()

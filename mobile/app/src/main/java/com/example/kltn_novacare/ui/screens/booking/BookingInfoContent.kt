@@ -83,12 +83,13 @@ fun BookingSelectionCard(
     text: String,
     placeholder: String = "",
     isSelected: Boolean = false,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, if (isSelected) Color(0xFFCBD5E1) else Color(0xFFE2E8F0)),
         color = Color.White
@@ -113,12 +114,14 @@ fun BookingSelectionCard(
                 color = if (isSelected) Color(0xFF0F172A) else Color(0xFF94A3B8),
                 modifier = Modifier.weight(1f)
             )
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Color(0xFF64748B),
-                modifier = Modifier.size(20.dp)
-            )
+            if (enabled) {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Color(0xFF64748B),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -134,6 +137,7 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
     val repository = remember { DoctorRepository() }
     val today = remember { LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")) }
     val date = state.selectedDate ?: today.toString()
+    val doctorServiceReady = state.bookingType == "VIDEO" || state.doctorServiceSelected
 
     var refresh by remember { mutableIntStateOf(0) }
     var showDoctors by remember { mutableStateOf(false) }
@@ -147,11 +151,11 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
     }
 
     // Tải khung giờ trống
-    val slots by produceState<NetworkState<List<AppointmentSlot>>>(NetworkState.Loading, state.doctor?.id, state.workplace?.id, date, refresh) {
+    val slots by produceState<NetworkState<List<AppointmentSlot>>>(NetworkState.Loading, state.doctor?.id, state.workplace?.id, date, doctorServiceReady, refresh) {
         value = NetworkState.Loading
         val doctorId = state.doctor?.id
         val workplaceId = state.workplace?.id
-        if (doctorId == null || workplaceId == null) value = NetworkState.Idle
+        if (doctorId == null || workplaceId == null || !doctorServiceReady) value = NetworkState.Idle
         else value = repository.getAvailableSlots(doctorId, workplaceId, date).fold(
             onSuccess = { NetworkState.Success(it) },
             onFailure = { NetworkState.Error(it.message ?: "Không thể tải khung giờ") }
@@ -196,82 +200,103 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 1. Thẻ Bệnh viện (Medpro style)
+                // 1. Ngữ cảnh đặt khám / cơ sở đã chọn
                 item {
-                    OutlinedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.5.dp, Color(0xFFBAE6FD)),
-                        colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (state.bookingType == "VIDEO") {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            color = NovaCareGreenLight,
+                            border = BorderStroke(1.dp, NovaCareGreenBorder)
+                        ) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier.size(46.dp).background(NovaCareGreen, RoundedCornerShape(14.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) { Icon(Icons.Default.Videocam, contentDescription = null, tint = Color.White) }
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("Bác sĩ Chuyên Khoa", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                                    Text("Tư vấn Online qua NovaCare", color = TextSecondary, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    } else {
+                        OutlinedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.5.dp, NovaCareGreenBorder),
+                            colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = hospital?.name ?: "Cơ sở khám bệnh",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = Color(0xFF0F172A),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(Icons.Default.CheckCircle, contentDescription = "Đã xác thực", tint = NovaCareGreen, modifier = Modifier.size(16.dp))
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = hospital?.name ?: "Bệnh viện",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = Color(0xFF0F172A),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = "Verified",
-                                    tint = Color(0xFF0284C7),
-                                    modifier = Modifier.size(16.dp)
+                                    text = hospital?.displayAddress?.takeIf { it.isNotBlank() } ?: "Địa chỉ cơ sở y tế đang cập nhật",
+                                    fontSize = 11.5.sp,
+                                    color = Color(0xFF64748B),
+                                    lineHeight = 16.sp
                                 )
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = hospital?.displayAddress?.takeIf { it.isNotBlank() }
-                                    ?: "Địa chỉ cơ sở y tế đang cập nhật",
-                                fontSize = 11.5.sp,
-                                color = Color(0xFF64748B),
-                                lineHeight = 16.sp
-                            )
                         }
                     }
                 }
 
-                // 2. Chuyên khoa *
+                // 2. Bắt buộc chọn bác sĩ trước.
+                item {
+                    val doctorMode = allowDoctorSelection || state.bookingType == "VIDEO"
+                    BookingSectionHeader(title = "Bác sĩ")
+                    val doctorOrRoom = state.doctor?.let {
+                        "${it.displayFullNameWithTitle} • ${state.workplace?.position ?: "Phòng khám"}"
+                    } ?: state.workplace?.position ?: ""
+                    BookingSelectionCard(
+                        icon = if (doctorMode) Icons.Default.PersonSearch else Icons.Default.HomeWork,
+                        text = doctorOrRoom,
+                        placeholder = if (doctorMode) "Chọn bác sĩ" else "Phòng khám của bác sĩ",
+                        isSelected = state.doctor != null || state.workplace != null,
+                        enabled = allowDoctorSelection,
+                        onClick = { showDoctors = true }
+                    )
+                }
+
+                // 3. Khám theo bác sĩ là dịch vụ duy nhất và chỉ chọn sau bác sĩ.
+                item {
+                    BookingSectionHeader(title = "Dịch vụ")
+                    val isVideo = state.bookingType == "VIDEO"
+                    BookingSelectionCard(
+                        icon = if (isVideo) Icons.Default.Videocam else Icons.Default.VolunteerActivism,
+                        text = when {
+                            isVideo -> "Tư vấn video online 01 lượt • 150.000 ₫"
+                            state.doctorServiceSelected -> "Khám theo bác sĩ"
+                            else -> ""
+                        },
+                        placeholder = if (state.doctor == null) "Chọn bác sĩ trước" else "Chọn dịch vụ",
+                        isSelected = isVideo || state.doctorServiceSelected,
+                        enabled = !isVideo && state.doctor != null,
+                        onClick = { vm.selectDoctorConsultation() }
+                    )
+                }
+
+                // 4. Chuyên khoa được xác định tự động theo bác sĩ (hoặc theo gợi ý AI).
                 item {
                     BookingSectionHeader(title = "Chuyên khoa")
                     BookingSelectionCard(
                         icon = Icons.Default.MedicalServices,
                         text = specialty?.name.orEmpty(),
-                        placeholder = "Chọn chuyên khoa",
+                        placeholder = if (state.screeningSessionId != null) "Chuyên khoa theo gợi ý AI" else "Tự động theo bác sĩ",
                         isSelected = specialty != null,
+                        enabled = true,
                         onClick = { showSpecialties = true }
-                    )
-                }
-
-                // 3. Dịch vụ *
-                item {
-                    BookingSectionHeader(title = "Dịch vụ")
-                    val serviceTitle = state.selectedService?.let {
-                        "${it.name} - ${bookingMoney(it.price)} (Thanh toán tại Bệnh viện)"
-                    } ?: "Khám dịch vụ (Theo Bác sĩ)"
-                    BookingSelectionCard(
-                        icon = Icons.Default.VolunteerActivism,
-                        text = serviceTitle,
-                        placeholder = "Chọn dịch vụ khám",
-                        isSelected = true,
-                        onClick = { showServices = true }
-                    )
-                }
-
-                // 4. Phòng khám / Bác sĩ *
-                item {
-                    BookingSectionHeader(title = "Phòng khám")
-                    val doctorOrRoom = state.doctor?.let {
-                        "${it.displayFullNameWithTitle} • ${state.workplace?.position ?: "Phòng khám"}"
-                    } ?: state.workplace?.position ?: ""
-                    BookingSelectionCard(
-                        icon = Icons.Default.HomeWork,
-                        text = doctorOrRoom,
-                        placeholder = "Chọn bác sĩ / phòng khám",
-                        isSelected = state.doctor != null || state.workplace != null,
-                        onClick = { showDoctors = true }
                     )
                 }
 
@@ -294,7 +319,7 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(68.dp)
-                                    .clickable { vm.selectDate(dateStr) },
+                                    .clickable(enabled = doctorServiceReady) { vm.selectDate(dateStr) },
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(
                                     if (isSelected) 1.5.dp else 1.dp,
@@ -329,7 +354,7 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
                             modifier = Modifier
                                 .weight(1.1f)
                                 .height(68.dp)
-                                .clickable {
+                                .clickable(enabled = doctorServiceReady) {
                                     val selected = LocalDate.parse(date)
                                     DatePickerDialog(
                                         context,
@@ -460,7 +485,7 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .height(52.dp)
-                                                    .clickable { vm.selectDateTime(date, slot) },
+                                                    .clickable(enabled = doctorServiceReady) { vm.selectDateTime(date, slot) },
                                                 shape = RoundedCornerShape(10.dp),
                                                 border = BorderStroke(
                                                     if (isSelected) 1.5.dp else 1.dp,
@@ -521,7 +546,7 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .height(52.dp)
-                                                    .clickable { vm.selectDateTime(date, slot) },
+                                                    .clickable(enabled = doctorServiceReady) { vm.selectDateTime(date, slot) },
                                                 shape = RoundedCornerShape(10.dp),
                                                 border = BorderStroke(
                                                     if (isSelected) 1.5.dp else 1.dp,
@@ -595,7 +620,7 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    val canContinue = state.workplace != null && state.selectedSlot != null
+                    val canContinue = state.workplace != null && doctorServiceReady && state.selectedSlot != null
                     Button(
                         onClick = { vm.setStep(2) },
                         enabled = canContinue,
@@ -620,7 +645,7 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
         }
 
         // Floating Action Button Hotline (Orange)
-        FloatingActionButton(
+        if (state.bookingType != "VIDEO") FloatingActionButton(
             onClick = {
                 val phone = hospital?.phone ?: hospital?.hotline ?: "19002115"
                 runCatching {
@@ -649,7 +674,7 @@ fun BookingInfoContent(vm: BookingViewModel, doctorVM: DoctorViewModel, allowDoc
         DoctorSelectionModal(
             hospital = state.hospital,
             doctorViewModel = doctorVM,
-            specialtyId = state.selectedSpecialty?.id,
+            specialtyId = specialty?.id,
             onDismiss = { showDoctors = false },
             onDoctorSelected = { doctor, workplace ->
                 vm.selectDoctor(doctor, workplace)
@@ -937,7 +962,7 @@ fun ServiceSelectionDialog(
                                         color = if (isSelected) NovaCareGreen else Color(0xFF0F172A)
                                     )
                                     Text(
-                                        text = "${bookingMoney(service.price)} (Thanh toán tại Bệnh viện)",
+                                        text = bookingMoney(service.price),
                                         fontSize = 12.sp,
                                         color = if (isSelected) NovaCareGreen else Color(0xFF64748B),
                                         fontWeight = FontWeight.SemiBold

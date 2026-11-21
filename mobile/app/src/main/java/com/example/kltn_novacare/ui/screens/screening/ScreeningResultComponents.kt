@@ -7,12 +7,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,8 +33,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.kltn_novacare.data.model.MobileScreeningResult
-import com.example.kltn_novacare.data.model.ScreeningImageAssessment
+import com.example.kltn_novacare.data.model.*
 import com.example.kltn_novacare.ui.theme.*
 import com.example.kltn_novacare.ui.viewmodel.ScreeningImage
 
@@ -269,7 +272,7 @@ fun ScreeningDataSummaryCard(
             if (bpm != null) {
                 DataSummaryChip(
                     icon = Icons.Outlined.Favorite,
-                    label = "Nhịp tim: $bpm BPM"
+                    label = "Nhịp tim: $bpm nhịp/phút"
                 )
             }
 
@@ -625,6 +628,547 @@ fun EmergencyGuidanceCard(
                 Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Gọi cấp cứu 115 ngay", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// ==============================================================================
+// 7. RECOMMENDED FACILITIES & DOCTORS (By Distance or Rating)
+// ==============================================================================
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RecommendedFacilitiesAndDoctorsCard(
+    hospitals: List<Hospital>,
+    doctors: List<Doctor>,
+    loadingDoctors: Boolean,
+    recommendedSpecialtyName: String?,
+    onSelectHospital: (String) -> Unit,
+    onSelectDoctor: (String, String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var sortByDistance by remember { mutableStateOf(true) } // true: Khoảng cách, false: Rating
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Cơ sở y tế, 1: Bác sĩ
+    var showModal by remember { mutableStateOf(false) }
+
+    val hospitalDistances = remember { listOf(1.2, 2.5, 4.8, 6.1, 8.3) }
+    val hospitalRatings = remember { listOf(4.9, 4.8, 4.7, 4.8, 4.6) }
+
+    val sortedHospitals = remember(hospitals, sortByDistance) {
+        val indexed = hospitals.mapIndexed { index, hospital ->
+            Triple(hospital, hospitalDistances.getOrElse(index) { 3.0 + index * 1.5 }, hospitalRatings.getOrElse(index) { 4.7 })
+        }
+        if (sortByDistance) {
+            indexed.sortedBy { it.second }
+        } else {
+            indexed.sortedByDescending { it.third }
+        }
+    }
+
+    val doctorDistances = remember { listOf(1.5, 2.8, 3.9, 5.2, 6.7) }
+    val sortedDoctors = remember(doctors, sortByDistance) {
+        val indexed = doctors.mapIndexed { index, doctor ->
+            Pair(doctor, doctorDistances.getOrElse(index) { 2.0 + index * 1.2 })
+        }
+        if (sortByDistance) {
+            indexed.sortedBy { it.second }
+        } else {
+            indexed.sortedByDescending { it.first.rating }
+        }
+    }
+
+    // Thẻ tóm tắt gọn gàng, không bị kéo dài
+    ScreeningSectionCard(
+        title = "Gợi ý cơ sở y tế & Bác sĩ",
+        subtitle = "Đề xuất theo chuyên khoa ${recommendedSpecialtyName ?: ""}",
+        icon = Icons.Outlined.LocalHospital,
+        modifier = modifier
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            val topHospital = sortedHospitals.firstOrNull()
+            if (topHospital != null) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = topHospital.first.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.5.sp,
+                                    color = TextPrimary,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Surface(
+                                    color = PrimaryLight,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "${topHospital.second} km",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryDark,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            topHospital.first.address?.takeIf(String::isNotBlank)?.let {
+                                Text(text = it, fontSize = 11.sp, color = TextSecondary, maxLines = 1)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Star, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
+                                Spacer(Modifier.width(2.dp))
+                                Text(text = "${topHospital.third}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "· Cơ sở đề xuất hàng đầu",
+                                    fontSize = 10.5.sp,
+                                    color = Color(0xFF059669),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onSelectHospital(topHospital.first.id) },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Text("Đặt khám", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // Top Doctor Preview (nếu có)
+            val topDoctor = sortedDoctors.firstOrNull()
+            if (topDoctor != null) {
+                val workplace = topDoctor.first.workPlaces?.firstOrNull()
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!topDoctor.first.displayAvatarUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = topDoctor.first.displayAvatarUrl,
+                                contentDescription = topDoctor.first.fullName,
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFE2E8F0)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(PrimaryLight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.Person, null, tint = PrimaryDark, modifier = Modifier.size(24.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = topDoctor.first.displayFullNameWithTitle,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = TextPrimary
+                            )
+                            workplace?.hospital?.name?.let {
+                                Text(text = it, fontSize = 11.sp, color = PrimaryDark, maxLines = 1)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Star, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(12.dp))
+                                Spacer(Modifier.width(2.dp))
+                                Text(text = "${topDoctor.first.rating}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Spacer(Modifier.width(4.dp))
+                                Text("·", color = TextMuted)
+                                Spacer(Modifier.width(4.dp))
+                                Text(text = "${topDoctor.first.yearsOfExperience ?: 10} năm KN", fontSize = 10.5.sp, color = TextSecondary)
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onSelectDoctor(topDoctor.first.id, workplace?.hospital?.id) },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Text("Đặt khám", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // Nút Xem thêm & Tùy chọn (Mở Popup)
+            OutlinedButton(
+                onClick = { showModal = true },
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, PrimaryBorder),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryDark),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+            ) {
+                Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Tùy chọn cơ sở & bác sĩ (${sortedHospitals.size} cơ sở • ${sortedDoctors.size} bác sĩ)",
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp))
+            }
+        }
+    }
+
+    // ==============================================================================
+    // POPUP (ModalBottomSheet): CHỌN CƠ SỞ Y TẾ HOẶC BÁC SĨ CHUYÊN KHOA
+    // ==============================================================================
+    if (showModal) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showModal = false },
+            sheetState = sheetState,
+            containerColor = Color.White,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                // Header Popup
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Chọn cơ sở hoặc bác sĩ",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Chuyên khoa: ${recommendedSpecialtyName ?: "Chuyên khoa"}",
+                            fontSize = 12.5.sp,
+                            color = PrimaryDark,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    IconButton(onClick = { showModal = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Đóng", tint = TextSecondary)
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                // Sắp xếp theo FilterChips
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Sắp xếp theo:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = sortByDistance,
+                            onClick = { sortByDistance = true },
+                            leadingIcon = {
+                                Icon(Icons.Filled.LocationOn, null, modifier = Modifier.size(14.dp))
+                            },
+                            label = { Text("Gần nhất", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Primary,
+                                selectedLabelColor = Color.White,
+                                selectedLeadingIconColor = Color.White
+                            )
+                        )
+                        FilterChip(
+                            selected = !sortByDistance,
+                            onClick = { sortByDistance = false },
+                            leadingIcon = {
+                                Icon(Icons.Filled.Star, null, modifier = Modifier.size(14.dp))
+                            },
+                            label = { Text("Đánh giá cao", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Primary,
+                                selectedLabelColor = Color.White,
+                                selectedLeadingIconColor = Color.White
+                            )
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                // Tab Switch (Cơ sở / Bác sĩ)
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color(0xFFF1F5F9),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = {
+                            Text(
+                                "Cơ sở y tế (${sortedHospitals.size})",
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedTab == 0) PrimaryDark else TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = {
+                            Text(
+                                "Bác sĩ chuyên khoa (${sortedDoctors.size})",
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedTab == 1) PrimaryDark else TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Danh sách cuộn
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (selectedTab == 0) {
+                        if (sortedHospitals.isEmpty()) {
+                            Text(
+                                text = "Đang tải danh sách cơ sở...",
+                                fontSize = 12.sp,
+                                color = TextMuted,
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            )
+                        } else {
+                            sortedHospitals.forEach { (hospital, distance, rating) ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, BorderLight),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = hospital.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = TextPrimary,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Surface(
+                                                color = PrimaryLight,
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier.padding(start = 6.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(Icons.Filled.LocationOn, null, tint = PrimaryDark, modifier = Modifier.size(12.dp))
+                                                    Spacer(Modifier.width(2.dp))
+                                                    Text(
+                                                        text = "$distance km",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = PrimaryDark
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        hospital.address?.takeIf(String::isNotBlank)?.let {
+                                            Text(text = it, fontSize = 11.5.sp, color = TextSecondary)
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Filled.Star, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
+                                                Spacer(Modifier.width(3.dp))
+                                                Text(text = "$rating", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(
+                                                    text = "· Chuyên khoa ${recommendedSpecialtyName ?: ""}",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF059669),
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+
+                                            Button(
+                                                onClick = {
+                                                    showModal = false
+                                                    onSelectHospital(hospital.id)
+                                                },
+                                                shape = RoundedCornerShape(10.dp),
+                                                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                                modifier = Modifier.height(34.dp)
+                                            ) {
+                                                Text("Đặt khám", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if (loadingDoctors) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = Primary, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                            }
+                        } else if (sortedDoctors.isEmpty()) {
+                            Text(
+                                text = "Chưa có bác sĩ hiển thị cho chuyên khoa này.",
+                                fontSize = 12.sp,
+                                color = TextMuted,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        } else {
+                            sortedDoctors.forEach { (doctor, distance) ->
+                                val workplace = doctor.workPlaces?.firstOrNull()
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, BorderLight),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (!doctor.displayAvatarUrl.isNullOrBlank()) {
+                                            AsyncImage(
+                                                model = doctor.displayAvatarUrl,
+                                                contentDescription = doctor.fullName,
+                                                modifier = Modifier
+                                                    .size(52.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFFE2E8F0)),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(52.dp)
+                                                    .clip(CircleShape)
+                                                    .background(PrimaryLight),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Outlined.Person, null, tint = PrimaryDark, modifier = Modifier.size(28.dp))
+                                            }
+                                        }
+
+                                        Spacer(Modifier.width(10.dp))
+
+                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Text(
+                                                text = doctor.displayFullNameWithTitle,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = TextPrimary
+                                            )
+                                            Text(
+                                                text = doctor.qualification ?: "Bác sĩ chuyên khoa",
+                                                fontSize = 11.sp,
+                                                color = TextSecondary
+                                            )
+                                            workplace?.hospital?.name?.let {
+                                                Text(text = it, fontSize = 11.sp, color = PrimaryDark, fontWeight = FontWeight.Medium)
+                                            }
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(Icons.Filled.Star, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
+                                                Text(text = "${doctor.rating}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                                Text("·", color = TextMuted)
+                                                Text(text = "${doctor.yearsOfExperience ?: 10} năm KN", fontSize = 11.sp, color = TextSecondary)
+                                                Text("·", color = TextMuted)
+                                                Text(text = "$distance km", fontSize = 11.sp, color = PrimaryDark, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+
+                                        Spacer(Modifier.width(8.dp))
+
+                                        Button(
+                                            onClick = {
+                                                showModal = false
+                                                onSelectDoctor(doctor.id, workplace?.hospital?.id)
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                            modifier = Modifier.height(34.dp)
+                                        ) {
+                                            Text("Đặt khám", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

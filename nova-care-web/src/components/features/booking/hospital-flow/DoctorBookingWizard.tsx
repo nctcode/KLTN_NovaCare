@@ -16,6 +16,7 @@ import { Stethoscope, Users, CheckCircle2, CreditCard, ChevronRight, FileCheck }
 import { ClinicRoom } from './RoomSelectModal';
 import { BookingType, BOOKING_TYPES_CONFIG } from '@/config/bookingTypes';
 import { MedicalRecordShareDraft } from './MedicalRecordShareConsent';
+import { AfterHoursBookingStep } from './AfterHoursBookingStep';
 
 interface DoctorBookingWizardProps {
   hospital: Hospital;
@@ -178,7 +179,23 @@ export function DoctorBookingWizard({
 
         {/* STEP: BOOKING INFO */}
         {((!isInpatientMode && step === 1) || (isInpatientMode && step === 2)) && (
-          <Step1BookingInfo
+          bookingMode === 'OUT_OF_HOURS' ? <AfterHoursBookingStep
+            hospital={hospital}
+            selectedSpecialty={selectedSpecialty}
+            setSelectedSpecialty={setSelectedSpecialty}
+            selectedRoom={selectedRoom}
+            setSelectedRoom={setSelectedRoom}
+            setSelectedDoctor={setSelectedDoctor}
+            selectedService={selectedService}
+            setSelectedService={setSelectedService}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            selectedSlotTime={selectedSlotTime}
+            setSelectedSlotTime={setSelectedSlotTime}
+            selectedSlotId={selectedSlotId}
+            setSelectedSlotId={setSelectedSlotId}
+            onNext={() => setStep(2)}
+          /> : <Step1BookingInfo
             hospital={hospital}
             bookingMode={bookingMode}
             selectedSpecialty={selectedSpecialty}
@@ -244,6 +261,8 @@ export function DoctorBookingWizard({
             specialty={selectedSpecialty}
             doctor={selectedDoctor}
             service={selectedService}
+            room={selectedRoom}
+            bookingMode={bookingMode}
             selectedDate={selectedDate}
             selectedSlotTime={selectedSlotTime}
             selectedSlotId={selectedSlotId}

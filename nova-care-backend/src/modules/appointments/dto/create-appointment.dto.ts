@@ -2,6 +2,11 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateAppointmentDto {
+  @ApiProperty({ description: 'Phiên sàng lọc AI áp dụng cho lịch khám', required: false })
+  @IsOptional()
+  @IsUUID()
+  screeningSessionId?: string;
+
   @IsOptional() @IsUUID()
   clinicRoomId?: string;
 

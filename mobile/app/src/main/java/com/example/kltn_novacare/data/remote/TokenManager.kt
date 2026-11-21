@@ -14,6 +14,7 @@ class TokenManager(context: Context) {
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USER_AVATAR = "user_avatar"
+        private const val KEY_USER_ROLE = "user_role"
     }
 
     fun saveTokens(accessToken: String, refreshToken: String) {
@@ -24,11 +25,12 @@ class TokenManager(context: Context) {
         }
     }
 
-    fun saveUser(id: String, fullName: String, email: String, avatarUrl: String? = null) {
+    fun saveUser(id: String, fullName: String, email: String, role: String, avatarUrl: String? = null) {
         prefs.edit().apply {
             putString(KEY_USER_ID, id)
             putString(KEY_USER_NAME, fullName)
             putString(KEY_USER_EMAIL, email)
+            putString(KEY_USER_ROLE, role)
             if (avatarUrl != null) {
                 putString(KEY_USER_AVATAR, avatarUrl)
             }
@@ -58,6 +60,8 @@ class TokenManager(context: Context) {
     fun getUserEmail(): String? = prefs.getString(KEY_USER_EMAIL, null)
 
     fun getUserAvatar(): String? = prefs.getString(KEY_USER_AVATAR, null)
+
+    fun getUserRole(): String = prefs.getString(KEY_USER_ROLE, "PATIENT") ?: "PATIENT"
 
     fun clear() {
         prefs.edit().clear().apply()

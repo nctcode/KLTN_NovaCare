@@ -53,6 +53,7 @@ import Link from 'next/link';
 import { reviewService } from '@/services/review.service';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { ReviewTargetType } from '@/types/review.types';
+import { AiScreeningAppointmentCard } from '@/components/admin/schedules/AiScreeningAppointmentCard';
 
 const statusConfig: Record<string, { label: string; style: string; icon: React.ReactNode }> = {
   PENDING: {
@@ -383,6 +384,12 @@ export default function AppointmentDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        <AiScreeningAppointmentCard
+          appointmentId={appointment.id}
+          enabled={!!appointment.preExamSession}
+          isLight
+        />
 
         {/* 5. Patient Details Card */}
         <Card className="border-slate-200 shadow-sm bg-white rounded-2xl">

@@ -10,20 +10,18 @@ interface AdminThemeContextType {
 }
 
 const AdminThemeContext = createContext<AdminThemeContextType>({
-  theme: 'dark',
+  theme: 'light',
   toggleTheme: () => {},
 });
 
 export function AdminThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
     const saved = localStorage.getItem('admin-theme') as Theme;
     if (saved === 'light' || saved === 'dark') {
       setTheme(saved);
     }
-    setMounted(true);
   }, []);
 
   const toggleTheme = () => {

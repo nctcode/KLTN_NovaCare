@@ -58,7 +58,9 @@ services:
         condition: service_started
     networks:
       - novacare_network
-    command: npm run start:dev
+    # Schema được bind-mount từ máy host, vì vậy Prisma Client trong volume
+    # node_modules phải được đồng bộ trước khi NestJS biên dịch.
+    command: sh -c "npx prisma generate && npm run start:dev"
 
   # ── Prisma Studio (tuỳ chọn) ─────────────────────────────────────────
   prisma-studio:

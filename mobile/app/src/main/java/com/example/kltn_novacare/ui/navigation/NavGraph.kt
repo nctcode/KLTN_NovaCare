@@ -13,6 +13,7 @@ import com.example.kltn_novacare.ui.screens.home.HomeScreen
 import com.example.kltn_novacare.ui.screens.doctor.DoctorListScreen
 import com.example.kltn_novacare.ui.screens.doctor.DoctorDetailScreen
 import com.example.kltn_novacare.ui.screens.booking.BookingScreen
+import com.example.kltn_novacare.ui.screens.booking.DoctorBookingScreen
 import com.example.kltn_novacare.ui.screens.profile.ProfileListScreen
 import com.example.kltn_novacare.ui.screens.appointment.AppointmentListScreen
 import com.example.kltn_novacare.ui.screens.appointment.AppointmentDetailScreen
@@ -20,8 +21,11 @@ import com.example.kltn_novacare.ui.screens.payment.PaymentScreen
 import com.example.kltn_novacare.ui.screens.notification.NotificationScreen
 import com.example.kltn_novacare.ui.screens.consultation.ConsultationChatScreen
 import com.example.kltn_novacare.ui.screens.consultation.ConsultationHomeScreen
-import com.example.kltn_novacare.ui.screens.consultation.ConsultationPrecheckScreen
+import com.example.kltn_novacare.ui.screens.consultation.VideoBookingScreen
+import com.example.kltn_novacare.ui.screens.consultation.VideoDoctorCatalogScreen
 import com.example.kltn_novacare.ui.screens.settings.SettingsScreen
+import com.example.kltn_novacare.ui.screens.specialty.SpecialtyCatalogScreen
+import com.example.kltn_novacare.ui.screens.specialty.SpecialtyResultsScreen
 import com.example.kltn_novacare.ui.viewmodel.*
 
 @Composable
@@ -36,7 +40,7 @@ fun NavGraph(
 ) {
     // Check initial start destination based on login status
     val isUserLoggedIn = authViewModel.getCurrentUser() != null
-    val startDestination = if (isUserLoggedIn) Screen.Home.route else Screen.Login.route
+    val startDestination = if (!isUserLoggedIn) Screen.Login.route else Screen.Home.route
 
     NavHost(
         navController = navController,
@@ -59,6 +63,27 @@ fun NavGraph(
                 doctorViewModel = doctorViewModel,
                 appointmentViewModel = appointmentViewModel,
                 authViewModel = authViewModel
+            )
+        }
+
+        composable(Screen.SpecialtyCatalog.route) {
+            SpecialtyCatalogScreen(
+                navController = navController,
+                doctorViewModel = doctorViewModel
+            )
+        }
+
+        composable(
+            route = Screen.SpecialtyResults.route,
+            arguments = listOf(
+                navArgument("specialtyId") { type = NavType.StringType },
+                navArgument("specialtyName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            SpecialtyResultsScreen(
+                navController = navController,
+                specialtyId = backStackEntry.arguments?.getString("specialtyId").orEmpty(),
+                specialtyName = backStackEntry.arguments?.getString("specialtyName").orEmpty()
             )
         }
         
@@ -133,6 +158,13 @@ fun NavGraph(
                 patientViewModel = patientViewModel
             )
         }
+
+        composable(Screen.DoctorBooking.route) {
+            DoctorBookingScreen(
+                navController = navController,
+                doctorViewModel = doctorViewModel
+            )
+        }
         
         composable(Screen.Profiles.route) {
             ProfileListScreen(
@@ -163,9 +195,6 @@ fun NavGraph(
                 onPay = { appointment ->
                     bookingViewModel.resumePayment(appointment)
                     navController.navigate(Screen.BookingCheckout.route)
-                },
-                onConsult = { appointment ->
-                    navController.navigate(Screen.ConsultationPrecheck.createRoute(appointment.id))
                 }
             )
         }
@@ -173,20 +202,29 @@ fun NavGraph(
         composable(Screen.Consultations.route) {
             ConsultationHomeScreen(navController, consultationViewModel)
         }
+        composable(Screen.VideoDoctors.route) {
+            VideoDoctorCatalogScreen(navController, doctorViewModel)
+        }
+        composable(
+            route = Screen.VideoBooking.route,
+            arguments = listOf(
+                navArgument("doctorId") { type = NavType.StringType },
+                navArgument("workplaceId") { type = NavType.StringType }
+            )
+        ) { entry ->
+            VideoBookingScreen(
+                doctorId = entry.arguments?.getString("doctorId").orEmpty(),
+                workplaceId = entry.arguments?.getString("workplaceId").orEmpty(),
+                navController = navController,
+                bookingViewModel = bookingViewModel,
+                doctorViewModel = doctorViewModel,
+                patientViewModel = patientViewModel,
+                consultationViewModel = consultationViewModel
+            )
+        }
         composable(Screen.ConsultationVideo.route, arguments = listOf(navArgument("consultationId") { type = NavType.StringType })) { entry ->
             com.example.kltn_novacare.ui.screens.consultation.ConsultationVideoScreen(
                 entry.arguments?.getString("consultationId").orEmpty(), navController
-            )
-        }
-
-        composable(
-            route = Screen.ConsultationPrecheck.route,
-            arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
-        ) { entry ->
-            ConsultationPrecheckScreen(
-                appointmentId = entry.arguments?.getString("appointmentId").orEmpty(),
-                navController = navController,
-                viewModel = consultationViewModel
             )
         }
 
@@ -228,20 +266,20 @@ fun NavGraph(
         composable(
             route = Screen.HospitalBooking.route,
             arguments = listOf(
+                navArgument("hospitalId") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("specialtyId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("specialtyName") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("reason") { type = NavType.StringType; nullable = true; defaultValue = null },
-                navArgument("hospitalId") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
+                navArgument("doctorId") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
         ) { backStackEntry ->
             val hospitalId = backStackEntry.arguments?.getString("hospitalId")
             com.example.kltn_novacare.ui.screens.booking.HospitalFacilityBookingScreen(
                 initialHospitalId = hospitalId,
                 initialSpecialtyId = backStackEntry.arguments?.getString("specialtyId"),
+                initialSpecialtyName = backStackEntry.arguments?.getString("specialtyName"),
                 initialReason = backStackEntry.arguments?.getString("reason"),
+                initialDoctorId = backStackEntry.arguments?.getString("doctorId"),
                 navController = navController,
                 bookingViewModel = bookingViewModel,
                 doctorViewModel = doctorViewModel,
@@ -254,8 +292,17 @@ fun NavGraph(
                 onSkipScreening = {
                     navController.navigate(Screen.HospitalBooking.createRoute(null)) { popUpTo(Screen.PreExamScreening.route) { inclusive = true } }
                 },
-                onCompletedToBooking = { doctorId, specialtyId, hospitalId, reason ->
-                    navController.navigate(Screen.HospitalBooking.createRoute(hospitalId, specialtyId, reason)) { popUpTo(Screen.PreExamScreening.route) { inclusive = true } }
+                onCompletedToBooking = { doctorId, specialtyId, specialtyName, hospitalId, symptoms, summary, sessionId ->
+                    bookingViewModel.prepareFromScreening(sessionId, symptoms, summary)
+                    navController.navigate(
+                        Screen.HospitalBooking.createRoute(
+                            hospitalId = hospitalId,
+                            specialtyId = specialtyId,
+                            reason = symptoms,
+                            specialtyName = specialtyName,
+                            doctorId = doctorId
+                        )
+                    ) { popUpTo(Screen.PreExamScreening.route) { inclusive = true } }
                 }
             )
         }

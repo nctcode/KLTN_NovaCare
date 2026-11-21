@@ -38,8 +38,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ConsultationHomeScreen(navController: NavController, viewModel: ConsultationViewModel) {
     val state by viewModel.consultations.collectAsState()
-    val videoAvailable by viewModel.videoAvailable.collectAsState()
-    LaunchedEffect(Unit) { viewModel.loadConsultations(); viewModel.loadVideoCapabilities() }
+    LaunchedEffect(Unit) { viewModel.loadConsultations() }
 
     val isRefreshing = state is NetworkState.Loading
 
@@ -49,8 +48,8 @@ fun ConsultationHomeScreen(navController: NavController, viewModel: Consultation
             TopAppBar(
                 title = {
                     Column {
-                        Text("Tư vấn với bác sĩ", fontWeight = FontWeight.Bold, fontSize = 19.sp)
-                        Text("Trao đổi trực tiếp với bác sĩ NovaCare", color = TextSecondary, fontSize = 12.sp)
+                        Text("Lịch gọi video", fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                        Text("Các phòng video và chat của bạn", color = TextSecondary, fontSize = 12.sp)
                     }
                 },
                 navigationIcon = {
@@ -78,21 +77,7 @@ fun ConsultationHomeScreen(navController: NavController, viewModel: Consultation
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
-                    ConsultationModeCard(
-                        title = "Đặt lịch tư vấn",
-                        description = "Chọn bác sĩ và thời gian tư vấn online phù hợp.",
-                        onClick = { navController.navigate(Screen.Search.route) }
-                    )
-                }
-                item {
-                    if (videoAvailable) ConsultationModeCard(
-                        title = "Tư vấn video theo lịch hẹn",
-                        description = "Mở lịch khám online đã xác nhận, chọn tư vấn và hình thức Video và chat. Vào phòng từ biểu tượng camera trong phiên.",
-                        onClick = { navController.navigate(Screen.Appointments.route) }
-                    ) else Text("Tư vấn video chưa sẵn sàng. Bạn vẫn có thể sử dụng các phiên chat hiện có.", color = TextSecondary, fontSize = 13.sp)
-                }
-                item {
-                    Text("Cuộc tư vấn của bạn", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary,
+                    Text("Cuộc gọi của bạn", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary,
                         modifier = Modifier.padding(top = 8.dp))
                 }
                 when (val current = state) {
@@ -102,7 +87,7 @@ fun ConsultationHomeScreen(navController: NavController, viewModel: Consultation
                     }
                     is NetworkState.Success -> {
                         if (current.data.isEmpty()) item {
-                            EmptyConsultations { navController.navigate(Screen.Search.route) }
+                            EmptyConsultations { navController.navigate(Screen.VideoDoctors.route) }
                         } else items(current.data, key = { it.id }) { consultation ->
                             ConsultationRow(consultation) {
                                 navController.navigate(Screen.ConsultationChat.createRoute(consultation.id))
@@ -111,27 +96,6 @@ fun ConsultationHomeScreen(navController: NavController, viewModel: Consultation
                     }
                     else -> Unit
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ConsultationModeCard(title: String, description: String, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = PrimaryLight),
-        border = BorderStroke(1.dp, PrimaryBorder)
-    ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = Primary, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = Color.White, modifier = Modifier.padding(12.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Text(description, fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp)
             }
         }
     }
@@ -210,10 +174,10 @@ private fun EmptyConsultations(onStart: () -> Unit) {
         border = BorderStroke(1.dp, Border)) {
         Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null, tint = Primary, modifier = Modifier.size(44.dp))
-            Text("Bạn chưa có cuộc tư vấn nào", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
-            Text("Đặt lịch online với bác sĩ để bắt đầu trao đổi.", color = TextSecondary, fontSize = 13.sp)
+            Text("Bạn chưa có lịch gọi video", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+            Text("Chọn bác sĩ và đặt lịch gọi video để bắt đầu.", color = TextSecondary, fontSize = 13.sp)
             Button(onClick = onStart, modifier = Modifier.padding(top = 16.dp), colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
-                Text("Tìm bác sĩ tư vấn")
+                Text("Chọn bác sĩ gọi video")
             }
         }
     }

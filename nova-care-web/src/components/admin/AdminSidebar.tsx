@@ -90,6 +90,12 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
     href: '/admin/appointments',
   },
   {
+    id: 'after-hours-management',
+    label: 'Phòng khám & Dịch vụ',
+    icon: Clock,
+    href: '/admin/after-hours',
+  },
+  {
     id: 'audit-logs',
     label: 'Nhật ký hệ thống',
     icon: History,
@@ -169,6 +175,12 @@ function AdminSidebarInner() {
           label: 'Lịch trực & Ca khám',
           icon: Calendar,
           href: '/admin/schedules',
+        },
+        {
+          id: 'after-hours-management',
+          label: 'Phòng khám & Dịch vụ',
+          icon: Clock,
+          href: '/admin/after-hours',
         },
         {
           id: 'appointments-menu',

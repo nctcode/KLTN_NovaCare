@@ -37,9 +37,13 @@ export class ConsultationVideoService implements OnModuleInit, OnModuleDestroy {
       throw new ForbiddenException('Không có quyền tham gia phòng tư vấn này');
     }
     const now = Date.now();
+    const isLive = session.status === 'ACTIVE';
+    const isWithinSchedule = session.scheduledStartAt && session.scheduledEndAt &&
+      session.scheduledStartAt.getTime() <= now && session.scheduledEndAt.getTime() > now;
+
     if (!session.videoEnabled || !['ACCEPTED', 'ACTIVE'].includes(session.status)
       || !session.scheduledStartAt || !session.scheduledEndAt
-      || session.scheduledStartAt.getTime() > now || session.scheduledEndAt.getTime() <= now
+      || (!isLive && !isWithinSchedule)
       || !session.appointment || !['CONFIRMED', 'PAID'].includes(session.appointment.status)
       || !session.doctor.user?.isActive) {
       throw new BadRequestException('Phòng video chưa mở hoặc đã kết thúc. Cần bác sĩ tiếp nhận và đến đúng giờ hẹn.');

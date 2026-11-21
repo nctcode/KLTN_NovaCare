@@ -36,19 +36,12 @@ import com.example.kltn_novacare.ui.theme.*
 // ==============================================================================
 // STEP 1 - COMPONENT 1: PATIENT INFO CARD
 // ==============================================================================
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientInfoCard(
     age: String,
     onAgeChange: (String) -> Unit,
-    hospitalId: String?,
-    hospitals: List<Hospital>,
-    onSelectHospital: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var hospitalDropdownOpen by remember { mutableStateOf(false) }
-    val selectedHospitalName = hospitals.find { it.id == hospitalId }?.name ?: "Tất cả cơ sở (hoặc chọn sau)"
-
     ScreeningSectionCard(
         title = "Thông tin cơ bản",
         subtitle = "Dùng tuổi thực tế của người có triệu chứng để AI định hướng chuẩn xác.",
@@ -60,7 +53,7 @@ fun PatientInfoCard(
             OutlinedTextField(
                 value = age,
                 onValueChange = onAgeChange,
-                label = { Text("Số tuổi của người khám") },
+                label = { Text("Số tuổi của người khám *") },
                 placeholder = { Text("Ví dụ: 35") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -72,73 +65,6 @@ fun PatientInfoCard(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-
-            // Chọn cơ sở y tế
-            ExposedDropdownMenuBox(
-                expanded = hospitalDropdownOpen,
-                onExpandedChange = { hospitalDropdownOpen = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = selectedHospitalName,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Cơ sở y tế mong muốn (tùy chọn)") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = hospitalDropdownOpen) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.LocalHospital,
-                            contentDescription = null,
-                            tint = if (hospitalId != null) PrimaryDark else TextMuted,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Primary,
-                        focusedLabelColor = PrimaryDark,
-                        cursorColor = Primary
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor()
-                )
-
-                ExposedDropdownMenu(
-                    expanded = hospitalDropdownOpen,
-                    onDismissRequest = { hospitalDropdownOpen = false }
-                ) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                "Chọn cơ sở sau (không giới hạn)",
-                                fontWeight = if (hospitalId == null) FontWeight.Bold else FontWeight.Normal,
-                                color = if (hospitalId == null) PrimaryDark else TextPrimary
-                            )
-                        },
-                        onClick = {
-                            onSelectHospital(null)
-                            hospitalDropdownOpen = false
-                        }
-                    )
-                    HorizontalDivider()
-                    hospitals.forEach { h ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = h.name,
-                                    fontWeight = if (h.id == hospitalId) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (h.id == hospitalId) PrimaryDark else TextPrimary
-                                )
-                            },
-                            onClick = {
-                                onSelectHospital(h.id)
-                                hospitalDropdownOpen = false
-                            }
-                        )
-                    }
-                }
-            }
         }
     }
 }
@@ -179,9 +105,9 @@ fun BodyRegionSelectorCard(
 
     ScreeningSectionCard(
         title = "1. Vị trí khó chịu / tổn thương",
-        subtitle = "Có thể chọn nhiều vị trí (tối đa 10 vùng). Trái/phải tính theo cơ thể của bạn.",
+        subtitle = "Có thể chọn tối đa 2 vùng. Trái/phải tính theo cơ thể của bạn.",
         icon = Icons.Outlined.HealthAndSafety,
-        badgeText = "${selectedRegions.size}/10 đã chọn",
+        badgeText = "${selectedRegions.size}/2 đã chọn",
         badgeColor = if (selectedRegions.isNotEmpty()) PrimaryDark else TextMuted,
         modifier = modifier
     ) {

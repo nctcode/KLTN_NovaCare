@@ -116,6 +116,17 @@ class ConsultationViewModel(
         }
     }
 
+    /** Creates the technical video session after a paid/confirmed video appointment. */
+    fun createVideoConsultation(appointmentId: String, onCreated: (String) -> Unit) {
+        createConsultation(
+            appointmentId = appointmentId,
+            topic = "Tư vấn video trực tuyến",
+            description = "Cuộc hẹn gọi video với bác sĩ được đặt qua ứng dụng NovaCare.",
+            channel = "VIDEO",
+            onCreated = onCreated
+        )
+    }
+
     fun resetCreateState() { if (_createState.value !is NetworkState.Loading) _createState.value = NetworkState.Idle }
 
     fun openConversation(id: String) {

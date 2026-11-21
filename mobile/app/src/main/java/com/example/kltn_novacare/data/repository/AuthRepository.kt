@@ -7,6 +7,7 @@ import com.example.kltn_novacare.data.remote.LoginRequest
 import com.example.kltn_novacare.data.remote.RegisterRequest
 import com.example.kltn_novacare.data.remote.RefreshTokenRequest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
 class AuthRepository {
@@ -20,15 +21,25 @@ class AuthRepository {
             val body = response.body()
             if (response.isSuccessful && body != null && body.success) {
                 val data = body.data!!
+                if (data.user.role == "DOCTOR") {
+                    tokenManager.clear()
+                    return@withContext Result.failure(Exception("Vui lòng sử dụng ứng dụng NovaCare Doctor dành riêng cho bác sĩ"))
+                }
                 tokenManager.saveTokens(data.accessToken, data.refreshToken)
-                tokenManager.saveUser(data.user.id, data.user.fullName, data.user.email, data.user.avatarUrl)
+                tokenManager.saveUser(data.user.id, data.user.fullName, data.user.email, data.user.role, data.user.avatarUrl)
                 Result.success(data)
             } else {
-                val errorMsg = body?.error ?: body?.message ?: "Đăng nhập thất bại"
+                val errorMsg = AuthErrorMessage.fromHttp(
+                    statusCode = response.code(),
+                    bodyMessage = body?.message ?: body?.error,
+                    rawErrorBody = response.errorBody()?.string()
+                )
                 Result.failure(Exception(errorMsg))
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(AuthErrorMessage.fromException(e), e))
         }
     }
 
@@ -39,7 +50,7 @@ class AuthRepository {
             if (response.isSuccessful && body != null && body.success) {
                 val data = body.data!!
                 tokenManager.saveTokens(data.accessToken, data.refreshToken)
-                tokenManager.saveUser(data.user.id, data.user.fullName, data.user.email, data.user.avatarUrl)
+                tokenManager.saveUser(data.user.id, data.user.fullName, data.user.email, data.user.role, data.user.avatarUrl)
                 Result.success(data)
             } else {
                 val errorMsg = body?.error ?: body?.message ?: "Đăng ký thất bại"
@@ -65,15 +76,23 @@ class AuthRepository {
     }
 
     fun isLoggedIn(): Boolean {
+        if (tokenManager.getUserRole() == "DOCTOR") {
+            tokenManager.clear()
+            return false
+        }
         return tokenManager.getAccessToken() != null
     }
 
     fun getCurrentUser(): User? {
+        if (tokenManager.getUserRole() == "DOCTOR") {
+            tokenManager.clear()
+            return null
+        }
         val id = tokenManager.getUserId() ?: return null
         val name = tokenManager.getUserName() ?: ""
         val email = tokenManager.getUserEmail() ?: ""
         val avatar = tokenManager.getUserAvatar()
-        return User(id, email, null, name, "PATIENT", true, avatar)
+        return User(id, email, null, name, tokenManager.getUserRole(), true, avatar)
     }
 
     fun updateAvatar(avatarUri: String?) {

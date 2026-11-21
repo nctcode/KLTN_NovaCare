@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/*
+ * Dark colors are opt-in. The Admin portal owns its light/dark preference,
+ * so OS-level prefers-color-scheme must not partially override a light page.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #F8F9FA;
   --foreground: #212529;

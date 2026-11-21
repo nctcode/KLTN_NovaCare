@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client';
-import { Appointment, CreateAppointmentDto, CancelAppointmentDto } from '@/types/appointment.types';
+import { Appointment, AppointmentScreening, CreateAppointmentDto, CancelAppointmentDto } from '@/types/appointment.types';
 
 export const appointmentService = {
   async create(data: CreateAppointmentDto): Promise<Appointment> {
@@ -30,6 +30,11 @@ export const appointmentService = {
   async getById(id: string): Promise<Appointment> {
     const response = await apiClient.get<any>(`/appointments/${id}`);
     return response.data;
+  },
+
+  async getScreening(id: string): Promise<AppointmentScreening> {
+    const response = await apiClient.get<any>(`/appointments/${id}/screening`);
+    return response.data !== undefined ? response.data : response;
   },
 
   async cancel(id: string, data?: CancelAppointmentDto): Promise<Appointment> {

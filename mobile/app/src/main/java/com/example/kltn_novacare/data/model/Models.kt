@@ -333,6 +333,40 @@ data class AppointmentEncounter(val status: String?, val encounterCode: String? 
     val diagnoses: List<com.google.gson.JsonObject>? = null, val observations: List<com.google.gson.JsonObject>? = null,
     val prescription: com.google.gson.JsonObject? = null)
 
+data class ScreeningSessionSummary(
+    val id: String,
+    val status: String? = null,
+    val riskLevel: String? = null,
+    val recommendations: com.google.gson.JsonObject? = null,
+    val completedAt: String? = null
+)
+
+data class AppointmentScreeningQuestion(val id: String, val question: String, val answer: String?, val order: Int)
+data class AppointmentScreeningMedia(
+    val id: String, val type: String, val mimeType: String, val sizeBytes: Int,
+    val createdAt: String, val fileUrl: String
+)
+data class AppointmentScreening(
+    val id: String,
+    val status: String,
+    val completedAt: String?,
+    val symptoms: String?,
+    val voiceTranscript: String?,
+    val riskLevel: String?,
+    val bodyDiagramData: com.google.gson.JsonObject?,
+    val structuredData: com.google.gson.JsonObject?,
+    val imageAnalysis: com.google.gson.JsonObject?,
+    val recommendations: com.google.gson.JsonObject?,
+    val questions: List<AppointmentScreeningQuestion> = emptyList(),
+    val media: List<AppointmentScreeningMedia> = emptyList()
+)
+
+data class ConsultationSummary(
+    val id: String,
+    val channel: String? = null,
+    val status: String? = null
+)
+
 data class Appointment(
     val id: String,
     val userId: String,
@@ -347,6 +381,9 @@ data class Appointment(
     val reason: String? = null,
     val symptoms: String? = null,
     val notes: String? = null,
+    val serviceBookingMode: String? = null,
+    val medicalService: MedicalService? = null,
+    val consultation: ConsultationSummary? = null,
     @SerializedName("totalPrice") val rawTotalPrice: JsonElement? = null,
     @SerializedName("totalAmount") val rawTotalAmount: JsonElement? = null,
     val createdAt: String,
@@ -354,10 +391,19 @@ data class Appointment(
     val expiresAt: String? = null,
     val patientProfile: PatientProfile? = null,
     val workplace: DoctorWorkplace? = null,
+    val preExamSession: ScreeningSessionSummary? = null,
     val statusHistory: List<AppointmentStatusHistory>? = null
 ) {
     val totalAmount: Double
         get() = parseJsonElementToDouble(rawTotalPrice ?: rawTotalAmount) ?: 200000.0
+
+    val appointmentTypeLabel: String
+        get() = when {
+            serviceBookingMode == "ONLINE" || consultation != null -> "Tư vấn video trực tuyến"
+            serviceBookingMode == "AFTER_HOURS" -> "Khám ngoài giờ"
+            serviceBookingMode == "SERVICE" || medicalService != null -> medicalService?.name ?: "Khám dịch vụ"
+            else -> "Khám theo bác sĩ"
+        }
 }
 
 data class Notification(

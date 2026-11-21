@@ -3,6 +3,7 @@ import { PrismaService } from '@/database/prisma.service';
 import { GoogleSpeechToTextService } from './speech-to-text.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
 
 const ALLOWED_MIME_TYPES = [
   'video/webm',
@@ -17,6 +18,7 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Injectable()
 export class ScreeningMediaService {
@@ -153,5 +155,72 @@ export class ScreeningMediaService {
 
     await this.prisma.screeningMedia.delete({ where: { id: mediaId } });
     return { success: true, deletedId: mediaId };
+  }
+
+  async saveSymptomImages(sessionId: string, files: any[] = []) {
+    const session = await this.prisma.preExamSession.findUnique({ where: { id: sessionId } });
+    if (!session) throw new NotFoundException('Phiên sàng lọc không tồn tại');
+
+    const saved: any[] = [];
+    try {
+      for (const file of files) {
+        const mimeType = String(file?.mimetype || '').toLowerCase();
+        const size = Number(file?.size || file?.buffer?.length || 0);
+        if (!ALLOWED_IMAGE_TYPES.includes(mimeType) || !file?.buffer?.length || size <= 0 || size > 5 * 1024 * 1024)
+          throw new BadRequestException('Ảnh sàng lọc phải là JPEG, PNG hoặc WebP và không quá 5 MB.');
+        const extension = mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg';
+        const filename = `${sessionId}_${randomUUID()}${extension}`;
+        fs.writeFileSync(path.join(this.uploadDir, filename), file.buffer);
+        const record = await this.prisma.screeningMedia.create({
+          data: {
+            sessionId,
+            type: 'SYMPTOM_IMAGE',
+            storageKey: filename,
+            mimeType,
+            sizeBytes: size,
+            processingStatus: 'READY',
+          },
+        });
+        saved.push(record);
+      }
+      if (saved.length) await this.prisma.preExamSession.update({
+        where: { id: sessionId },
+        data: { uploadedFiles: [...session.uploadedFiles, ...saved.map((item) => item.storageKey)] },
+      });
+      return saved;
+    } catch (error) {
+      for (const item of saved) {
+        const target = path.join(this.uploadDir, item.storageKey);
+        if (fs.existsSync(target)) fs.unlinkSync(target);
+        await this.prisma.screeningMedia.delete({ where: { id: item.id } }).catch(() => undefined);
+      }
+      throw error;
+    }
+  }
+
+  async getAuthorizedMedia(sessionId: string, mediaId: string, user: any) {
+    const media = await this.prisma.screeningMedia.findFirst({
+      where: { id: mediaId, sessionId },
+      include: {
+        session: {
+          include: {
+            appointment: { include: { slot: { include: { doctorWorkplace: { include: { doctor: true } } } } } },
+          },
+        },
+      },
+    });
+    if (!media) throw new NotFoundException('Ảnh sàng lọc không tồn tại');
+    const appointment = media.session.appointment as any;
+    const workplace = appointment?.slot?.doctorWorkplace;
+    const role = String(user.role || '').toUpperCase();
+    const allowed = media.session.userId === user.id ||
+      ['ADMIN', 'SUPER_ADMIN'].includes(role) ||
+      (role === 'HOSPITAL_ADMIN' && user.hospitalId && user.hospitalId === workplace?.hospitalId) ||
+      (role === 'DOCTOR' && workplace?.doctor?.userId === user.id);
+    if (!allowed) throw new NotFoundException('Ảnh sàng lọc không tồn tại');
+    const filePath = path.resolve(this.uploadDir, media.storageKey);
+    if (!filePath.startsWith(path.resolve(this.uploadDir)) || !fs.existsSync(filePath))
+      throw new NotFoundException('Tệp sàng lọc không còn tồn tại');
+    return { media, filePath };
   }
 }

@@ -35,10 +35,11 @@ class MobileScreeningContractTest {
         assertTrue(state.copy(answers = mapOf("knee-safety" to "yes")).hasWarning)
     }
     @Test fun applyRequiresCurrentRevisionExactHospitalAndBackendPermission() {
-        val result = Gson().fromJson("""{"schemaVersion":"3","inputRevision":"7","canApply":true,"nextAction":"BOOK_SPECIALTY","recommendedSpecialtyId":"neuro","recommendedSpecialtyName":"Thần kinh","riskLevel":"CONSULT","hospitalAvailability":{"hospitalId":"h1","available":true}}""", MobileScreeningResult::class.java)
+        val result = Gson().fromJson("""{"schemaVersion":"3","inputRevision":"7","screeningSessionId":"session-1","canApply":true,"nextAction":"BOOK_SPECIALTY","recommendedSpecialtyId":"neuro","recommendedSpecialtyName":"Thần kinh","riskLevel":"CONSULT","hospitalAvailability":{"hospitalId":"h1","available":true}}""", MobileScreeningResult::class.java)
         assertTrue(result.applicable(7, "h1")); assertFalse(result.applicable(8, "h1")); assertFalse(result.applicable(7, "h2"))
         assertFalse(result.copy(canApply = false).applicable(7, "h1")); assertFalse(result.copy(riskLevel = "EMERGENCY").applicable(7, "h1"))
         assertFalse(result.copy(nextAction = "CHOOSE_FACILITY").applicable(7, "h1"))
+        assertFalse(result.copy(screeningSessionId = null).applicable(7, "h1"))
     }
     @Test fun cameraPpgRejectsShortNoisyMissingAndOutOfRangeIntervals() {
         assertNull(estimateCameraPpg(emptyList(), 20000))

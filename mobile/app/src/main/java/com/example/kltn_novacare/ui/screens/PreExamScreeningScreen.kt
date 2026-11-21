@@ -27,7 +27,7 @@ import com.example.kltn_novacare.ui.viewmodel.PreExamViewModel
 @Composable
 fun PreExamScreeningScreen(
     onSkipScreening: () -> Unit,
-    onCompletedToBooking: (String?, String?, String?, String) -> Unit,
+    onCompletedToBooking: (String?, String?, String?, String?, String, String, String) -> Unit,
     viewModel: PreExamViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -99,48 +99,78 @@ fun PreExamScreeningScreen(
             if (state.catalog != null) {
                 when (state.step) {
                     0 -> {
+                        val hasValidAge = state.age.isNotBlank() && (state.age.toIntOrNull() ?: 0) in 1..120
+                        val hasRegions = state.regions.isNotEmpty() && state.regions.size <= 2
                         ScreeningBottomAction(
                             primaryText = "Tiếp tục",
                             onPrimary = { viewModel.step(1) },
-                            primaryEnabled = state.regions.isNotEmpty() && !locked,
-                            helperText = if (state.regions.isEmpty()) "Vui lòng chọn ít nhất 1 vùng khó chịu để tiếp tục" else null
+                            primaryEnabled = hasValidAge && hasRegions && !locked,
+                            helperText = when {
+                                !hasValidAge -> "Vui lòng nhập độ tuổi của người khám để tiếp tục *"
+                                !hasRegions -> "Vui lòng chọn từ 1 đến 2 vùng khó chịu / tổn thương"
+                                else -> null
+                            }
                         )
                     }
                     1 -> {
+                        val questions = state.questions
+                        val allQuestionsAnswered = questions.isNotEmpty() && questions.all { state.answers.containsKey(it.id) }
+                        val painSelected = state.pain.isNotBlank() && state.pain.toIntOrNull() != null
+                        val durationFilled = state.duration.isNotBlank()
+                        val canProceedStep2 = allQuestionsAnswered && painSelected && durationFilled && !locked
                         ScreeningBottomAction(
                             primaryText = "Tiếp tục",
                             onPrimary = { viewModel.step(2) },
-                            primaryEnabled = !locked
+                            primaryEnabled = canProceedStep2,
+                            helperText = when {
+                                !painSelected -> "Vui lòng chọn thang điểm mức độ đau (0 - 10)"
+                                !durationFilled -> "Vui lòng nhập thời điểm triệu chứng bắt đầu"
+                                !allQuestionsAnswered -> "Vui lòng trả lời đủ ${questions.size} câu trắc nghiệm (còn ${questions.size - state.answers.size} câu)"
+                                else -> null
+                            }
                         )
                     }
                     2 -> {
-                        ScreeningBottomAction(
-                            primaryText = "Tiếp tục",
-                            onPrimary = { viewModel.step(3) },
-                            primaryEnabled = !locked && (!state.images.isNotEmpty() || state.consent),
-                            secondaryText = "Bỏ qua bước này",
-                            onSecondary = {
-                                state.images.forEach(viewModel::removeImage)
-                                viewModel.step(3)
-                            },
-                            helperText = if (state.images.isNotEmpty() && !state.consent) "Cần đồng ý xử lý ảnh hoặc bỏ qua bước này" else null
-                        )
+                        val hasUploadedImageAndConsent = state.images.isNotEmpty() && state.consent
+                        if (hasUploadedImageAndConsent) {
+                            ScreeningBottomAction(
+                                primaryText = "Tiếp tục",
+                                onPrimary = { viewModel.step(3) },
+                                primaryEnabled = !locked,
+                                secondaryText = "Bỏ qua bước này",
+                                onSecondary = {
+                                    state.images.forEach(viewModel::removeImage)
+                                    viewModel.step(3)
+                                }
+                            )
+                        } else {
+                            ScreeningBottomAction(
+                                primaryText = "Bỏ qua bước này",
+                                onPrimary = {
+                                    state.images.forEach(viewModel::removeImage)
+                                    viewModel.step(3)
+                                },
+                                primaryEnabled = !locked,
+                                helperText = if (state.images.isNotEmpty() && !state.consent) "Vui lòng tích đồng ý xử lý ảnh để tiếp tục hoặc nhấn Bỏ qua" else null
+                            )
+                        }
                     }
                     3 -> {
                         ScreeningBottomAction(
                             primaryText = "Tiếp tục",
                             onPrimary = { viewModel.step(4) },
-                            primaryEnabled = !locked,
+                            primaryEnabled = state.ppg != null && !locked,
                             secondaryText = "Bỏ qua bước này",
                             onSecondary = {
                                 viewModel.ppg(null)
                                 viewModel.step(4)
-                            }
+                            },
+                            helperText = if (state.ppg == null) "Hoàn thành đo nhịp tim để tiếp tục hoặc nhấn Bỏ qua bước này" else null
                         )
                     }
                     4 -> {
-                        val canAnalyze = !locked && state.regions.isNotEmpty() &&
-                                (state.transcript.isBlank() || state.confirmed)
+                        val hasVoiceOrTranscript = state.transcript.isNotBlank()
+                        val canAnalyze = !locked && hasVoiceOrTranscript && state.confirmed
                         ScreeningBottomAction(
                             primaryText = "Phân tích và xem gợi ý",
                             onPrimary = { viewModel.analyze() },
@@ -152,8 +182,11 @@ fun PreExamScreeningScreen(
                                 viewModel.transcript("")
                                 viewModel.analyze()
                             },
-                            helperText = if (state.transcript.isNotBlank() && !state.confirmed)
-                                "Vui lòng đánh dấu xác nhận lời kể trước khi phân tích" else null
+                            helperText = when {
+                                !hasVoiceOrTranscript -> "Vui lòng ghi âm triệu chứng hoặc nhấn Bỏ qua để phân tích ngay"
+                                !state.confirmed -> "Vui lòng đánh dấu xác nhận lời kể trước khi phân tích"
+                                else -> null
+                            }
                         )
                     }
                     5 -> {
@@ -168,6 +201,7 @@ fun PreExamScreeningScreen(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .navigationBarsPadding()
                                         .padding(horizontal = 16.dp, vertical = 12.dp),
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
@@ -179,8 +213,11 @@ fun PreExamScreeningScreen(
                                                     onCompletedToBooking(
                                                         null,
                                                         res.recommendedSpecialtyId,
+                                                        res.recommendedSpecialtyName,
                                                         state.hospitalId,
-                                                        res.summary.orEmpty()
+                                                        state.symptoms,
+                                                        res.summary.orEmpty(),
+                                                        res.screeningSessionId.orEmpty()
                                                     )
                                                 }
                                             },
@@ -333,23 +370,13 @@ fun PreExamScreeningScreen(
                     0 -> {
                         PatientInfoCard(
                             age = state.age,
-                            onAgeChange = viewModel::age,
-                            hospitalId = state.hospitalId,
-                            hospitals = state.hospitals,
-                            onSelectHospital = viewModel::hospital
+                            onAgeChange = viewModel::age
                         )
 
                         BodyRegionSelectorCard(
                             catalogRegions = catalog.regions,
                             selectedRegions = state.regions,
                             onToggleRegion = viewModel::region
-                        )
-
-                        SymptomDescriptionCard(
-                            symptoms = state.symptoms,
-                            onSymptomsChange = viewModel::symptoms,
-                            onUrgentCheck = { viewModel.analyze(true) },
-                            hasSelectedRegions = state.regions.isNotEmpty()
                         )
                     }
 
@@ -529,6 +556,42 @@ fun PreExamScreeningScreen(
 
                             // 5. Lưu ý y tế & Tài liệu tham khảo
                             MedicalNotesAndCitationsCard(result = result)
+
+                            // 6. Gợi ý cơ sở y tế & Bác sĩ (DƯỚI CÙNG - Có popup tùy chọn xem thêm)
+                            RecommendedFacilitiesAndDoctorsCard(
+                                hospitals = state.hospitals,
+                                doctors = state.recommendedDoctors,
+                                loadingDoctors = state.loadingDoctors,
+                                recommendedSpecialtyName = result.recommendedSpecialtyName,
+                                onSelectHospital = { hospitalId ->
+                                    if (!applied) {
+                                        applied = true
+                                        onCompletedToBooking(
+                                            null,
+                                            result.recommendedSpecialtyId,
+                                            result.recommendedSpecialtyName,
+                                            hospitalId,
+                                            state.symptoms,
+                                            result.summary.orEmpty(),
+                                            result.screeningSessionId.orEmpty()
+                                        )
+                                    }
+                                },
+                                onSelectDoctor = { doctorId, hospitalId ->
+                                    if (!applied) {
+                                        applied = true
+                                        onCompletedToBooking(
+                                            doctorId,
+                                            result.recommendedSpecialtyId,
+                                            result.recommendedSpecialtyName,
+                                            hospitalId,
+                                            state.symptoms,
+                                            result.summary.orEmpty(),
+                                            result.screeningSessionId.orEmpty()
+                                        )
+                                    }
+                                }
+                            )
                         }
 
                         if (!state.busy && state.result == null) {

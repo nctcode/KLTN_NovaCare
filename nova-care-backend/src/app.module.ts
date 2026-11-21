@@ -34,6 +34,7 @@ import { SchedulesModule } from '@/modules/schedules/schedules.module';
 import { ConsultationsModule } from '@/modules/consultations/consultations.module';
 import { SearchModule } from '@/modules/search/search.module';
 import { ReviewsModule } from '@/modules/reviews/reviews.module';
+import { DoctorPortalModule } from '@/modules/doctor-portal/doctor-portal.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { ReviewsModule } from '@/modules/reviews/reviews.module';
     ClinicRoomsModule,
     PartnerRequestsModule,
     ReviewsModule,
+    DoctorPortalModule,
   ],
 })
 export class AppModule { }

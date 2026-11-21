@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -58,6 +59,8 @@ type ConsultationWithAccess = Prisma.ConsultationSessionGetPayload<{
 
 @Injectable()
 export class ConsultationsService {
+  private readonly logger = new Logger(ConsultationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
@@ -200,10 +203,10 @@ export class ConsultationsService {
   async start(id: string, userId: string) {
     const session = await this.getDoctorSession(id, userId);
     this.requireStatus(session.status, [ConsultationStatus.ACCEPTED]);
-    if (session.chatOpenAt && session.chatOpenAt > new Date()) {
-      throw new BadRequestException('Phiên tư vấn chưa đến thời gian bắt đầu');
-    }
-    return this.transition(session, userId, ConsultationStatus.ACTIVE, { startedAt: new Date() });
+    return this.transition(session, userId, ConsultationStatus.ACTIVE, {
+      startedAt: new Date(),
+      chatOpenAt: new Date(),
+    });
   }
 
   async complete(id: string, userId: string) {
@@ -455,6 +458,47 @@ export class ConsultationsService {
       }
       throw error;
     });
+
+    if (session.appointmentId) {
+      if (status === ConsultationStatus.COMPLETED) {
+        await this.prisma.appointment.update({
+          where: { id: session.appointmentId },
+          data: {
+            status: AppointmentStatus.COMPLETED,
+            completedAt: new Date(),
+          },
+        }).catch(err => {
+          this.logger.error(`Không thể cập nhật Appointment ${session.appointmentId} sang COMPLETED: ${err.message}`);
+        });
+
+        await this.prisma.appointmentStatusHistory.create({
+          data: {
+            appointmentId: session.appointmentId,
+            status: AppointmentStatus.COMPLETED,
+            note: 'Bác sĩ đã hoàn thành phiên tư vấn trực tuyến',
+          },
+        }).catch(() => undefined);
+      } else if (status === ConsultationStatus.CANCELLED) {
+        await this.prisma.appointment.update({
+          where: { id: session.appointmentId },
+          data: {
+            status: AppointmentStatus.CANCELLED,
+            cancelledAt: new Date(),
+          },
+        }).catch(err => {
+          this.logger.error(`Không thể cập nhật Appointment ${session.appointmentId} sang CANCELLED: ${err.message}`);
+        });
+
+        await this.prisma.appointmentStatusHistory.create({
+          data: {
+            appointmentId: session.appointmentId,
+            status: AppointmentStatus.CANCELLED,
+            note: 'Đã hủy phiên tư vấn trực tuyến',
+          },
+        }).catch(() => undefined);
+      }
+    }
+
     if (session.videoEnabled && (status === ConsultationStatus.COMPLETED || status === ConsultationStatus.CANCELLED || status === ConsultationStatus.EXPIRED)) {
       // Persist the terminal state first; the reconciler retries provider failures.
       await this.video.close(session.id).catch(() => undefined);

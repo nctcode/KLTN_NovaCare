@@ -18,6 +18,7 @@ data class ScreeningVitals(val bpm: Int? = null, val quality: String? = null)
 data class ScreeningImageAssessment(val imageIndex: Int, val status: String?, val observations: List<String>?)
 data class ScreeningHospitalAvailability(val hospitalId: String?, val available: Boolean = false)
 data class MobileScreeningResult(val schemaVersion: String?, val inputRevision: String?, val riskLevel: String?,
+    val screeningSessionId: String? = null,
     val riskLabel: String?, val summary: String?, val nextAction: String?, val canApply: Boolean = false,
     val recommendedSpecialtyId: String?, val recommendedSpecialtyName: String?,
     val triageDetails: TriageDetails?, val providerErrors: List<ScreeningProviderFailure>?,
@@ -25,10 +26,9 @@ data class MobileScreeningResult(val schemaVersion: String?, val inputRevision: 
     val recommendationSource: String?, val decisionReason: String?, val ppg: ScreeningVitals?,
     val hospitalAvailability: ScreeningHospitalAvailability?, val modalityStatuses: Map<String, String>?,
     val imageAssessments: List<ScreeningImageAssessment>? = null, val ppgExplanation: String? = null) {
-    fun applicable(revision: Long, hospitalId: String?) = schemaVersion == "3" && inputRevision == revision.toString() &&
-        canApply && nextAction == "BOOK_SPECIALTY" && !recommendedSpecialtyId.isNullOrBlank() &&
-        !recommendedSpecialtyName.isNullOrBlank() && hospitalId != null && hospitalAvailability?.available == true &&
-        hospitalAvailability.hospitalId == hospitalId && riskLevel !in listOf("EMERGENCY", "URGENT")
+    fun applicable(revision: Long, hospitalId: String? = null) = schemaVersion == "3" && inputRevision == revision.toString() &&
+        canApply && !screeningSessionId.isNullOrBlank() && nextAction == "BOOK_SPECIALTY" && !recommendedSpecialtyId.isNullOrBlank() &&
+        !recommendedSpecialtyName.isNullOrBlank() && riskLevel !in listOf("EMERGENCY", "URGENT")
 }
 fun unwrapScreeningResponse(body: JsonObject): JsonObject {
     var value = body

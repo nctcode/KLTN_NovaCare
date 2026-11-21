@@ -55,7 +55,7 @@ fun PainAndDurationCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Thang điểm đau (0 - 10):",
+                        text = "Thang điểm đau (0 - 10) *",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -141,7 +141,7 @@ fun PainAndDurationCard(
             OutlinedTextField(
                 value = duration,
                 onValueChange = onDurationChange,
-                label = { Text("Triệu chứng bắt đầu khi nào?") },
+                label = { Text("Triệu chứng bắt đầu khi nào? *") },
                 placeholder = { Text("Ví dụ: 3 ngày trước, sau khi thức dậy...") },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),

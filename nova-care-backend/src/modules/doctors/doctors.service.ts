@@ -204,6 +204,9 @@ export class DoctorsService {
         startTime: { gte: startOfDay, lte: endOfDay },
         isAvailable: true,
         isActive: true,
+        // A slot assigned to a clinic room belongs to SERVICE/AFTER_HOURS
+        // booking. It must not be offered again in the doctor-booking flow.
+        roomSession: null,
       },
       orderBy: { startTime: 'asc' },
       include: {
@@ -311,6 +314,7 @@ export class DoctorsService {
             startTime: { gte: startOfDay, lte: endOfDay },
             isAvailable: true,
             isActive: true,
+            roomSession: null,
           },
           orderBy: { startTime: 'asc' },
           include: {

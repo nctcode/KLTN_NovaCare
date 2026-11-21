@@ -337,6 +337,53 @@ fun AppointmentItem(appointment: Appointment, onClick: () -> Unit) {
                 color = BorderLight
             )
 
+            // Booking Type Tag
+            Surface(
+                color = when {
+                    appointment.serviceBookingMode == "ONLINE" || appointment.consultation != null -> Color(0xFFE0F2FE)
+                    appointment.serviceBookingMode == "AFTER_HOURS" -> Color(0xFFFEF3C7)
+                    appointment.serviceBookingMode == "SERVICE" || appointment.medicalService != null -> Color(0xFFF3E8FF)
+                    else -> Color(0xFFF1F5F9)
+                },
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = when {
+                            appointment.serviceBookingMode == "ONLINE" || appointment.consultation != null -> Icons.Outlined.Videocam
+                            appointment.serviceBookingMode == "AFTER_HOURS" -> Icons.Outlined.AccessTime
+                            appointment.serviceBookingMode == "SERVICE" || appointment.medicalService != null -> Icons.Outlined.MedicalServices
+                            else -> Icons.Outlined.Person
+                        },
+                        contentDescription = null,
+                        tint = when {
+                            appointment.serviceBookingMode == "ONLINE" || appointment.consultation != null -> Color(0xFF0369A1)
+                            appointment.serviceBookingMode == "AFTER_HOURS" -> Color(0xFFB45309)
+                            appointment.serviceBookingMode == "SERVICE" || appointment.medicalService != null -> Color(0xFF7E22CE)
+                            else -> Color(0xFF475569)
+                        },
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = appointment.appointmentTypeLabel,
+                        color = when {
+                            appointment.serviceBookingMode == "ONLINE" || appointment.consultation != null -> Color(0xFF0369A1)
+                            appointment.serviceBookingMode == "AFTER_HOURS" -> Color(0xFFB45309)
+                            appointment.serviceBookingMode == "SERVICE" || appointment.medicalService != null -> Color(0xFF7E22CE)
+                            else -> Color(0xFF475569)
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             // Specialty & Medical Workplace
             Text(
                 text = (appointment.workplace ?: appointment.slot?.doctorWorkplace)?.specialty?.name ?: "Khám tổng quát",

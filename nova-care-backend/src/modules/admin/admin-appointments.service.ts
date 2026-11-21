@@ -158,6 +158,9 @@ export class AdminAppointmentsService {
         medicalService: true,
         statusHistory: { orderBy: { createdAt: 'desc' } },
         contactLogs: { orderBy: { contactedAt: 'desc' } },
+        preExamSession: {
+          select: { id: true, status: true, riskLevel: true, completedAt: true },
+        },
         slot: {
           include: {
             doctorWorkplace: {

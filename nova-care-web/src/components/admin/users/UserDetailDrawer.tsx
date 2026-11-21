@@ -9,11 +9,9 @@ import {
   Lock,
   Unlock,
   Users,
-  Loader2,
 } from 'lucide-react';
 import { AdminUserItem, AccountStatus } from './types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 interface UserDetailModalProps {
   user: AdminUserItem | null;
@@ -521,109 +519,6 @@ export const UserDetailDrawer: React.FC<UserDetailModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Removed reset-password and notification dialogs from the admin UI. */}
-      {false && showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="max-w-md w-full p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white space-y-3">
-            <div className="flex items-center gap-2 font-bold text-sm">
-              <KeyRound className="w-4 h-4 text-slate-700 dark:text-slate-300" />
-              <span>Xác nhận Reset Mật khẩu</span>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Hệ thống sẽ tạo mật khẩu ngẫu nhiên tạm thời gửi tới người dùng <strong>{user.fullName}</strong>.
-            </p>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowResetModal(false)}
-                className="text-xs h-8 rounded-lg"
-              >
-                Hủy
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  onResetPassword(user.id);
-                  setShowResetModal(false);
-                }}
-                className="text-xs h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                Tạo & Gửi mật khẩu
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 2: Send Notification */}
-      {false && showNotifModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="max-w-md w-full p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-bold text-sm">
-                <Bell className="w-4 h-4 text-slate-700 dark:text-slate-300" />
-                <span>Gửi thông báo tới người dùng</span>
-              </div>
-              <button onClick={() => setShowNotifModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSendNotif} className="space-y-3 text-xs">
-              <div>
-                <label className="font-semibold block mb-1">Tiêu đề thông báo</label>
-                <Input
-                  required
-                  placeholder="Nhập tiêu đề..."
-                  value={notifTitle}
-                  onChange={(e) => setNotifTitle(e.target.value)}
-                  className="text-xs rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="font-semibold block mb-1">Nội dung chi tiết</label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Nhập nội dung thông báo..."
-                  value={notifMessage}
-                  onChange={(e) => setNotifMessage(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowNotifModal(false)}
-                  className="text-xs h-8 rounded-lg"
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  size="sm"
-                  className="text-xs h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-3.5 h-3.5 mr-1" /> Gửi thông báo
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </>
   );
 };

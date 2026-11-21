@@ -56,6 +56,21 @@ fun bookingTime(value: String): String = runCatching {
 }.getOrDefault(value.take(5))
 fun bookingDate(value: String?): String = value?.substringBefore('T').orEmpty()
 
+fun bookingPaymentLabel(method: String): String = when (method.uppercase()) {
+    "MOMO" -> "Ví MoMo (mô phỏng)"
+    "VNPAY" -> "VNPAY (mô phỏng)"
+    "VIETQR" -> "VietQR (mô phỏng)"
+    "CARD" -> "Thẻ ngân hàng (mô phỏng)"
+    else -> "Thanh toán tại cơ sở y tế"
+}
+
+fun bookingServiceLabel(state: BookingUiState): String = state.selectedService?.name ?: when (state.bookingType) {
+    "VIDEO" -> "Tư vấn video trực tuyến"
+    "AFTER_HOURS" -> "Khám dịch vụ ngoài giờ"
+    "SERVICE" -> "Khám dịch vụ"
+    else -> "Khám theo bác sĩ"
+}
+
 @Composable
 fun DashedDivider(
     color: Color = Color(0xFFE2E8F0),
@@ -212,6 +227,7 @@ fun BookingJourney(
     patientViewModel: PatientViewModel,
     navController: NavController,
     onBackFromInfo: () -> Unit,
+    completionContent: (@Composable (BookingUiState) -> Unit)? = null,
     info: @Composable () -> Unit
 ) {
     val state by bookingViewModel.uiState.collectAsState()
@@ -228,11 +244,11 @@ fun BookingJourney(
     BackHandler(onBack = back)
 
     val currentTitle = when (state.currentStep) {
-        1 -> "Chọn thông tin khám"
+        1 -> if (state.bookingType == "VIDEO") "Chọn lịch gọi video" else "Chọn thông tin khám"
         2 -> "Chọn hồ sơ"
         3 -> "Xác nhận thông tin"
         4 -> "Thông tin thanh toán"
-        else -> "Phiếu khám điện tử"
+        else -> if (state.bookingType == "VIDEO") "Lịch gọi video" else "Phiếu khám điện tử"
     }
 
     Scaffold(
@@ -255,22 +271,25 @@ fun BookingJourney(
                 2 -> BookingProfileStep(state, patientViewModel, bookingViewModel)
                 3 -> BookingReviewStep(state, bookingViewModel)
                 4 -> BookingCheckoutStep(state, bookingViewModel)
-                5 -> BookingReceipt(
-                    state = state,
-                    onDetails = {
-                        state.createdAppointment?.let {
-                            navController.navigate(Screen.AppointmentDetail.createRoute(it.id)) {
-                                popUpTo(navController.currentDestination?.route ?: Screen.Home.route) { inclusive = true }
+                5 -> {
+                    if (completionContent != null) completionContent(state)
+                    else BookingReceipt(
+                        state = state,
+                        onDetails = {
+                            state.createdAppointment?.let {
+                                navController.navigate(Screen.AppointmentDetail.createRoute(it.id)) {
+                                    popUpTo(navController.currentDestination?.route ?: Screen.Home.route) { inclusive = true }
+                                }
+                            }
+                        },
+                        onAppointments = {
+                            navController.navigate(Screen.Appointments.route) {
+                                popUpTo(Screen.Home.route)
+                                launchSingleTop = true
                             }
                         }
-                    },
-                    onAppointments = {
-                        navController.navigate(Screen.Appointments.route) {
-                            popUpTo(Screen.Home.route)
-                            launchSingleTop = true
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -861,7 +880,7 @@ fun MedproBookingSummaryCard(state: BookingUiState) {
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = state.selectedService?.name ?: "Khám dịch vụ",
+                    text = bookingServiceLabel(state),
                     fontSize = 13.5.sp,
                     color = Color(0xFF0F172A)
                 )
@@ -908,12 +927,10 @@ fun MedproBookingSummaryCard(state: BookingUiState) {
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "${bookingMoney(total)} (Thanh toán tại Bệnh viện)",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.5.sp,
-                    color = Color(0xFF0F172A)
-                )
+                Column {
+                    Text(bookingMoney(total), fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = Color(0xFF0F172A))
+                    Text(bookingPaymentLabel(state.paymentMethod), fontSize = 11.sp, color = Color(0xFF64748B))
+                }
             }
         }
     }
@@ -938,6 +955,35 @@ private fun BookingReviewStep(state: BookingUiState, vm: BookingViewModel) {
                 // Summary Card (Medpro style)
                 item {
                     MedproBookingSummaryCard(state)
+                }
+
+                if (state.screeningSessionId != null) {
+                    item {
+                        Surface(
+                            color = Color(0xFFECFDF5),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+                                Box(
+                                    Modifier.size(42.dp).background(Color(0xFF059669), RoundedCornerShape(12.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White) }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("Đã đính kèm phiếu sàng lọc AI", fontWeight = FontWeight.Bold, color = Color(0xFF065F46))
+                                    Text(
+                                        state.screeningSummary ?: "Thông tin sàng lọc sẽ được gửi an toàn tới bác sĩ phụ trách.",
+                                        fontSize = 12.sp,
+                                        lineHeight = 17.sp,
+                                        color = Color(0xFF047857)
+                                    )
+                                    Text("Thông tin hỗ trợ định hướng, không thay thế chẩn đoán.", fontSize = 11.sp, color = Color(0xFF64748B))
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Lý do khám / Triệu chứng
@@ -974,6 +1020,7 @@ private fun BookingReviewStep(state: BookingUiState, vm: BookingViewModel) {
                             profileId = state.selectedProfile.id,
                             targetId = target.id,
                             targetName = target.name,
+                            validUntilAtLeast = state.selectedSlot?.startTime,
                             onBusy = { sharingBusy = it }
                         )
                     }
@@ -1010,12 +1057,10 @@ private fun BookingReviewStep(state: BookingUiState, vm: BookingViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Tạm tính", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                        Text(
-                            text = "${bookingMoney(total)} (Thanh toán tại Bệnh viện)",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NovaCareGreen
-                        )
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(bookingMoney(total), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NovaCareGreen)
+                            Text(bookingPaymentLabel(state.paymentMethod), fontSize = 11.sp, color = Color(0xFF64748B))
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -1138,12 +1183,10 @@ fun BookingCheckoutStep(state: BookingUiState, vm: BookingViewModel) {
                             fontSize = 14.5.sp,
                             color = Color(0xFF0F172A)
                         )
-                        Text(
-                            text = "${bookingMoney(total)} (Thanh toán tại Bệnh viện)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = Color(0xFF0F172A)
-                        )
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(bookingMoney(total), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF0F172A))
+                            Text(bookingPaymentLabel(state.paymentMethod), fontSize = 11.sp, color = NovaCareGreen)
+                        }
                     }
                 }
 

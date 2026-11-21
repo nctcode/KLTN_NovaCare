@@ -8,6 +8,7 @@ import {
   UseGuards,
   HttpStatus,
   ForbiddenException,
+  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
@@ -33,8 +34,12 @@ export class AppointmentsController {
   @ApiOperation({ summary: 'Tạo lịch khám mới' })
   @ApiResponse({ status: 201, description: 'Tạo lịch khám thành công' })
   @ApiResponse({ status: 409, description: 'Khung giờ đã hết chỗ hoặc trùng lịch' })
-  async create(@CurrentUser() user: User, @Body() createDto: CreateAppointmentDto) {
-    const data = await this.service.create(user.id, createDto);
+  async create(
+    @CurrentUser() user: User,
+    @Body() createDto: CreateAppointmentDto,
+    @Headers('x-novacare-booking-type') bookingType?: string,
+  ) {
+    const data = await this.service.create(user.id, createDto, bookingType);
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Tạo lịch khám thành công',
@@ -84,6 +89,12 @@ export class AppointmentsController {
       message: 'Lấy chi tiết lịch khám thành công',
       data,
     };
+  }
+
+  @Get(':id/screening')
+  @ApiOperation({ summary: 'Lấy phiếu sàng lọc AI gắn với lịch khám' })
+  async getScreening(@Param('id') id: string, @CurrentUser() user: User) {
+    return { statusCode: HttpStatus.OK, data: await this.service.getScreening(id, user) };
   }
 
   @Get(':id/timeline')

@@ -159,14 +159,6 @@ fun ScreeningVoiceSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Privacy Consent
-        PrivacyConsentCard(
-            checked = consent,
-            onCheckedChange = onConsentChange,
-            title = "Đồng ý xử lý giọng nói y tế bằng AI",
-            description = "Bản ghi âm chỉ được dùng để chuyển thành văn bản trong phiên này. Hệ thống không chẩn đoán dựa trên âm sắc giọng nói."
-        )
-
         // Main Voice Capture Section Card
         ScreeningSectionCard(
             title = "5. Giọng nói triệu chứng (tùy chọn)",
@@ -419,5 +411,13 @@ fun ScreeningVoiceSection(
                 }
             }
         }
+
+        // Privacy Consent (placed below voice capture card)
+        PrivacyConsentCard(
+            checked = consent,
+            onCheckedChange = onConsentChange,
+            title = "Đồng ý xử lý giọng nói y tế bằng AI",
+            description = "Bản ghi âm chỉ được dùng để chuyển thành văn bản trong phiên này. Hệ thống không chẩn đoán dựa trên âm sắc giọng nói."
+        )
     }
 }

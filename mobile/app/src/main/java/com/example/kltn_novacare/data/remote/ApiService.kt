@@ -258,7 +258,10 @@ interface ApiService {
     // APPOINTMENTS
     // ==========================================
     @POST("appointments")
-    fun createAppointment(@Body request: CreateAppointmentRequest): Call<ApiResponse<Appointment>>
+    fun createAppointment(
+        @Header("X-NovaCare-Booking-Type") bookingType: String? = null,
+        @Body request: CreateAppointmentRequest
+    ): Call<ApiResponse<Appointment>>
 
     @PATCH("appointments/{id}/confirm")
     fun confirmAppointment(@Path("id") id: String): Call<ApiResponse<Appointment>>
@@ -277,6 +280,9 @@ interface ApiService {
 
     @GET("appointments/{id}")
     fun getAppointmentById(@Path("id") id: String): Call<ApiResponse<Appointment>>
+
+    @GET("appointments/{id}/screening")
+    fun getAppointmentScreening(@Path("id") id: String): Call<ApiResponse<AppointmentScreening>>
 
     @PATCH("appointments/{id}/cancel")
     fun cancelAppointment(
@@ -363,7 +369,8 @@ data class CreateAppointmentRequest(
     val idempotencyKey: String,
     val medicalServiceId: String? = null,
     val clinicRoomId: String? = null,
-    val serviceBookingMode: String? = null
+    val serviceBookingMode: String? = null,
+    val screeningSessionId: String? = null
 )
 
 data class SimulatePaymentRequest(val appointmentId: String, val paymentMethod: String)

@@ -25,7 +25,9 @@ export function useAuth() {
       toast.success('Đăng nhập thành công!');
 
       // Tự động điều hướng theo Role
-      if (user.role === 'ADMIN' || user.role === 'HOSPITAL_ADMIN') {
+      if (user.role === 'DOCTOR') {
+        router.push('/doctor');
+      } else if (user.role === 'ADMIN' || user.role === 'HOSPITAL_ADMIN') {
         router.push('/admin');
       } else {
         router.push('/');

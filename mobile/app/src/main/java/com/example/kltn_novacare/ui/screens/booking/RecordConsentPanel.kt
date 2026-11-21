@@ -45,6 +45,7 @@ fun RecordConsentPanel(
     profileId: String,
     targetId: String,
     targetName: String,
+    validUntilAtLeast: String? = null,
     onBusy: (Boolean) -> Unit = {}
 ) {
     key(profileId, targetId) {
@@ -57,13 +58,35 @@ fun RecordConsentPanel(
         var message by remember { mutableStateOf<String?>(null) }
         var showConfigSheet by remember { mutableStateOf(false) }
         var showHistorySheet by remember { mutableStateOf(false) }
+        var existingConsentId by remember { mutableStateOf<String?>(null) }
 
         val scope = rememberCoroutineScope()
         val api = remember { ApiClient.getService() }
 
         DisposableEffect(Unit) { onDispose { onBusy(false) } }
 
-        fun loadRecords() {
+        // Tự động kiểm tra quyền chia sẻ đã cấp trước đó giữa 2 cơ sở
+        LaunchedEffect(profileId, targetId) {
+            healthApiResult("Không tải được quyền chia sẻ", { api.consents(profileId) }) { it.data.orEmpty() }
+                .onSuccess { list ->
+                    val matched = list.firstOrNull {
+                        it.get("targetHospital")?.takeIf { h -> h.isJsonObject }?.asJsonObject?.text("id") == targetId &&
+                        it.text("status") == "GRANTED" &&
+                        runCatching { Instant.parse(it.text("expiresAt")) > Instant.now() }.getOrDefault(true)
+                    }
+                    if (matched != null) {
+                        existingConsentId = matched.text("id")
+                        enabled = true
+                        val scopeObj = matched.get("scope")?.takeIf { s -> s.isJsonObject }?.asJsonObject
+                        val allowed = scopeObj?.get("allowedSections")?.takeIf { a -> a.isJsonArray }?.asJsonArray?.mapNotNull { item -> if (item.isJsonPrimitive) item.asString else null }?.toSet()
+                        if (!allowed.isNullOrEmpty()) sections = allowed
+                        val encs = scopeObj?.get("encounterIds")?.takeIf { e -> e.isJsonArray }?.asJsonArray?.mapNotNull { item -> if (item.isJsonPrimitive) item.asString else null }?.toSet()
+                        if (!encs.isNullOrEmpty()) selected = encs
+                    }
+                }
+        }
+
+        fun loadRecords(onLoaded: (() -> Unit)? = null) {
             scope.launch {
                 busy = true
                 onBusy(true)
@@ -71,8 +94,11 @@ fun RecordConsentPanel(
                     .fold(
                         onSuccess = { fetched ->
                             records = fetched
-                            selected = fetched.map { it.text("id") }.toSet()
+                            if (selected.isEmpty()) {
+                                selected = fetched.map { it.text("id") }.toSet()
+                            }
                             message = null
+                            onLoaded?.invoke()
                         },
                         onFailure = { message = it.message }
                     )
@@ -82,9 +108,11 @@ fun RecordConsentPanel(
         }
 
         fun executeGrant(onSuccessDone: () -> Unit) {
-            val chosen = records.filter { it.text("id") in selected }.groupBy { it.getAsJsonObject("hospital").text("id") }
+            val chosen = records.filter { it.text("id") in selected }.groupBy { it.get("hospital")?.takeIf { h -> h.isJsonObject }?.asJsonObject?.text("id") ?: "unknown" }
             val selectedSections = sections.toList()
-            val expires = Instant.now().plus(days.toLongOrNull() ?: 7L, ChronoUnit.DAYS).toString()
+            val requestedExpiry = Instant.now().plus(days.toLongOrNull() ?: 7L, ChronoUnit.DAYS)
+            val appointmentExpiry = validUntilAtLeast?.let { runCatching { Instant.parse(it).plus(1, ChronoUnit.DAYS) }.getOrNull() }
+            val expires = listOfNotNull(requestedExpiry, appointmentExpiry).maxOrNull().toString()
 
             scope.launch {
                 busy = true
@@ -107,16 +135,27 @@ fun RecordConsentPanel(
                         message = created.exceptionOrNull()?.message
                         break
                     }
-                    val granted = healthApiResult("Không xác nhận được quyền", { api.grantConsent(created.getOrThrow()) }) { it.data }
+                    val newConsentId = created.getOrThrow()
+                    val granted = healthApiResult("Không xác nhận được quyền", { api.grantConsent(newConsentId) }) { it.data }
                     if (granted.isFailure) {
                         message = granted.exceptionOrNull()?.message
                         break
                     }
+                    existingConsentId = newConsentId
                     completed++
                 }
 
                 if (completed > 0) {
-                    message = "Đã cấp quyền chia sẻ thành công từ $completed cơ sở y tế cho $targetName."
+                    val sectionNames = selectedSections.map {
+                        when (it) {
+                            "SUMMARY" -> "Tóm tắt"
+                            "DIAGNOSES" -> "Chẩn đoán"
+                            "OBSERVATIONS" -> "Cận lâm sàng"
+                            else -> "Đơn thuốc"
+                        }
+                    }.joinToString(", ")
+                    message = "Đã lưu quyền chia sẻ (${selected.size} lần khám, phạm vi: $sectionNames)."
+                    enabled = true
                     onSuccessDone()
                 }
                 busy = false
@@ -176,9 +215,28 @@ fun RecordConsentPanel(
                         checked = enabled,
                         enabled = !busy,
                         onCheckedChange = { value ->
-                            enabled = value
-                            if (value && records.isEmpty()) {
-                                loadRecords()
+                            if (value) {
+                                enabled = true
+                                if (records.isEmpty()) {
+                                    loadRecords { showConfigSheet = true }
+                                } else {
+                                    showConfigSheet = true
+                                }
+                            } else {
+                                enabled = false
+                                existingConsentId?.let { cid ->
+                                    scope.launch {
+                                        busy = true
+                                        onBusy(true)
+                                        healthApiResult("Không thu hồi được quyền", { api.revokeConsent(cid) }) { it.data }
+                                            .onSuccess {
+                                                existingConsentId = null
+                                                message = "Đã thu hồi quyền chia sẻ hồ sơ"
+                                            }
+                                        busy = false
+                                        onBusy(false)
+                                    }
+                                }
                             }
                         },
                         colors = SwitchDefaults.colors(
@@ -453,8 +511,8 @@ fun ConsentManagement(profileId: String) {
             val expiry = consent.text("expiresAt")
             val expired = runCatching { Instant.parse(expiry) <= Instant.now() }.getOrDefault(false)
             val status = consent.text("status")
-            val sourceName = consent.getAsJsonObject("sourceHospital")?.text("name") ?: "Cơ sở nguồn"
-            val targetHospitalName = consent.getAsJsonObject("targetHospital")?.text("name") ?: "Cơ sở đích"
+            val sourceName = consent.get("sourceHospital")?.takeIf { it.isJsonObject }?.asJsonObject?.text("name") ?: "Cơ sở nguồn"
+            val targetHospitalName = consent.get("targetHospital")?.takeIf { it.isJsonObject }?.asJsonObject?.text("name") ?: "Cơ sở đích"
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -494,14 +552,17 @@ fun ConsentManagement(profileId: String) {
                         }
                     }
 
-                    val allowed = consent.getAsJsonObject("scope")?.getAsJsonArray("allowedSections")?.joinToString {
-                        when(it.asString) {
-                            "SUMMARY" -> "Tóm tắt"
-                            "DIAGNOSES" -> "Chẩn đoán"
-                            "OBSERVATIONS" -> "Cận lâm sàng"
-                            else -> "Đơn thuốc"
-                        }
-                    }.orEmpty()
+                    val allowed = consent.get("scope")?.takeIf { it.isJsonObject }?.asJsonObject
+                        ?.get("allowedSections")?.takeIf { it.isJsonArray }?.asJsonArray
+                        ?.mapNotNull { if (it.isJsonPrimitive) it.asString else null }
+                        ?.joinToString {
+                            when(it) {
+                                "SUMMARY" -> "Tóm tắt"
+                                "DIAGNOSES" -> "Chẩn đoán"
+                                "OBSERVATIONS" -> "Cận lâm sàng"
+                                else -> "Đơn thuốc"
+                            }
+                        }.orEmpty()
 
                     if (allowed.isNotBlank()) {
                         Text("Phạm vi: $allowed", fontSize = 12.sp, color = TextSecondary)
@@ -543,7 +604,8 @@ fun ConsentManagement(profileId: String) {
             Text("Chưa có lượt truy cập hồ sơ nào được ghi nhận.", fontSize = 12.sp, color = TextMuted)
         }
         logs.forEach { logItem ->
-            val hospitalWhoAccessed = logItem.getAsJsonObject("user")?.getAsJsonObject("hospital")?.text("name").orEmpty()
+            val hospitalWhoAccessed = logItem.get("user")?.takeIf { it.isJsonObject }?.asJsonObject
+                ?.get("hospital")?.takeIf { it.isJsonObject }?.asJsonObject?.text("name").orEmpty()
             val accessedAt = logItem.text("createdAt")
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -601,7 +663,7 @@ private fun ShareConfigSheetContent(
     onConfirm: () -> Unit,
     onClose: () -> Unit
 ) {
-    var agreedTerms by remember { mutableStateOf(false) }
+    var agreedTerms by remember { mutableStateOf(true) }
     var customDaysMode by remember { mutableStateOf(days !in listOf("7", "14", "30", "90")) }
     val allSelected = records.isNotEmpty() && selected.size == records.size
 
@@ -675,7 +737,7 @@ private fun ShareConfigSheetContent(
                 }
 
                 // Grouped records
-                records.groupBy { it.getAsJsonObject("hospital").text("name") }.forEach { (hospitalName, entries) ->
+                records.groupBy { it.get("hospital")?.takeIf { h -> h.isJsonObject }?.asJsonObject?.text("name") ?: "Cơ sở y tế" }.forEach { (hospitalName, entries) ->
                     Text(
                         text = hospitalName,
                         fontSize = 13.sp,

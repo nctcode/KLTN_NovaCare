@@ -25,7 +25,8 @@ data class PreExamUiState(
     val answers: Map<String, String> = emptyMap(), val images: List<ScreeningImage> = emptyList(),
     val consent: Boolean = false, val ppg: ScreeningPpg? = null, val transcript: String = "", val confirmed: Boolean = false,
     val busy: Boolean = false, val importing: Boolean = false, val transcribing: Boolean = false,
-    val revision: Long = 0, val result: MobileScreeningResult? = null, val error: String? = null
+    val revision: Long = 0, val result: MobileScreeningResult? = null, val error: String? = null,
+    val recommendedDoctors: List<Doctor> = emptyList(), val loadingDoctors: Boolean = false
 ) {
     val questions get() = catalog?.questions.orEmpty().filter { q -> q.regionIds.any { it in regions } }.sortedWith(compareByDescending<ScreeningQuestion> { it.safety }.thenByDescending { it.priority })
     val unansweredSafety get() = questions.filter { it.safety && answers[it.id] !in listOf("yes", "no") }
@@ -35,6 +36,7 @@ data class PreExamUiState(
 
 class PreExamViewModel(private val api: PreExamApiService = ApiClient.getPreExamApiService()) : ViewModel() {
     private val gson = Gson()
+    private val doctorRepository = com.example.kltn_novacare.data.repository.DoctorRepository()
     private val mutable = MutableStateFlow(PreExamUiState())
     val uiState = mutable.asStateFlow()
     private var analysis: Job? = null
@@ -73,7 +75,7 @@ class PreExamViewModel(private val api: PreExamApiService = ApiClient.getPreExam
     }
     fun region(id: String) {
         val old = mutable.value
-        if (id !in old.regions && old.regions.size >= 10) { error("Chọn tối đa 10 vùng cơ thể."); return }
+        if (id !in old.regions && old.regions.size >= 2) { error("Chọn tối đa 2 vùng cơ thể."); return }
         voiceGeneration++; voice?.cancel(); importJob?.cancel(); old.images.forEach { it.file.delete() }
         edit { it.copy(regions = if (id in it.regions) it.regions - id else it.regions + id,
             answers = emptyMap(), images = emptyList(), ppg = null, transcript = "", confirmed = false, transcribing = false, importing = false) }
@@ -147,7 +149,43 @@ class PreExamViewModel(private val api: PreExamApiService = ApiClient.getPreExam
                 check(response.isSuccessful) { if (response.code() == 400) "Bộ câu hỏi hoặc dữ liệu đã thay đổi. Hãy tải lại bộ câu hỏi và kiểm tra thông tin." else "Chưa nhận được kết quả. Vui lòng thử lại." }
                 val result = gson.fromJson(unwrapScreeningResponse(response.body()!!), MobileScreeningResult::class.java)
                 check(result.schemaVersion == "3" && result.inputRevision == revision.toString() && !result.summary.isNullOrBlank()) { "Phản hồi sàng lọc không hợp lệ." }
-                if (mutable.value.revision == revision) mutable.value = mutable.value.copy(result = result, busy = false)
+                if (mutable.value.revision == revision) {
+                    mutable.value = mutable.value.copy(result = result, busy = false, loadingDoctors = true)
+                    if (!result.recommendedSpecialtyId.isNullOrBlank() || !result.recommendedSpecialtyName.isNullOrBlank()) {
+                        launch {
+                            try {
+                                var docs: List<Doctor> = emptyList()
+                                if (!result.recommendedSpecialtyId.isNullOrBlank()) {
+                                    val docRes = doctorRepository.searchDoctors(specialtyId = result.recommendedSpecialtyId)
+                                    docs = docRes.getOrNull().orEmpty()
+                                }
+                                if (docs.isEmpty() && !result.recommendedSpecialtyName.isNullOrBlank()) {
+                                    val allDocRes = doctorRepository.searchDoctors()
+                                    val allDocs = allDocRes.getOrNull().orEmpty()
+                                    val specName = result.recommendedSpecialtyName.lowercase()
+                                    val specId = result.recommendedSpecialtyId?.lowercase()
+                                    docs = allDocs.filter { doc ->
+                                        doc.workPlaces.orEmpty().any { wp ->
+                                            val wSpecName = wp.specialty?.name?.lowercase().orEmpty()
+                                            val wSpecId = wp.specialty?.id?.lowercase().orEmpty()
+                                            (specId != null && wSpecId == specId) ||
+                                            (specName.isNotBlank() && (wSpecName.contains(specName) || specName.contains(wSpecName)))
+                                        }
+                                    }
+                                }
+                                if (mutable.value.revision == revision) {
+                                    mutable.value = mutable.value.copy(recommendedDoctors = docs, loadingDoctors = false)
+                                }
+                            } catch (_: Exception) {
+                                if (mutable.value.revision == revision) {
+                                    mutable.value = mutable.value.copy(loadingDoctors = false)
+                                }
+                            }
+                        }
+                    } else {
+                        mutable.value = mutable.value.copy(loadingDoctors = false)
+                    }
+                }
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
                 if (mutable.value.revision == revision) mutable.value = mutable.value.copy(busy = false, error = if (e is IllegalStateException) e.message else "Không kết nối được dịch vụ. Chưa có kết quả AI; hãy thử lại.")
             }

@@ -114,7 +114,7 @@ fun ScreeningPpgCapture(
                 title = "4. Nhịp tim qua camera (tùy chọn)",
                 subtitle = "Chỉ dùng hỗ trợ sàng lọc khi tín hiệu ổn định. Không thay thế thiết bị y tế chuyên dụng.",
                 icon = Icons.Outlined.Sensors,
-                badgeText = if (currentPpg != null) "${currentPpg.bpm} BPM" else "Tùy chọn",
+                badgeText = if (currentPpg != null) "${currentPpg.bpm} nhịp/phút" else "Tùy chọn",
                 badgeColor = if (currentPpg != null) PrimaryDark else TextMuted
             ) {
                 // Already recorded measurement banner
@@ -138,7 +138,7 @@ fun ScreeningPpgCapture(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Đã ghi nhận nhịp tim: ${currentPpg.bpm} BPM",
+                                    text = "Đã ghi nhận nhịp tim: ${currentPpg.bpm} nhịp/phút",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = PrimaryDark

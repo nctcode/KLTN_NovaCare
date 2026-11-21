@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kltn_novacare.data.model.Appointment
 import com.example.kltn_novacare.data.model.Notification
+import com.example.kltn_novacare.data.model.AppointmentScreening
 import com.example.kltn_novacare.data.repository.AppointmentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,8 @@ class AppointmentViewModel(
 
     private val _appointmentDetails = MutableStateFlow<NetworkState<Appointment>>(NetworkState.Idle)
     val appointmentDetails: StateFlow<NetworkState<Appointment>> = _appointmentDetails.asStateFlow()
+    private val _appointmentScreening = MutableStateFlow<NetworkState<AppointmentScreening>>(NetworkState.Idle)
+    val appointmentScreening: StateFlow<NetworkState<AppointmentScreening>> = _appointmentScreening.asStateFlow()
 
     private val _cancelState = MutableStateFlow<NetworkState<Appointment>>(NetworkState.Idle)
     val cancelState: StateFlow<NetworkState<Appointment>> = _cancelState.asStateFlow()
@@ -56,8 +59,22 @@ class AppointmentViewModel(
         viewModelScope.launch {
             _appointmentDetails.value = NetworkState.Loading
             appointmentRepository.getAppointmentById(appointmentId).fold(
-                onSuccess = { _appointmentDetails.value = NetworkState.Success(it) },
+                onSuccess = {
+                    _appointmentDetails.value = NetworkState.Success(it)
+                    if (it.preExamSession != null) loadScreening(appointmentId)
+                    else _appointmentScreening.value = NetworkState.Idle
+                },
                 onFailure = { _appointmentDetails.value = NetworkState.Error(it.message ?: "Không tìm thấy lịch khám") }
+            )
+        }
+    }
+
+    private fun loadScreening(appointmentId: String) {
+        _appointmentScreening.value = NetworkState.Loading
+        viewModelScope.launch {
+            appointmentRepository.getAppointmentScreening(appointmentId).fold(
+                onSuccess = { _appointmentScreening.value = NetworkState.Success(it) },
+                onFailure = { _appointmentScreening.value = NetworkState.Error(it.message ?: "Không thể tải phiếu sàng lọc AI") }
             )
         }
     }

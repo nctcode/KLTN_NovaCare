@@ -233,9 +233,9 @@ function AdminHospitalsContent() {
   // Mutations
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => {
-      const confirmationMessage = status.includes('Hoáº¡t')
+      const confirmationMessage = status === 'Hoạt động'
         ? 'Bạn có chắc muốn kích hoạt lại bệnh viện này không? Bệnh viện có thể tiếp tục nhận lịch.'
-        : status.includes('Táº¡m')
+        : status === 'Tạm ngưng'
           ? 'Bạn có chắc muốn ngừng nhận lịch của bệnh viện này không?'
           : 'Bạn có chắc muốn ngừng hợp tác với bệnh viện này không?';
 
@@ -599,19 +599,19 @@ function AdminHospitalsContent() {
                               <DropdownMenuContent align="end" className="w-44 text-xs font-medium rounded-xl p-1.5">
                                 <DropdownMenuItem
                                   onClick={() => updateStatusMutation.mutate({ id: hosp.id, status: 'Hoạt động' })}
-                                  className={`cursor-pointer text-emerald-600 ${hosp.status === 'Hoạt động' || hosp.status === 'Hoáº¡t Ä‘á»™ng' || (hosp.status as string) === 'ACTIVE' ? 'hidden' : ''}`}
+                                  className={`cursor-pointer text-emerald-600 ${hosp.status === 'Hoạt động' || (hosp.status as string) === 'ACTIVE' ? 'hidden' : ''}`}
                                 >
                                   Kích hoạt hoạt động
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => updateStatusMutation.mutate({ id: hosp.id, status: 'Tạm ngưng' })}
-                                  className={`cursor-pointer text-amber-600 ${hosp.status === 'Tạm ngưng' || hosp.status === 'Táº¡m ngÆ°ng' || (hosp.status as string) === 'PAUSED' ? 'hidden' : ''}`}
+                                  className={`cursor-pointer text-amber-600 ${hosp.status === 'Tạm ngưng' || (hosp.status as string) === 'PAUSED' ? 'hidden' : ''}`}
                                 >
                                   Tạm ngưng nhận lịch
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => updateStatusMutation.mutate({ id: hosp.id, status: 'Ngừng hợp tác' })}
-                                  className={`cursor-pointer text-rose-600 ${hosp.status === 'Ngừng hợp tác' || hosp.status === 'Ngá»«ng há»£p tĂ¡c' || (hosp.status as string) === 'TERMINATED' ? 'hidden' : ''}`}
+                                  className={`cursor-pointer text-rose-600 ${hosp.status === 'Ngừng hợp tác' || (hosp.status as string) === 'TERMINATED' ? 'hidden' : ''}`}
                                 >
                                   Ngừng hợp tác
                                 </DropdownMenuItem>

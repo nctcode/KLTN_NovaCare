@@ -10,7 +10,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const isLight = theme === 'light';
 
   return (
-    <div className={`flex h-screen w-full overflow-hidden transition-colors duration-200 ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100'}`}>
+    <div className={`flex h-screen w-full overflow-hidden transition-colors duration-200 ${isLight ? 'bg-slate-100 text-slate-900' : 'dark bg-slate-950 text-slate-100'}`}>
       <AdminSidebar />
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
         <AdminHeader />

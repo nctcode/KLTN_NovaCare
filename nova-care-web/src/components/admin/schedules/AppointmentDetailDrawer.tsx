@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { RecordContactModal } from './RecordContactModal';
 import { NoShowConfirmModal } from './NoShowConfirmModal';
 import { RevertNoShowModal } from './RevertNoShowModal';
+import { AiScreeningAppointmentCard } from './AiScreeningAppointmentCard';
 
 const STATUS_BADGE: Record<string, { label: string; styleDark: string; styleLight: string }> = {
   PENDING: { label: 'Chờ xác nhận', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -225,6 +226,12 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
                 </tbody>
               </table>
             </div>
+
+            <AiScreeningAppointmentCard
+              appointmentId={appt.id}
+              enabled={!!appt.preExamSession}
+              isLight={isLight}
+            />
 
             {/* 3. Bác sĩ & Cơ sở khám */}
             <div className={tableContainerClass}>

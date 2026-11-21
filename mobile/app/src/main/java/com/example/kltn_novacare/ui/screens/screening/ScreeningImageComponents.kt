@@ -130,14 +130,6 @@ fun ScreeningImageSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Privacy Consent
-        PrivacyConsentCard(
-            checked = consent,
-            onCheckedChange = onConsentChange,
-            title = "Đồng ý xử lý ảnh y tế bằng AI",
-            description = "Ảnh chỉ được gửi đến hệ thống AI để phân tích trong phiên này và không tự động lưu vào hồ sơ công khai."
-        )
-
         // Main Image Upload Card
         ScreeningSectionCard(
             title = "3. Ảnh tổn thương (tùy chọn)",
@@ -325,6 +317,14 @@ fun ScreeningImageSection(
                 )
             }
         }
+
+        // Privacy Consent (placed below image selection card)
+        PrivacyConsentCard(
+            checked = consent,
+            onCheckedChange = onConsentChange,
+            title = "Đồng ý xử lý ảnh y tế bằng AI",
+            description = "Ảnh chỉ được gửi đến hệ thống AI để phân tích trong phiên này và không tự động lưu vào hồ sơ công khai."
+        )
     }
 
     // Full-screen image preview dialog with zoom

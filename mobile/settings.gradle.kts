@@ -27,4 +27,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "KLTN_NovaCare"
 include(":app")
+include(":doctorApp")
  

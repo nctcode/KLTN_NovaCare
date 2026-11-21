@@ -253,7 +253,7 @@ fun PrivacyConsentCard(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Tôi đồng ý xử lý dữ liệu cho phiên sàng lọc này",
+                    text = "Tôi đồng ý xử lý dữ liệu và đính kèm phiếu sàng lọc vào lịch khám để tôi và bác sĩ phụ trách có thể xem lại",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary
@@ -286,6 +286,7 @@ fun ScreeningBottomAction(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

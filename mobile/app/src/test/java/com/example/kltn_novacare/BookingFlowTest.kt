@@ -4,6 +4,8 @@ import com.example.kltn_novacare.data.model.*
 import com.example.kltn_novacare.data.remote.ApiService
 import com.example.kltn_novacare.data.repository.AppointmentRepository
 import com.example.kltn_novacare.ui.screens.booking.isBookableSlot
+import com.example.kltn_novacare.ui.screens.booking.getAvailableBookingModesForHospital
+import com.example.kltn_novacare.ui.screens.booking.bookingServiceLabel
 import com.example.kltn_novacare.ui.viewmodel.*
 import com.google.gson.Gson
 import com.google.gson.JsonObject
@@ -192,5 +194,63 @@ class BookingFlowTest {
         assertFalse(isBookableSlot(slot.copy(status = "BLOCKED"), "2099-01-01", now))
         assertFalse(isBookableSlot(slot.copy(isAvailable = false), "2099-01-01", now))
         assertFalse(isBookableSlot(slot.copy(startTime = "2000-01-01T00:00:00Z"), "2000-01-01", now))
+    }
+
+    @Test fun facilityBookingOffersOnlySupportedSentenceCaseModes() {
+        val modes = getAvailableBookingModesForHospital(Hospital("hospital-id", "Bệnh viện Quốc tế NovaCare"))
+        assertEquals(listOf("DOCTOR", "SERVICE", "AFTER_HOURS"), modes.map { it.id })
+        assertEquals(listOf("Khám theo bác sĩ", "Khám dịch vụ", "Khám ngoài giờ"), modes.map { it.title })
+        assertFalse(modes.any { it.id == "PACKAGE" || it.title.contains("Gói khám") })
+    }
+
+    @Test fun serviceBookingSubmitsRoomServiceContract() = runBlocking {
+        val specialty = Specialty("specialty-id", "Nội tổng quát")
+        val service = MedicalService(
+            id = "service-id",
+            hospitalId = "hospital-id",
+            specialtyId = specialty.id,
+            name = "Khám nội dịch vụ",
+            rawPrice = com.google.gson.JsonPrimitive(250000.0),
+            specialty = specialty
+        )
+        val room = ClinicRoom("room-id", "hospital-id", specialty.id, "P101", "Phòng khám nội")
+        val workplace = DoctorWorkplace("workplace-id", consultationFee = 350000.0, specialty = specialty)
+        val roomSlot = slot.copy(doctorWorkplace = workplace)
+        val session = ClinicRoomSession("session-id", "SERVICE", room, service, roomSlot)
+        val serviceAppointment = appointment.replace("350000", "250000")
+        val vm = vm { request ->
+            when (request.url.encodedPath) {
+                "/api/v1/appointments" -> {
+                    val json = request.json()
+                    assertEquals("real-slot-id", json["slotId"].asString)
+                    assertEquals("service-id", json["medicalServiceId"].asString)
+                    assertEquals("room-id", json["clinicRoomId"].asString)
+                    assertEquals("SERVICE", json["serviceBookingMode"].asString)
+                    201 to envelope(serviceAppointment)
+                }
+                "/api/v1/appointments/appointment-id/confirm" ->
+                    200 to envelope(serviceAppointment.replace("AWAITING_PAYMENT", "CONFIRMED"))
+                else -> error("Unexpected path ${request.url.encodedPath}")
+            }
+        }
+        vm.selectHospital(Hospital("hospital-id", "Bệnh viện NovaCare"))
+        vm.setBookingType("SERVICE")
+        vm.selectRoomSpecialty(specialty)
+        vm.selectRoomService(service)
+        vm.selectRoom(room)
+        vm.selectRoomTime("2099-01-01", session)
+        vm.setStep(2)
+        vm.selectProfile(profile)
+        vm.setStep(3)
+        vm.setStep(4)
+        vm.checkout()
+        assertEquals("CONFIRMED", settled(vm).createdAppointment?.status)
+    }
+
+    @Test fun checkoutSummaryUsesTheActualBookingModeLabel() {
+        assertEquals("Khám theo bác sĩ", bookingServiceLabel(BookingUiState(bookingType = "DOCTOR")))
+        assertEquals("Khám dịch vụ", bookingServiceLabel(BookingUiState(bookingType = "SERVICE")))
+        assertEquals("Khám dịch vụ ngoài giờ", bookingServiceLabel(BookingUiState(bookingType = "AFTER_HOURS")))
+        assertEquals("Tư vấn video trực tuyến", bookingServiceLabel(BookingUiState(bookingType = "VIDEO")))
     }
 }

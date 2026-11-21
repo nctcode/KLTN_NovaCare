@@ -21,6 +21,8 @@ import { SpecialtyConstraintValidatorService } from './validators/specialty-cons
 import { ICDCandidateResolverService } from './services/icd-candidate-resolver.service';
 import { RedFlagEngineService } from './engines/red-flag-engine.service';
 import { SpecialtyRecommendationEngineService } from './engines/specialty-recommendation-engine.service';
+import { normalizeScreeningInput, SCREENING_CATALOG } from './normalization/screening-input';
+import { ScreeningMediaService } from './services/screening-media.service';
 
 @Injectable()
 export class PreExamV2Service {
@@ -41,6 +43,7 @@ export class PreExamV2Service {
     private constraintValidator: SpecialtyConstraintValidatorService,
     private icdResolver: ICDCandidateResolverService,
     private specialtyEngine: SpecialtyRecommendationEngineService,
+    private screeningMedia: ScreeningMediaService,
   ) { }
 
   async startSession(userId: string, dto: StartPreExamDto) {
@@ -225,17 +228,80 @@ export class PreExamV2Service {
     return { sessionId: updated.id, riskAssessment, recommendations, structuredData };
   }
 
-  async getSession(sessionId: string) {
-    const session = await this.prisma.preExamSession.findUnique({
-      where: { id: sessionId },
-      include: { questions: { orderBy: { order: 'asc' } } },
+  async getSession(sessionId: string, userId: string) {
+    const session = await this.prisma.preExamSession.findFirst({
+      where: { id: sessionId, userId },
+      include: { questions: { orderBy: { order: 'asc' } }, media: { orderBy: { createdAt: 'asc' } } },
     });
     if (!session) throw new NotFoundException('Session không tồn tại');
     return session;
   }
 
-  async analyzeSmartphoneInputs(dto: any, files?: { voiceFile?: any; imageFiles?: any[] }) {
-    return this.orchestrator.orchestrateScreening(randomUUID(), { ...dto, files });
+  async analyzeSmartphoneInputs(userId: string, dto: any, files?: { voiceFile?: any; imageFiles?: any[] }) {
+    const input = normalizeScreeningInput(dto);
+    const sessionId = randomUUID();
+    const result = await this.orchestrator.orchestrateScreening(sessionId, { ...dto, files });
+    const answerFacts = new Map(
+      input.facts.filter((fact) => fact.source === 'QUESTIONNAIRE')
+        .map((fact) => [fact.id.replace(/^answer:/, ''), fact.text]),
+    );
+    let ppgSnapshot = dto.ppg || null;
+    if (typeof ppgSnapshot === 'string') {
+      try {
+        ppgSnapshot = JSON.parse(ppgSnapshot);
+      } catch {
+        ppgSnapshot = null;
+      }
+    }
+
+    await this.prisma.preExamSession.create({
+      data: {
+        id: sessionId,
+        userId,
+        source: 'SMARTPHONE_AI',
+        schemaVersion: String(dto.schemaVersion || '3'),
+        catalogVersion: String((SCREENING_CATALOG as any).version || ''),
+        inputRevision: input.revision,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        initialText: input.symptoms || null,
+        voiceTranscript: input.voiceTranscript || null,
+        bodyDiagramData: { regions: input.regions } as any,
+        imageAnalysis: {
+          assessments: result.imageAssessments || [],
+          findings: result.imageAnalysisFindings || [],
+        } as any,
+        structuredData: {
+          age: input.age,
+          symptoms: input.symptoms,
+          regions: input.regions,
+          painLevel: input.questionnaire.painLevel,
+          duration: input.questionnaire.duration,
+          ppg: ppgSnapshot,
+          voiceTranscript: input.voiceTranscript,
+          facts: input.facts,
+          redFlags: input.redFlags,
+          questionnaire: input.questionnaire,
+        } as any,
+        recommendations: result as any,
+        riskLevel: result.riskLevel || null,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        questions: {
+          create: input.questionnaire.answers.map((answer, index) => {
+            const snapshot = answerFacts.get(answer.questionId) || answer.questionId;
+            const separator = snapshot.lastIndexOf(' — ');
+            return {
+              question: separator >= 0 ? snapshot.slice(0, separator) : snapshot,
+              answer: separator >= 0 ? snapshot.slice(separator + 3) : String(answer.answer ?? ''),
+              order: index,
+              context: { questionId: answer.questionId, rawAnswer: answer.answer, catalogVersion: (SCREENING_CATALOG as any).version } as any,
+            };
+          }),
+        },
+      },
+    });
+    await this.screeningMedia.saveSymptomImages(sessionId, files?.imageFiles || []);
+    return { ...result, screeningSessionId: sessionId };
   }
 
   async evaluateHealthAssessment(

@@ -38,12 +38,16 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { interoperabilityService } from '@/services/interoperability.service';
 import { MedicalRecordShareDraft } from './MedicalRecordShareConsent';
+import { ClinicRoom } from './RoomSelectModal';
+import { BookingType } from '@/config/bookingTypes';
 
 interface Step4PaymentProps {
   hospital: Hospital;
   specialty: Specialty | null;
   doctor: Doctor | null;
   service: MedicalService | null;
+  room: ClinicRoom | null;
+  bookingMode?: BookingType | null;
   selectedDate: string;
   selectedSlotTime: string;
   selectedSlotId: string | null;
@@ -58,6 +62,8 @@ export function Step4Payment({
   specialty,
   doctor,
   service,
+  room,
+  bookingMode,
   selectedDate,
   selectedSlotTime,
   selectedSlotId,
@@ -115,6 +121,8 @@ export function Step4Payment({
           patientProfileId: patientProfile.id,
           slotId: selectedSlotId,
           ...(validServiceId ? { medicalServiceId: validServiceId } : {}),
+          ...(room?.id ? { clinicRoomId: room.id } : {}),
+          ...(room?.id && bookingMode ? { serviceBookingMode: bookingMode === 'OUT_OF_HOURS' ? 'AFTER_HOURS' : bookingMode } : {}),
           reason: reason || `Khám theo bác sĩ - ${specialty?.name || 'Chuyên khoa'}`,
           idempotencyKey,
         } as any);

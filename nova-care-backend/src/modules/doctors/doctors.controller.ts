@@ -22,6 +22,8 @@ import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { UpdateDoctorDto } from './dto/update-doctor.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { Public } from '@/common/decorators/public.decorator';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { RolesGuard } from '@/common/guards/roles.guard';
 
 @ApiTags('Bác sĩ')
 @Controller('api/v1/doctors')
@@ -29,7 +31,8 @@ export class DoctorsController {
   constructor(private readonly service: DoctorsService) { }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Tạo bác sĩ mới' })
   async create(@Body() createDto: CreateDoctorDto) {
@@ -80,7 +83,8 @@ export class DoctorsController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Cập nhật bác sĩ' })
   async update(@Param('id') id: string, @Body() updateDto: UpdateDoctorDto) {
@@ -93,7 +97,8 @@ export class DoctorsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'HOSPITAL_ADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Xóa bác sĩ (xóa mềm)' })
   async remove(@Param('id') id: string) {

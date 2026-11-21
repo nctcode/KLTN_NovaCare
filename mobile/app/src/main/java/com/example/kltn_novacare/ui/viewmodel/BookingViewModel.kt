@@ -20,6 +20,7 @@ data class BookingUiState(
     val doctor: Doctor? = null,
     val workplace: DoctorWorkplace? = null,
     val selectedService: MedicalService? = null,
+    val doctorServiceSelected: Boolean = false,
     val selectedRoom: ClinicRoom? = null,
     val selectedSpecialty: Specialty? = null,
     val selectedDate: String? = null,
@@ -27,6 +28,8 @@ data class BookingUiState(
     val selectedProfile: PatientProfile? = null,
     val reason: String = "",
     val symptoms: String = "",
+    val screeningSessionId: String? = null,
+    val screeningSummary: String? = null,
     val paymentMethod: String = "CASH",
     val idempotencyKey: String = UUID.randomUUID().toString(),
     val createdAppointment: Appointment? = null,
@@ -36,7 +39,8 @@ data class BookingUiState(
 ) {
     val busy get() = checkoutState is NetworkState.Loading
     val locked get() = busy || createdAppointment != null
-    val estimatedPrice get() = (if (selectedRoom != null) 0.0 else workplace?.consultationFee ?: 0.0) + (selectedService?.price ?: 0.0)
+    val estimatedPrice get() = if (bookingType == "VIDEO") 150_000.0
+        else (if (selectedRoom != null) 0.0 else workplace?.consultationFee ?: 0.0) + (selectedService?.price ?: 0.0)
 }
 
 class BookingViewModel(
@@ -66,6 +70,15 @@ class BookingViewModel(
         if (!_uiState.value.busy) _uiState.value = BookingUiState()
     }
 
+    fun prepareFromScreening(sessionId: String, symptoms: String, summary: String) {
+        if (!_uiState.value.busy) _uiState.value = BookingUiState(
+            reason = symptoms,
+            symptoms = symptoms,
+            screeningSessionId = sessionId,
+            screeningSummary = summary
+        )
+    }
+
     // New draft input gets a new key; retries of the same submission reuse the key.
     private fun draft(change: (BookingUiState) -> BookingUiState) {
         val before = _uiState.value
@@ -86,14 +99,27 @@ class BookingViewModel(
     }
 
     fun selectHospital(hospital: Hospital) = draft {
-        if (it.hospital?.id == hospital.id) it else it.copy(hospital = hospital, doctor = null,
-            workplace = null, selectedSlot = null, selectedService = null, selectedSpecialty = null)
+        if (it.hospital?.id == hospital.id) it else it.copy(
+            hospital = hospital, doctor = null,
+            workplace = null, selectedSlot = null, selectedService = null, doctorServiceSelected = false,
+            selectedSpecialty = if (it.screeningSessionId != null) it.selectedSpecialty else null
+        )
     }
-    fun setBookingType(type: String) = draft { it.copy(bookingType = type, selectedRoom = null, selectedSlot = null, selectedDate = null, selectedService = null, selectedSpecialty = null, workplace = null, doctor = null) }
+    fun setBookingType(type: String) = draft {
+        it.copy(
+            bookingType = type, selectedRoom = null, selectedSlot = null,
+            selectedDate = null, selectedService = null, doctorServiceSelected = false,
+            selectedSpecialty = if (it.screeningSessionId != null) it.selectedSpecialty else null,
+            workplace = null, doctor = null
+        )
+    }
     fun selectDoctor(doctor: Doctor, workplace: DoctorWorkplace) = draft {
         if (it.workplace?.id == workplace.id) it.copy(doctor = doctor, workplace = workplace)
         else it.copy(doctor = doctor, workplace = workplace, hospital = workplace.hospital ?: it.hospital,
-            selectedSlot = null, selectedService = null, selectedSpecialty = workplace.specialty)
+            selectedSlot = null, selectedService = null, doctorServiceSelected = false, selectedSpecialty = workplace.specialty)
+    }
+    fun selectDoctorConsultation() = draft {
+        if (it.doctor == null) it else it.copy(doctorServiceSelected = true, selectedService = null, selectedDate = null, selectedSlot = null)
     }
     fun selectService(service: MedicalService?) = draft { it.copy(selectedService = service, selectedSlot = null) }
     fun selectSpecialty(specialty: Specialty) = draft { it.copy(selectedSpecialty = specialty) }
@@ -135,8 +161,10 @@ class BookingViewModel(
                     slotId = initial.selectedSlot!!.id, patientProfileId = initial.selectedProfile!!.id,
                     reason = initial.reason.trim().ifBlank { null }, symptoms = initial.symptoms.trim().ifBlank { null },
                     idempotencyKey = initial.idempotencyKey, medicalServiceId = initial.selectedService?.id,
-                    clinicRoomId = initial.selectedRoom?.id, serviceBookingMode = initial.bookingType.takeIf { initial.selectedRoom != null }
-                ))
+                    clinicRoomId = initial.selectedRoom?.id,
+                    serviceBookingMode = initial.bookingType.takeIf { initial.selectedRoom != null },
+                    screeningSessionId = initial.screeningSessionId
+                ), bookingType = if (initial.bookingType == "VIDEO") "ONLINE" else null)
                 appointment = result.getOrElse { fail(it.message ?: "Không thể đặt lịch"); return@launch }
                 _uiState.value = _uiState.value.copy(createdAppointment = appointment)
             }

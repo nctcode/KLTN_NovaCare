@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '@/database/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CancelAppointmentDto } from './dto/cancel-appointment.dto';
-import { Appointment, AppointmentStatus, SlotStatus, EncounterStatus, ObservationCategory, MatchingStatus } from '@prisma/client';
+import { Appointment, AppointmentStatus, BookingType, SlotStatus, EncounterStatus, ObservationCategory, MatchingStatus } from '@prisma/client';
 import { getSpecialtyEMRTemplate } from './data/specialty-emr-mock.data';
 import { SlotStatusService } from '../schedules/slot-status.service';
 import { contiguousSlotWindow } from '../schedules/contiguous-slot-window';
@@ -23,8 +23,8 @@ export class AppointmentsService {
   // ============================================
   // 1. TẠO LỊCH KHÁM (VỚI TRANSACTION + LOCK MULTI-SLOT)
   // ============================================
-  async create(userId: string, createDto: CreateAppointmentDto): Promise<Appointment> {
-    const { patientProfileId, slotId, medicalServiceId, reason, symptoms, idempotencyKey } = createDto;
+  async create(userId: string, createDto: CreateAppointmentDto, bookingType?: string): Promise<Appointment> {
+    const { patientProfileId, slotId, medicalServiceId, reason, symptoms, idempotencyKey, screeningSessionId } = createDto;
 
     // 1. Kiểm tra quyền sở hữu patient profile
     const profile = await this.prisma.patientProfile.findFirst({
@@ -63,13 +63,22 @@ export class AppointmentsService {
         const doctorWorkplaceId = primarySlotData.doctorWorkplaceId ?? primarySlotData.doctor_workplace_id;
         const primaryStartTime = new Date(primarySlotData.startTime ?? primarySlotData.start_time);
         const roomSession = await tx.clinicRoomSession.findUnique({ where: { slotId }, include: { room: true, service: true } });
-        if (roomSession || createDto.clinicRoomId || createDto.serviceBookingMode) {
-          if (!roomSession || roomSession.roomId !== createDto.clinicRoomId || roomSession.mode !== createDto.serviceBookingMode || roomSession.medicalServiceId !== medicalServiceId || !roomSession.room.isActive || !roomSession.service.isActive) {
+        const workplace = await tx.doctorWorkplace.findUnique({
+          where: { id: doctorWorkplaceId },
+          include: { doctor: true, hospital: true, specialty: true },
+        });
+        if (!workplace) {
+          throw new NotFoundException('Nơi làm việc của bác sĩ không tồn tại');
+        }
+        if (roomSession) {
+          if (roomSession.roomId !== createDto.clinicRoomId || roomSession.mode !== createDto.serviceBookingMode || roomSession.medicalServiceId !== medicalServiceId || !roomSession.room.isActive || !roomSession.service.isActive) {
             throw new BadRequestException('Phòng khám, dịch vụ hoặc hình thức khám không hợp lệ');
           }
           if (primaryStartTime <= new Date() || (roomSession.mode === 'AFTER_HOURS' && ![0, 6].includes(new Date(primaryStartTime.getTime() + 25200000).getUTCDay()))) {
             throw new BadRequestException('Ngày khám không còn hợp lệ');
           }
+        } else if (createDto.clinicRoomId || createDto.serviceBookingMode) {
+          throw new BadRequestException('Lịch dịch vụ chưa được bệnh viện phân phòng khám thực tế');
         }
         const slotDate = primarySlotData.date ? new Date(primarySlotData.date) : new Date(primaryStartTime.toISOString().split('T')[0]);
 
@@ -107,7 +116,7 @@ export class AppointmentsService {
         );
         candidateSlots = await tx.appointmentSlot.findMany({ where: { id: { in: requiredSlotIds } }, orderBy: { startTime: 'asc' } });
         const mappedRooms = await tx.clinicRoomSession.findMany({ where: { slotId: { in: requiredSlotIds } } });
-        if (mappedRooms.some(mapping => mapping.id !== roomSession?.id) || (roomSession && candidateSlots.length !== 1)) {
+        if (mappedRooms.some(mapping => mapping.id !== roomSession?.id)) {
           throw new BadRequestException('Khung giờ dành riêng cho dịch vụ tại phòng khám');
         }
 
@@ -149,16 +158,47 @@ export class AppointmentsService {
         }
 
         // 3.5 Lấy thông tin workplace để tính phí
-        const workplace = await tx.doctorWorkplace.findUnique({
-          where: { id: doctorWorkplaceId },
-          include: {
-            doctor: true,
-            hospital: true,
-            specialty: true,
-          },
-        });
-        if (!workplace) {
-          throw new NotFoundException('Nơi làm việc của bác sĩ không tồn tại');
+        const screeningSession = screeningSessionId
+          ? await tx.preExamSession.findFirst({
+              where: { id: screeningSessionId, userId, status: 'COMPLETED', appointmentId: null },
+            })
+          : null;
+        if (screeningSessionId && !screeningSession) {
+          throw new BadRequestException('Phiên sàng lọc AI không hợp lệ, đã hết hạn hoặc đã được sử dụng');
+        }
+        if (screeningSession) {
+          const recommendation = screeningSession.recommendations as any;
+          if (recommendation?.recommendedSpecialtyId && recommendation.recommendedSpecialtyId !== workplace.specialtyId) {
+            throw new BadRequestException('Chuyên khoa của lịch khám không khớp với phiếu sàng lọc AI');
+          }
+        }
+
+        const isVideoConsultation = bookingType?.toUpperCase() === 'ONLINE';
+        if (isVideoConsultation) {
+          if (medicalServiceId || roomSession) {
+            throw new BadRequestException('Lịch gọi video không dùng dịch vụ hoặc phòng khám tại cơ sở');
+          }
+          const vietnamStart = new Date(primaryStartTime.getTime() + 7 * 60 * 60 * 1000);
+          const vietnamEnd = new Date(overallEndTime.getTime() + 7 * 60 * 60 * 1000);
+          const slotStartMinutes = vietnamStart.getUTCHours() * 60 + vietnamStart.getUTCMinutes();
+          const slotEndMinutes = vietnamEnd.getUTCHours() * 60 + vietnamEnd.getUTCMinutes();
+          const onlineSchedules = await tx.doctorSchedule.findMany({
+            where: {
+              doctorWorkplaceId,
+              dayOfWeek: vietnamStart.getUTCDay(),
+              isActive: true,
+              bookingType: { in: [BookingType.ALL, BookingType.ONLINE] },
+            },
+          });
+          const matchesOnlineSchedule = onlineSchedules.some((schedule) => {
+            const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
+            const [endHour, endMinute] = schedule.endTime.split(':').map(Number);
+            return slotStartMinutes >= startHour * 60 + startMinute &&
+              slotEndMinutes <= endHour * 60 + endMinute;
+          });
+          if (!matchesOnlineSchedule) {
+            throw new BadRequestException('Khung giờ này không hỗ trợ tư vấn video');
+          }
         }
 
         // 3.6 Tính tổng tiền
@@ -171,13 +211,17 @@ export class AppointmentsService {
             serviceFee = Number(service.price);
           }
         }
-        const consultationFee = roomSession ? 0 : Number(workplace.consultationFee);
+        const consultationFee = isVideoConsultation ? 150_000 :
+          (roomSession || createDto.serviceBookingMode ? 0 : Number(workplace.consultationFee));
         const totalPrice = consultationFee + serviceFee;
 
         // 3.7 Tạo mã lịch khám
         const bookingCode = await this.generateBookingCode();
 
         // 3.8 Tạo lịch khám
+        const screeningInput = screeningSession?.structuredData as any;
+        const appointmentReason = reason?.trim() || screeningInput?.symptoms || null;
+        const appointmentSymptoms = symptoms?.trim() || screeningInput?.symptoms || null;
         const appointment = await tx.appointment.create({
           data: {
             bookingCode,
@@ -185,11 +229,11 @@ export class AppointmentsService {
             slotId,
             medicalServiceId,
             clinicRoomId: roomSession?.roomId,
-            serviceBookingMode: roomSession?.mode,
+            serviceBookingMode: isVideoConsultation ? 'ONLINE' : (roomSession?.mode || createDto.serviceBookingMode || 'DOCTOR'),
             userId,
             status: AppointmentStatus.AWAITING_PAYMENT,
-            reason,
-            symptoms,
+            reason: appointmentReason,
+            symptoms: appointmentSymptoms,
             totalPrice,
             consultationFee,
             serviceFee,
@@ -210,8 +254,22 @@ export class AppointmentsService {
               },
             },
             medicalService: true,
+            preExamSession: { select: { id: true, status: true, riskLevel: true, recommendations: true } },
           },
         });
+
+        if (screeningSession) {
+          const linked = await tx.preExamSession.updateMany({
+            where: { id: screeningSession.id, appointmentId: null },
+            data: {
+              appointmentId: appointment.id,
+              patientProfileId,
+              status: 'APPLIED',
+              expiresAt: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),
+            },
+          });
+          if (linked.count !== 1) throw new ConflictException('Phiên sàng lọc AI vừa được dùng cho lịch khám khác');
+        }
 
         // 3.9 Tạo các bản ghi AppointmentSlotBooking junction
         for (const reqSlotId of requiredSlotIds) {
@@ -320,6 +378,7 @@ export class AppointmentsService {
           },
         },
         medicalService: true,
+        consultation: { select: { id: true, channel: true, status: true } },
         payment: true,
         medicalEncounter: {
           include: {
@@ -422,6 +481,7 @@ export class AppointmentsService {
           },
         },
         medicalService: true,
+        consultation: { select: { id: true, channel: true, status: true } },
         payment: true,
         medicalEncounter: {
           include: {
@@ -474,6 +534,7 @@ export class AppointmentsService {
           },
         },
         medicalService: true,
+        consultation: { select: { id: true, channel: true, status: true } },
         payment: true,
         medicalEncounter: {
           include: {
@@ -516,6 +577,7 @@ export class AppointmentsService {
           },
         },
         medicalService: true,
+        consultation: { select: { id: true, channel: true, status: true } },
         payment: true,
         medicalEncounter: {
           include: {
@@ -529,6 +591,7 @@ export class AppointmentsService {
         statusHistory: {
           orderBy: { createdAt: 'desc' },
         },
+        preExamSession: { select: { id: true, status: true, riskLevel: true, recommendations: true, completedAt: true } },
       },
     });
     if (!appointment) {
@@ -538,6 +601,51 @@ export class AppointmentsService {
       throw new ForbiddenException('Bạn không có quyền xem lịch khám này');
     }
     return appointment;
+  }
+
+  async getScreening(id: string, user: any) {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        preExamSession: {
+          include: { questions: { orderBy: { order: 'asc' } }, media: { orderBy: { createdAt: 'asc' } } },
+        },
+        slot: { include: { doctorWorkplace: { include: { doctor: true } } } },
+      },
+    });
+    if (!appointment?.preExamSession) throw new NotFoundException('Lịch khám không có phiếu sàng lọc AI');
+    const workplace = appointment.slot?.doctorWorkplace as any;
+    const role = String(user.role || '').toUpperCase();
+    const allowed = appointment.userId === user.id ||
+      ['ADMIN', 'SUPER_ADMIN'].includes(role) ||
+      (role === 'HOSPITAL_ADMIN' && user.hospitalId && user.hospitalId === workplace?.hospitalId) ||
+      (role === 'DOCTOR' && workplace?.doctor?.userId === user.id);
+    if (!allowed) throw new ForbiddenException('Bạn không có quyền xem phiếu sàng lọc này');
+    const session = appointment.preExamSession;
+    return {
+      id: session.id,
+      status: session.status,
+      source: session.source,
+      completedAt: session.completedAt,
+      schemaVersion: session.schemaVersion,
+      catalogVersion: session.catalogVersion,
+      symptoms: session.initialText,
+      voiceTranscript: session.voiceTranscript,
+      bodyDiagramData: session.bodyDiagramData,
+      structuredData: session.structuredData,
+      imageAnalysis: session.imageAnalysis,
+      recommendations: session.recommendations,
+      riskLevel: session.riskLevel,
+      questions: session.questions,
+      media: session.media.map((item) => ({
+        id: item.id,
+        type: item.type,
+        mimeType: item.mimeType,
+        sizeBytes: item.sizeBytes,
+        createdAt: item.createdAt,
+        fileUrl: `/api/v1/pre-exam-v2/sessions/${session.id}/media/${item.id}/file`,
+      })),
+    };
   }
 
   // ============================================

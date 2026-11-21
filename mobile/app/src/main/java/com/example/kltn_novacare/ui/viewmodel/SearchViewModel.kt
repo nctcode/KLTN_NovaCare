@@ -119,6 +119,32 @@ class SearchViewModel @JvmOverloads constructor(
         performSearch(resetPagination = true)
     }
 
+    /** Opens a dedicated specialty result list while retaining location filters. */
+    fun showSpecialtyResults(specialtyId: String, category: SearchCategory) {
+        val current = _uiState.value
+        val filters = current.filters.copy(selectedSpecialtyIds = setOf(specialtyId))
+        _uiState.value = current.copy(
+            category = category,
+            filters = filters,
+            draftFilters = filters
+        )
+        performSearch(resetPagination = true)
+    }
+
+    fun disableNearestLocation() {
+        val updated = _uiState.value.filters.copy(
+            isNearMe = false,
+            userLat = null,
+            userLng = null
+        )
+        _uiState.value = _uiState.value.copy(
+            filters = updated,
+            draftFilters = updated,
+            locationState = UserLocationState.Idle
+        )
+        performSearch(resetPagination = true)
+    }
+
     fun performSearch(resetPagination: Boolean = true) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
