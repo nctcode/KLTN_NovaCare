@@ -24,8 +24,7 @@
         "operationId": "getHospitalCatalog",
         "security": [
           { "ApiKeyAuth": [] },
-          { "BearerAuth": [] },
-          {}
+          { "BearerAuth": [] }
         ],
         "parameters": [
           {

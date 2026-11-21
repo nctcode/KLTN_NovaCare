@@ -54,6 +54,7 @@ function LoginContent() {
 
   // Activation mode state (when token is present)
   const [activationPassword, setActivationPassword] = useState('');
+  const [activationEmail, setActivationEmail] = useState('');
   const [activationConfirm, setActivationConfirm] = useState('');
   const [showActivationPassword, setShowActivationPassword] = useState(false);
   const [showActivationConfirm, setShowActivationConfirm] = useState(false);
@@ -77,6 +78,7 @@ function LoginContent() {
       authService.activateHospitalAccount({
         token: token!,
         password: activationPassword,
+        email: activationEmail,
       }),
     onSuccess: (response: any) => {
       const res = response?.data || response;
@@ -85,7 +87,7 @@ function LoginContent() {
         toast.success(
           `Kích hoạt tài khoản thành công! Chào mừng Quản trị viên ${res.user.hospital?.name || ''}`
         );
-        router.push('/hospital-admin');
+        router.push('/admin');
       } else {
         toast.success('Kích hoạt thành công. Vui lòng đăng nhập!');
         router.push('/dang-nhap');
@@ -104,6 +106,10 @@ function LoginContent() {
   const handleActivationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!activationEmail.trim() || !/^\S+@\S+\.\S+$/.test(activationEmail)) {
+      toast.error('Vui lòng nhập email đăng nhập hợp lệ');
+      return;
+    }
     if (!activationPassword || activationPassword.length < 6) {
       toast.error('Mật khẩu mới phải có tối thiểu 6 ký tự');
       return;
@@ -194,10 +200,12 @@ function LoginContent() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-slate-700">Tài khoản Email đăng nhập</Label>
                   <Input
-                    readOnly
-                    disabled
-                    value={(verifyData?.data || verifyData)?.email}
-                    className="bg-slate-100 font-semibold text-slate-700 text-xs h-10 cursor-not-allowed"
+                    required
+                    type="email"
+                    placeholder="Nhập email đăng nhập mới"
+                    value={activationEmail}
+                    onChange={(e) => setActivationEmail(e.target.value)}
+                    className="font-semibold text-slate-700 text-xs h-10"
                   />
                   <p className="text-[11px] text-slate-500">
                     Email này đã được cấp quyền Quản trị viên (Hospital Admin).

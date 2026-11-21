@@ -1,0 +1,325 @@
+@startuml NovaCare_catalog
+title NovaCare - Medical Catalog and Hospital Operations
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend right
+  |= Notation |= Meaning |
+  | `?` | Optional Prisma field |
+  | `[]` | Prisma list/array field |
+  | `<<PK>>` | Primary key |
+  | `<<FK>>` | Foreign key scalar field |
+  | `<<supporting>>` | Backend record used by a current UI workflow; not independently managed |
+  | `<<reference>>` | Related model shown in another domain diagram; only its identifier is shown |
+  | Multiplicity | `1`, `0..1`, `0..*` |
+  Scope: models are included only when a current UI flow uses them or they support that flow.
+  Attributes are schema fields; a UI may expose only a subset of them.
+endlegend
+
+package "Enums" {
+  enum BookingType {
+    ALL
+    HOSPITAL
+    ON_DEMAND
+    ONLINE
+  }
+  enum DataSource {
+    MANUAL
+    EXCEL
+    API
+  }
+  enum Gender {
+    MALE
+    FEMALE
+    OTHER
+  }
+  enum HospitalType {
+    PUBLIC
+    PRIVATE
+    INTERNATIONAL
+  }
+  enum PartnershipStatus {
+    ACTIVE
+    PAUSED
+    TERMINATED
+  }
+  enum ScheduleExceptionType {
+    DAY_OFF
+    BLOCK_TIME
+  }
+  enum ScheduleSource {
+    INTERNAL
+    HIS_API
+  }
+  enum SlotStatus {
+    AVAILABLE
+    FULL
+    BLOCKED
+    CONFLICTED
+    CANCELLED
+  }
+}
+
+package "Medical Catalog and Hospital Operations" {
+  class AppointmentSlot {
+    +id: String <<PK>>
+    +doctorWorkplaceId: String <<FK>>
+    +date: DateTime?
+    +startTime: DateTime
+    +endTime: DateTime
+    +capacity: Int
+    +bookedCount: Int
+    +isAvailable: Boolean
+    +isActive: Boolean
+    +status: SlotStatus
+    +version: Int
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +doctorWorkplace: DoctorWorkplace <<relation>>
+    +primaryAppointments: Appointment[] <<relation>>
+    +slotBookings: AppointmentSlotBooking[] <<relation>>
+  }
+  class Doctor {
+    +id: String <<PK>>
+    +fullName: String
+    +title: String?
+    +avatarUrl: String?
+    +qualification: String
+    +yearsOfExperience: Int
+    +gender: Gender?
+    +bio: String?
+    +externalId: String?
+    +source: DataSource
+    +rating: Float
+    +reviewCount: Int
+    +consultationCount: Int
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +userId: String? <<FK>>
+    +user: User? <<relation>>
+    +workPlaces: DoctorWorkplace[] <<relation>>
+    +consultations: ConsultationSession[] <<relation>>
+  }
+  class DoctorSchedule {
+    +id: String <<PK>>
+    +doctorWorkplaceId: String <<FK>>
+    +bookingType: BookingType
+    +dayOfWeek: Int
+    +startTime: String
+    +endTime: String
+    +breakStart: String?
+    +breakEnd: String?
+    +slotDuration: Int?
+    +capacity: Int
+    +effectiveFrom: DateTime?
+    +effectiveTo: DateTime?
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +doctorWorkplace: DoctorWorkplace <<relation>>
+  }
+  class DoctorWorkplace {
+    +id: String <<PK>>
+    +doctorId: String <<FK>>
+    +hospitalId: String <<FK>>
+    +branchId: String? <<FK>>
+    +specialtyId: String <<FK>>
+    +consultationFee: Decimal
+    +position: String?
+    +joinedAt: DateTime?
+    +isPrimary: Boolean
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +doctor: Doctor <<relation>>
+    +hospital: Hospital <<relation>>
+    +branch: HospitalBranch? <<relation>>
+    +specialty: Specialty <<relation>>
+    +schedules: DoctorSchedule[] <<relation>>
+    +slots: AppointmentSlot[] <<relation>>
+    +exceptions: ScheduleException[] <<relation>>
+    +consultations: ConsultationSession[] <<relation>>
+  }
+  class HealthPackage {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +specialtyId: String? <<FK>>
+    +name: String
+    +thumbnailUrl: String?
+    +price: Decimal
+    +originalPrice: Decimal?
+    +description: String?
+    +duration: Int
+    +services: Json?
+    +preparationNote: String?
+    +estimatedResultTime: String?
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +hospital: Hospital <<relation>>
+    +specialty: Specialty? <<relation>>
+  }
+  class Hospital {
+    +id: String <<PK>>
+    +name: String
+    +address: String?
+    +city: String?
+    +phone: String?
+    +hotline: String?
+    +emergencyHotline: String?
+    +description: String?
+    +logoUrl: String?
+    +coverImageUrl: String?
+    +images: String[]
+    +website: String?
+    +email: String?
+    +operatingHours: String?
+    +googleMapUrl: String?
+    +latitude: Float?
+    +longitude: Float?
+    +establishedYear: Int?
+    +bedCount: Int?
+    +type: HospitalType
+    +status: PartnershipStatus
+    +rating: Float
+    +reviewCount: Int
+    +hospitalCode: String?
+    +externalId: String?
+    +source: DataSource
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +branches: HospitalBranch[] <<relation>>
+    +workPlaces: DoctorWorkplace[] <<relation>>
+    +services: MedicalService[] <<relation>>
+    +packages: HealthPackage[] <<relation>>
+    +hospitalSpecialties: HospitalSpecialty[] <<relation>>
+    +medicalEncounters: MedicalEncounter[] <<relation>>
+    +sourceConsents: PatientConsent[] <<relation>>
+    +targetConsents: PatientConsent[] <<relation>>
+    +users: User[] <<relation>>
+    +bookingConfigs: HospitalBookingConfig[] <<relation>>
+  }
+  class HospitalBookingConfig <<supporting>> {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +bookingType: BookingType
+    +maxAdvanceDays: Int
+    +allowSaturday: Boolean
+    +allowSunday: Boolean
+    +minAdvanceMinutes: Int
+    +defaultSlotDuration: Int
+    +scheduleSource: ScheduleSource
+    +gracePeriodMinutes: Int
+    +minContactAttempts: Int
+    +minContactIntervalMinutes: Int
+    +autoNoShowEnabled: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +hospital: Hospital <<relation>>
+  }
+  class HospitalBranch {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +name: String?
+    +address: String
+    +phone: String?
+    +latitude: Float?
+    +longitude: Float?
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +hospital: Hospital <<relation>>
+    +workPlaces: DoctorWorkplace[] <<relation>>
+  }
+  class HospitalSpecialty {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +specialtyId: String <<FK>>
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +hospital: Hospital <<relation>>
+    +specialty: Specialty <<relation>>
+  }
+  class MedicalService {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +specialtyId: String? <<FK>>
+    +name: String
+    +description: String?
+    +price: Decimal
+    +duration: Int
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +hospital: Hospital <<relation>>
+    +specialty: Specialty? <<relation>>
+    +appointments: Appointment[] <<relation>>
+  }
+  class ScheduleException <<supporting>> {
+    +id: String <<PK>>
+    +doctorWorkplaceId: String <<FK>>
+    +date: DateTime
+    +startTime: String?
+    +endTime: String?
+    +exceptionType: ScheduleExceptionType
+    +reason: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +doctorWorkplace: DoctorWorkplace <<relation>>
+  }
+  class Specialty {
+    +id: String <<PK>>
+    +name: String
+    +description: String?
+    +icon: String?
+    +coverImageUrl: String?
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +workPlaces: DoctorWorkplace[] <<relation>>
+    +hospitalSpecialties: HospitalSpecialty[] <<relation>>
+    +packages: HealthPackage[] <<relation>>
+    +services: MedicalService[] <<relation>>
+    +consultations: ConsultationSession[] <<relation>>
+  }
+  class User <<reference>> {
+    +id: String
+  }
+}
+
+DoctorWorkplace "1" <-- "0..*" AppointmentSlot : doctorWorkplace
+Hospital "1" <-- "0..*" HospitalBookingConfig : hospital
+Hospital "1" <-- "0..*" HospitalBranch : hospital
+Hospital "1" <-- "0..*" HospitalSpecialty : hospital
+Specialty "1" <-- "0..*" HospitalSpecialty : specialty
+User "0..1" <-- "0..1" Doctor : user
+Doctor "1" <-- "0..*" DoctorWorkplace : doctor
+Hospital "1" <-- "0..*" DoctorWorkplace : hospital
+HospitalBranch "0..1" <-- "0..*" DoctorWorkplace : branch
+Specialty "1" <-- "0..*" DoctorWorkplace : specialty
+DoctorWorkplace "1" <-- "0..*" ScheduleException : doctorWorkplace
+Hospital "1" <-- "0..*" MedicalService : hospital
+Specialty "0..1" <-- "0..*" MedicalService : specialty
+Hospital "1" <-- "0..*" HealthPackage : hospital
+Specialty "0..1" <-- "0..*" HealthPackage : specialty
+DoctorWorkplace "1" <-- "0..*" DoctorSchedule : doctorWorkplace
+Hospital "0..*" -- "0..*" Specialty : via HospitalSpecialty
+DoctorSchedule "0..*" -- "0..*" MedicalService : via DoctorScheduleService
+
+note bottom
+  Booking configuration, schedule exceptions and slot bookings
+  support active booking/availability workflows. Internal-only
+  room/session tables are omitted because no live UI integration
+  was evidenced; the current room selector uses local sample data.
+end note
+
+@enduml

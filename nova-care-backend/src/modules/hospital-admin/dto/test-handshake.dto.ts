@@ -1,10 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class TestHandshakeDto {
   @ApiPropertyOptional({
     description: 'URL endpoint HIS Catalog của bệnh viện',
-    example: 'http://localhost:5055/api/hospital-catalog',
+    example: 'https://his.benhvien.vn/api/hospital-catalog',
   })
   @IsOptional()
   @IsString()
@@ -20,7 +20,7 @@ export class TestHandshakeDto {
 
   @ApiPropertyOptional({
     description: 'Khóa API Key hoặc Token xác thực',
-    example: 'tamanh_secret_2026',
+    example: 'hospital_partner_key_2026',
   })
   @IsOptional()
   @IsString()
@@ -32,4 +32,12 @@ export class TestHandshakeDto {
   @IsOptional()
   @IsString()
   secretToken?: string;
+
+  @ApiPropertyOptional({
+    description: 'Lưu cấu hình endpoint sau khi kiểm tra kết nối thành công',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  persistConfig?: boolean;
 }

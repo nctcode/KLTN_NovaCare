@@ -18,7 +18,6 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Copy,
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<string, { label: string; textClass: string; dotClass: string }> = {
@@ -54,6 +53,10 @@ export default function AdminPartnerRequestsPage() {
   // Detail Modal
   const [viewingRequest, setViewingRequest] = useState<any | null>(null);
 
+  // Reject Modal State
+  const [rejectingRequest, setRejectingRequest] = useState<any | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
   // Approve Modal State
   const [approvingRequest, setApprovingRequest] = useState<any | null>(null);
   const [approveForm, setApproveForm] = useState({
@@ -61,6 +64,9 @@ export default function AdminPartnerRequestsPage() {
     adminEmail: '',
     adminFullName: '',
     adminNote: '',
+    approvalDocumentName: '',
+    approvalDocumentMimeType: '',
+    approvalDocumentData: '',
   });
 
   // Success Modal State
@@ -85,15 +91,30 @@ export default function AdminPartnerRequestsPage() {
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status, adminNote }: { id: string; status: string; adminNote?: string }) =>
       partnerService.updateStatus(id, { status, adminNote }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success('Cập nhật trạng thái thành công');
       queryClient.invalidateQueries({ queryKey: ['admin-partner-requests'] });
       if (viewingRequest) {
-        setViewingRequest((prev: any) => (prev ? { ...prev, status: 'CONTACTED' } : null));
+        setViewingRequest((prev: any) => (prev ? { ...prev, status: variables.status, adminNote: variables.adminNote } : null));
       }
     },
     onError: (err: any) => {
       toast.error('Lỗi: ' + (err?.response?.data?.message || err?.message || 'Không thể cập nhật'));
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      partnerService.updateStatus(id, { status: 'REJECTED', adminNote: reason }),
+    onSuccess: () => {
+      toast.success('Đã từ chối yêu cầu và gửi email thông báo');
+      queryClient.invalidateQueries({ queryKey: ['admin-partner-requests'] });
+      setRejectingRequest(null);
+      setRejectReason('');
+      setViewingRequest(null);
+    },
+    onError: (err: any) => {
+      toast.error('Lỗi từ chối yêu cầu: ' + (err?.response?.data?.message || err?.message || 'Thao tác thất bại'));
     },
   });
 
@@ -102,7 +123,7 @@ export default function AdminPartnerRequestsPage() {
     mutationFn: ({ id, data }: { id: string; data: typeof approveForm }) =>
       partnerService.approveRequest(id, data),
     onSuccess: (res: any) => {
-      toast.success('Phê duyệt hợp tác và tạo tài khoản thành công!');
+      toast.success('Phê duyệt hợp tác và gửi email xác nhận thành công!');
       queryClient.invalidateQueries({ queryKey: ['admin-partner-requests'] });
       setApprovingRequest(null);
       setViewingRequest(null);
@@ -120,6 +141,9 @@ export default function AdminPartnerRequestsPage() {
       adminEmail: req.email || '',
       adminFullName: req.contactName ? `${req.contactName}` : `Quản Trị Viên ${req.hospitalName}`,
       adminNote: '',
+      approvalDocumentName: '',
+      approvalDocumentMimeType: '',
+      approvalDocumentData: '',
     });
   };
 
@@ -129,15 +153,29 @@ export default function AdminPartnerRequestsPage() {
       toast.error('Email quản trị không được để trống');
       return;
     }
+    if (approveForm.approvalDocumentData && approveForm.approvalDocumentMimeType !== 'application/pdf') {
+      toast.error('Văn bản chấp thuận phải là file PDF');
+      return;
+    }
     approveMutation.mutate({
       id: approvingRequest.id,
       data: approveForm,
     });
   };
 
-  const handleCopyLink = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast.success('Đã sao chép liên kết kích hoạt!');
+  const handleOpenReject = (req: any) => {
+    setRejectingRequest(req);
+    setRejectReason('');
+  };
+
+  const handleConfirmReject = () => {
+    const reason = rejectReason.trim();
+    if (!rejectingRequest) return;
+    if (!reason) {
+      toast.error('Vui lòng nhập lý do từ chối');
+      return;
+    }
+    rejectMutation.mutate({ id: rejectingRequest.id, reason });
   };
 
   return (
@@ -320,6 +358,16 @@ export default function AdminPartnerRequestsPage() {
                           </button>
                         )}
 
+                        {req.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReject(req)}
+                            className="text-rose-600 dark:text-rose-400 hover:underline underline-offset-2 cursor-pointer"
+                          >
+                            Từ chối
+                          </button>
+                        )}
+
                         {/* Duyệt hợp tác */}
                         {req.status !== 'APPROVED' && (
                           <button
@@ -487,6 +535,21 @@ export default function AdminPartnerRequestsPage() {
               </Button>
             )}
 
+            {viewingRequest?.status === 'PENDING' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const req = viewingRequest;
+                  setViewingRequest(null);
+                  handleOpenReject(req);
+                }}
+                className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 dark:text-rose-400 dark:border-rose-900"
+              >
+                Từ chối yêu cầu
+              </Button>
+            )}
+
             {viewingRequest && viewingRequest.status !== 'APPROVED' && (
               <Button
                 size="sm"
@@ -504,6 +567,46 @@ export default function AdminPartnerRequestsPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!rejectingRequest} onOpenChange={(open) => !open && setRejectingRequest(null)}>
+        <DialogContent className="max-w-md border-0 shadow-lg dark:bg-slate-950">
+          <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <DialogTitle className="text-base font-semibold text-slate-900 dark:text-white">
+              Từ chối yêu cầu hợp tác
+            </DialogTitle>
+            <p className="text-xs text-slate-500 mt-1">
+              Lý do sẽ được lưu vào hồ sơ và gửi đến email đăng ký của đối tác.
+            </p>
+          </DialogHeader>
+          <div className="py-3 space-y-1.5">
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              Lý do từ chối <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Nhập lý do từ chối..."
+              rows={5}
+              maxLength={2000}
+              className="w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-xs outline-none focus:border-slate-400 dark:border-slate-800"
+            />
+          </div>
+          <DialogFooter className="border-t border-slate-100 dark:border-slate-800 pt-3 gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setRejectingRequest(null)} className="text-xs">
+              Hủy
+            </Button>
+            <Button
+              size="sm"
+              disabled={rejectMutation.isPending || !rejectReason.trim()}
+              onClick={handleConfirmReject}
+              className="bg-rose-600 text-white hover:bg-rose-700 text-xs font-medium"
+            >
+              {rejectMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Xác nhận từ chối
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* 6. MODAL PHÊ DUYỆT - CSS cơ bản, không màu mè, bỏ khung viền */}
       <Dialog open={!!approvingRequest} onOpenChange={(open) => !open && setApprovingRequest(null)}>
         <DialogContent className="max-w-md border-0 shadow-lg dark:bg-slate-950">
@@ -512,7 +615,7 @@ export default function AdminPartnerRequestsPage() {
               Phê Duyệt Hợp Tác Cơ Sở Y Tế
             </DialogTitle>
             <p className="text-xs text-slate-500 mt-1">
-              Hệ thống sẽ tạo cơ sở y tế, cấp quyền Hospital Admin và gửi liên kết kích hoạt qua email.
+              Hệ thống sẽ tạo cơ sở y tế và gửi email xác nhận kết quả duyệt đến email đăng ký.
             </p>
           </DialogHeader>
 
@@ -530,7 +633,38 @@ export default function AdminPartnerRequestsPage() {
 
             <div className="space-y-1">
               <label className="text-slate-700 dark:text-slate-300 font-medium">
-                Email nhận tài khoản Quản trị viên (Hospital Admin) *:
+                Văn bản chấp thuận PDF (tùy chọn, tối đa 5MB):
+              </label>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="w-full text-xs"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.type !== 'application/pdf' || file.size > 5 * 1024 * 1024) {
+                    toast.error('Chỉ chấp nhận file PDF tối đa 5MB');
+                    e.currentTarget.value = '';
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () => setApproveForm((prev) => ({
+                    ...prev,
+                    approvalDocumentName: file.name,
+                    approvalDocumentMimeType: file.type,
+                    approvalDocumentData: String(reader.result),
+                  }));
+                  reader.readAsDataURL(file);
+                }}
+              />
+              {approveForm.approvalDocumentName && (
+                <p className="text-[11px] text-emerald-600">Đã chọn: {approveForm.approvalDocumentName}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-slate-700 dark:text-slate-300 font-medium">
+                Email nhận thông báo xác nhận *:
               </label>
               <Input
                 type="email"
@@ -540,7 +674,7 @@ export default function AdminPartnerRequestsPage() {
                 className="h-8 text-xs border-slate-200 dark:border-slate-800"
               />
               <p className="text-[11px] text-slate-400">
-                Có thể chỉnh sửa nếu đối tác dùng email quản trị khác với email liên hệ ban đầu.
+                Email này chỉ dùng để gửi thông báo xác nhận kết quả duyệt.
               </p>
             </div>
 
@@ -616,32 +750,11 @@ export default function AdminPartnerRequestsPage() {
                   <span className="text-slate-500">Tài khoản Quản trị:</span>{' '}
                   <span className="font-semibold text-slate-900 dark:text-white">{approvalResult.user?.email}</span>
                 </p>
-                <p className="text-slate-500 pt-1">
-                  Email kích hoạt tài khoản đã được gửi đến địa chỉ trên.
+            <p className="text-slate-500 pt-1">
+                  Email xác nhận kết quả duyệt đã được gửi đến địa chỉ đăng ký.
                 </p>
               </div>
 
-              {approvalResult.activationUrl && (
-                <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <label className="text-slate-500 block">
-                    Liên kết kích hoạt trực tiếp (dùng để kiểm thử nhanh):
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      readOnly
-                      value={approvalResult.activationUrl}
-                      className="h-8 text-[11px] font-mono bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => handleCopyLink(approvalResult.activationUrl)}
-                      className="h-8 px-2.5 bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs shrink-0"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

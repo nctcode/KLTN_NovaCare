@@ -309,7 +309,9 @@ export class HospitalAdminController {
     const data = await this.service.testHandshake(
       dto.endpointUrl,
       dto.authType,
-      dto.authToken || dto.secretToken
+      dto.authToken || dto.secretToken,
+      req.targetHospitalId,
+      dto.persistConfig === true
     );
     return {
       statusCode: HttpStatus.OK,

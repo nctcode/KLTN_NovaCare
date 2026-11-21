@@ -895,27 +895,30 @@ export class HospitalAdminService {
   }
 
   /**
-   * Helper giải quyết hospitalId an toàn (fallback cho Platform Admin)
+   * Resolve hospital scope without silently falling back to another hospital.
    */
   async resolveHospitalId(hospitalId?: string): Promise<string> {
     if (hospitalId) return hospitalId;
-    const first = await this.prisma.hospital.findFirst({
-      where: { isActive: true },
-      select: { id: true },
-    });
-    if (!first) throw new NotFoundException('Không tìm thấy cơ sở y tế nào trong hệ thống');
-    return first.id;
+    throw new BadRequestException(
+      'Thiếu hospitalId. Không thể xác định phạm vi cơ sở y tế để tích hợp HIS.',
+    );
   }
 
   /**
    * 12. Test Handshake kết nối HIS
    */
-  async testHandshake(endpointUrl?: string, authType?: string, authToken?: string) {
+  async testHandshake(
+    endpointUrl?: string,
+    authType?: string,
+    authToken?: string,
+    hospitalId?: string,
+    persistConfig = false
+  ) {
     if (!endpointUrl || !endpointUrl.trim()) {
       throw new BadRequestException('Vui lòng nhập đường dẫn Endpoint URL của hệ thống HIS');
     }
 
-    if (authType && authType !== 'none' && (!authToken || !authToken.trim())) {
+    if (!['api_key', 'bearer'].includes(authType || '') || !authToken?.trim()) {
       throw new BadRequestException(
         `Bạn đã chọn phương thức xác thực "${authType === 'api_key' ? 'X-API-KEY' : 'Bearer Token'}" nhưng chưa nhập mã khóa API Key / Token`
       );
@@ -926,6 +929,21 @@ export class HospitalAdminService {
       authType,
       authToken
     );
+    if (hospitalId && persistConfig) {
+      await this.prisma.hospitalIntegrationConfig.upsert({
+        where: { hospitalId },
+        create: {
+          hospitalId,
+          endpointUrl: endpointUrl.trim(),
+          authType: authType || 'none',
+        },
+        update: {
+          endpointUrl: endpointUrl.trim(),
+          authType: authType || 'none',
+        },
+      });
+    }
+
     return {
       success: true,
       hospitalCode: rawCatalog.hospital_code,
@@ -965,7 +983,7 @@ export class HospitalAdminService {
       throw new BadRequestException('Vui lòng nhập đường dẫn Endpoint URL của hệ thống HIS');
     }
 
-    if (dto.authType && dto.authType !== 'none' && (!dto.authToken || !dto.authToken.trim())) {
+    if (!['api_key', 'bearer'].includes(dto.authType || '') || !dto.authToken?.trim()) {
       throw new BadRequestException(
         `Bạn đã chọn phương thức xác thực "${dto.authType === 'api_key' ? 'X-API-KEY' : 'Bearer Token'}" nhưng chưa nhập mã khóa API Key / Token`
       );
@@ -994,6 +1012,18 @@ export class HospitalAdminService {
           : {}),
         ...(rawCatalog.bed_count ? { bedCount: Number(rawCatalog.bed_count) } : {}),
         ...(rawCatalog.operating_hours ? { operatingHours: rawCatalog.operating_hours } : {}),
+      },
+    });
+    await this.prisma.hospitalIntegrationConfig.upsert({
+      where: { hospitalId: targetHospitalId },
+      create: {
+        hospitalId: targetHospitalId,
+        endpointUrl: dto.endpointUrl.trim(),
+        authType: dto.authType || 'none',
+      },
+      update: {
+        endpointUrl: dto.endpointUrl.trim(),
+        authType: dto.authType || 'none',
       },
     });
 
@@ -1292,6 +1322,12 @@ export class HospitalAdminService {
         externalId: true,
         source: true,
         updatedAt: true,
+        integrationConfig: {
+          select: {
+            endpointUrl: true,
+            authType: true,
+          },
+        },
       },
     });
 
@@ -1316,6 +1352,8 @@ export class HospitalAdminService {
       isConnected: !!hospital?.externalId,
       externalId: hospital?.externalId || null,
       source: hospital?.source || 'MANUAL',
+      endpointUrl: hospital?.integrationConfig?.endpointUrl || null,
+      authType: hospital?.integrationConfig?.authType || 'none',
       apiDoctorCount,
       totalDoctorCount,
       specialtyCount,

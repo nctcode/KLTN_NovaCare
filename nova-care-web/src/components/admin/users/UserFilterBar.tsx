@@ -157,6 +157,16 @@ export const UserFilterBar: React.FC<UserFilterBarProps> = ({
                   Trạng thái: {statusFilter === 'ACTIVE' ? 'Hoạt động' : 'Bị khóa'}
                 </span>
               )}
+              {dateRangeFilter !== 'all' && (
+                <span className="inline-flex items-center text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                  Thời gian: {
+                    dateRangeFilter === 'today' ? 'Hôm nay'
+                      : dateRangeFilter === '7days' ? '7 ngày qua'
+                        : dateRangeFilter === '30days' ? '30 ngày qua'
+                          : 'Tháng này'
+                  }
+                </span>
+              )}
             </div>
           </div>
         )}

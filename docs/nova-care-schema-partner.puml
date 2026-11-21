@@ -1,0 +1,57 @@
+@startuml NovaCare_partner
+title NovaCare - Partner Management
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend right
+  |= Notation |= Meaning |
+  | `?` | Optional Prisma field |
+  | `[]` | Prisma list/array field |
+  | `<<PK>>` | Primary key |
+  | `<<FK>>` | Foreign key scalar field |
+  | `<<supporting>>` | Backend record used by a current UI workflow; not independently managed |
+  | `<<reference>>` | Related model shown in another domain diagram; only its identifier is shown |
+  | Multiplicity | `1`, `0..1`, `0..*` |
+  Scope: models are included only when a current UI flow uses them or they support that flow.
+  Attributes are schema fields; a UI may expose only a subset of them.
+endlegend
+
+package "Enums" {
+  enum PartnerRequestStatus {
+    PENDING
+    CONTACTED
+    APPROVED
+    REJECTED
+  }
+  enum PartnerType {
+    HOSPITAL
+    DOCTOR
+  }
+}
+
+package "Partner Management" {
+  class PartnerRequest {
+    +id: String <<PK>>
+    +type: PartnerType
+    +contactName: String
+    +titleOrRole: String?
+    +phone: String
+    +email: String
+    +hospitalName: String
+    +specialty: String?
+    +notes: String?
+    +status: PartnerRequestStatus
+    +adminNote: String?
+    +approvedAt: DateTime?
+    +createdHospitalId: String?
+    +createdUserId: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+  }
+}
+
+
+@enduml

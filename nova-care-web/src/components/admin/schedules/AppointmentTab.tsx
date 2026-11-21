@@ -510,7 +510,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                               )}
                               {appt.contactLogs && appt.contactLogs.length > 0 && (
                                 <span className="inline-flex items-center text-[10px] text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded font-semibold border border-blue-200 dark:border-blue-800">
-                                  📞 {appt.contactLogs.length} lần gọi
+                                  📋 {appt.contactLogs.length} lượt liên hệ
                                 </span>
                               )}
                             </div>

@@ -144,7 +144,7 @@ export const hospitalAdminService = {
   /**
    * 12. Kiểm tra bắt tay (Handshake) với HIS của bệnh viện
    */
-  async testHandshake(data: { endpointUrl?: string; authType?: string; authToken?: string } | string): Promise<any> {
+  async testHandshake(data: { endpointUrl?: string; authType?: string; authToken?: string; persistConfig?: boolean } | string): Promise<any> {
     const payload = typeof data === 'string' ? { endpointUrl: data } : data;
     const response = await apiClient.post<any>(
       '/hospital-admin/integration/test-handshake',

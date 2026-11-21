@@ -55,7 +55,12 @@ export function RecordContactModal({ appointment, open, onClose, onSuccess }: Re
   if (!appointment) return null;
 
   const patientName = appointment.patientProfile?.fullName || appointment.user?.fullName || 'Bệnh nhân';
-  const patientPhone = appointment.patientProfile?.phoneNumber || appointment.user?.phoneNumber || 'Chưa có SĐT';
+  const patientPhone =
+    appointment.patientProfile?.phone ||
+    appointment.patientProfile?.phoneNumber ||
+    appointment.user?.phone ||
+    appointment.user?.phoneNumber ||
+    'Chưa có SĐT';
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -83,7 +88,7 @@ export function RecordContactModal({ appointment, open, onClose, onSuccess }: Re
             <div className="text-slate-500 font-mono mt-0.5">{patientPhone}</div>
           </div>
           <div className="text-right text-[11px] text-slate-500">
-            <div>Số lượt đã gọi: <strong className="text-blue-600 dark:text-blue-400 font-bold">{appointment.contactLogs?.length || 0}</strong></div>
+            <div>Số lượt đã liên hệ: <strong className="text-blue-600 dark:text-blue-400 font-bold">{appointment.contactLogs?.length || 0}</strong></div>
           </div>
         </div>
 
@@ -140,10 +145,10 @@ export function RecordContactModal({ appointment, open, onClose, onSuccess }: Re
 
           {/* Note */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Ghi chú cuộc gọi</Label>
+            <Label className="text-xs font-semibold">Ghi chú liên hệ</Label>
             <Textarea
               rows={3}
-              placeholder="VD: Đã đổ chuông 3 hồi nhưng không nhấc máy; hoặc bệnh nhân báo kẹt xe đang đến..."
+              placeholder="VD: Nội dung trao đổi hoặc kết quả liên hệ với bệnh nhân..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="text-xs rounded-lg"

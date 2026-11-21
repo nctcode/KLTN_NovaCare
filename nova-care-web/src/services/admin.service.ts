@@ -10,6 +10,8 @@ export interface PaginationParams {
   status?: string;
   hospitalId?: string;
   doctorId?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 const extractData = (res: any) => {
@@ -70,6 +72,8 @@ export const adminService = {
     if (params?.role) query.append('role', params.role);
     if (params?.status === 'ACTIVE') query.append('isActive', 'true');
     if (params?.status === 'LOCKED') query.append('isActive', 'false');
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
 
     const response = await apiClient.get<any>(`/admin/users?${query.toString()}`);
     return extractData(response);
@@ -511,7 +515,6 @@ export const adminService = {
   async createHospitalAdmin(data: {
     fullName: string;
     email: string;
-    password: string;
     phone?: string;
     hospitalId: string;
   }): Promise<any> {
@@ -564,6 +567,11 @@ export const adminService = {
   // HIS Gateway Ingestion & Sync
   async syncHisCatalog(endpointUrl?: string): Promise<any> {
     const response = await apiClient.post<any>('/integration/catalog-sync', { endpointUrl });
+    return extractData(response);
+  },
+
+  async testHisGateway(data: { endpointUrl: string; authType?: string; authToken?: string }): Promise<any> {
+    const response = await apiClient.post<any>('/admin/interoperability/test-gateway', data);
     return extractData(response);
   },
 

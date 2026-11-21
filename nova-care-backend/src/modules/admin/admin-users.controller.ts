@@ -46,12 +46,16 @@ export class AdminUsersController {
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'role', required: false, enum: Role })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Ngày bắt đầu đăng ký (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Ngày kết thúc đăng ký (YYYY-MM-DD)' })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('role') role?: Role,
     @Query('isActive') isActive?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.service.findAll({
       page: page ? parseInt(page, 10) : 1,
@@ -59,6 +63,8 @@ export class AdminUsersController {
       search,
       role,
       isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      startDate,
+      endDate,
     });
   }
 

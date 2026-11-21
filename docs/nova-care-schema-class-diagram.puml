@@ -1,0 +1,1076 @@
+@startuml NovaCareSchemaClassDiagram
+title NovaCare - Complete Prisma Schema Reference
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend right
+  |= Notation |= Meaning |
+  | `?` | Optional Prisma field |
+  | `[]` | Prisma list/array field |
+  | `<<PK>>` | Primary key |
+  | `<<FK>>` | Foreign key scalar field |
+  | Multiplicity | `1`, `0..1`, `0..*` |
+  Relation-valued Prisma fields are listed in each class and also represented as associations.
+  Many-to-many relations are represented through their explicit join models.
+endlegend
+
+package "Enums" {
+  enum Gender {
+    MALE
+    FEMALE
+    OTHER
+  }
+  enum Role {
+    PATIENT
+    DOCTOR
+    ADMIN
+    HOSPITAL_ADMIN
+  }
+  enum AppointmentStatus {
+    PENDING
+    AWAITING_PAYMENT
+    CONFIRMED
+    PAID
+    COMPLETED
+    CANCELLED
+    EXPIRED
+    NO_SHOW
+    FAILED
+    REFUNDED
+  }
+  enum PaymentStatus {
+    PENDING
+    PROCESSING
+    PAID
+    FAILED
+    REFUNDED
+    EXPIRED
+  }
+  enum PaymentMethod {
+    VNPAY
+    CASH
+    BANKING
+    MOMO
+    VIETQR
+    CARD
+  }
+  enum NotificationType {
+    BOOKING_CONFIRMED
+    PAYMENT_SUCCESS
+    REMINDER
+    CANCELLED
+    RESCHEDULED
+    EXPIRED
+    CONSULTATION_MESSAGE
+    CONSULTATION_STATUS
+    SYSTEM
+  }
+  enum HospitalType {
+    PUBLIC
+    PRIVATE
+    INTERNATIONAL
+  }
+  enum PartnershipStatus {
+    ACTIVE
+    PAUSED
+    TERMINATED
+  }
+  enum DataSource {
+    MANUAL
+    EXCEL
+    API
+  }
+  enum EncounterStatus {
+    IN_PROGRESS
+    COMPLETED
+    PUBLISHED
+    CANCELLED
+  }
+  enum ObservationCategory {
+    VITAL_SIGNS
+    LAB_RESULT
+    IMAGING
+  }
+  enum MatchingStatus {
+    MATCHED
+    PENDING
+    UNMATCHED
+  }
+  enum ConsentStatus {
+    PENDING
+    GRANTED
+    REVOKED
+    EXPIRED
+  }
+  enum ScheduleExceptionType {
+    DAY_OFF
+    BLOCK_TIME
+  }
+  enum ScheduleSource {
+    INTERNAL
+    HIS_API
+  }
+  enum SlotStatus {
+    AVAILABLE
+    FULL
+    BLOCKED
+    CONFLICTED
+    CANCELLED
+  }
+  enum BookingType {
+    ALL
+    HOSPITAL
+    ON_DEMAND
+    ONLINE
+  }
+  enum ConsultationStatus {
+    SCHEDULED
+    WAITING
+    ACCEPTED
+    ACTIVE
+    COMPLETED
+    CANCELLED
+    EXPIRED
+  }
+  enum ConsultationRequestMode {
+    SCHEDULED
+    ON_DEMAND
+  }
+  enum ConsultationChannel {
+    CHAT
+    VIDEO
+  }
+  enum ConsultationSenderType {
+    PATIENT
+    DOCTOR
+    SYSTEM
+  }
+  enum ConsultationMessageType {
+    TEXT
+    IMAGE
+    DOCUMENT
+    SYSTEM
+  }
+  enum ConsultationAttachmentStatus {
+    PENDING
+    READY
+    FAILED
+    DELETED
+  }
+  enum PartnerRequestStatus {
+    PENDING
+    CONTACTED
+    APPROVED
+    REJECTED
+  }
+  enum PartnerType {
+    HOSPITAL
+    DOCTOR
+  }
+}
+
+
+package "Core Tables" {
+  class User {
+    +authVersion: Int
+    +id: String <<PK>>
+    +email: String?
+    +phone: String?
+    +passwordHash: String
+    +fullName: String
+    +role: Role
+    +isActive: Boolean
+    +lastLoginAt: DateTime?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +resetPasswordToken: String?
+    +resetPasswordExpiresAt: DateTime?
+    +activationToken: String?
+    +activationExpiresAt: DateTime?
+    +otpCode: String?
+    +otpExpiresAt: DateTime?
+    +otpVerified: Boolean
+    +patientProfiles: PatientProfile[] <<relation>>
+    +appointments: Appointment[] <<relation>>
+    +refreshTokens: RefreshToken[] <<relation>>
+    +notifications: Notification[] <<relation>>
+    +deviceTokens: DeviceToken[] <<relation>>
+    +auditLogs: AuditLog[] <<relation>>
+    +preExamSessions: PreExamSession[] <<relation>>
+    +medicalPassport: MedicalPassport? <<relation>>
+    +doctorProfile: Doctor? <<relation>>
+    +consultationsCreated: ConsultationSession[] <<relation>>
+    +consultationMessages: ConsultationMessage[] <<relation>>
+    +consultationAttachments: ConsultationAttachment[] <<relation>>
+    +hospitalId: String? <<FK>>
+    +hospital: Hospital? <<relation>>
+  }
+  class PasswordResetChallenge {
+    +userId: String <<PK>>
+    +otpHash: String?
+    +destination: String
+    +expiresAt: DateTime
+    +requestedAt: DateTime
+    +attempts: Int
+    +windowStart: DateTime
+    +sendCount: Int
+    +verificationTokenHash: String?
+    +verificationExpiresAt: DateTime?
+  }
+  class RegistrationOtpChallenge {
+    +phone: String <<PK>>
+    +otpHash: String?
+    +expiresAt: DateTime
+    +requestedAt: DateTime
+    +attempts: Int
+    +windowStart: DateTime
+    +sendCount: Int
+    +verificationTokenHash: String?
+    +verificationExpiresAt: DateTime?
+  }
+  class RefreshToken {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +tokenHash: String
+    +expiresAt: DateTime
+    +deviceInfo: String?
+    +ipAddress: String?
+    +isRevoked: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +user: User <<relation>>
+  }
+  class PatientProfile {
+    +id: String <<PK>>
+    +patientCode: String?
+    +userId: String <<FK>>
+    +fullName: String
+    +gender: Gender?
+    +dateOfBirth: DateTime?
+    +phone: String?
+    +address: String?
+    +relation: String?
+    +identityNumber: String?
+    +healthInsurance: String?
+    +bhytInitialHospitalCode: String?
+    +bhytValidFrom: DateTime?
+    +bhytValidTo: DateTime?
+    +provinceCode: String?
+    +districtCode: String?
+    +wardCode: String?
+    +bloodType: String?
+    +ethnicity: String?
+    +nationality: String?
+    +occupation: String?
+    +guardianName: String?
+    +familyMedicalHistory: String?
+    +lifestyleRiskFactors: String?
+    +currentMedications: String?
+    +medicalHistory: String?
+    +allergies: String?
+    +emergencyContact: String?
+    +emergencyPhone: String?
+    +isDefault: Boolean
+    +isActive: Boolean
+    +securityPin: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +user: User <<relation>>
+    +appointments: Appointment[] <<relation>>
+    +medicalEncounters: MedicalEncounter[] <<relation>>
+    +hospitalLinks: PatientHospitalLink[] <<relation>>
+    +consents: PatientConsent[] <<relation>>
+    +consultations: ConsultationSession[] <<relation>>
+  }
+  class Appointment {
+    +clinicRoomId: String?
+    +serviceBookingMode: String?
+    +id: String <<PK>>
+    +bookingCode: String
+    +patientProfileId: String <<FK>>
+    +slotId: String <<FK>>
+    +medicalServiceId: String? <<FK>>
+    +userId: String <<FK>>
+    +status: AppointmentStatus
+    +reason: String?
+    +symptoms: String?
+    +totalPrice: Decimal
+    +consultationFee: Decimal
+    +serviceFee: Decimal
+    +idempotencyKey: String?
+    +expiresAt: DateTime?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +cancelledAt: DateTime?
+    +completedAt: DateTime?
+    +reminderSentAt: DateTime?
+    +reminderCount: Int
+    +checkInAt: DateTime?
+    +noShowAt: DateTime?
+    +patientProfile: PatientProfile <<relation>>
+    +user: User <<relation>>
+    +slot: AppointmentSlot <<relation>>
+    +medicalService: MedicalService? <<relation>>
+    +slotBookings: AppointmentSlotBooking[] <<relation>>
+    +statusHistory: AppointmentStatusHistory[] <<relation>>
+    +contactLogs: AppointmentContactLog[] <<relation>>
+    +payment: PaymentTransaction? <<relation>>
+    +medicalEncounter: MedicalEncounter? <<relation>>
+    +consultation: ConsultationSession? <<relation>>
+  }
+  class AppointmentSlot {
+    +roomSession: ClinicRoomSession? <<relation>>
+    +id: String <<PK>>
+    +doctorWorkplaceId: String <<FK>>
+    +date: DateTime?
+    +startTime: DateTime
+    +endTime: DateTime
+    +capacity: Int
+    +bookedCount: Int
+    +isAvailable: Boolean
+    +isActive: Boolean
+    +status: SlotStatus
+    +version: Int
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +doctorWorkplace: DoctorWorkplace <<relation>>
+    +primaryAppointments: Appointment[] <<relation>>
+    +slotBookings: AppointmentSlotBooking[] <<relation>>
+  }
+  class AppointmentSlotBooking {
+    +id: String <<PK>>
+    +appointmentId: String <<FK>>
+    +slotId: String <<FK>>
+    +createdAt: DateTime
+    +appointment: Appointment <<relation>>
+    +slot: AppointmentSlot <<relation>>
+  }
+  class AppointmentStatusHistory {
+    +id: String <<PK>>
+    +appointmentId: String <<FK>>
+    +status: AppointmentStatus
+    +note: String?
+    +createdAt: DateTime
+    +appointment: Appointment <<relation>>
+  }
+  class AppointmentContactLog {
+    +id: String <<PK>>
+    +appointmentId: String <<FK>>
+    +staffId: String?
+    +staffName: String?
+    +channel: String
+    +outcome: String
+    +note: String?
+    +contactedAt: DateTime
+    +createdAt: DateTime
+    +appointment: Appointment <<relation>>
+  }
+  class PaymentTransaction {
+    +id: String <<PK>>
+    +appointmentId: String <<FK>>
+    +amount: Decimal
+    +paymentMethod: PaymentMethod
+    +transactionCode: String
+    +status: PaymentStatus
+    +vnpResponseCode: String?
+    +vnpTransactionNo: String?
+    +callbackData: Json?
+    +paidAt: DateTime?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +appointment: Appointment <<relation>>
+  }
+  class Notification {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +title: String
+    +content: String
+    +type: NotificationType
+    +isRead: Boolean
+    +readAt: DateTime?
+    +data: Json?
+    +channel: String?
+    +externalId: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +user: User <<relation>>
+  }
+  class NotificationLog {
+    +id: String <<PK>>
+    +appointmentId: String?
+    +userId: String
+    +type: String
+    +channel: String
+    +status: String
+    +errorMessage: String?
+    +sentAt: DateTime?
+    +createdAt: DateTime
+  }
+  class DeviceToken {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +deviceToken: String
+    +deviceType: String
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +user: User <<relation>>
+  }
+  class AuditLog {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +action: String
+    +entityType: String
+    +entityId: String?
+    +oldValue: Json?
+    +newValue: Json?
+    +ipAddress: String?
+    +userAgent: String?
+    +createdAt: DateTime
+    +user: User <<relation>>
+  }
+}
+
+package "Medical and Catalog" {
+  class Hospital {
+    +id: String <<PK>>
+    +name: String
+    +address: String?
+    +city: String?
+    +phone: String?
+    +hotline: String?
+    +emergencyHotline: String?
+    +description: String?
+    +logoUrl: String?
+    +coverImageUrl: String?
+    +images: String[]
+    +website: String?
+    +email: String?
+    +operatingHours: String?
+    +googleMapUrl: String?
+    +latitude: Float?
+    +longitude: Float?
+    +establishedYear: Int?
+    +bedCount: Int?
+    +type: HospitalType
+    +status: PartnershipStatus
+    +rating: Float
+    +reviewCount: Int
+    +hospitalCode: String?
+    +externalId: String?
+    +source: DataSource
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +branches: HospitalBranch[] <<relation>>
+    +workPlaces: DoctorWorkplace[] <<relation>>
+    +services: MedicalService[] <<relation>>
+    +packages: HealthPackage[] <<relation>>
+    +hospitalSpecialties: HospitalSpecialty[] <<relation>>
+    +medicalEncounters: MedicalEncounter[] <<relation>>
+    +patientLinks: PatientHospitalLink[] <<relation>>
+    +sourceConsents: PatientConsent[] <<relation>>
+    +targetConsents: PatientConsent[] <<relation>>
+    +users: User[] <<relation>>
+    +bookingConfigs: HospitalBookingConfig[] <<relation>>
+  }
+  class HospitalBookingConfig {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +bookingType: BookingType
+    +maxAdvanceDays: Int
+    +allowSaturday: Boolean
+    +allowSunday: Boolean
+    +minAdvanceMinutes: Int
+    +defaultSlotDuration: Int
+    +scheduleSource: ScheduleSource
+    +gracePeriodMinutes: Int
+    +minContactAttempts: Int
+    +minContactIntervalMinutes: Int
+    +autoNoShowEnabled: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +hospital: Hospital <<relation>>
+  }
+  class HospitalBranch {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +name: String?
+    +address: String
+    +phone: String?
+    +latitude: Float?
+    +longitude: Float?
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +hospital: Hospital <<relation>>
+    +workPlaces: DoctorWorkplace[] <<relation>>
+  }
+  class Specialty {
+    +id: String <<PK>>
+    +name: String
+    +description: String?
+    +icon: String?
+    +coverImageUrl: String?
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +workPlaces: DoctorWorkplace[] <<relation>>
+    +hospitalSpecialties: HospitalSpecialty[] <<relation>>
+    +packages: HealthPackage[] <<relation>>
+    +services: MedicalService[] <<relation>>
+    +consultations: ConsultationSession[] <<relation>>
+  }
+  class HospitalSpecialty {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +specialtyId: String <<FK>>
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +hospital: Hospital <<relation>>
+    +specialty: Specialty <<relation>>
+  }
+  class Doctor {
+    +id: String <<PK>>
+    +fullName: String
+    +title: String?
+    +avatarUrl: String?
+    +qualification: String
+    +yearsOfExperience: Int
+    +gender: Gender?
+    +bio: String?
+    +externalId: String?
+    +source: DataSource
+    +rating: Float
+    +reviewCount: Int
+    +consultationCount: Int
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +userId: String? <<FK>>
+    +user: User? <<relation>>
+    +workPlaces: DoctorWorkplace[] <<relation>>
+    +consultations: ConsultationSession[] <<relation>>
+  }
+  class DoctorWorkplace {
+    +id: String <<PK>>
+    +doctorId: String <<FK>>
+    +hospitalId: String <<FK>>
+    +branchId: String? <<FK>>
+    +specialtyId: String <<FK>>
+    +consultationFee: Decimal
+    +position: String?
+    +joinedAt: DateTime?
+    +isPrimary: Boolean
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +doctor: Doctor <<relation>>
+    +hospital: Hospital <<relation>>
+    +branch: HospitalBranch? <<relation>>
+    +specialty: Specialty <<relation>>
+    +schedules: DoctorSchedule[] <<relation>>
+    +slots: AppointmentSlot[] <<relation>>
+    +exceptions: ScheduleException[] <<relation>>
+    +consultations: ConsultationSession[] <<relation>>
+  }
+  class ScheduleException {
+    +id: String <<PK>>
+    +doctorWorkplaceId: String <<FK>>
+    +date: DateTime
+    +startTime: String?
+    +endTime: String?
+    +exceptionType: ScheduleExceptionType
+    +reason: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +doctorWorkplace: DoctorWorkplace <<relation>>
+  }
+  class MedicalService {
+    +roomSessions: ClinicRoomSession[] <<relation>>
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +specialtyId: String? <<FK>>
+    +name: String
+    +description: String?
+    +price: Decimal
+    +duration: Int
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +hospital: Hospital <<relation>>
+    +specialty: Specialty? <<relation>>
+    +appointments: Appointment[] <<relation>>
+    +scheduleServices: DoctorScheduleService[] <<relation>>
+  }
+  class ClinicRoom {
+    +id: String <<PK>>
+    +hospitalId: String
+    +specialtyId: String
+    +code: String
+    +name: String
+    +isActive: Boolean
+    +sessions: ClinicRoomSession[] <<relation>>
+  }
+  class ClinicRoomSession {
+    +id: String <<PK>>
+    +roomId: String <<FK>>
+    +medicalServiceId: String <<FK>>
+    +slotId: String <<FK>>
+    +mode: String
+    +room: ClinicRoom <<relation>>
+    +service: MedicalService <<relation>>
+    +slot: AppointmentSlot <<relation>>
+  }
+  class HealthPackage {
+    +id: String <<PK>>
+    +hospitalId: String <<FK>>
+    +specialtyId: String? <<FK>>
+    +name: String
+    +thumbnailUrl: String?
+    +price: Decimal
+    +originalPrice: Decimal?
+    +description: String?
+    +duration: Int
+    +services: Json?
+    +preparationNote: String?
+    +estimatedResultTime: String?
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +hospital: Hospital <<relation>>
+    +specialty: Specialty? <<relation>>
+  }
+  class DoctorSchedule {
+    +id: String <<PK>>
+    +doctorWorkplaceId: String <<FK>>
+    +bookingType: BookingType
+    +dayOfWeek: Int
+    +startTime: String
+    +endTime: String
+    +breakStart: String?
+    +breakEnd: String?
+    +slotDuration: Int?
+    +capacity: Int
+    +effectiveFrom: DateTime?
+    +effectiveTo: DateTime?
+    +isActive: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +doctorWorkplace: DoctorWorkplace <<relation>>
+    +scheduleServices: DoctorScheduleService[] <<relation>>
+  }
+  class DoctorScheduleService {
+    +id: String <<PK>>
+    +scheduleId: String <<FK>>
+    +medicalServiceId: String <<FK>>
+    +createdAt: DateTime
+    +schedule: DoctorSchedule <<relation>>
+    +medicalService: MedicalService <<relation>>
+  }
+}
+
+package "Pre-Exam AI and Medical Passport" {
+  class PreExamSession {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +status: String
+    +startedAt: DateTime
+    +completedAt: DateTime?
+    +initialText: String?
+    +voiceTranscript: String?
+    +bodyDiagramData: Json?
+    +imageAnalysis: Json?
+    +uploadedFiles: String[]
+    +structuredData: Json?
+    +recommendations: Json?
+    +riskLevel: String?
+    +expiresAt: DateTime
+    +user: User <<relation>>
+    +questions: PreExamQuestion[] <<relation>>
+    +media: ScreeningMedia[] <<relation>>
+  }
+  class PreExamQuestion {
+    +id: String <<PK>>
+    +sessionId: String <<FK>>
+    +question: String
+    +answer: String?
+    +order: Int
+    +context: Json?
+    +preExamSession: PreExamSession <<relation>>
+  }
+  class ScreeningMedia {
+    +id: String <<PK>>
+    +sessionId: String <<FK>>
+    +type: String
+    +storageKey: String
+    +mimeType: String
+    +sizeBytes: Int
+    +durationMs: Int?
+    +scriptId: String?
+    +processingStatus: String
+    +transcript: String?
+    +createdAt: DateTime
+    +session: PreExamSession <<relation>>
+  }
+  class MedicalPassport {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +summary: Json
+    +version: Int
+    +updatedAt: DateTime
+    +user: User <<relation>>
+    +shares: MedicalPassportShare[] <<relation>>
+  }
+  class MedicalPassportShare {
+    +id: String <<PK>>
+    +passportId: String <<FK>>
+    +shareToken: String
+    +qrCode: String
+    +pinCode: String?
+    +allowedSections: String[]
+    +validUntil: DateTime
+    +isActive: Boolean
+    +lastAccessedAt: DateTime?
+    +accessCount: Int
+    +sharedWith: String?
+    +createdAt: DateTime
+    +revokedAt: DateTime?
+    +medicalPassport: MedicalPassport <<relation>>
+    +accessLogs: MedicalPassportAccessLog[] <<relation>>
+  }
+  class MedicalPassportAccessLog {
+    +id: String <<PK>>
+    +shareId: String <<FK>>
+    +ipAddress: String?
+    +userAgent: String?
+    +accessedAt: DateTime
+    +share: MedicalPassportShare <<relation>>
+  }
+}
+
+package "Interoperability Clinical History" {
+  class MedicalEncounter {
+    +id: String <<PK>>
+    +patientProfileId: String <<FK>>
+    +hospitalId: String <<FK>>
+    +appointmentId: String? <<FK>>
+    +externalEncounterId: String?
+    +encounterCode: String
+    +encounterDate: DateTime
+    +doctorName: String
+    +doctorTitle: String?
+    +specialtyName: String
+    +chiefComplaint: String?
+    +clinicalSummary: String?
+    +physicalExamination: String?
+    +organSystemsExam: Json?
+    +specialtyExam: Json?
+    +admissionSource: String?
+    +admissionAt: DateTime?
+    +dischargeType: String?
+    +treatmentDays: Int?
+    +initialDiagnosis: String?
+    +differentialDiagnosis: String?
+    +treatmentPlan: String?
+    +doctorNotes: String?
+    +conclusion: String?
+    +treatmentResult: String?
+    +revisitDate: DateTime?
+    +prognosisNear: String?
+    +prognosisFar: String?
+    +careLevel: String?
+    +dietaryRegimen: String?
+    +departmentHeadName: String?
+    +hospitalDirectorName: String?
+    +digitalSignature: Json?
+    +status: EncounterStatus
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +patientProfile: PatientProfile <<relation>>
+    +hospital: Hospital <<relation>>
+    +appointment: Appointment? <<relation>>
+    +diagnoses: Diagnosis[] <<relation>>
+    +observations: Observation[] <<relation>>
+    +prescription: Prescription? <<relation>>
+  }
+  class Diagnosis {
+    +id: String <<PK>>
+    +encounterId: String <<FK>>
+    +icdCode: String
+    +diseaseName: String
+    +isPrimary: Boolean
+    +isComplication: Boolean
+    +diagnosisType: String?
+    +note: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +encounter: MedicalEncounter <<relation>>
+  }
+  class Observation {
+    +id: String <<PK>>
+    +encounterId: String <<FK>>
+    +category: ObservationCategory
+    +code: String?
+    +name: String
+    +value: String
+    +unit: String?
+    +referenceRange: String?
+    +interpretation: String?
+    +observedAt: DateTime
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +encounter: MedicalEncounter <<relation>>
+  }
+  class Prescription {
+    +id: String <<PK>>
+    +encounterId: String <<FK>>
+    +prescriptionCode: String
+    +prescribedAt: DateTime
+    +note: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +encounter: MedicalEncounter <<relation>>
+    +items: PrescriptionItem[] <<relation>>
+  }
+  class PrescriptionItem {
+    +id: String <<PK>>
+    +prescriptionId: String <<FK>>
+    +drugName: String
+    +activeIngredientCode: String?
+    +dosage: String
+    +usageInstruction: String
+    +quantity: Int
+    +unit: String?
+    +duration: String?
+    +note: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +prescription: Prescription <<relation>>
+  }
+  class PatientHospitalLink {
+    +id: String <<PK>>
+    +patientProfileId: String <<FK>>
+    +hospitalId: String <<FK>>
+    +externalPatientId: String
+    +matchingStatus: MatchingStatus
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +patientProfile: PatientProfile <<relation>>
+    +hospital: Hospital <<relation>>
+  }
+  class PatientConsent {
+    +id: String <<PK>>
+    +patientProfileId: String <<FK>>
+    +sourceHospitalId: String <<FK>>
+    +targetHospitalId: String <<FK>>
+    +status: ConsentStatus
+    +grantedAt: DateTime?
+    +expiresAt: DateTime?
+    +revokedAt: DateTime?
+    +scope: Json?
+    +purpose: String
+    +confirmedAt: DateTime?
+    +policyVersion: String
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +patientProfile: PatientProfile <<relation>>
+    +sourceHospital: Hospital <<relation>>
+    +targetHospital: Hospital <<relation>>
+  }
+}
+
+package "Telemedicine" {
+  class ConsultationSession {
+    +id: String <<PK>>
+    +patientProfileId: String <<FK>>
+    +doctorId: String <<FK>>
+    +doctorWorkplaceId: String <<FK>>
+    +specialtyId: String <<FK>>
+    +appointmentId: String? <<FK>>
+    +createdByUserId: String <<FK>>
+    +idempotencyKey: String
+    +requestMode: ConsultationRequestMode
+    +channel: ConsultationChannel
+    +status: ConsultationStatus
+    +topic: String
+    +description: String
+    +scheduledStartAt: DateTime?
+    +scheduledEndAt: DateTime?
+    +chatOpenAt: DateTime?
+    +acceptedAt: DateTime?
+    +startedAt: DateTime?
+    +completedAt: DateTime?
+    +cancelledAt: DateTime?
+    +expiresAt: DateTime?
+    +followUpUntil: DateTime?
+    +videoEnabled: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +patientProfile: PatientProfile <<relation>>
+    +doctor: Doctor <<relation>>
+    +doctorWorkplace: DoctorWorkplace <<relation>>
+    +specialty: Specialty <<relation>>
+    +appointment: Appointment? <<relation>>
+    +createdBy: User <<relation>>
+    +messages: ConsultationMessage[] <<relation>>
+    +attachments: ConsultationAttachment[] <<relation>>
+  }
+  class ConsultationMessage {
+    +id: String <<PK>>
+    +consultationId: String <<FK>>
+    +senderUserId: String <<FK>>
+    +senderType: ConsultationSenderType
+    +messageType: ConsultationMessageType
+    +clientMessageId: String
+    +text: String?
+    +sentAt: DateTime
+    +deliveredAt: DateTime?
+    +readAt: DateTime?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +consultation: ConsultationSession <<relation>>
+    +sender: User <<relation>>
+    +attachments: ConsultationAttachment[] <<relation>>
+  }
+  class ConsultationAttachment {
+    +id: String <<PK>>
+    +consultationId: String <<FK>>
+    +messageId: String? <<FK>>
+    +uploadedByUserId: String <<FK>>
+    +status: ConsultationAttachmentStatus
+    +type: ConsultationMessageType
+    +fileName: String
+    +mimeType: String
+    +sizeBytes: Int
+    +storageKey: String
+    +thumbnailKey: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +consultation: ConsultationSession <<relation>>
+    +message: ConsultationMessage? <<relation>>
+    +uploadedBy: User <<relation>>
+  }
+}
+
+package "Partner Management" {
+  class PartnerRequest {
+    +id: String <<PK>>
+    +type: PartnerType
+    +contactName: String
+    +titleOrRole: String?
+    +phone: String
+    +email: String
+    +hospitalName: String
+    +specialty: String?
+    +notes: String?
+    +status: PartnerRequestStatus
+    +adminNote: String?
+    +approvedAt: DateTime?
+    +createdHospitalId: String?
+    +createdUserId: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+  }
+}
+
+Hospital "0..1" <-- "0..*" User : hospital
+User "1" <-- "0..*" RefreshToken : user
+User "1" <-- "0..*" PatientProfile : user
+PatientProfile "1" <-- "0..*" Appointment : patientProfile
+User "1" <-- "0..*" Appointment : user
+AppointmentSlot "1" <-- "0..*" Appointment : slot
+MedicalService "0..1" <-- "0..*" Appointment : medicalService
+DoctorWorkplace "1" <-- "0..*" AppointmentSlot : doctorWorkplace
+Appointment "1" <-- "0..*" AppointmentSlotBooking : appointment
+AppointmentSlot "1" <-- "0..*" AppointmentSlotBooking : slot
+Appointment "1" <-- "0..*" AppointmentStatusHistory : appointment
+Appointment "1" <-- "0..*" AppointmentContactLog : appointment
+Appointment "1" <-- "0..1" PaymentTransaction : appointment
+User "1" <-- "0..*" Notification : user
+User "1" <-- "0..*" DeviceToken : user
+User "1" <-- "0..*" AuditLog : user
+Hospital "1" <-- "0..*" HospitalBookingConfig : hospital
+Hospital "1" <-- "0..*" HospitalBranch : hospital
+Hospital "1" <-- "0..*" HospitalSpecialty : hospital
+Specialty "1" <-- "0..*" HospitalSpecialty : specialty
+User "0..1" <-- "0..1" Doctor : user
+Doctor "1" <-- "0..*" DoctorWorkplace : doctor
+Hospital "1" <-- "0..*" DoctorWorkplace : hospital
+HospitalBranch "0..1" <-- "0..*" DoctorWorkplace : branch
+Specialty "1" <-- "0..*" DoctorWorkplace : specialty
+DoctorWorkplace "1" <-- "0..*" ScheduleException : doctorWorkplace
+Hospital "1" <-- "0..*" MedicalService : hospital
+Specialty "0..1" <-- "0..*" MedicalService : specialty
+ClinicRoom "1" <-- "0..*" ClinicRoomSession : room
+MedicalService "1" <-- "0..*" ClinicRoomSession : service
+AppointmentSlot "1" <-- "0..1" ClinicRoomSession : slot
+Hospital "1" <-- "0..*" HealthPackage : hospital
+Specialty "0..1" <-- "0..*" HealthPackage : specialty
+DoctorWorkplace "1" <-- "0..*" DoctorSchedule : doctorWorkplace
+DoctorSchedule "1" <-- "0..*" DoctorScheduleService : schedule
+MedicalService "1" <-- "0..*" DoctorScheduleService : medicalService
+User "1" <-- "0..*" PreExamSession : user
+PreExamSession "1" <-- "0..*" PreExamQuestion : preExamSession
+PreExamSession "1" <-- "0..*" ScreeningMedia : session
+User "1" <-- "0..1" MedicalPassport : user
+MedicalPassport "1" <-- "0..*" MedicalPassportShare : medicalPassport
+MedicalPassportShare "1" <-- "0..*" MedicalPassportAccessLog : share
+PatientProfile "1" <-- "0..*" MedicalEncounter : patientProfile
+Hospital "1" <-- "0..*" MedicalEncounter : hospital
+Appointment "0..1" <-- "0..1" MedicalEncounter : appointment
+MedicalEncounter "1" <-- "0..*" Diagnosis : encounter
+MedicalEncounter "1" <-- "0..*" Observation : encounter
+MedicalEncounter "1" <-- "0..1" Prescription : encounter
+Prescription "1" <-- "0..*" PrescriptionItem : prescription
+PatientProfile "1" <-- "0..*" PatientHospitalLink : patientProfile
+Hospital "1" <-- "0..*" PatientHospitalLink : hospital
+PatientProfile "1" <-- "0..*" PatientConsent : patientProfile
+Hospital "1" <-- "0..*" PatientConsent : sourceHospital
+Hospital "1" <-- "0..*" PatientConsent : targetHospital
+PatientProfile "1" <-- "0..*" ConsultationSession : patientProfile
+Doctor "1" <-- "0..*" ConsultationSession : doctor
+DoctorWorkplace "1" <-- "0..*" ConsultationSession : doctorWorkplace
+Specialty "1" <-- "0..*" ConsultationSession : specialty
+Appointment "0..1" <-- "0..1" ConsultationSession : appointment
+User "1" <-- "0..*" ConsultationSession : createdBy
+ConsultationSession "1" <-- "0..*" ConsultationMessage : consultation
+User "1" <-- "0..*" ConsultationMessage : sender
+ConsultationSession "1" <-- "0..*" ConsultationAttachment : consultation
+ConsultationMessage "0..1" <-- "0..*" ConsultationAttachment : message
+User "1" <-- "0..*" ConsultationAttachment : uploadedBy
+
+note as JoinRelations
+Many-to-many relationships are modeled through explicit join models:
+- Hospital <-> Specialty via HospitalSpecialty
+- Appointment <-> AppointmentSlot via AppointmentSlotBooking
+- DoctorSchedule <-> MedicalService via DoctorScheduleService
+- PatientProfile <-> Hospital via PatientHospitalLink
+end note
+Hospital "0..*" -- "0..*" Specialty : via HospitalSpecialty
+Appointment "0..*" -- "0..*" AppointmentSlot : via AppointmentSlotBooking
+DoctorSchedule "0..*" -- "0..*" MedicalService : via DoctorScheduleService
+PatientProfile "0..*" -- "0..*" Hospital : via PatientHospitalLink
+
+note bottom
+  Doctor and Hospital are associated through DoctorWorkplace,
+  which also records Specialty and workplace-specific attributes.
+  This is modeled as a ternary association entity, not a bare N:N link.
+end note
+
+note bottom
+  This is the complete database-schema view, not an inventory of
+  models currently exposed by or backing an active UI workflow.
+  Use the six domain diagrams for the UI-scoped view.
+end note
+
+@enduml

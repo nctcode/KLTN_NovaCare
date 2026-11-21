@@ -70,7 +70,7 @@ export const authService = {
     return res && res.data ? res.data : res;
   },
 
-  async activateHospitalAccount(data: { token: string; password: string }): Promise<AuthResponse> {
+  async activateHospitalAccount(data: { token: string; password: string; email?: string }): Promise<AuthResponse> {
     const res = await apiClient.post<any>('/auth/activate-hospital-account', data);
     return res && res.data ? res.data : res;
   },

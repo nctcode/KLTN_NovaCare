@@ -1,0 +1,339 @@
+@startuml NovaCare_core
+title NovaCare - Core Domain
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty methods
+
+legend right
+  |= Notation |= Meaning |
+  | `?` | Optional Prisma field |
+  | `[]` | Prisma list/array field |
+  | `<<PK>>` | Primary key |
+  | `<<FK>>` | Foreign key scalar field |
+  | `<<supporting>>` | Backend record used by a current UI workflow; not independently managed |
+  | `<<reference>>` | Related model shown in another domain diagram; only its identifier is shown |
+  | Multiplicity | `1`, `0..1`, `0..*` |
+  Scope: models are included only when a current UI flow uses them or they support that flow.
+  Attributes are schema fields; a UI may expose only a subset of them.
+endlegend
+
+package "Enums" {
+  enum AppointmentStatus {
+    PENDING
+    AWAITING_PAYMENT
+    CONFIRMED
+    PAID
+    COMPLETED
+    CANCELLED
+    EXPIRED
+    NO_SHOW
+    FAILED
+    REFUNDED
+  }
+  enum Gender {
+    MALE
+    FEMALE
+    OTHER
+  }
+  enum NotificationType {
+    BOOKING_CONFIRMED
+    PAYMENT_SUCCESS
+    REMINDER
+    CANCELLED
+    RESCHEDULED
+    EXPIRED
+    CONSULTATION_MESSAGE
+    CONSULTATION_STATUS
+    SYSTEM
+  }
+  enum PaymentMethod {
+    VNPAY
+    CASH
+    BANKING
+    MOMO
+    VIETQR
+    CARD
+  }
+  enum PaymentStatus {
+    PENDING
+    PROCESSING
+    PAID
+    FAILED
+    REFUNDED
+    EXPIRED
+  }
+  enum Role {
+    PATIENT
+    DOCTOR
+    ADMIN
+    HOSPITAL_ADMIN
+  }
+}
+
+package "Core Domain" {
+  class Appointment {
+    +clinicRoomId: String?
+    +serviceBookingMode: String?
+    +id: String <<PK>>
+    +bookingCode: String
+    +patientProfileId: String <<FK>>
+    +slotId: String <<FK>>
+    +medicalServiceId: String? <<FK>>
+    +userId: String <<FK>>
+    +status: AppointmentStatus
+    +reason: String?
+    +symptoms: String?
+    +totalPrice: Decimal
+    +consultationFee: Decimal
+    +serviceFee: Decimal
+    +idempotencyKey: String?
+    +expiresAt: DateTime?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +cancelledAt: DateTime?
+    +completedAt: DateTime?
+    +reminderSentAt: DateTime?
+    +reminderCount: Int
+    +checkInAt: DateTime?
+    +noShowAt: DateTime?
+    +patientProfile: PatientProfile <<relation>>
+    +user: User <<relation>>
+    +slot: AppointmentSlot <<relation>>
+    +medicalService: MedicalService? <<relation>>
+    +slotBookings: AppointmentSlotBooking[] <<relation>>
+    +statusHistory: AppointmentStatusHistory[] <<relation>>
+    +contactLogs: AppointmentContactLog[] <<relation>>
+    +payment: PaymentTransaction? <<relation>>
+    +medicalEncounter: MedicalEncounter? <<relation>>
+    +consultation: ConsultationSession? <<relation>>
+  }
+  class AppointmentContactLog {
+    +id: String <<PK>>
+    +appointmentId: String <<FK>>
+    +staffId: String?
+    +staffName: String?
+    +channel: String
+    +outcome: String
+    +note: String?
+    +contactedAt: DateTime
+    +createdAt: DateTime
+    +appointment: Appointment <<relation>>
+  }
+  class AppointmentSlot <<reference>> {
+    +id: String
+  }
+  class AppointmentSlotBooking <<supporting>> {
+    +id: String <<PK>>
+    +appointmentId: String <<FK>>
+    +slotId: String <<FK>>
+    +createdAt: DateTime
+    +appointment: Appointment <<relation>>
+    +slot: AppointmentSlot <<relation>>
+  }
+  class AppointmentStatusHistory {
+    +id: String <<PK>>
+    +appointmentId: String <<FK>>
+    +status: AppointmentStatus
+    +note: String?
+    +createdAt: DateTime
+    +appointment: Appointment <<relation>>
+  }
+  class AuditLog {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +action: String
+    +entityType: String
+    +entityId: String?
+    +oldValue: Json?
+    +newValue: Json?
+    +ipAddress: String?
+    +userAgent: String?
+    +createdAt: DateTime
+    +user: User <<relation>>
+  }
+  class Doctor <<reference>> {
+    +id: String
+  }
+  class DoctorWorkplace <<reference>> {
+    +id: String
+  }
+  class Hospital <<reference>> {
+    +id: String
+  }
+  class HospitalBranch <<reference>> {
+    +id: String
+  }
+  class MedicalService <<reference>> {
+    +id: String
+  }
+  class Notification {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +title: String
+    +content: String
+    +type: NotificationType
+    +isRead: Boolean
+    +readAt: DateTime?
+    +data: Json?
+    +channel: String?
+    +externalId: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +user: User <<relation>>
+  }
+  class PasswordResetChallenge <<supporting>> {
+    +userId: String <<PK>>
+    +otpHash: String?
+    +destination: String
+    +expiresAt: DateTime
+    +requestedAt: DateTime
+    +attempts: Int
+    +windowStart: DateTime
+    +sendCount: Int
+    +verificationTokenHash: String?
+    +verificationExpiresAt: DateTime?
+  }
+  class PatientProfile {
+    +id: String <<PK>>
+    +patientCode: String?
+    +userId: String <<FK>>
+    +fullName: String
+    +gender: Gender?
+    +dateOfBirth: DateTime?
+    +phone: String?
+    +address: String?
+    +relation: String?
+    +identityNumber: String?
+    +healthInsurance: String?
+    +bhytInitialHospitalCode: String?
+    +bhytValidFrom: DateTime?
+    +bhytValidTo: DateTime?
+    +provinceCode: String?
+    +districtCode: String?
+    +wardCode: String?
+    +bloodType: String?
+    +ethnicity: String?
+    +nationality: String?
+    +occupation: String?
+    +guardianName: String?
+    +familyMedicalHistory: String?
+    +lifestyleRiskFactors: String?
+    +currentMedications: String?
+    +medicalHistory: String?
+    +allergies: String?
+    +emergencyContact: String?
+    +emergencyPhone: String?
+    +isDefault: Boolean
+    +isActive: Boolean
+    +securityPin: String?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +user: User <<relation>>
+    +appointments: Appointment[] <<relation>>
+    +medicalEncounters: MedicalEncounter[] <<relation>>
+    +consents: PatientConsent[] <<relation>>
+    +consultations: ConsultationSession[] <<relation>>
+  }
+  class PaymentTransaction {
+    +id: String <<PK>>
+    +appointmentId: String <<FK>>
+    +amount: Decimal
+    +paymentMethod: PaymentMethod
+    +transactionCode: String
+    +status: PaymentStatus
+    +vnpResponseCode: String?
+    +vnpTransactionNo: String?
+    +callbackData: Json?
+    +paidAt: DateTime?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +appointment: Appointment <<relation>>
+  }
+  class RefreshToken <<supporting>> {
+    +id: String <<PK>>
+    +userId: String <<FK>>
+    +tokenHash: String
+    +expiresAt: DateTime
+    +deviceInfo: String?
+    +ipAddress: String?
+    +isRevoked: Boolean
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +user: User <<relation>>
+  }
+  class RegistrationOtpChallenge <<supporting>> {
+    +phone: String <<PK>>
+    +otpHash: String?
+    +expiresAt: DateTime
+    +requestedAt: DateTime
+    +attempts: Int
+    +windowStart: DateTime
+    +sendCount: Int
+    +verificationTokenHash: String?
+    +verificationExpiresAt: DateTime?
+  }
+  class Specialty <<reference>> {
+    +id: String
+  }
+  class User {
+    +authVersion: Int
+    +id: String <<PK>>
+    +email: String?
+    +phone: String?
+    +passwordHash: String
+    +fullName: String
+    +role: Role
+    +isActive: Boolean
+    +lastLoginAt: DateTime?
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +deletedAt: DateTime?
+    +resetPasswordToken: String?
+    +resetPasswordExpiresAt: DateTime?
+    +activationToken: String?
+    +activationExpiresAt: DateTime?
+    +otpCode: String?
+    +otpExpiresAt: DateTime?
+    +otpVerified: Boolean
+    +patientProfiles: PatientProfile[] <<relation>>
+    +appointments: Appointment[] <<relation>>
+    +refreshTokens: RefreshToken[] <<relation>>
+    +notifications: Notification[] <<relation>>
+    +auditLogs: AuditLog[] <<relation>>
+    +preExamSessions: PreExamSession[] <<relation>>
+    +medicalPassport: MedicalPassport? <<relation>>
+    +doctorProfile: Doctor? <<relation>>
+    +consultationsCreated: ConsultationSession[] <<relation>>
+    +consultationMessages: ConsultationMessage[] <<relation>>
+    +consultationAttachments: ConsultationAttachment[] <<relation>>
+    +hospitalId: String? <<FK>>
+    +hospital: Hospital? <<relation>>
+  }
+}
+
+Hospital "0..1" <-- "0..*" User : hospital
+User "1" <-- "0..*" RefreshToken : user
+User "1" <-- "0..*" PatientProfile : user
+PatientProfile "1" <-- "0..*" Appointment : patientProfile
+User "1" <-- "0..*" Appointment : user
+AppointmentSlot "1" <-- "0..*" Appointment : slot
+MedicalService "0..1" <-- "0..*" Appointment : medicalService
+Appointment "1" <-- "0..*" AppointmentSlotBooking : appointment
+AppointmentSlot "1" <-- "0..*" AppointmentSlotBooking : slot
+Appointment "1" <-- "0..*" AppointmentStatusHistory : appointment
+Appointment "1" <-- "0..*" AppointmentContactLog : appointment
+Appointment "1" <-- "0..1" PaymentTransaction : appointment
+User "1" <-- "0..*" Notification : user
+User "1" <-- "0..*" AuditLog : user
+Appointment "0..*" -- "0..*" AppointmentSlot : via AppointmentSlotBooking
+
+note bottom
+  Authentication challenges and refresh tokens support active
+  registration, password-reset and session-renewal flows.
+  They are not managed as standalone business records in the UI.
+end note
+
+@enduml

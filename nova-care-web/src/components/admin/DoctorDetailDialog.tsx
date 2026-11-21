@@ -167,8 +167,6 @@ export function DoctorDetailDialog({
     enabled: open && !currentHospitalId,
   });
   const specialties = Array.isArray(rawSpecialties) ? rawSpecialties : [];
-  const displaySpecialties = currentHospitalId && hospitalSpecialties.length > 0 ? hospitalSpecialties : (currentHospitalId ? hospitalSpecialties : specialties);
-
   const { data: rawHospitals } = useQuery({
     queryKey: ['admin-hospitals-all'],
     queryFn: async () => {
@@ -673,22 +671,12 @@ export function DoctorDetailDialog({
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="font-medium text-slate-700 dark:text-slate-300 block">Chuyên khoa của bệnh viện *</label>
-                        <select
+                        <label className="font-medium text-slate-700 dark:text-slate-300 block">Bằng cấp / chuyên môn</label>
+                        <Input
                           value={formData.qualification}
                           onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
                           className={`w-full text-xs font-normal rounded-lg p-2 border ${inputBg}`}
-                        >
-                          <option value="">-- Chọn chuyên khoa của bệnh viện --</option>
-                          {displaySpecialties.map((s: any) => (
-                            <option key={s.id} value={s.name}>
-                              {s.name}
-                            </option>
-                          ))}
-                          {formData.qualification && !displaySpecialties.some((s: any) => s.name === formData.qualification) && (
-                            <option value={formData.qualification}>{formData.qualification}</option>
-                          )}
-                        </select>
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="font-medium text-slate-700 dark:text-slate-300 block">Số năm kinh nghiệm</label>

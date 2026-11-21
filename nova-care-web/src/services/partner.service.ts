@@ -31,6 +31,9 @@ export interface ApprovePartnerInput {
   adminFullName?: string;
   hospitalName?: string;
   adminNote?: string;
+  approvalDocumentName?: string;
+  approvalDocumentMimeType?: string;
+  approvalDocumentData?: string;
 }
 
 export const partnerService = {

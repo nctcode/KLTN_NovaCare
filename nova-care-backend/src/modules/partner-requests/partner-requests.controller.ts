@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -98,8 +99,9 @@ export class PartnerRequestsController {
   async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdatePartnerStatusDto,
+    @Req() req: any,
   ) {
-    const data = await this.service.updateStatus(id, dto);
+    const data = await this.service.updateStatus(id, dto, req.user?.id);
     return {
       statusCode: HttpStatus.OK,
       message: 'Cập nhật trạng thái thành công',
@@ -114,11 +116,12 @@ export class PartnerRequestsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Platform Admin: Phê duyệt hợp tác và gửi thư kích hoạt tài khoản' })
+  @ApiOperation({ summary: 'Platform Admin: Phê duyệt hợp tác và gửi email xác nhận' })
   async approveRequest(
     @Param('id') id: string,
     @Body() dto: ApprovePartnerRequestDto,
+    @Req() req: any,
   ) {
-    return this.service.approveRequest(id, dto);
+    return this.service.approveRequest(id, dto, req.user?.id);
   }
 }

@@ -62,8 +62,8 @@ Hệ thống HIS của bệnh viện cần mở **duy nhất 01 Endpoint HTTP GE
 | Tên Header | Kiểu | Bắt buộc | Mô tả |
 | :--- | :--- | :--- | :--- |
 | `Accept` | `string` | Có | Giá trị: `application/json` |
-| `X-API-KEY` | `string` | Tùy chọn | Mã khóa xác thực nếu viện cấu hình cơ chế API Key |
-| `Authorization` | `string` | Tùy chọn | `Bearer <token>` nếu viện dùng Bearer Token |
+| `X-API-KEY` | `string` | Bắt buộc khi chọn API Key | Mã khóa xác thực do bệnh viện cấp cho NovaCare |
+| `Authorization` | `string` | Bắt buộc khi chọn Bearer | `Bearer <token>` do bệnh viện cấp cho NovaCare |
 
 #### Query Parameters:
 | Tham số | Kiểu | Bắt buộc | Ví dụ | Mô tả |
@@ -213,7 +213,7 @@ NovaCare kích hoạt gọi API của bệnh viện theo **3 trường hợp c�
 Quy trình kích hoạt kết nối được thực hiện qua giao diện Web của Cổng Quản Trị Cơ Sở Y Tế (`/hospital-admin/integration`) thông qua 5 giai đoạn liên hoàn:
 
 ### 5.1 Giai đoạn 1: Nhập thông số & Thẩm định Bắt tay (Connection & Handshake)
-- **Nhập URL & Bảo mật:** Quản trị viên nhập đường dẫn Endpoint URL (Ví dụ: `http://localhost:5055/api/hospital-catalog`) và thiết lập cơ chế xác thực (None / API Key / Bearer).
+- **Nhập URL & Bảo mật:** Quản trị viên nhập đường dẫn Endpoint URL do bệnh viện cung cấp và bắt buộc thiết lập một cơ chế xác thực (API Key hoặc Bearer).
 - **Thẩm định tự động (Automated Sanity Check):** NovaCare gửi một request HTTP GET tới URL đã cung cấp. Bộ máy thẩm định (Validator) quét kiểm tra phản hồi HTTP 200 và tính toàn vẹn của dữ liệu (`hospital_code`, `departments`, `doctors`).
 - **Phản hồi tức thì:** Nếu thành công, màn hình hiển thị thẻ tóm tắt số lượng khoa phòng, bác sĩ và ca trực phát hiện được để mở khóa luồng kết nối chính thức.
 

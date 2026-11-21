@@ -1,0 +1,726 @@
+@startuml UC01_TraCuuGoiKham
+title UC01 - Tra cứu gói khám
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_GoiKham" as GD_GoiKham
+control "CTR_AdminHealthPackages" as CTR_GoiKham
+entity "E_HealthPackage" as E_GoiKham
+
+Admin -> GD_GoiKham: Mở trang Gói khám
+GD_GoiKham -> CTR_GoiKham: GET danh sách (từ khóa, bộ lọc, trang)
+CTR_GoiKham -> E_GoiKham: Truy vấn gói khám theo cơ sở
+E_GoiKham --> CTR_GoiKham: Danh sách gói khám
+CTR_GoiKham --> GD_GoiKham: Kết quả danh sách
+GD_GoiKham --> Admin: Hiển thị danh sách
+opt Admin chọn Xem chi tiết
+  Admin -> GD_GoiKham: Chọn một gói khám
+  note right of GD_GoiKham
+    Modal dùng dữ liệu gói đã có trong dòng danh sách;
+    luồng hiện tại không gọi API detail.
+  end note
+  GD_GoiKham --> Admin: Hiển thị thông tin chi tiết
+end
+alt Không có kết quả
+  GD_GoiKham --> Admin: Hiển thị danh sách rỗng
+else Lỗi tải dữ liệu
+  CTR_GoiKham --> GD_GoiKham: Trả lỗi
+  GD_GoiKham --> Admin: Thông báo lỗi tải danh sách
+end
+@enduml
+
+@startuml UC02_QuanLyThongTinGoiKham
+title UC02 - Quản lý thông tin gói khám
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_GoiKham" as GD_GoiKham
+control "CTR_AdminHealthPackages" as CTR_GoiKham
+entity "E_HealthPackage" as E_GoiKham
+
+alt Admin thêm gói khám
+  Admin -> GD_GoiKham: Chọn Thêm gói
+  GD_GoiKham --> Admin: Hiển thị biểu mẫu trống
+  Admin -> GD_GoiKham: Nhập dữ liệu và chọn Lưu
+  GD_GoiKham -> CTR_GoiKham: POST tạo mới
+  CTR_GoiKham -> E_GoiKham: Kiểm tra và tạo gói
+  E_GoiKham --> CTR_GoiKham: Kết quả tạo
+  CTR_GoiKham --> GD_GoiKham: Trả kết quả
+  GD_GoiKham --> Admin: Thông báo và tải lại danh sách
+else Admin sửa gói khám
+  Admin -> GD_GoiKham: Chọn Sửa gói
+  GD_GoiKham --> Admin: Hiển thị biểu mẫu có dữ liệu
+  Admin -> GD_GoiKham: Cập nhật dữ liệu và chọn Lưu
+  GD_GoiKham -> CTR_GoiKham: PATCH cập nhật
+  CTR_GoiKham -> E_GoiKham: Kiểm tra và cập nhật gói
+  E_GoiKham --> CTR_GoiKham: Kết quả cập nhật
+  CTR_GoiKham --> GD_GoiKham: Trả kết quả
+  GD_GoiKham --> Admin: Thông báo và tải lại danh sách
+else Admin đổi trạng thái
+  Admin -> GD_GoiKham: Bật/Tắt trạng thái gói
+  GD_GoiKham -> CTR_GoiKham: PATCH trạng thái
+  CTR_GoiKham -> E_GoiKham: Cập nhật isActive
+  E_GoiKham --> CTR_GoiKham: Kết quả cập nhật
+  CTR_GoiKham --> GD_GoiKham: Trả trạng thái mới
+  GD_GoiKham --> Admin: Cập nhật danh sách
+else Admin xóa gói
+  Admin -> GD_GoiKham: Chọn Xóa và xác nhận
+  GD_GoiKham -> CTR_GoiKham: DELETE gói khám
+  CTR_GoiKham -> E_GoiKham: Xóa gói trong phạm vi cơ sở
+  E_GoiKham --> CTR_GoiKham: Kết quả xóa
+  CTR_GoiKham --> GD_GoiKham: Trả kết quả
+  GD_GoiKham --> Admin: Thông báo và tải lại danh sách
+end
+note over GD_GoiKham,CTR_GoiKham
+  Nếu dữ liệu không hợp lệ hoặc API lỗi,
+  giao diện hiển thị thông báo lỗi và không xác nhận thành công.
+end note
+@enduml
+
+@startuml UC03_XemThongTinCoSo
+title UC03 - Xem thông tin cơ sở y tế
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_HoSoCoSo" as GD_HoSo
+control "CTR_AdminHospitals" as CTR_CoSo
+entity "E_Hospital" as E_CoSo
+
+Admin -> GD_HoSo: Mở hồ sơ cơ sở
+GD_HoSo -> CTR_CoSo: GET thông tin cơ sở được gán
+CTR_CoSo -> E_CoSo: Truy vấn hồ sơ theo ID cơ sở
+E_CoSo --> CTR_CoSo: Hồ sơ cơ sở
+CTR_CoSo --> GD_HoSo: Trả thông tin hồ sơ
+GD_HoSo --> Admin: Hiển thị hồ sơ và các tab
+alt Tài khoản không có cơ sở hợp lệ
+  CTR_CoSo --> GD_HoSo: Trả lỗi phạm vi hoặc không tìm thấy
+  GD_HoSo --> Admin: Thông báo không thể tải hồ sơ
+else Lỗi truy vấn
+  CTR_CoSo --> GD_HoSo: Trả lỗi hệ thống
+  GD_HoSo --> Admin: Thông báo lỗi
+end
+@enduml
+
+@startuml UC04_CapNhatThongTinCoSo
+title UC04 - Cập nhật thông tin cơ sở y tế
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_ChinhSuaCoSo" as GD_ChinhSua
+control "CTR_AdminHospitals" as CTR_CoSo
+entity "E_Hospital" as E_CoSo
+
+Admin -> GD_ChinhSua: Mở chỉnh sửa hồ sơ
+GD_ChinhSua -> CTR_CoSo: GET hồ sơ cơ sở
+CTR_CoSo -> E_CoSo: Truy vấn cơ sở được gán
+E_CoSo --> CTR_CoSo: Dữ liệu hiện tại
+CTR_CoSo --> GD_ChinhSua: Trả dữ liệu biểu mẫu
+GD_ChinhSua --> Admin: Hiển thị biểu mẫu
+Admin -> GD_ChinhSua: Cập nhật trường được phép, chọn Lưu
+GD_ChinhSua -> CTR_CoSo: PATCH thông tin cơ sở
+CTR_CoSo -> E_CoSo: Kiểm tra phạm vi và cập nhật
+alt Cập nhật thành công
+  E_CoSo --> CTR_CoSo: Hồ sơ mới
+  CTR_CoSo --> GD_ChinhSua: Trả kết quả
+  GD_ChinhSua --> Admin: Thông báo thành công
+else Dữ liệu không hợp lệ hoặc lưu thất bại
+  CTR_CoSo --> GD_ChinhSua: Trả lỗi
+  GD_ChinhSua --> Admin: Hiển thị lỗi, giữ biểu mẫu
+end
+opt Admin hủy chỉnh sửa
+  Admin -> GD_ChinhSua: Chọn Hủy
+  GD_ChinhSua --> Admin: Đóng biểu mẫu, không gửi cập nhật
+end
+@enduml
+
+@startuml UC05_TraCuuBacSi
+title UC05 - Tra cứu bác sĩ
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_DanhSachBacSi" as GD_DanhSach
+boundary "GD_ChiTietBacSi" as GD_ChiTiet
+control "CTR_AdminDoctors" as CTR_BacSi
+entity "E_Doctor" as E_BacSi
+entity "E_DoctorWorkplace" as E_NoiCongTac
+
+Admin -> GD_DanhSach: Mở Đội ngũ Bác sĩ
+GD_DanhSach -> CTR_BacSi: GET danh sách (tìm kiếm, lọc, phân trang)
+CTR_BacSi -> E_BacSi: Truy vấn bác sĩ thuộc cơ sở
+CTR_BacSi -> E_NoiCongTac: Truy vấn liên kết nơi công tác
+E_BacSi --> CTR_BacSi: Danh sách hồ sơ
+E_NoiCongTac --> CTR_BacSi: Thông tin thuộc cơ sở
+CTR_BacSi --> GD_DanhSach: Trả danh sách
+GD_DanhSach --> Admin: Hiển thị danh sách
+Admin -> GD_DanhSach: Chọn một bác sĩ
+GD_DanhSach -> CTR_BacSi: GET chi tiết bác sĩ
+CTR_BacSi -> E_BacSi: Truy vấn hồ sơ
+CTR_BacSi -> E_NoiCongTac: Truy vấn nơi công tác
+E_BacSi --> CTR_BacSi: Hồ sơ bác sĩ
+E_NoiCongTac --> CTR_BacSi: Nơi công tác
+CTR_BacSi --> GD_ChiTiet: Trả dữ liệu chi tiết
+GD_ChiTiet --> Admin: Hiển thị hồ sơ và các tab
+alt Không có kết quả hoặc lỗi tải
+  CTR_BacSi --> GD_DanhSach: Trả danh sách rỗng hoặc lỗi
+  GD_DanhSach --> Admin: Hiển thị trạng thái rỗng hoặc thông báo lỗi
+end
+@enduml
+
+@startuml UC06_ThemBacSi
+title UC06 - Thêm bác sĩ
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_DanhSachBacSi" as GD_BacSi
+boundary "GD_FormBacSi" as GD_Form
+control "CTR_AdminDoctors" as CTR_BacSi
+entity "E_Doctor" as E_BacSi
+
+Admin -> GD_BacSi: Chọn Thêm bác sĩ
+GD_BacSi --> Admin: Hiển thị biểu mẫu
+Admin -> GD_Form: Nhập thông tin bác sĩ, chọn Lưu
+GD_Form -> CTR_BacSi: POST tạo bác sĩ
+CTR_BacSi -> E_BacSi: Kiểm tra dữ liệu và tạo hồ sơ
+alt Tạo thành công
+  E_BacSi --> CTR_BacSi: Hồ sơ mới
+  CTR_BacSi --> GD_Form: Trả kết quả thành công
+  GD_Form --> Admin: Đóng form, cập nhật danh sách
+else Thiếu họ tên, dữ liệu sai hoặc lỗi tạo
+  CTR_BacSi --> GD_Form: Trả lỗi
+  GD_Form --> Admin: Hiển thị lỗi, không báo tạo thành công
+end
+opt Admin hủy
+  Admin -> GD_Form: Đóng hoặc hủy biểu mẫu
+  GD_Form --> Admin: Không tạo hồ sơ
+end
+@enduml
+
+@startuml UC07_CapNhatThongTinBacSi
+title UC07 - Cập nhật thông tin bác sĩ
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_ChiTietBacSi" as GD_ChiTiet
+control "CTR_AdminDoctors" as CTR_BacSi
+entity "E_Doctor" as E_BacSi
+
+Admin -> GD_ChiTiet: Chọn chỉnh sửa hồ sơ
+GD_ChiTiet --> Admin: Hiển thị các trường được phép chỉnh sửa
+Admin -> GD_ChiTiet: Sửa thông tin và chọn Lưu
+GD_ChiTiet -> CTR_BacSi: PATCH thông tin bác sĩ
+CTR_BacSi -> E_BacSi: Kiểm tra quyền và cập nhật hồ sơ
+alt Cập nhật thành công
+  E_BacSi --> CTR_BacSi: Hồ sơ đã cập nhật
+  CTR_BacSi --> GD_ChiTiet: Trả dữ liệu mới
+  GD_ChiTiet --> Admin: Hiển thị hồ sơ cập nhật
+else Dữ liệu không hợp lệ hoặc lỗi cập nhật
+  CTR_BacSi --> GD_ChiTiet: Trả lỗi
+  GD_ChiTiet --> Admin: Hiển thị lỗi, giữ thông tin cũ
+end
+opt Admin hủy
+  Admin -> GD_ChiTiet: Hủy chỉnh sửa
+  GD_ChiTiet --> Admin: Bỏ thay đổi chưa lưu
+end
+@enduml
+
+@startuml UC08_QuanLyNoiCongTacBacSi
+title UC08 - Quản lý nơi công tác bác sĩ
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_TabNoiCongTac" as GD_NoiCongTac
+control "CTR_AdminDoctors" as CTR_BacSi
+entity "E_DoctorWorkplace" as E_NoiCongTac
+
+Admin -> GD_NoiCongTac: Mở tab Nơi công tác
+GD_NoiCongTac -> CTR_BacSi: GET nơi công tác của bác sĩ
+CTR_BacSi -> E_NoiCongTac: Truy vấn liên kết bác sĩ-cơ sở
+E_NoiCongTac --> CTR_BacSi: Danh sách nơi công tác
+CTR_BacSi --> GD_NoiCongTac: Trả dữ liệu
+GD_NoiCongTac --> Admin: Hiển thị các nơi công tác
+alt Thêm nơi công tác
+  Admin -> GD_NoiCongTac: Nhập cơ sở/chuyên khoa/giá và lưu
+  GD_NoiCongTac -> CTR_BacSi: POST nơi công tác
+  CTR_BacSi -> E_NoiCongTac: Tạo liên kết
+  E_NoiCongTac --> CTR_BacSi: Kết quả tạo
+  CTR_BacSi --> GD_NoiCongTac: Trả kết quả
+  GD_NoiCongTac --> Admin: Cập nhật danh sách
+else Sửa thông tin nơi công tác
+  Admin -> GD_NoiCongTac: Sửa thông tin và lưu
+  GD_NoiCongTac -> CTR_BacSi: PATCH nơi công tác
+  CTR_BacSi -> E_NoiCongTac: Cập nhật liên kết
+  E_NoiCongTac --> CTR_BacSi: Kết quả cập nhật
+  CTR_BacSi --> GD_NoiCongTac: Trả kết quả
+  GD_NoiCongTac --> Admin: Cập nhật danh sách
+else Đổi trạng thái hoặc đặt làm chính
+  Admin -> GD_NoiCongTac: Chọn trạng thái/cơ sở chính
+  GD_NoiCongTac -> CTR_BacSi: PATCH thông tin nơi công tác
+  CTR_BacSi -> E_NoiCongTac: Cập nhật isActive/isPrimary
+  E_NoiCongTac --> CTR_BacSi: Kết quả cập nhật
+  CTR_BacSi --> GD_NoiCongTac: Trả kết quả
+  GD_NoiCongTac --> Admin: Hiển thị trạng thái mới
+end
+alt Thao tác thất bại
+  CTR_BacSi --> GD_NoiCongTac: Trả lỗi xác thực hoặc lỗi lưu
+  GD_NoiCongTac --> Admin: Hiển thị thông báo lỗi
+end
+@enduml
+
+@startuml UC09_TraCuuLichLamViec
+title UC09 - Tra cứu lịch làm việc
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_LichLamViec" as GD_Lich
+control "CTR_DoctorSchedules" as CTR_Lich
+entity "E_DoctorSchedule" as E_Lich
+entity "E_DoctorWorkplace" as E_NoiCongTac
+
+Admin -> GD_Lich: Mở Lịch trực & Ca khám
+GD_Lich -> CTR_Lich: GET lịch (cơ sở, bộ lọc, trang)
+CTR_Lich -> E_NoiCongTac: Truy vấn nơi công tác thuộc cơ sở
+CTR_Lich -> E_Lich: Truy vấn lịch làm việc tương ứng
+E_Lich --> CTR_Lich: Danh sách ca
+CTR_Lich --> GD_Lich: Trả lịch
+GD_Lich --> Admin: Hiển thị bảng hoặc lịch tuần
+Admin -> GD_Lich: Tìm kiếm/lọc lịch
+GD_Lich -> CTR_Lich: GET lịch theo điều kiện
+CTR_Lich -> E_Lich: Truy vấn ca phù hợp
+E_Lich --> CTR_Lich: Kết quả
+CTR_Lich --> GD_Lich: Trả danh sách lọc
+GD_Lich --> Admin: Hiển thị lịch phù hợp
+alt Không có lịch hoặc tải lỗi
+  CTR_Lich --> GD_Lich: Trả rỗng hoặc lỗi
+  GD_Lich --> Admin: Hiển thị trạng thái rỗng hoặc thông báo lỗi
+end
+@enduml
+
+@startuml UC10_QuanLyCaKham
+title UC10 - Quản lý ca khám
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_LichLamViec" as GD_Lich
+boundary "GD_BieuMauCaKham" as GD_Form
+control "CTR_DoctorSchedules" as CTR_Lich
+entity "E_DoctorSchedule" as E_Lich
+
+alt Thêm ca khám
+  Admin -> GD_Lich: Chọn Thêm ca
+  GD_Lich --> GD_Form: Mở biểu mẫu trống
+  Admin -> GD_Form: Nhập bác sĩ, ngày, giờ và thông tin nghỉ
+  Admin -> GD_Form: Chọn Lưu
+  GD_Form -> CTR_Lich: POST tạo ca
+  CTR_Lich -> E_Lich: Kiểm tra và tạo ca
+  E_Lich --> CTR_Lich: Kết quả tạo
+  CTR_Lich --> GD_Form: Trả kết quả
+  GD_Form --> GD_Lich: Đóng form và tải lại
+  GD_Lich --> Admin: Hiển thị lịch mới
+else Sửa ca khám
+  Admin -> GD_Lich: Chọn Sửa ca
+  GD_Lich --> GD_Form: Mở biểu mẫu có dữ liệu hiện tại
+  Admin -> GD_Form: Cập nhật thông tin và chọn Lưu
+  GD_Form -> CTR_Lich: PUT cập nhật ca
+  CTR_Lich -> E_Lich: Kiểm tra và cập nhật ca
+  E_Lich --> CTR_Lich: Kết quả cập nhật
+  CTR_Lich --> GD_Form: Trả kết quả
+  GD_Form --> GD_Lich: Đóng form và tải lại
+  GD_Lich --> Admin: Hiển thị lịch đã cập nhật
+else Đổi trạng thái ca
+  Admin -> GD_Lich: Bật/Tắt ca
+  GD_Lich -> CTR_Lich: PUT cập nhật ca (isActive)
+  CTR_Lich -> E_Lich: Cập nhật trạng thái
+  E_Lich --> CTR_Lich: Kết quả
+  CTR_Lich --> GD_Lich: Trả trạng thái mới
+  GD_Lich --> Admin: Cập nhật danh sách
+else Xóa ca
+  Admin -> GD_Lich: Chọn Xóa và xác nhận
+  GD_Lich -> CTR_Lich: DELETE ca
+  CTR_Lich -> E_Lich: Xóa ca
+  E_Lich --> CTR_Lich: Kết quả xóa
+  CTR_Lich --> GD_Lich: Trả kết quả
+  GD_Lich --> Admin: Cập nhật danh sách
+end
+note over GD_Form,CTR_Lich
+  Nếu dữ liệu ca không hợp lệ hoặc lưu/xóa thất bại,
+  giao diện hiển thị lỗi và giữ dữ liệu chưa lưu.
+end note
+@enduml
+
+@startuml UC11_TraCuuDichVu
+title UC11 - Tra cứu dịch vụ
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_DanhSachDichVu" as GD_DanhSach
+boundary "GD_ChiTietDichVu" as GD_ChiTiet
+control "CTR_AdminMedicalServices" as CTR_DichVu
+entity "E_MedicalService" as E_DichVu
+
+Admin -> GD_DanhSach: Mở Dịch vụ y tế
+GD_DanhSach -> CTR_DichVu: GET danh sách (từ khóa, trạng thái, trang)
+CTR_DichVu -> E_DichVu: Truy vấn dịch vụ theo cơ sở
+E_DichVu --> CTR_DichVu: Danh sách dịch vụ
+CTR_DichVu --> GD_DanhSach: Trả danh sách
+GD_DanhSach --> Admin: Hiển thị kết quả
+Admin -> GD_DanhSach: Chọn xem một dịch vụ
+GD_DanhSach -> CTR_DichVu: GET chi tiết dịch vụ
+CTR_DichVu -> E_DichVu: Truy vấn dịch vụ theo ID
+E_DichVu --> CTR_DichVu: Thông tin dịch vụ
+CTR_DichVu --> GD_ChiTiet: Trả chi tiết
+GD_ChiTiet --> Admin: Hiển thị thông tin chi tiết
+alt Không tìm thấy hoặc lỗi tải
+  CTR_DichVu --> GD_DanhSach: Trả rỗng hoặc lỗi
+  GD_DanhSach --> Admin: Hiển thị trạng thái rỗng hoặc thông báo lỗi
+end
+@enduml
+
+@startuml UC12_QuanLyDichVu
+title UC12 - Quản lý dịch vụ
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_DanhSachDichVu" as GD_DanhSach
+boundary "GD_FormDichVu" as GD_Form
+control "CTR_AdminMedicalServices" as CTR_DichVu
+entity "E_MedicalService" as E_DichVu
+
+alt Thêm dịch vụ
+  Admin -> GD_DanhSach: Chọn Thêm dịch vụ
+  GD_DanhSach --> GD_Form: Hiển thị biểu mẫu trống
+  Admin -> GD_Form: Nhập thông tin và chọn Lưu
+  GD_Form -> CTR_DichVu: POST tạo dịch vụ
+  CTR_DichVu -> E_DichVu: Kiểm tra và tạo
+  E_DichVu --> CTR_DichVu: Kết quả tạo
+  CTR_DichVu --> GD_Form: Trả kết quả
+  GD_Form --> GD_DanhSach: Đóng form, tải lại danh sách
+  GD_DanhSach --> Admin: Hiển thị dịch vụ mới
+else Sửa dịch vụ
+  Admin -> GD_DanhSach: Chọn Sửa dịch vụ
+  GD_DanhSach --> GD_Form: Hiển thị biểu mẫu có dữ liệu
+  Admin -> GD_Form: Cập nhật thông tin và chọn Lưu
+  GD_Form -> CTR_DichVu: PATCH cập nhật dịch vụ
+  CTR_DichVu -> E_DichVu: Kiểm tra và cập nhật
+  E_DichVu --> CTR_DichVu: Kết quả cập nhật
+  CTR_DichVu --> GD_Form: Trả kết quả
+  GD_Form --> GD_DanhSach: Đóng form, tải lại danh sách
+  GD_DanhSach --> Admin: Hiển thị dữ liệu mới
+else Đổi trạng thái
+  Admin -> GD_DanhSach: Bật/Tắt dịch vụ
+  GD_DanhSach -> CTR_DichVu: PATCH toggle-status
+  CTR_DichVu -> E_DichVu: Cập nhật trạng thái
+  E_DichVu --> CTR_DichVu: Kết quả
+  CTR_DichVu --> GD_DanhSach: Trả trạng thái mới
+  GD_DanhSach --> Admin: Cập nhật danh sách
+else Xóa dịch vụ
+  Admin -> GD_DanhSach: Chọn Xóa và xác nhận
+  GD_DanhSach -> CTR_DichVu: DELETE dịch vụ
+  CTR_DichVu -> E_DichVu: Xóa dịch vụ
+  E_DichVu --> CTR_DichVu: Kết quả xóa
+  CTR_DichVu --> GD_DanhSach: Trả kết quả
+  GD_DanhSach --> Admin: Cập nhật danh sách
+end
+note over GD_Form,CTR_DichVu
+  Nếu dữ liệu không hợp lệ hoặc thao tác thất bại,
+  giao diện hiển thị thông báo lỗi, không báo thành công.
+end note
+@enduml
+
+@startuml UC13_TraCuuLichHen
+title UC13 - Tra cứu lịch hẹn
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_DanhSachLichHen" as GD_DanhSach
+boundary "GD_ChiTietLichHen" as GD_ChiTiet
+control "CTR_AdminAppointments" as CTR_LichHen
+entity "E_Appointment" as E_LichHen
+
+Admin -> GD_DanhSach: Mở Lịch hẹn bệnh nhân
+GD_DanhSach -> CTR_LichHen: GET danh sách và thống kê (bộ lọc, trang)
+CTR_LichHen -> E_LichHen: Truy vấn lịch theo cơ sở
+E_LichHen --> CTR_LichHen: Danh sách và số liệu
+CTR_LichHen --> GD_DanhSach: Trả kết quả
+GD_DanhSach --> Admin: Hiển thị danh sách/lịch
+Admin -> GD_DanhSach: Chọn xem chi tiết lịch
+GD_DanhSach -> CTR_LichHen: GET lịch theo ID
+CTR_LichHen -> E_LichHen: Truy vấn lịch và thông tin liên quan
+E_LichHen --> CTR_LichHen: Chi tiết và lịch sử
+CTR_LichHen --> GD_ChiTiet: Trả thông tin
+GD_ChiTiet --> Admin: Hiển thị chi tiết và timeline
+alt Không có lịch phù hợp hoặc lỗi
+  CTR_LichHen --> GD_DanhSach: Trả danh sách rỗng hoặc lỗi
+  GD_DanhSach --> Admin: Hiển thị trạng thái rỗng hoặc thông báo lỗi
+end
+@enduml
+
+@startuml UC14_XuLyTrangThaiLichHen
+title UC14 - Xử lý trạng thái lịch hẹn
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_ChiTietLichHen" as GD_LichHen
+control "CTR_AdminAppointments" as CTR_LichHen
+entity "E_Appointment" as E_LichHen
+entity "E_AppointmentStatusHistory" as E_LichSu
+
+Admin -> GD_LichHen: Chọn hành động trạng thái khả dụng
+GD_LichHen --> Admin: Hiển thị xác nhận/biểu mẫu ghi chú
+Admin -> GD_LichHen: Xác nhận chuyển trạng thái
+GD_LichHen -> CTR_LichHen: PATCH trạng thái và ghi chú (nếu có)
+CTR_LichHen -> E_LichHen: Kiểm tra trạng thái hiện tại
+CTR_LichHen -> E_LichSu: Ghi nhận lịch sử thay đổi
+CTR_LichHen -> E_LichHen: Cập nhật trạng thái
+alt Chuyển trạng thái hợp lệ
+  E_LichHen --> CTR_LichHen: Trạng thái mới
+  E_LichSu --> CTR_LichHen: Lịch sử đã ghi
+  CTR_LichHen --> GD_LichHen: Trả kết quả cập nhật
+  GD_LichHen --> Admin: Hiển thị trạng thái mới
+else Không hợp lệ hoặc lỗi cập nhật
+  CTR_LichHen --> GD_LichHen: Trả lỗi
+  GD_LichHen --> Admin: Thông báo lỗi, giữ trạng thái cũ
+end
+@enduml
+
+@startuml UC15_CheckInBenhNhan
+title UC15 - Tiếp đón/check-in bệnh nhân
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_DanhSachLichHen" as GD_LichHen
+control "CTR_AdminAppointments" as CTR_LichHen
+entity "E_Appointment" as E_LichHen
+entity "E_AppointmentStatusHistory" as E_LichSu
+
+Admin -> GD_LichHen: Chọn Check-in
+GD_LichHen -> CTR_LichHen: PATCH check-in lịch hẹn
+CTR_LichHen -> E_LichHen: Kiểm tra lịch và điều kiện check-in
+alt Lịch hợp lệ
+  CTR_LichHen -> E_LichHen: Ghi nhận check-in
+  CTR_LichHen -> E_LichSu: Ghi lịch sử trạng thái
+  E_LichHen --> CTR_LichHen: Cập nhật thành công
+  E_LichSu --> CTR_LichHen: Lịch sử đã lưu
+  CTR_LichHen --> GD_LichHen: Trả kết quả
+  GD_LichHen --> Admin: Thông báo check-in thành công, tải lại lịch
+else Không tồn tại hoặc không đủ điều kiện
+  E_LichHen --> CTR_LichHen: Không hợp lệ
+  CTR_LichHen --> GD_LichHen: Trả lỗi nghiệp vụ
+  GD_LichHen --> Admin: Hiển thị lý do, không đổi trạng thái
+end
+@enduml
+
+@startuml UC16_GhiNhanLienHe
+title UC16 - Ghi nhận liên hệ bệnh nhân
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_FormLienHe" as GD_LienHe
+control "CTR_AdminAppointments" as CTR_LichHen
+entity "E_Appointment" as E_LichHen
+entity "E_AppointmentContactLog" as E_NhatKyLienHe
+
+Admin -> GD_LienHe: Chọn Liên hệ tại lịch hẹn
+GD_LienHe --> Admin: Hiển thị biểu mẫu liên hệ
+Admin -> GD_LienHe: Nhập kênh, kết quả, ghi chú và Lưu
+GD_LienHe -> CTR_LichHen: POST contact log
+CTR_LichHen -> E_LichHen: Kiểm tra lịch hẹn tồn tại/phạm vi
+CTR_LichHen -> E_NhatKyLienHe: Tạo nhật ký liên hệ
+alt Lưu thành công
+  E_NhatKyLienHe --> CTR_LichHen: Nhật ký đã tạo
+  CTR_LichHen --> GD_LienHe: Trả kết quả thành công
+  GD_LienHe --> Admin: Đóng biểu mẫu, hiển thị nhật ký mới
+else Thiếu dữ liệu hoặc lỗi lưu
+  CTR_LichHen --> GD_LienHe: Trả lỗi
+  GD_LienHe --> Admin: Hiển thị lỗi, giữ biểu mẫu
+end
+@enduml
+
+@startuml UC17_XuLyLichVangMat
+title UC17 - Xử lý lịch vắng mặt
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_XacNhanVangMat" as GD_VangMat
+boundary "GD_KhoiPhucLich" as GD_KhoiPhuc
+control "CTR_AdminAppointments" as CTR_LichHen
+entity "E_Appointment" as E_LichHen
+entity "E_AppointmentStatusHistory" as E_LichSu
+
+Admin -> GD_VangMat: Chọn xác nhận NO_SHOW
+GD_VangMat -> CTR_LichHen: GET kiểm tra điều kiện NO_SHOW
+CTR_LichHen -> E_LichHen: Kiểm tra trạng thái, thời gian, check-in và hồ sơ khám
+E_LichHen --> CTR_LichHen: Kết quả đủ/không đủ điều kiện
+CTR_LichHen --> GD_VangMat: Trả kết quả kiểm tra
+alt Đủ điều kiện và Admin xác nhận
+  Admin -> GD_VangMat: Xác nhận
+  GD_VangMat -> CTR_LichHen: PATCH trạng thái NO_SHOW
+  CTR_LichHen -> E_LichHen: Cập nhật trạng thái lịch
+  CTR_LichHen -> E_LichSu: Ghi lịch sử
+  E_LichHen --> CTR_LichHen: Trạng thái đã cập nhật
+  CTR_LichHen --> GD_VangMat: Trả kết quả
+  GD_VangMat --> Admin: Hiển thị lịch NO_SHOW
+else Chưa đủ điều kiện hoặc Admin hủy
+  GD_VangMat --> Admin: Hiển thị lý do hoặc giữ nguyên lịch
+end
+opt Khôi phục lịch NO_SHOW
+  Admin -> GD_KhoiPhuc: Chọn khôi phục và nhập lý do
+  GD_KhoiPhuc -> CTR_LichHen: PATCH revert-no-show (lý do)
+  CTR_LichHen -> E_LichHen: Kiểm tra trạng thái NO_SHOW
+  CTR_LichHen -> E_LichHen: Khôi phục trạng thái lịch
+  CTR_LichHen -> E_LichSu: Ghi lịch sử và lý do
+  alt Khôi phục thành công
+    E_LichHen --> CTR_LichHen: Trạng thái đã khôi phục
+    CTR_LichHen --> GD_KhoiPhuc: Trả kết quả
+    GD_KhoiPhuc --> Admin: Hiển thị trạng thái mới
+  else Thiếu lý do, trạng thái sai hoặc lỗi
+    CTR_LichHen --> GD_KhoiPhuc: Trả lỗi
+    GD_KhoiPhuc --> Admin: Hiển thị lỗi, giữ trạng thái hiện tại
+  end
+end
+@enduml
+
+@startuml UC18_XemTrangThaiHIS
+title UC18 - Xem trạng thái kết nối HIS
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_TichHopHIS" as GD_HIS
+control "CTR_HospitalAdmin" as CTR_TichHop
+entity "E_HospitalIntegration" as E_TichHop
+
+Admin -> GD_HIS: Mở Cổng đồng bộ HIS
+GD_HIS -> CTR_TichHop: GET trạng thái tích hợp cơ sở
+CTR_TichHop -> E_TichHop: Truy vấn cấu hình/trạng thái tích hợp
+E_TichHop --> CTR_TichHop: Trạng thái hiện có
+CTR_TichHop --> GD_HIS: Trả dữ liệu trạng thái
+GD_HIS --> Admin: Hiển thị trạng thái kết nối
+alt Chưa cấu hình hoặc chưa có trạng thái
+  GD_HIS --> Admin: Hiển thị trạng thái chưa thiết lập
+else Lỗi tải trạng thái
+  CTR_TichHop --> GD_HIS: Trả lỗi
+  GD_HIS --> Admin: Thông báo lỗi
+end
+@enduml
+
+@startuml UC19_KiemTraKetNoiHIS
+title UC19 - Kiểm tra kết nối HIS
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_KiemTraKetNoiHIS" as GD_KiemTra
+control "CTR_HospitalAdmin" as CTR_TichHop
+actor "HIS của bệnh viện" as HIS
+
+Admin -> GD_KiemTra: Nhập endpoint và phương thức xác thực
+Admin -> GD_KiemTra: Chọn Kiểm tra API
+GD_KiemTra -> CTR_TichHop: POST test-handshake (endpoint, auth)
+CTR_TichHop -> HIS: Gửi yêu cầu handshake
+alt HIS phản hồi hợp lệ
+  HIS --> CTR_TichHop: Phản hồi handshake
+  CTR_TichHop --> GD_KiemTra: Kết quả kết nối thành công
+  GD_KiemTra --> Admin: Hiển thị kết quả kiểm tra
+else Thiếu thông tin, HIS lỗi hoặc hết thời gian
+  HIS --> CTR_TichHop: Lỗi/không có phản hồi
+  CTR_TichHop --> GD_KiemTra: Trả lỗi handshake
+  GD_KiemTra --> Admin: Hiển thị lỗi, không tiếp tục đồng bộ
+end
+@enduml
+
+@startuml UC20_DongBoDanhMucHIS
+title UC20 - Đồng bộ danh mục HIS
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_WizardDongBoHIS" as GD_DongBo
+control "CTR_HospitalAdmin" as CTR_TichHop
+actor "HIS của bệnh viện" as HIS
+entity "E_Specialty" as E_ChuyenKhoa
+entity "E_Doctor" as E_BacSi
+entity "E_DoctorWorkplace" as E_NoiCongTac
+
+Admin -> GD_DongBo: Mở xem trước danh mục sau khi kết nối
+GD_DongBo -> CTR_TichHop: Lấy dữ liệu preview/đối chiếu
+CTR_TichHop -> HIS: Đọc danh mục cơ sở, khoa/phòng, bác sĩ
+HIS --> CTR_TichHop: Dữ liệu danh mục HIS
+CTR_TichHop -> E_ChuyenKhoa: Đọc danh mục chuyên khoa chuẩn
+E_ChuyenKhoa --> CTR_TichHop: Danh mục NovaCare
+CTR_TichHop --> GD_DongBo: Trả dữ liệu xem trước
+GD_DongBo --> Admin: Hiển thị dữ liệu và ánh xạ
+Admin -> GD_DongBo: Ánh xạ chuyên khoa, chọn bác sĩ
+GD_DongBo --> Admin: Hiển thị kết quả đối chiếu
+Admin -> GD_DongBo: Xác nhận thực thi đồng bộ
+GD_DongBo -> CTR_TichHop: POST sync-catalog (dữ liệu ánh xạ, bác sĩ chọn)
+CTR_TichHop -> HIS: Lấy danh mục chính thức
+HIS --> CTR_TichHop: Danh mục trả về
+CTR_TichHop -> E_Specialty: Ánh xạ chuyên khoa
+CTR_TichHop -> E_BacSi: Tạo/cập nhật bác sĩ theo dữ liệu đồng bộ
+CTR_TichHop -> E_NoiCongTac: Tạo/cập nhật nơi công tác
+alt Đồng bộ thành công
+  E_Specialty --> CTR_TichHop: Kết quả ánh xạ
+  E_BacSi --> CTR_TichHop: Kết quả cập nhật
+  E_NoiCongTac --> CTR_TichHop: Kết quả liên kết
+  CTR_TichHop --> GD_DongBo: Báo cáo đồng bộ
+  GD_DongBo --> Admin: Hiển thị kết quả
+else HIS lỗi hoặc đồng bộ thất bại
+  CTR_TichHop --> GD_DongBo: Trả lỗi đồng bộ
+  GD_DongBo --> Admin: Hiển thị thất bại, không báo thành công
+end
+note over GD_DongBo,CTR_CatalogSync
+  Chỉ bước xác nhận mới gửi yêu cầu ghi dữ liệu.
+  Preview/ánh xạ trước đó chưa ghi dữ liệu.
+end note
+@enduml
+
+@startuml UC21_TraCuuChuyenKhoaTiepNhan
+title UC21 - Tra cứu chuyên khoa tiếp nhận
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_ChuyenKhoaTiepNhan" as GD_ChuyenKhoa
+control "CTR_AdminSpecialties" as CTR_ChuyenKhoa
+entity "E_HospitalSpecialty" as E_TiepNhan
+entity "E_Specialty" as E_DanhMuc
+entity "E_DoctorWorkplace" as E_NoiCongTac
+
+Admin -> GD_ChuyenKhoa: Mở Chuyên khoa tiếp nhận
+GD_ChuyenKhoa -> CTR_ChuyenKhoa: GET danh sách (tìm kiếm, trạng thái, trang)
+CTR_ChuyenKhoa -> E_TiepNhan: Truy vấn chuyên khoa của cơ sở
+CTR_ChuyenKhoa -> E_DanhMuc: Lấy thông tin danh mục chuẩn
+E_TiepNhan --> CTR_ChuyenKhoa: Liên kết tiếp nhận
+E_DanhMuc --> CTR_ChuyenKhoa: Thông tin chuyên khoa
+CTR_ChuyenKhoa --> GD_ChuyenKhoa: Trả danh sách
+GD_ChuyenKhoa --> Admin: Hiển thị chuyên khoa
+Admin -> GD_ChuyenKhoa: Chọn xem chi tiết/bác sĩ
+GD_ChuyenKhoa -> CTR_ChuyenKhoa: GET bác sĩ theo chuyên khoa/cơ sở
+CTR_ChuyenKhoa -> E_NoiCongTac: Truy vấn bác sĩ tại cơ sở
+E_NoiCongTac --> CTR_ChuyenKhoa: Danh sách bác sĩ
+CTR_ChuyenKhoa --> GD_ChuyenKhoa: Trả chi tiết và bác sĩ
+GD_ChuyenKhoa --> Admin: Hiển thị chi tiết
+alt Không có chuyên khoa hoặc bác sĩ phù hợp
+  GD_ChuyenKhoa --> Admin: Hiển thị danh sách rỗng/trạng thái chưa có bác sĩ
+else Lỗi tải
+  CTR_ChuyenKhoa --> GD_ChuyenKhoa: Trả lỗi
+  GD_ChuyenKhoa --> Admin: Thông báo lỗi
+end
+@enduml
+
+@startuml UC22_QuanLyChuyenKhoaCoSoTiepNhan
+title UC22 - Quản lý chuyên khoa cơ sở tiếp nhận
+autonumber
+actor Admin_Hospital as Admin
+boundary "GD_ChuyenKhoaTiepNhan" as GD_ChuyenKhoa
+control "CTR_AdminSpecialties" as CTR_ChuyenKhoa
+entity "E_HospitalSpecialty" as E_TiepNhan
+entity "E_Specialty" as E_DanhMuc
+
+Admin -> GD_ChuyenKhoa: Chọn tiếp nhận chuyên khoa
+GD_ChuyenKhoa -> CTR_ChuyenKhoa: GET chuyên khoa chuẩn chưa tiếp nhận
+CTR_ChuyenKhoa -> E_DanhMuc: Truy vấn danh mục chuẩn
+CTR_ChuyenKhoa -> E_TiepNhan: Kiểm tra liên kết với cơ sở
+E_DanhMuc --> CTR_ChuyenKhoa: Danh sách chuyên khoa
+E_TiepNhan --> CTR_ChuyenKhoa: Trạng thái tiếp nhận hiện có
+CTR_ChuyenKhoa --> GD_ChuyenKhoa: Trả lựa chọn
+GD_ChuyenKhoa --> Admin: Hiển thị danh sách chọn
+Admin -> GD_ChuyenKhoa: Chọn chuyên khoa và xác nhận
+GD_ChuyenKhoa -> CTR_ChuyenKhoa: POST tiếp nhận chuyên khoa
+CTR_ChuyenKhoa -> E_TiepNhan: Tạo/kích hoạt liên kết cơ sở-chuyên khoa
+alt Tiếp nhận thành công
+  E_TiepNhan --> CTR_ChuyenKhoa: Liên kết đã cập nhật
+  CTR_ChuyenKhoa --> GD_ChuyenKhoa: Trả kết quả
+  GD_ChuyenKhoa --> Admin: Cập nhật danh sách
+else Đã tồn tại hoặc thao tác thất bại
+  CTR_ChuyenKhoa --> GD_ChuyenKhoa: Trả lỗi nghiệp vụ/lỗi lưu
+  GD_ChuyenKhoa --> Admin: Hiển thị thông báo lỗi
+end
+opt Tạm ngưng hoặc kích hoạt lại
+  Admin -> GD_ChuyenKhoa: Chọn đổi trạng thái tiếp nhận
+  GD_ChuyenKhoa -> CTR_ChuyenKhoa: PATCH hospital-status
+  CTR_ChuyenKhoa -> E_TiepNhan: Cập nhật trạng thái liên kết
+  E_TiepNhan --> CTR_ChuyenKhoa: Trạng thái mới
+  CTR_ChuyenKhoa --> GD_ChuyenKhoa: Trả kết quả
+  GD_ChuyenKhoa --> Admin: Hiển thị trạng thái mới
+end
+note right of E_DanhMuc
+  Admin_Hospital chỉ thay đổi liên kết tiếp nhận
+  của cơ sở, không sửa danh mục chuẩn toàn hệ thống.
+end note
+@enduml

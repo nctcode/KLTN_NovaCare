@@ -205,22 +205,21 @@ function PlatformAdminHisSync() {
   // REAL PING TEST
   const handlePingTest = async (gw: GatewayItem) => {
     setPingingId(gw.id);
-    const start = performance.now();
     try {
-      // Execute actual API roundtrip check
-      await adminService.getOverview();
-      const latency = Math.max(12, Math.round(performance.now() - start));
+      const result = await adminService.testHisGateway({ endpointUrl: gw.endpoint });
+      const latency = Number(result?.latencyMs || 0);
       setLivePings((prev) => ({
         ...prev,
         [gw.id]: { latency, testedAt: 'Vừa xong' },
       }));
-      toast.success(`Kết nối thành công đến ${gw.hospitalName} (${latency}ms)`);
-    } catch {
+      toast.success(`API HIS hoạt động: ${result?.hospitalName || gw.hospitalName} (${latency}ms)`);
+    } catch (error: any) {
       setLivePings((prev) => ({
         ...prev,
         [gw.id]: { latency: 0, testedAt: 'Mất kết nối' },
       }));
-      toast.error(`Không thể kết nối đến cổng ${gw.hospitalName}`);
+      const message = error?.response?.data?.message || error?.message || 'Endpoint HIS không phản hồi';
+      toast.error(`API HIS không hoạt động: ${message}`);
     } finally {
       setPingingId(null);
     }
@@ -235,9 +234,9 @@ function PlatformAdminHisSync() {
       await queryClient.invalidateQueries({ queryKey: ['admin-hospitals-for-his'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-audit-logs-his'] });
       toast.success(`Đồng bộ dữ liệu thành công cho ${gw.hospitalName}!`);
-    } catch {
-      // If standalone server is offline or mock URL, show realistic handling
-      toast.info(`Lệnh đồng bộ đã được chuyển tiếp đến Gateway ${gw.hospitalName}.`);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Không thể kết nối đến HIS';
+      toast.error(`Đồng bộ thất bại tại ${gw.hospitalName}: ${message}`);
     } finally {
       setSyncingId(null);
     }
@@ -251,8 +250,9 @@ function PlatformAdminHisSync() {
       await queryClient.invalidateQueries({ queryKey: ['admin-hospitals-for-his'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-audit-logs-his'] });
       toast.success('Đã gửi yêu cầu đồng bộ toàn hệ thống HIS thành công!');
-    } catch {
-      toast.info('Đã kích hoạt chu kỳ đồng bộ tự động cho tất cả cơ sở đối tác.');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Không thể kết nối đến HIS';
+      toast.error(`Đồng bộ toàn hệ thống thất bại: ${message}`);
     } finally {
       setIsSyncingAll(false);
     }

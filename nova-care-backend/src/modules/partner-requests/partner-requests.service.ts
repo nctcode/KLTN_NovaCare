@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
@@ -21,6 +20,7 @@ import {
 } from '@prisma/client';
 import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
+import { AuditLogService } from '@/common/services/audit-log.service';
 
 @Injectable()
 export class PartnerRequestsService {
@@ -30,6 +30,7 @@ export class PartnerRequestsService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   /**
@@ -164,7 +165,7 @@ export class PartnerRequestsService {
   /**
    * 4. Admin: Cập nhật trạng thái (CONTACTED, REJECTED)
    */
-  async updateStatus(id: string, dto: UpdatePartnerStatusDto) {
+  async updateStatus(id: string, dto: UpdatePartnerStatusDto, adminUserId?: string) {
     const request = await this.prisma.partnerRequest.findUnique({
       where: { id },
     });
@@ -177,19 +178,56 @@ export class PartnerRequestsService {
       throw new BadRequestException('Yêu cầu hợp tác này đã được duyệt trước đó');
     }
 
-    return this.prisma.partnerRequest.update({
+    const adminNote = dto.adminNote?.trim();
+    const rejectionReason = dto.status === PartnerRequestStatus.REJECTED
+      ? adminNote
+      : undefined;
+    if (dto.status === PartnerRequestStatus.REJECTED) {
+      if (!adminNote) {
+        throw new BadRequestException('Vui lòng nhập lý do từ chối');
+      }
+      if (request.status !== PartnerRequestStatus.PENDING) {
+        throw new BadRequestException('Chỉ có thể từ chối yêu cầu đang chờ xử lý');
+      }
+    }
+
+    const updatedRequest = await this.prisma.partnerRequest.update({
       where: { id },
       data: {
         status: dto.status,
-        ...(dto.adminNote ? { adminNote: dto.adminNote } : {}),
+        ...(adminNote ? { adminNote } : {}),
       },
     });
+
+    if (dto.status === PartnerRequestStatus.REJECTED && rejectionReason) {
+      const actorId = adminUserId;
+      if (!actorId) {
+        throw new BadRequestException('Admin user is required for this operation');
+      }
+      await this.auditLogService.logAction({
+        userId: actorId,
+        action: 'REJECT_PARTNER_REQUEST',
+        entityType: 'PartnerRequest',
+        entityId: id,
+        oldValue: { status: request.status },
+        newValue: { status: updatedRequest.status, reason: rejectionReason },
+      });
+
+      await this.emailService.sendPartnerRejectionEmail(
+        request.email,
+        request.hospitalName,
+        request.contactName,
+        rejectionReason,
+      );
+    }
+
+    return updatedRequest;
   }
 
   /**
    * 5. Admin: DUYỆT HỢP TÁC & TẠO HOSPITAL ADMIN & GỬI EMAIL KÍCH HOẠT
    */
-  async approveRequest(id: string, dto: ApprovePartnerRequestDto) {
+  async approveRequest(id: string, dto: ApprovePartnerRequestDto, adminUserId?: string) {
     const request = await this.prisma.partnerRequest.findUnique({
       where: { id },
     });
@@ -202,6 +240,16 @@ export class PartnerRequestsService {
       throw new BadRequestException('Yêu cầu hợp tác này đã được phê duyệt thành công trước đó');
     }
 
+    if (dto.approvalDocumentData) {
+      if (dto.approvalDocumentMimeType !== 'application/pdf') {
+        throw new BadRequestException('Văn bản chấp thuận phải là file PDF');
+      }
+      const raw = dto.approvalDocumentData.replace(/^data:application\/pdf;base64,/, '');
+      if (Buffer.byteLength(raw, 'base64') > 5 * 1024 * 1024) {
+        throw new BadRequestException('Văn bản PDF không được vượt quá 5MB');
+      }
+    }
+
     const targetHospitalName = (dto.hospitalName || request.hospitalName).trim();
     const targetAdminEmail = (dto.adminEmail || request.email).trim().toLowerCase();
     const targetAdminFullName = (
@@ -211,16 +259,7 @@ export class PartnerRequestsService {
     ).trim();
 
     // 1. Kiểm tra tài khoản email đã tồn tại hay chưa
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: targetAdminEmail },
-      include: { hospital: true },
-    });
-
-    if (existingUser && existingUser.role === Role.HOSPITAL_ADMIN && existingUser.hospitalId) {
-      throw new ConflictException(
-        `Email [${targetAdminEmail}] hiện đã là Quản trị viên của cơ sở y tế [${existingUser.hospital?.name}]. Vui lòng chỉ định email quản trị khác.`,
-      );
-    }
+    const existingUser: any = null;
 
     // 2. Tìm hoặc tạo Bệnh viện
     let hospital = await this.prisma.hospital.findFirst({
@@ -231,8 +270,8 @@ export class PartnerRequestsService {
       hospital = await this.prisma.hospital.create({
         data: {
           name: targetHospitalName,
-          phone: request.phone,
-          email: targetAdminEmail,
+          phone: null,
+          email: null,
           status: PartnershipStatus.ACTIVE,
           isActive: true,
           source: DataSource.MANUAL,
@@ -240,6 +279,15 @@ export class PartnerRequestsService {
         },
       });
       this.logger.log(`Tạo mới cơ sở y tế: [${hospital.name}] (ID: ${hospital.id})`);
+    }
+
+    // Email/phone trong đơn chỉ dùng cho liên hệ và gửi link kích hoạt.
+    // Không bao giờ dùng chúng làm thông tin liên hệ của cơ sở y tế.
+    if (hospital.email !== null || hospital.phone !== null) {
+      hospital = await this.prisma.hospital.update({
+        where: { id: hospital.id },
+        data: { email: null, phone: null },
+      });
     }
 
     // 3. Tạo activation token (hạn 48h)
@@ -262,7 +310,9 @@ export class PartnerRequestsService {
 
       user = await this.prisma.user.create({
         data: {
-          email: targetAdminEmail,
+          // Email trong đơn chỉ dùng để gửi link kích hoạt; email đăng nhập
+          // sẽ được bệnh viện tự nhập và lưu ở bước kích hoạt.
+          email: null,
           phone: userPhone,
           fullName: targetAdminFullName,
           passwordHash,
@@ -298,16 +348,29 @@ export class PartnerRequestsService {
         createdHospitalId: hospital.id,
         createdUserId: user.id,
         adminNote: dto.adminNote || request.adminNote,
+        approvalDocumentName: dto.approvalDocumentName,
+        approvalDocumentMimeType: dto.approvalDocumentMimeType,
+        approvalDocumentData: dto.approvalDocumentData,
       },
     });
 
-    // 5. Gửi email kích hoạt
+    if (adminUserId) {
+      await this.auditLogService.logAction({
+        userId: adminUserId,
+        action: 'APPROVE_PARTNER_REQUEST',
+        entityType: 'PartnerRequest',
+        entityId: id,
+        oldValue: { status: request.status },
+        newValue: { status: updatedRequest.status, approvalDocumentName: dto.approvalDocumentName },
+      });
+    }
+
+    // 5. Gửi email duyệt kèm link kích hoạt để bệnh viện tự đặt email và mật khẩu
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') ||
       process.env.FRONTEND_URL ||
       'http://localhost:3001';
     const activationUrl = `${frontendUrl}/dang-nhap?token=${activationToken}`;
-
     await this.emailService.sendHospitalActivationEmail(
       targetAdminEmail,
       hospital.name,
@@ -317,7 +380,7 @@ export class PartnerRequestsService {
 
     return {
       success: true,
-      message: `Đã phê duyệt yêu cầu hợp tác và gửi thư kích hoạt tài khoản tới ${targetAdminEmail}`,
+      message: `Đã phê duyệt yêu cầu hợp tác và gửi email kích hoạt tới ${targetAdminEmail}`,
       data: {
         request: updatedRequest,
         hospital: {
@@ -329,7 +392,6 @@ export class PartnerRequestsService {
           email: user.email,
           fullName: user.fullName,
         },
-        activationToken,
         activationUrl,
       },
     };

@@ -72,6 +72,7 @@ export default function AdminDoctorsPage() {
     fullName: '',
     title: 'BS.CKI',
     gender: 'MALE',
+    specialtyId: '',
     avatarUrl: '',
     qualification: '',
     yearsOfExperience: 5,
@@ -119,6 +120,20 @@ export default function AdminDoctorsPage() {
   });
   const specialties = Array.isArray(rawSpecialties) ? rawSpecialties : [];
 
+  const { data: rawHospitalSpecialties, isLoading: isLoadingHospitalSpecialties } = useQuery({
+    queryKey: ['doctor-create-hospital-specialties', user?.hospitalId],
+    queryFn: () => {
+      if (!user?.hospitalId) {
+        throw new Error('Hospital ID is required to load hospital specialties');
+      }
+      return hospitalService.getSpecialties(user.hospitalId);
+    },
+    enabled: isHospitalAdmin && !!user?.hospitalId,
+  });
+  const hospitalSpecialties: Array<{ id: string; name: string }> = Array.isArray(rawHospitalSpecialties)
+    ? rawHospitalSpecialties
+    : [];
+
   // Fetch Doctors with Filters
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -150,6 +165,7 @@ export default function AdminDoctorsPage() {
         fullName: '',
         title: 'BS.CKI',
         gender: 'MALE',
+        specialtyId: '',
         avatarUrl: '',
         qualification: '',
         yearsOfExperience: 5,
@@ -186,11 +202,21 @@ export default function AdminDoctorsPage() {
       alert('Vui lòng nhập Họ và Tên bác sĩ');
       return;
     }
+    if (isHospitalAdmin && !user?.hospitalId) {
+      alert('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      return;
+    }
+    if (isHospitalAdmin && !createForm.specialtyId) {
+      alert('Vui lòng chọn chuyên khoa của cơ sở y tế');
+      return;
+    }
 
     createMutation.mutate({
       fullName: createForm.fullName.trim(),
       title: createForm.title,
       gender: createForm.gender,
+      hospitalId: isHospitalAdmin ? user?.hospitalId : undefined,
+      specialtyId: isHospitalAdmin ? createForm.specialtyId : undefined,
       avatarUrl: createForm.avatarUrl.trim() || undefined,
       qualification: createForm.qualification.trim() || 'Bác sĩ chuyên khoa',
       yearsOfExperience: Number(createForm.yearsOfExperience) || 0,
@@ -558,6 +584,30 @@ export default function AdminDoctorsPage() {
                   />
                 </div>
               </div>
+
+              {isHospitalAdmin && (
+                <div className="space-y-1">
+                  <label className="font-medium block">Chuyên khoa tại cơ sở y tế *</label>
+                  <select
+                    required
+                    value={createForm.specialtyId}
+                    onChange={(e) => setCreateForm({ ...createForm, specialtyId: e.target.value })}
+                    disabled={isLoadingHospitalSpecialties || hospitalSpecialties.length === 0}
+                    className={`w-full text-xs font-medium rounded-lg p-2 border ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                      }`}
+                  >
+                    <option value="">
+                      {isLoadingHospitalSpecialties ? 'Đang tải chuyên khoa...' : '-- Chọn chuyên khoa --'}
+                    </option>
+                    {hospitalSpecialties.map((specialty) => (
+                      <option key={specialty.id} value={specialty.id}>{specialty.name}</option>
+                    ))}
+                  </select>
+                  {!isLoadingHospitalSpecialties && hospitalSpecialties.length === 0 && (
+                    <p className="text-[11px] text-rose-600">Cơ sở y tế chưa có chuyên khoa để gán cho bác sĩ.</p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-1">
                 <label className="font-medium block">URL Ảnh đại diện (Avatar)</label>

@@ -143,10 +143,19 @@ export class AdminHospitalsService {
 
   async create(data: any, adminUserId: string, ipAddress?: string, userAgent?: string) {
     const { specialtyIds, coverImageUrl, ...createPayload } = data || {};
+    const existingCodes = await this.prisma.hospital.findMany({
+      where: { hospitalCode: { not: null } },
+      select: { hospitalCode: true },
+    });
+    const usedCodes = new Set(existingCodes.map((item) => item.hospitalCode));
+    let codeNumber = 1;
+    while (usedCodes.has(`BV-${String(codeNumber).padStart(3, '0')}`)) codeNumber += 1;
+    const generatedHospitalCode = `BV-${String(codeNumber).padStart(3, '0')}`;
+
     const hospital = await this.prisma.hospital.create({
       data: {
         name: createPayload.name,
-        hospitalCode: createPayload.hospitalCode || null,
+        hospitalCode: generatedHospitalCode,
         externalId: createPayload.externalId || null,
         type: createPayload.type || 'PUBLIC',
         establishedYear: createPayload.establishedYear ? Number(createPayload.establishedYear) : undefined,

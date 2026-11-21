@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PartnerRequestStatus } from '@prisma/client';
 
@@ -13,7 +13,9 @@ export class UpdatePartnerStatusDto {
   status: PartnerRequestStatus;
 
   @ApiPropertyOptional({ description: 'Ghi chú thêm về cuộc trao đổi' })
-  @IsString()
   @IsOptional()
+  @ValidateIf((value) => value.status === PartnerRequestStatus.REJECTED)
+  @IsString()
+  @IsNotEmpty({ message: 'Vui lòng nhập lý do từ chối' })
   adminNote?: string;
 }

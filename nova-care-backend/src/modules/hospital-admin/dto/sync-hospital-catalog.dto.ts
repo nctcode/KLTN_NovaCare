@@ -4,7 +4,7 @@ import { IsOptional, IsString, IsObject, IsArray } from 'class-validator';
 export class SyncHospitalCatalogDto {
   @ApiPropertyOptional({
     description: 'URL endpoint HIS Catalog của bệnh viện',
-    example: 'http://localhost:5055/api/hospital-catalog',
+    example: 'https://his.benhvien.vn/api/hospital-catalog',
   })
   @IsOptional()
   @IsString()
