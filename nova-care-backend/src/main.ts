@@ -11,7 +11,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
-  app.useBodyParser('json', { type: ['application/json', 'application/webhook+json'] });
+  app.useBodyParser('json', { limit: '15mb', type: ['application/json', 'application/webhook+json'] });
+  app.useBodyParser('urlencoded', { limit: '15mb', extended: true });
 
   // ── Security ─────────────────────────────────────────────────────────
   app.use(helmet());

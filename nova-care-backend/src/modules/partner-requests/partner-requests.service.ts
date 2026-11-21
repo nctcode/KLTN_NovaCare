@@ -348,9 +348,9 @@ export class PartnerRequestsService {
         createdHospitalId: hospital.id,
         createdUserId: user.id,
         adminNote: dto.adminNote || request.adminNote,
-        approvalDocumentName: dto.approvalDocumentName,
-        approvalDocumentMimeType: dto.approvalDocumentMimeType,
-        approvalDocumentData: dto.approvalDocumentData,
+        approvalDocumentName: dto.approvalDocumentName || null,
+        approvalDocumentMimeType: dto.approvalDocumentMimeType || null,
+        approvalDocumentData: dto.approvalDocumentData || null,
       },
     });
 

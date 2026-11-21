@@ -157,9 +157,18 @@ export default function AdminPartnerRequestsPage() {
       toast.error('Văn bản chấp thuận phải là file PDF');
       return;
     }
+    const payload: ApprovePartnerInput = {
+      adminEmail: approveForm.adminEmail.trim(),
+      adminFullName: approveForm.adminFullName.trim() || undefined,
+      hospitalName: approveForm.hospitalName.trim() || undefined,
+      adminNote: approveForm.adminNote.trim() || undefined,
+      approvalDocumentName: approveForm.approvalDocumentName.trim() || undefined,
+      approvalDocumentMimeType: approveForm.approvalDocumentMimeType.trim() || undefined,
+      approvalDocumentData: approveForm.approvalDocumentData.trim() || undefined,
+    };
     approveMutation.mutate({
       id: approvingRequest.id,
-      data: approveForm,
+      data: payload,
     });
   };
 
