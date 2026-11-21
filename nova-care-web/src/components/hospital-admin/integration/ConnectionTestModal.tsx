@@ -29,7 +29,7 @@ import {
 import { hospitalAdminService } from '@/services/hospital-admin.service';
 import { toast } from 'sonner';
 
-type HisAuthType = 'api_key' | 'bearer';
+type HisAuthType = 'none' | 'api_key' | 'bearer';
 
 interface ConnectionTestModalProps {
   open: boolean;

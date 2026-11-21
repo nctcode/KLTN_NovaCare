@@ -108,9 +108,11 @@ export function HospitalIntegrationView() {
     }
     return '';
   });
-  const [authType, setAuthType] = useState<'api_key' | 'bearer'>(() => {
+  const [authType, setAuthType] = useState<'none' | 'api_key' | 'bearer'>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(storageKey('auth_type')) === 'bearer' ? 'bearer' : 'api_key';
+      const savedAuth = localStorage.getItem(storageKey('auth_type'));
+      if (savedAuth === 'bearer' || savedAuth === 'none') return savedAuth;
+      return 'api_key';
     }
     return 'api_key';
   });

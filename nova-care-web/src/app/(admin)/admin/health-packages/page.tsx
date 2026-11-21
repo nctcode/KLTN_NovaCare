@@ -50,19 +50,20 @@ import {
 } from '@/components/ui/dialog';
 
 const normalizePackageServices = (services: unknown): string[] => {
-  let parsed: unknown = services;
-
-  if (typeof parsed === 'string') {
+  if (typeof services === 'string') {
+    const rawString = services.trim();
+    if (!rawString) return [];
     try {
-      parsed = JSON.parse(parsed);
+      const parsedJson = JSON.parse(rawString);
+      return normalizePackageServices(parsedJson);
     } catch {
-      return parsed.trim() ? [parsed.trim()] : [];
+      return [rawString];
     }
   }
 
-  if (!Array.isArray(parsed)) return [];
+  if (!Array.isArray(services)) return [];
 
-  return parsed
+  return services
     .map((item) => {
       if (typeof item === 'string') return item.trim();
       if (item && typeof item === 'object' && 'name' in item) {
