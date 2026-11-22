@@ -120,7 +120,7 @@ export default function AdminPartnerRequestsPage() {
 
   // Approve Mutation
   const approveMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: typeof approveForm }) =>
+    mutationFn: ({ id, data }: { id: string; data: ApprovePartnerInput }) =>
       partnerService.approveRequest(id, data),
     onSuccess: (res: any) => {
       toast.success('Phê duyệt hợp tác và gửi email xác nhận thành công!');
