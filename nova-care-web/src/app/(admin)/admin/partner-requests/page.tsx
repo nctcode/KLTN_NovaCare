@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { partnerService } from '@/services/partner.service';
+import { partnerService, type ApprovePartnerInput } from '@/services/partner.service';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
