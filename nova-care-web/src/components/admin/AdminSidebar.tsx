@@ -61,7 +61,7 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
   },
   {
     id: 'partner-requests',
-    label: 'Quản lý danh sách đăng ký hợp tác ',
+    label: 'Quản lý hợp tác ',
     icon: UserPlus,
     href: '/admin/partner-requests',
   },
@@ -140,73 +140,73 @@ function AdminSidebarInner() {
   // Dynamic menu configuration based on role
   const menuConfig: MenuGroup[] = isHospitalAdmin
     ? [
-        {
-          id: 'dashboard',
-          label: 'Tổng quan Bệnh viện',
-          icon: LayoutDashboard,
-          href: '/admin',
-        },
-        {
-          id: 'hospital-doctors',
-          label: 'Đội ngũ Bác sĩ',
-          icon: UserCheck,
-          href: '/admin/doctors',
-        },
-        {
-          id: 'hospital-services',
-          label: 'Dịch vụ Y tế',
-          icon: ClipboardList,
-          href: '/admin/medical-services',
-        },
-        {
-          id: 'hospital-packages',
-          label: 'Gói khám Sức khỏe',
-          icon: Stethoscope,
-          href: '/admin/health-packages',
-        },
-        {
-          id: 'hospital-specialties',
-          label: 'Chuyên khoa Tiếp nhận',
-          icon: Activity,
-          href: '/admin/specialties',
-        },
-        {
-          id: 'schedules-menu',
-          label: 'Lịch trực & Ca khám',
-          icon: Calendar,
-          href: '/admin/schedules',
-        },
-        {
-          id: 'after-hours-management',
-          label: 'Phòng khám & Dịch vụ',
-          icon: Clock,
-          href: '/admin/after-hours',
-        },
-        {
-          id: 'appointments-menu',
-          label: 'Lịch hẹn Bệnh nhân',
-          icon: CalendarCheck,
-          href: '/admin/appointments',
-        },
-        {
-          id: 'his-sync-menu',
-          label: 'Cổng Đồng bộ HIS',
-          icon: Network,
-          href: '/admin/his-sync',
-        },
-        {
-          id: 'my-hospital',
-          label: 'Hồ sơ Cơ sở Y tế',
-          icon: Building2,
-          href: `/admin/hospitals/${hospitalId}`,
-        },
-        {
-          id: 'reviews-moderation',
-          label: 'Đánh giá & Phản hồi',
-          icon: Star,
-          href: '/admin/reviews',
-        },
-      ]
+      {
+        id: 'dashboard',
+        label: 'Tổng quan Bệnh viện',
+        icon: LayoutDashboard,
+        href: '/admin',
+      },
+      {
+        id: 'hospital-doctors',
+        label: 'Đội ngũ Bác sĩ',
+        icon: UserCheck,
+        href: '/admin/doctors',
+      },
+      {
+        id: 'hospital-services',
+        label: 'Dịch vụ Y tế',
+        icon: ClipboardList,
+        href: '/admin/medical-services',
+      },
+      {
+        id: 'hospital-packages',
+        label: 'Gói khám Sức khỏe',
+        icon: Stethoscope,
+        href: '/admin/health-packages',
+      },
+      {
+        id: 'hospital-specialties',
+        label: 'Chuyên khoa Tiếp nhận',
+        icon: Activity,
+        href: '/admin/specialties',
+      },
+      {
+        id: 'schedules-menu',
+        label: 'Lịch trực & Ca khám',
+        icon: Calendar,
+        href: '/admin/schedules',
+      },
+      {
+        id: 'after-hours-management',
+        label: 'Phòng khám & Dịch vụ',
+        icon: Clock,
+        href: '/admin/after-hours',
+      },
+      {
+        id: 'appointments-menu',
+        label: 'Lịch hẹn Bệnh nhân',
+        icon: CalendarCheck,
+        href: '/admin/appointments',
+      },
+      {
+        id: 'his-sync-menu',
+        label: 'Cổng Đồng bộ HIS',
+        icon: Network,
+        href: '/admin/his-sync',
+      },
+      {
+        id: 'my-hospital',
+        label: 'Hồ sơ Cơ sở Y tế',
+        icon: Building2,
+        href: `/admin/hospitals/${hospitalId}`,
+      },
+      {
+        id: 'reviews-moderation',
+        label: 'Đánh giá & Phản hồi',
+        icon: Star,
+        href: '/admin/reviews',
+      },
+    ]
     : ADMIN_MENU_CONFIG;
 
   // Helper to determine if a sub-item is active
@@ -274,11 +274,10 @@ function AdminSidebarInner() {
 
   return (
     <aside
-      className={`w-64 flex flex-col shrink-0 border-r select-none ${
-        isLight
+      className={`w-64 flex flex-col shrink-0 border-r select-none ${isLight
           ? 'bg-white text-slate-800 border-slate-200'
           : 'bg-slate-900 text-slate-200 border-slate-800'
-      }`}
+        }`}
     >
       {/* Brand Header */}
       <div className={`h-16 flex items-center px-5 border-b shrink-0 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
@@ -308,37 +307,35 @@ function AdminSidebarInner() {
               group.href === '/admin'
                 ? pathname === '/admin'
                 : group.href === '/admin/users'
-                ? pathname === '/admin/users'
-                : group.href.includes('?tab=')
-                ? pathname.startsWith(`/admin/hospitals/${hospitalId}`) &&
-                  searchParams.get('tab') === group.href.split('?tab=')[1]
-                : group.href === `/admin/hospitals/${hospitalId}`
-                ? pathname === `/admin/hospitals/${hospitalId}` &&
-                  (!searchParams.get('tab') || searchParams.get('tab') === 'overview')
-                : pathname === group.href || (group.href !== '/admin' && pathname.startsWith(group.href));
+                  ? pathname === '/admin/users'
+                  : group.href.includes('?tab=')
+                    ? pathname.startsWith(`/admin/hospitals/${hospitalId}`) &&
+                    searchParams.get('tab') === group.href.split('?tab=')[1]
+                    : group.href === `/admin/hospitals/${hospitalId}`
+                      ? pathname === `/admin/hospitals/${hospitalId}` &&
+                      (!searchParams.get('tab') || searchParams.get('tab') === 'overview')
+                      : pathname === group.href || (group.href !== '/admin' && pathname.startsWith(group.href));
 
             return (
               <Link
                 key={group.id}
                 href={group.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
-                  isSingleActive
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${isSingleActive
                     ? isLight
                       ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60 shadow-xs'
                       : 'bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-800/50'
                     : isLight
-                    ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-                }`}
+                      ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                  }`}
               >
                 <GroupIcon
-                  className={`w-4 h-4 shrink-0 ${
-                    isSingleActive
+                  className={`w-4 h-4 shrink-0 ${isSingleActive
                       ? isLight
                         ? 'text-emerald-700'
                         : 'text-emerald-400'
                       : 'text-slate-400'
-                  }`}
+                    }`}
                 />
                 <span className="truncate">{group.label}</span>
               </Link>
@@ -355,30 +352,27 @@ function AdminSidebarInner() {
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition text-left ${
-                  hasActiveChild
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition text-left ${hasActiveChild
                     ? isLight
                       ? 'text-slate-900 bg-slate-50'
                       : 'text-white bg-slate-800/40'
                     : isLight
-                    ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                    : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
-                }`}
+                      ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                  }`}
               >
                 <div className="flex items-center gap-3 truncate">
                   <GroupIcon
-                    className={`w-4 h-4 shrink-0 ${
-                      hasActiveChild
+                    className={`w-4 h-4 shrink-0 ${hasActiveChild
                         ? 'text-emerald-600 dark:text-emerald-400'
                         : 'text-slate-400'
-                    }`}
+                      }`}
                   />
                   <span className="truncate">{group.label}</span>
                 </div>
                 <ChevronDown
-                  className={`w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${
-                    isOpen ? 'rotate-180 text-emerald-600' : ''
-                  }`}
+                  className={`w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-emerald-600' : ''
+                    }`}
                 />
               </button>
 
@@ -393,33 +387,30 @@ function AdminSidebarInner() {
                       <Link
                         key={sub.id}
                         href={sub.href}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] font-medium transition ${
-                          isSubActive
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] font-medium transition ${isSubActive
                             ? isLight
                               ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60 shadow-xs'
                               : 'bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-800/50'
                             : isLight
-                            ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-                        }`}
+                              ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                              : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                          }`}
                       >
                         {SubIcon ? (
                           <SubIcon
-                            className={`w-3.5 h-3.5 shrink-0 ${
-                              isSubActive
+                            className={`w-3.5 h-3.5 shrink-0 ${isSubActive
                                 ? isLight
                                   ? 'text-emerald-700'
                                   : 'text-emerald-400'
                                 : 'text-slate-400'
-                            }`}
+                              }`}
                           />
                         ) : (
                           <div
-                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                              isSubActive
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubActive
                                 ? 'bg-emerald-600'
                                 : 'bg-slate-300 dark:bg-slate-600'
-                            }`}
+                              }`}
                           />
                         )}
                         <span className="truncate">{sub.label}</span>
@@ -440,11 +431,10 @@ function AdminSidebarInner() {
         <Link
           href="/"
           target="_blank"
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition ${
-            isLight
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition ${isLight
               ? 'text-slate-600 hover:bg-slate-100'
               : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
+            }`}
         >
           <ExternalLink className="w-4 h-4 shrink-0" />
           <span>Trang Bệnh nhân</span>
