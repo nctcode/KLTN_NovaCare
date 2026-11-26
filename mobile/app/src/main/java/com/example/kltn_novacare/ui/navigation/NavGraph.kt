@@ -123,8 +123,19 @@ fun NavGraph(
                     navController.navigate(Screen.DoctorDetail.createRoute(doctorId))
                 },
                 onNavigateToFacility = { facilityId ->
-                    navController.navigate(Screen.HospitalBooking.createRoute(hospitalId = facilityId))
+                    navController.navigate(Screen.HospitalDetail.createRoute(facilityId))
                 }
+            )
+        }
+
+        composable(
+            route = Screen.HospitalDetail.route,
+            arguments = listOf(navArgument("hospitalId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val hospitalId = backStackEntry.arguments?.getString("hospitalId") ?: ""
+            com.example.kltn_novacare.ui.screens.hospital.HospitalDetailScreen(
+                hospitalId = hospitalId,
+                navController = navController
             )
         }
         
@@ -270,7 +281,8 @@ fun NavGraph(
                 navArgument("specialtyId") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("specialtyName") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("reason") { type = NavType.StringType; nullable = true; defaultValue = null },
-                navArgument("doctorId") { type = NavType.StringType; nullable = true; defaultValue = null }
+                navArgument("doctorId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("mode") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
         ) { backStackEntry ->
             val hospitalId = backStackEntry.arguments?.getString("hospitalId")
@@ -280,6 +292,7 @@ fun NavGraph(
                 initialSpecialtyName = backStackEntry.arguments?.getString("specialtyName"),
                 initialReason = backStackEntry.arguments?.getString("reason"),
                 initialDoctorId = backStackEntry.arguments?.getString("doctorId"),
+                initialMode = backStackEntry.arguments?.getString("mode"),
                 navController = navController,
                 bookingViewModel = bookingViewModel,
                 doctorViewModel = doctorViewModel,

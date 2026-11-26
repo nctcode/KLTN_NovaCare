@@ -134,9 +134,17 @@ data class AppointmentsResponse(
     val limit: Int = 20,
     val totalPages: Int = 0
 )
+data class ScreeningMediaItem(
+    val id: String,
+    val type: String? = null,
+    val mimeType: String? = null,
+    val sizeBytes: Int? = null,
+    val fileUrl: String? = null
+)
 data class AppointmentScreening(
     val id: String,
     val status: String,
+    val source: String? = null,
     val completedAt: String? = null,
     val symptoms: String? = null,
     val riskLevel: String? = null,
@@ -144,7 +152,9 @@ data class AppointmentScreening(
     val voiceTranscript: String? = null,
     val bodyDiagramData: JsonElement? = null,
     val structuredData: JsonElement? = null,
-    val questions: List<ScreeningQuestion>? = emptyList()
+    val imageAnalysis: JsonElement? = null,
+    val questions: List<ScreeningQuestion>? = emptyList(),
+    val media: List<ScreeningMediaItem>? = emptyList()
 )
 data class ScreeningQuestion(val id: String, val question: String, val answer: String? = null, val order: Int = 0)
 data class SharedDiagnosis(val diseaseName: String? = null, val icdCode: String? = null)

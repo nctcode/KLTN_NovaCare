@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -318,17 +319,14 @@ function LoginContent() {
         {/* Mobile / Tablet Header: Chỉ hiển thị trên màn hình nhỏ khi ẩn Brand Panel */}
         <div className="lg:hidden flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10A66A] to-[#075E47] flex items-center justify-center text-white shadow-md shadow-[#10A66A]/20">
-              <Activity className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-bold text-xl tracking-tight text-gray-900 flex items-center gap-1">
-                NovaCare
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#EAF8F2] text-[#075E47] font-medium">
-                  Y tế số
-                </span>
-              </span>
-            </div>
+            <Image
+              src="/novacare-logo.png"
+              alt="NovaCare"
+              width={130}
+              height={36}
+              className="h-8 w-auto object-contain"
+              priority
+            />
           </Link>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200">
             <HeartHandshake className="w-3.5 h-3.5 text-[#10A66A]" />

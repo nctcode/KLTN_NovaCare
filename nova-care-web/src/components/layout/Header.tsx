@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -284,18 +285,15 @@ export function Header({
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
-          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-            <div className="w-9 h-9 bg-[#0c4b39] rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200">
-              <span className="text-[#66FF33] font-black text-lg">N</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black text-[#1A2B3C] tracking-tight leading-none">
-                NovaCare
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5 hidden sm:block">
-                Hệ thống y tế & Đặt khám
-              </span>
-            </div>
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0 py-1">
+            <Image
+              src="/novacare-logo.png"
+              alt="NovaCare"
+              width={150}
+              height={44}
+              className="h-10 w-auto object-contain group-hover:opacity-95 transition-all"
+              priority
+            />
           </Link>
         </div>
 

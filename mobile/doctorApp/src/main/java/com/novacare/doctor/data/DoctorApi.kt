@@ -1,8 +1,10 @@
 package com.novacare.doctor.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 import okhttp3.Authenticator
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -156,13 +158,55 @@ class DoctorSession(context: Context) {
     fun clear() = preferences.edit().clear().apply()
 }
 
+enum class DoctorServerMode(val label: String) {
+    PRODUCTION("Server AWS"),
+    LOCAL_USB("Cáp USB (Local)")
+}
+
 object DoctorApiClient {
+    private const val PRODUCTION_BASE_URL = "https://novacare-health.me/api/v1/"
+    private const val LOCAL_EMULATOR_BASE_URL = "http://10.0.2.2:3000/api/v1/"
+    private const val LOCAL_USB_BASE_URL = "http://127.0.0.1:3000/api/v1/"
+    private const val PREFS_NAME = "novacare_doctor_server_prefs"
+    private const val KEY_SERVER_MODE = "server_mode"
+
+    @Volatile
+    private var currentMode: DoctorServerMode = DoctorServerMode.PRODUCTION
+    private var serverPrefs: SharedPreferences? = null
     private lateinit var session: DoctorSession
     private lateinit var service: DoctorApi
 
+    fun getServerMode(): DoctorServerMode = currentMode
+
+    fun setServerMode(mode: DoctorServerMode) {
+        if (currentMode != mode) {
+            currentMode = mode
+            serverPrefs?.edit()?.putString(KEY_SERVER_MODE, mode.name)?.apply()
+            if (serverPrefs != null) {
+                session().clear()
+            }
+        }
+    }
+
     fun init(context: Context) {
-        session = DoctorSession(context.applicationContext)
+        val appContext = context.applicationContext
+        session = DoctorSession(appContext)
+        serverPrefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedMode = serverPrefs?.getString(KEY_SERVER_MODE, DoctorServerMode.PRODUCTION.name)
+        currentMode = runCatching { DoctorServerMode.valueOf(savedMode ?: DoctorServerMode.PRODUCTION.name) }
+            .getOrDefault(DoctorServerMode.PRODUCTION)
+
         val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
+        val dynamicBaseUrl = Interceptor { chain ->
+            val original = chain.request()
+            val targetBase = baseUrl().toHttpUrl()
+            val updatedUrl = original.url.newBuilder()
+                .scheme(targetBase.scheme)
+                .host(targetBase.host)
+                .port(targetBase.port)
+                .build()
+            chain.proceed(original.newBuilder().url(updatedUrl).build())
+        }
         val authHeader = Interceptor { chain ->
             val builder = chain.request().newBuilder()
             session.accessToken()?.let { builder.header("Authorization", "Bearer $it") }
@@ -201,25 +245,26 @@ object DoctorApiClient {
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor(dynamicBaseUrl)
             .addInterceptor(authHeader)
             .addInterceptor(logging)
             .authenticator(authenticator)
             .build()
-        service = Retrofit.Builder().baseUrl(baseUrl()).client(client)
+        service = Retrofit.Builder().baseUrl(PRODUCTION_BASE_URL).client(client)
             .addConverterFactory(GsonConverterFactory.create()).build().create(DoctorApi::class.java)
     }
 
     fun api(): DoctorApi = service
     fun session(): DoctorSession = session
 
+    fun getBaseUrl(): String = baseUrl()
     fun serverBaseUrl(): String = baseUrl().removeSuffix("api/v1/").removeSuffix("/")
     fun attachmentUrl(consultationId: String, attachmentId: String): String =
         "${baseUrl()}consultations/$consultationId/attachments/$attachmentId"
 
-    private fun baseUrl(): String = if (isEmulator()) {
-        "http://10.0.2.2:3000/api/v1/"
-    } else {
-        "http://127.0.0.1:3000/api/v1/"
+    private fun baseUrl(): String = when (currentMode) {
+        DoctorServerMode.PRODUCTION -> PRODUCTION_BASE_URL
+        DoctorServerMode.LOCAL_USB -> if (isEmulator()) LOCAL_EMULATOR_BASE_URL else LOCAL_USB_BASE_URL
     }
 
     private fun isEmulator(): Boolean = Build.FINGERPRINT.startsWith("generic") ||

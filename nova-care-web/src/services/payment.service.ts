@@ -11,11 +11,16 @@ export const paymentService = {
     return response.data;
   },
 
-  async simulateSuccess(appointmentId: string, paymentMethod: string): Promise<any> {
+  async simulateSuccess(appointmentId: string, paymentMethod: string = 'VNPAY'): Promise<any> {
     const response = await apiClient.post<any>('/payments/simulate-success', {
       appointmentId,
       paymentMethod,
     });
     return response.data;
+  },
+
+  async verifyVnpayReturn(params: Record<string, string>): Promise<any> {
+    const response = await apiClient.get<any>('/payments/vnpay-ipn', { params });
+    return response;
   },
 };

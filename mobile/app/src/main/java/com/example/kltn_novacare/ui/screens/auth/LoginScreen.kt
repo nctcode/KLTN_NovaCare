@@ -1,5 +1,6 @@
 package com.example.kltn_novacare.ui.screens.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,6 +33,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.kltn_novacare.R
+import com.example.kltn_novacare.data.remote.ApiClient
+import com.example.kltn_novacare.data.remote.ServerMode
 import com.example.kltn_novacare.ui.navigation.Screen
 import com.example.kltn_novacare.ui.theme.*
 import com.example.kltn_novacare.ui.viewmodel.AuthState
@@ -44,6 +50,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var serverMode by remember { mutableStateOf(ApiClient.getServerMode()) }
     val focusManager = LocalFocusManager.current
 
     val authState by authViewModel.authState.collectAsState()
@@ -138,31 +145,17 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(horizontal = 24.dp)
             ) {
-                // White rounded badge with emerald N logo
-                Box(
+                // Official NovaCare Logo (White text variant for dark gradient background)
+                Image(
+                    painter = painterResource(id = R.drawable.novacare_logo_white),
+                    contentDescription = "NovaCare",
                     modifier = Modifier
-                        .size(76.dp)
-                        .background(Color.White, RoundedCornerShape(22.dp))
-                        .border(1.5.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(22.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "N",
-                        color = Primary,
-                        fontSize = 44.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "NovaCare",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    letterSpacing = 0.5.sp
+                        .height(64.dp)
+                        .fillMaxWidth(0.68f),
+                    contentScale = ContentScale.Fit
                 )
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
                     text = "Đăng nhập để tiếp tục",
@@ -347,7 +340,70 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Server Connection Mode Switcher (Production AWS vs Local USB Cable)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        ServerMode.entries.forEach { mode ->
+                            val selected = serverMode == mode
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (selected) Primary else Color.Transparent)
+                                    .clickable {
+                                        ApiClient.setServerMode(mode)
+                                        serverMode = mode
+                                        errorMessage = null
+                                    }
+                                    .padding(vertical = 8.dp, horizontal = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (mode == ServerMode.PRODUCTION) Icons.Default.Cloud else Icons.Default.Usb,
+                                        contentDescription = null,
+                                        tint = if (selected) Color.White else TextSecondary,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = mode.label,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selected) Color.White else TextSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Text(
+                    text = ApiClient.getBaseUrl().removeSuffix("/"),
+                    fontSize = 11.sp,
+                    color = TextMuted,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Trust / Security Badge (Concise & Minimal)
             Row(

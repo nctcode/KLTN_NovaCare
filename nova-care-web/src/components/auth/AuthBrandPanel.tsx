@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { Calendar, Stethoscope, Building2, ShieldCheck, Sparkles, FolderHeart } from 'lucide-react';
 
 export function AuthBrandPanel() {
@@ -10,31 +11,16 @@ export function AuthBrandPanel() {
 
       {/* Top Branding Section */}
       <div className="relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
-            <svg
-              className="w-6 h-6 text-[#A7F3D0]"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              {/* Medical Cross + Heart Pulse */}
-              <path d="M12 4v16m-8-8h16" />
-              <circle cx="12" cy="12" r="3" className="fill-white/20" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-2xl font-black tracking-tight text-white flex items-center gap-1.5">
-              NovaCare
-              <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-[#10A66A]/30 text-[#A7F3D0] border border-[#10A66A]/40">
-                Healthcare
-              </span>
-            </div>
-            <p className="text-xs text-[#A7F3D0]/90 font-medium">Hệ thống Y tế & Đặt khám Trực tuyến</p>
-          </div>
+        <div className="flex flex-col gap-2">
+          <Image
+            src="/novacare-logo-white.png"
+            alt="NovaCare Logo"
+            width={180}
+            height={50}
+            className="h-11 w-auto object-contain"
+            priority
+          />
+          <p className="text-xs text-[#A7F3D0]/90 font-medium pl-1">Hệ thống Y tế & Đặt khám Trực tuyến</p>
         </div>
       </div>
 

@@ -12,6 +12,11 @@ export class CreatePaymentDto {
   @IsNotEmpty({ message: 'Mã lịch hẹn không được để trống' })
   @IsString({ message: 'Mã lịch hẹn phải là chuỗi' })
   appointmentId: string;
+
+  @ApiProperty({ example: 'VNPAYQR', description: 'Mã ngân hàng / phương thức VNPAY (VNPAYQR, VNBANK, INTCARD)', required: false })
+  @IsOptional()
+  @IsString()
+  bankCode?: string;
 }
 
 export class SimulatePaymentDto {
@@ -20,7 +25,7 @@ export class SimulatePaymentDto {
   @IsString({ message: 'Mã lịch hẹn phải là chuỗi' })
   appointmentId: string;
 
-  @ApiProperty({ example: 'MOMO', description: 'Phương thức thanh toán (MOMO, VIETQR, CARD)', required: false })
+  @ApiProperty({ example: 'VNPAY', description: 'Phương thức thanh toán (VNPAY, CASH)', required: false })
   @IsOptional()
   @IsString()
   paymentMethod?: string;
@@ -34,10 +39,14 @@ export class PaymentsController {
   @Post('create')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Tạo URL thanh toán VNPay' })
+  @ApiOperation({ summary: 'Tạo URL thanh toán VNPay Sandbox 2.1.0' })
   async createPayment(@Body() dto: CreatePaymentDto, @Req() req: Request) {
     const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
-    const paymentUrl = await this.paymentsService.createPaymentUrl(dto.appointmentId, ip);
+    const paymentUrl = await this.paymentsService.createPaymentUrl(
+      dto.appointmentId,
+      ip,
+      dto.bankCode,
+    );
     return {
       statusCode: 200,
       message: 'Tạo link thanh toán VNPay thành công',
@@ -47,11 +56,11 @@ export class PaymentsController {
 
   @Public()
   @Post('simulate-success')
-  @ApiOperation({ summary: 'Giả lập thanh toán MoMo / VietQR / Thẻ thành công' })
+  @ApiOperation({ summary: 'Giả lập thanh toán VNPAY thành công' })
   async simulateSuccess(@Body() dto: SimulatePaymentDto) {
     const result = await this.paymentsService.simulatePaymentSuccess(
       dto.appointmentId,
-      dto.paymentMethod || 'MOMO'
+      dto.paymentMethod || 'VNPAY'
     );
     return {
       statusCode: 200,

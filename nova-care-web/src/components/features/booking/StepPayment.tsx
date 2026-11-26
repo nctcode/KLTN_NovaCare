@@ -18,43 +18,23 @@ import { useRouter } from 'next/navigation';
 const paymentMethods = [
   {
     id: 'vnpay',
-    name: 'VNPay (Thẻ ATM, Internet Banking, QR Code)',
-    description: 'Thanh toán trực tiếp qua ứng dụng ngân hàng hoặc thẻ ATM nội địa',
+    name: 'Cổng thanh toán VNPAY Sandbox',
+    description: 'Thanh toán trực tuyến qua cổng VNPAY (Thẻ ATM nội địa NCB, VNPAY-QR, thẻ quốc tế)',
     icon: CreditCard,
     popular: true,
     isGateway: true,
-    color: '#007bff',
+    color: '#005baa',
     logo: '🏦',
   },
   {
-    id: 'momo',
-    name: 'Ví điện tử MoMo',
-    description: 'Quét mã QR bằng ứng dụng MoMo trên điện thoại',
+    id: 'at_hospital',
+    name: 'Thanh toán tại cơ sở y tế',
+    description: 'Xác nhận giữ lịch và thanh toán trực tiếp tại quầy lễ tân khi đến khám',
     icon: Wallet,
     popular: false,
     isGateway: false,
-    color: '#ae2070',
-    logo: '💜',
-  },
-  {
-    id: 'vietqr',
-    name: 'Chuyển khoản VietQR Chanh chóng',
-    description: 'Chuyển khoản qua mã QR Ngân hàng (Miễn phí giao dịch)',
-    icon: QrCode,
-    popular: false,
-    isGateway: false,
-    color: '#1a73e8',
-    logo: '📱',
-  },
-  {
-    id: 'card',
-    name: 'Thẻ quốc tế (Visa, Mastercard, JCB)',
-    description: 'Hỗ trợ tất cả các dòng thẻ tín dụng & ghi nợ quốc tế',
-    icon: CreditCard,
-    popular: false,
-    isGateway: false,
-    color: '#1a1a2e',
-    logo: '💳',
+    color: '#0c4b39',
+    logo: '🏥',
   },
 ];
 
@@ -340,8 +320,17 @@ export function StepPayment() {
       return;
     }
 
-    /* MoMo / VietQR / Card → open simulate modal */
-    setShowSimulateModal(true);
+    /* Pay at hospital → confirm directly */
+    setIsProcessing(true);
+    try {
+      await appointmentService.confirm(appointmentId);
+      toast.success('Đặt lịch thành công! Vui lòng thanh toán tại cơ sở y tế khi đến khám.');
+      router.push(`/lich-kham/${appointmentId}`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể xác nhận lịch hẹn');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSimulateSuccess = () => {
@@ -518,12 +507,8 @@ export function StepPayment() {
               <div className="flex items-center justify-center gap-2">
                 <span>
                   {selectedMethod === 'vnpay'
-                    ? 'Thanh toán qua VNPay'
-                    : selectedMethod === 'momo'
-                    ? 'Thanh toán qua MoMo'
-                    : selectedMethod === 'vietqr'
-                    ? 'Chuyển khoản VietQR'
-                    : 'Thanh toán thẻ quốc tế'}
+                    ? 'Thanh toán qua VNPAY Sandbox'
+                    : 'Xác nhận thanh toán tại cơ sở y tế'}
                 </span>
                 <ArrowRight className="w-5 h-5" />
               </div>

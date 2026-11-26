@@ -1,5 +1,6 @@
 package com.novacare.doctor.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -45,9 +47,9 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private val DoctorGreen = Color(0xFF087F5B)
-private val DoctorLight = Color(0xFFF4F8F6)
-private val TextDark = Color(0xFF102A23)
+internal val DoctorGreen = Color(0xFF087F5B)
+internal val DoctorLight = Color(0xFFF4F8F6)
+internal val TextDark = Color(0xFF102A23)
 
 @Composable
 fun NovaCareDoctorTheme(content: @Composable () -> Unit) {
@@ -55,6 +57,8 @@ fun NovaCareDoctorTheme(content: @Composable () -> Unit) {
         colorScheme = lightColorScheme(
             primary = DoctorGreen,
             onPrimary = Color.White,
+            secondaryContainer = Color(0xFFD1FAE5),
+            onSecondaryContainer = Color(0xFF064E3B),
             background = DoctorLight,
             surface = Color.White,
             onSurface = TextDark
@@ -63,7 +67,7 @@ fun NovaCareDoctorTheme(content: @Composable () -> Unit) {
     )
 }
 
-private object Route {
+internal object Route {
     const val Dashboard = "dashboard"
     const val Schedule = "schedule"
     const val Appointments = "appointments"
@@ -89,14 +93,30 @@ private fun DoctorLoginScreen(viewModel: DoctorViewModel) {
     val auth by viewModel.auth.collectAsState()
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var serverMode by remember { mutableStateOf(DoctorApiClient.getServerMode()) }
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
             Column(Modifier.padding(26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(64.dp).background(DoctorGreen, RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.MedicalServices, null, tint = Color.White, modifier = Modifier.size(34.dp))
+                Image(
+                    painter = painterResource(id = com.novacare.doctor.R.drawable.novacare_logo),
+                    contentDescription = "NovaCare Doctor",
+                    modifier = Modifier.height(48.dp).padding(horizontal = 8.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Surface(
+                    color = DoctorGreen.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(
+                        "CỔNG BÁC SĨ (DOCTOR PORTAL)",
+                        color = DoctorGreen,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                    )
                 }
-                Text("NovaCare Doctor", fontSize = 25.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 16.dp))
-                Text("Không gian làm việc dành riêng cho bác sĩ", color = Color(0xFF64748B), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 22.dp))
+                Text("Không gian làm việc dành riêng cho bác sĩ", color = Color(0xFF64748B), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp, bottom = 22.dp))
                 OutlinedTextField(
                     value = username, onValueChange = { username = it }, singleLine = true,
                     label = { Text("Email hoặc số điện thoại") }, leadingIcon = { Icon(Icons.Outlined.AccountCircle, null) },
@@ -116,6 +136,53 @@ private fun DoctorLoginScreen(viewModel: DoctorViewModel) {
                     else Text("Đăng nhập dành cho Bác sĩ", fontWeight = FontWeight.Bold)
                 }
                 Text("Ứng dụng chỉ chấp nhận tài khoản có vai trò DOCTOR.", color = Color(0xFF64748B), fontSize = 10.sp, modifier = Modifier.padding(top = 14.dp))
+                Spacer(Modifier.height(12.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = DoctorLight,
+                    border = BorderStroke(1.dp, Color(0xFFD8E6E0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(Modifier.padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        DoctorServerMode.entries.forEach { mode ->
+                            val selected = serverMode == mode
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(if (selected) DoctorGreen else Color.Transparent)
+                                    .clickable {
+                                        DoctorApiClient.setServerMode(mode)
+                                        serverMode = mode
+                                    }
+                                    .padding(vertical = 8.dp, horizontal = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = if (mode == DoctorServerMode.PRODUCTION) Icons.Outlined.Cloud else Icons.Outlined.Usb,
+                                        contentDescription = null,
+                                        tint = if (selected) Color.White else Color(0xFF475569),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(Modifier.width(5.dp))
+                                    Text(
+                                        text = mode.label,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selected) Color.White else Color(0xFF475569)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Text(
+                    text = DoctorApiClient.getBaseUrl().removeSuffix("/"),
+                    color = Color(0xFF94A3B8),
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 5.dp)
+                )
             }
         }
     }
@@ -228,42 +295,6 @@ private fun StatCard(label: String, value: Int, icon: ImageVector, modifier: Mod
 }
 
 @Composable
-private fun ScheduleScreen(nav: NavHostController, viewModel: DoctorViewModel) {
-    var weekStart by remember { mutableStateOf(LocalDate.now().minusDays((LocalDate.now().dayOfWeek.value - 1).toLong())) }
-    val state by viewModel.schedule.collectAsState()
-    fun reload() = viewModel.loadSchedule(weekStart.toString(), weekStart.plusDays(6).toString())
-    LaunchedEffect(weekStart) { reload() }
-    DoctorScaffold(nav, Route.Schedule, "Lịch làm việc & ca trực") { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Row(Modifier.fillMaxWidth().background(Color.White).padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                IconButton(onClick = { weekStart = weekStart.minusWeeks(1) }) { Icon(Icons.Default.ChevronLeft, "Tuần trước") }
-                Text("${dateOnly(weekStart)} – ${dateOnly(weekStart.plusDays(6))}", fontWeight = FontWeight.Bold)
-                IconButton(onClick = { weekStart = weekStart.plusWeeks(1) }) { Icon(Icons.Default.ChevronRight, "Tuần sau") }
-            }
-            StateContent(state, Modifier.weight(1f), ::reload) { schedule ->
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    item { Text("Lịch do cơ sở y tế phân công · Chỉ đọc", color = Color(0xFF64748B), fontSize = 11.sp) }
-                    if (schedule.slots.isEmpty() && schedule.recurringSchedules.isEmpty()) item { EmptyCard("Không có ca trực trong tuần") }
-                    items(schedule.slots, key = { it.id }) { slot ->
-                        DetailCard {
-                            Text(formatDateTime(slot.startTime), fontWeight = FontWeight.Black, color = DoctorGreen)
-                            Text(slot.roomSession?.room?.name ?: slot.doctorWorkplace.branch?.name ?: slot.doctorWorkplace.hospital.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text("${slot.doctorWorkplace.specialty.name} · ${slot.bookedCount}/${slot.capacity} lịch hẹn", color = Color(0xFF64748B), fontSize = 11.sp)
-                        }
-                    }
-                    if (schedule.slots.isEmpty()) items(schedule.recurringSchedules, key = { it.id }) { recurring ->
-                        DetailCard {
-                            Text("${dayLabel(recurring.dayOfWeek)} · ${recurring.startTime}–${recurring.endTime}", fontWeight = FontWeight.Black, color = DoctorGreen)
-                            Text(recurring.doctorWorkplace.hospital.name, fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun AppointmentsScreen(nav: NavHostController, viewModel: DoctorViewModel) {
     var status by remember { mutableStateOf<String?>(null) }
     val start = remember { LocalDate.now().minusDays(7).toString() }
@@ -323,68 +354,6 @@ private fun AppointmentCard(item: DoctorAppointment, onClick: () -> Unit) {
                 }
             }
             Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF94A3B8))
-        }
-    }
-}
-
-@Composable
-private fun AppointmentDetailScreen(nav: NavHostController, viewModel: DoctorViewModel, id: String) {
-    val state by viewModel.appointment.collectAsState(); val screening by viewModel.screening.collectAsState()
-    val sharedRecords by viewModel.sharedRecords.collectAsState()
-    LaunchedEffect(id) { viewModel.loadAppointment(id) }
-    DoctorScaffold(nav, "", "Chi tiết lịch hẹn", canBack = true) { padding ->
-        StateContent(state, Modifier.padding(padding), { viewModel.loadAppointment(id) }) { appointment ->
-            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { DetailSection("Bệnh nhân", Icons.Outlined.Person) { InfoLine("Họ tên", appointment.patientProfile.fullName); InfoLine("Điện thoại", appointment.patientProfile.phone ?: "Chưa cung cấp"); InfoLine("Ngày sinh", formatBirthDate(appointment.patientProfile.dateOfBirth)); InfoLine("Giới tính", genderLabel(appointment.patientProfile.gender)); InfoLine("Địa chỉ", appointment.patientProfile.address ?: "Chưa cung cấp") } }
-                item { DetailSection("Lịch hẹn", Icons.Outlined.EventNote) { InfoLine("Mã lịch", appointment.bookingCode); InfoLine("Hình thức", appointment.appointmentTypeLabel); InfoLine("Thời gian", formatDateTime(appointment.slot.startTime)); InfoLine("Trạng thái", statusLabel(appointment.status)); InfoLine("Cơ sở", appointment.slot.doctorWorkplace.hospital.name); InfoLine("Phòng khám", appointment.slot.roomSession?.room?.name ?: "Chưa phân phòng"); InfoLine("Lý do", appointment.reason?.takeIf(String::isNotBlank) ?: "Chưa ghi nhận"); InfoLine("Triệu chứng", appointment.symptoms?.takeIf(String::isNotBlank) ?: appointment.reason?.takeIf(String::isNotBlank) ?: "Chưa ghi nhận") } }
-                item {
-                    DetailSection("Sàng lọc tiền khám AI", Icons.Outlined.Psychology) {
-                        Text("Chỉ dùng tham khảo trước khám, không thay thế chẩn đoán.", color = Color(0xFF92400E), fontSize = 11.sp)
-                        when (val value = screening) {
-                            is LoadState.Data -> {
-                                InfoLine("Mức nguy cơ", riskLabel(value.value.riskLevel))
-                                InfoLine("Triệu chứng người bệnh mô tả", value.value.symptoms?.takeIf(String::isNotBlank) ?: appointment.symptoms?.takeIf(String::isNotBlank) ?: appointment.reason?.takeIf(String::isNotBlank) ?: "Chưa ghi nhận")
-                                value.value.voiceTranscript?.takeIf(String::isNotBlank)?.let { InfoLine("Mô tả bằng giọng nói", it) }
-                                InfoLine("Nhận định tham khảo", recommendationSummary(value.value.recommendations))
-                                recommendationDetails(value.value.recommendations).forEach { (label, text) -> InfoLine(label, text) }
-                                val questions = value.value.questions.orEmpty()
-                                if (questions.isNotEmpty()) {
-                                    Text("Câu hỏi sàng lọc", fontWeight = FontWeight.Bold, color = DoctorGreen, modifier = Modifier.padding(top = 8.dp))
-                                    questions.sortedBy { it.order }.forEachIndexed { index, question ->
-                                        InfoLine("${index + 1}. ${question.question}", question.answer?.takeIf(String::isNotBlank) ?: "Chưa trả lời")
-                                    }
-                                }
-                            }
-                            is LoadState.Loading -> Text("Đang tải dữ liệu sàng lọc...", fontSize = 12.sp)
-                            else -> Text("Bệnh nhân chưa có phiếu sàng lọc.", fontSize = 12.sp)
-                        }
-                    }
-                }
-                item {
-                    DetailSection("Hồ sơ khám trước được chia sẻ", Icons.Outlined.FolderShared) {
-                        when (val records = sharedRecords) {
-                            is LoadState.Data -> if (records.value.isEmpty()) Text("Chưa có hồ sơ được chia sẻ hoặc quyền chia sẻ đã hết hiệu lực.", fontSize = 12.sp)
-                                else Text("${records.value.size} lần khám được người bệnh cấp quyền", color = DoctorGreen, fontSize = 12.sp)
-                            is LoadState.Error -> Text(records.message, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-                            else -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        }
-                    }
-                }
-                if (sharedRecords is LoadState.Data) items((sharedRecords as LoadState.Data<List<SharedRecord>>).value, key = { "record-${it.id}" }) { record ->
-                    DetailCard {
-                        Text("${formatDateTime(record.encounterDate)} · ${record.hospitalName}", fontWeight = FontWeight.Black, color = DoctorGreen)
-                        Text("${record.specialtyName} · ${record.doctorName}", fontSize = 12.sp, color = Color(0xFF64748B))
-                        record.chiefComplaint?.takeIf(String::isNotBlank)?.let { InfoLine("Lý do khám", it) }
-                        record.clinicalSummary?.takeIf(String::isNotBlank)?.let { InfoLine("Tóm tắt khám", it) }
-                        record.initialDiagnosis?.takeIf(String::isNotBlank)?.let { InfoLine("Chẩn đoán ban đầu", it) }
-                        record.diagnoses?.forEach { InfoLine("Chẩn đoán", "${it.diseaseName.orEmpty()}${it.icdCode?.let { code -> " ($code)" }.orEmpty()}") }
-                        record.observations?.forEach { InfoLine(it.name.orEmpty(), "${it.value.orEmpty()} ${it.unit.orEmpty()}".trim()) }
-                        record.treatmentPlan?.takeIf(String::isNotBlank)?.let { InfoLine("Điều trị", it) }
-                        record.conclusion?.takeIf(String::isNotBlank)?.let { InfoLine("Kết luận", it) }
-                        record.prescription?.items?.forEach { InfoLine("Thuốc: ${it.drugName.orEmpty()}", listOfNotNull(it.dosage, it.usageInstruction, it.duration).filter(String::isNotBlank).joinToString(" · ")) }
-                    }
-                }
-            }
         }
     }
 }
@@ -894,7 +863,7 @@ private fun ProfileScreen(nav: NavHostController, viewModel: DoctorViewModel) {
 }
 
 @Composable
-private fun <T> StateContent(state: LoadState<T>, modifier: Modifier = Modifier, retry: () -> Unit, content: @Composable (T) -> Unit) {
+internal fun <T> StateContent(state: LoadState<T>, modifier: Modifier = Modifier, retry: () -> Unit, content: @Composable (T) -> Unit) {
     Box(modifier.fillMaxSize()) {
         when (state) {
             is LoadState.Data -> content(state.value)
@@ -909,24 +878,62 @@ private fun <T> StateContent(state: LoadState<T>, modifier: Modifier = Modifier,
 @Composable private fun InfoLine(label: String, value: String) { Column(Modifier.padding(vertical = 3.dp)) { Text(label, color = Color(0xFF64748B), fontWeight = FontWeight.Bold, fontSize = 10.sp); Text(value, fontSize = 13.sp) } }
 @Composable private fun EmptyCard(text: String) = DetailCard { Box(Modifier.fillMaxWidth().padding(18.dp), contentAlignment = Alignment.Center) { Text(text, color = Color(0xFF64748B), fontSize = 12.sp) } }
 
-private val vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh")
-private fun formatDateTime(value: String): String = runCatching { OffsetDateTime.parse(value).atZoneSameInstant(vietnamZone).format(DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm")) }.getOrElse { value.replace("T", " ").take(16) }
-private fun formatBirthDate(value: String?): String = value?.takeIf(String::isNotBlank)?.let { runCatching { LocalDate.parse(it.substringBefore('T')).format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) }.getOrDefault(it.substringBefore('T')) } ?: "Chưa cung cấp"
-private fun genderLabel(value: String?): String = when (value?.uppercase()) { "MALE", "NAM" -> "Nam"; "FEMALE", "NU", "NỮ" -> "Nữ"; "OTHER", "KHAC", "KHÁC" -> "Khác"; else -> "Chưa cung cấp" }
-private fun riskLabel(value: String?): String = when (value?.uppercase()) { "LOW" -> "Nguy cơ thấp"; "MODERATE", "MEDIUM" -> "Nguy cơ trung bình"; "HIGH" -> "Nguy cơ cao"; "URGENT", "EMERGENCY" -> "Cần xử trí khẩn cấp"; "CONSULT" -> "Nên tham vấn bác sĩ"; else -> "Chưa phân loại" }
-private fun recommendationSummary(value: com.google.gson.JsonElement?): String {
+internal val vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh")
+internal fun formatDateTime(value: String): String = runCatching { OffsetDateTime.parse(value).atZoneSameInstant(vietnamZone).format(DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm")) }.getOrElse { value.replace("T", " ").take(16) }
+internal fun formatBirthDate(value: String?): String = value?.takeIf(String::isNotBlank)?.let { runCatching { LocalDate.parse(it.substringBefore('T')).format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) }.getOrDefault(it.substringBefore('T')) } ?: "Chưa cung cấp"
+internal fun genderLabel(value: String?): String = when (value?.uppercase()) { "MALE", "NAM" -> "Nam"; "FEMALE", "NU", "NỮ" -> "Nữ"; "OTHER", "KHAC", "KHÁC" -> "Khác"; else -> "Chưa cung cấp" }
+internal fun riskLabel(value: String?): String = when (value?.uppercase()) {
+    "LOW" -> "Nguy cơ thấp"
+    "MONITOR" -> "Theo dõi tại nhà"
+    "MODERATE", "MEDIUM" -> "Nguy cơ trung bình"
+    "HIGH" -> "Nguy cơ cao"
+    "URGENT" -> "Cần bác sĩ đánh giá sớm"
+    "EMERGENCY" -> "Cần xử trí khẩn cấp"
+    "CONSULT" -> "Nên tham vấn bác sĩ"
+    else -> "Chưa phân loại"
+}
+internal fun nextActionLabel(value: String?): String = when (value?.trim()?.uppercase()) {
+    "BOOK_SPECIALTY" -> "Đặt lịch khám đúng chuyên khoa gợi ý"
+    "CHOOSE_FACILITY" -> "Chọn cơ sở y tế có cung cấp chuyên khoa phù hợp"
+    "EMERGENCY_GUIDANCE" -> "Cảnh báo khẩn cấp — Hướng dẫn gọi cấp cứu 115"
+    "URGENT_GUIDANCE" -> "Khuyến nghị đến cơ sở y tế để bác sĩ đánh giá sớm"
+    "ASK_MORE" -> "Cần bổ sung thêm thông tin triệu chứng trước khi định hướng"
+    "REVIEW_REQUIRED" -> "Cần nhân viên y tế hoặc bác sĩ xem xét trực tiếp"
+    "CONTACT_FACILITY" -> "Liên hệ trực tiếp cơ sở y tế để được hướng dẫn phù hợp"
+    else -> value?.takeIf(String::isNotBlank) ?: "Chưa xác định"
+}
+internal fun decisionReasonLabel(value: String?): String = when (value?.trim()?.uppercase()) {
+    "SUPPORTED_AND_AVAILABLE" -> "Đủ dữ kiện triệu chứng và chuyên khoa hiện có tại cơ sở đã chọn"
+    "SPECIALTY_NOT_AT_FACILITY" -> "Đã xác định chuyên khoa phù hợp, nhưng cơ sở đã chọn chưa xác nhận cung cấp chuyên khoa này"
+    "SPECIALTY_NOT_IN_CATALOG" -> "Danh mục hệ thống hiện chưa có chuyên khoa tương ứng với triệu chứng đã cung cấp"
+    "AMBIGUOUS_SPECIALTIES" -> "Thông tin hiện tại còn giao thoa giữa nhiều chuyên khoa, cần khai thác thêm"
+    "INSUFFICIENT_EVIDENCE" -> "Chưa đủ bằng chứng y khoa để xác nhận một chuyên khoa duy nhất"
+    "MISSING_INFORMATION" -> "Còn thiếu thông tin bắt buộc để hoàn tất phân loại"
+    "REGION_CONFLICT" -> "Vùng cơ thể đã chọn chưa khớp với vị trí triệu chứng trong lời kể"
+    else -> value?.takeIf(String::isNotBlank) ?: "Chưa có lý do chi tiết"
+}
+internal fun recommendationSummary(value: com.google.gson.JsonElement?): String {
     if (value == null || value.isJsonNull) return "Chưa có nhận định"
     if (value.isJsonPrimitive) return value.asString.takeIf(String::isNotBlank) ?: "Chưa có nhận định"
     if (!value.isJsonObject) return "Chưa có nhận định"
     val summary = value.asJsonObject.get("summary")
     return if (summary != null && summary.isJsonPrimitive) summary.asString.takeIf(String::isNotBlank) ?: "Chưa có nhận định" else "Chưa có nhận định"
 }
-private fun recommendationDetails(value: com.google.gson.JsonElement?): List<Pair<String, String>> {
+internal fun recommendationDetails(value: com.google.gson.JsonElement?): List<Pair<String, String>> {
     if (value == null || !value.isJsonObject) return emptyList()
     val data = value.asJsonObject
-    return listOf("nextAction" to "Hướng xử trí", "decisionReason" to "Lý do khuyến nghị", "ppgExplanation" to "Nhận định nhịp tim")
-        .mapNotNull { (key, label) -> data.get(key)?.takeIf { it.isJsonPrimitive && it.asString.isNotBlank() }?.asString?.let { label to it } }
+    val items = mutableListOf<Pair<String, String>>()
+    data.get("nextAction")?.takeIf { it.isJsonPrimitive && it.asString.isNotBlank() }?.asString?.let {
+        items.add("Hướng xử trí" to nextActionLabel(it))
+    }
+    data.get("decisionReason")?.takeIf { it.isJsonPrimitive && it.asString.isNotBlank() }?.asString?.let {
+        items.add("Lý do khuyến nghị" to decisionReasonLabel(it))
+    }
+    data.get("ppgExplanation")?.takeIf { it.isJsonPrimitive && it.asString.isNotBlank() }?.asString?.let {
+        items.add("Nhận định nhịp tim PPG" to it)
+    }
+    return items
 }
-private fun dateOnly(date: LocalDate) = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-private fun dayLabel(day: Int) = listOf("Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy").getOrElse(day) { "" }
-private fun statusLabel(status: String) = mapOf("PENDING" to "Chờ xác nhận", "AWAITING_PAYMENT" to "Chờ thanh toán", "CONFIRMED" to "Đã xác nhận", "PAID" to "Đã thanh toán", "COMPLETED" to "Hoàn thành", "CANCELLED" to "Đã hủy", "NO_SHOW" to "Không đến")[status] ?: status
+internal fun dateOnly(date: LocalDate) = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+internal fun dayLabel(day: Int) = listOf("Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy").getOrElse(day) { "" }
+internal fun statusLabel(status: String) = mapOf("PENDING" to "Chờ xác nhận", "AWAITING_PAYMENT" to "Chờ thanh toán", "CONFIRMED" to "Đã xác nhận", "PAID" to "Đã thanh toán", "COMPLETED" to "Hoàn thành", "CANCELLED" to "Đã hủy", "NO_SHOW" to "Không đến")[status] ?: status

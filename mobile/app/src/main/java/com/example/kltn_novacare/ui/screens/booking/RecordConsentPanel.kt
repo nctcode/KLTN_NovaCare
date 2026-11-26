@@ -477,6 +477,7 @@ fun RecordConsentPanel(
 // ==============================================================================
 // 2. CONSENT MANAGEMENT (Public Composable used by PatientRecordBook & History)
 // ==============================================================================
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ConsentManagement(profileId: String) {
     val api = remember { ApiClient.getService() }
@@ -486,6 +487,7 @@ fun ConsentManagement(profileId: String) {
     var logs by remember(profileId) { mutableStateOf<List<JsonObject>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var pendingRevokeId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(profileId, refresh) {
         error = null
@@ -495,102 +497,268 @@ fun ConsentManagement(profileId: String) {
             .fold({ logs = it }, { error = it.message })
     }
 
+    fun formatDateStr(raw: String): String {
+        val d = raw.substringBefore('T')
+        return runCatching {
+            java.time.LocalDate.parse(d)
+                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        }.getOrDefault(d)
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         error?.let {
-            Text(it, color = Color(0xFFDC2626), fontSize = 12.sp)
+            Surface(
+                color = StatusErrorBg,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(it, color = StatusErrorText, fontSize = 12.sp, modifier = Modifier.padding(10.dp))
+            }
+        }
+
+        // Section Header: Consents
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Quyền chia sẻ đã cấp",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 14.5.sp,
+                color = TextPrimary
+            )
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFECFDF5)
+            ) {
+                Text(
+                    "${consents.size} mục",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryDark,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
         }
 
         if (consents.isEmpty()) {
-            Text("Chưa có quyền chia sẻ nào được cấp.", fontSize = 12.sp, color = TextMuted)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, Border)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Outlined.LockOpen, contentDescription = null, tint = TextMuted, modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.height(6.dp))
+                    Text("Chưa có quyền chia sẻ nào được cấp.", fontSize = 12.5.sp, color = TextSecondary)
+                }
+            }
         }
 
         consents.forEach { consent ->
             val expiry = consent.text("expiresAt")
             val expired = runCatching { Instant.parse(expiry) <= Instant.now() }.getOrDefault(false)
             val status = consent.text("status")
+            val isActiveConsent = !expired && status in listOf("GRANTED", "PENDING")
             val sourceName = consent.get("sourceHospital")?.takeIf { it.isJsonObject }?.asJsonObject?.text("name") ?: "Cơ sở nguồn"
             val targetHospitalName = consent.get("targetHospital")?.takeIf { it.isJsonObject }?.asJsonObject?.text("name") ?: "Cơ sở đích"
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, if (isActiveConsent) PrimaryBorder else Border),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Status Badge + Expiry Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "$sourceName → $targetHospitalName",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
-
                         Surface(
-                            color = if (expired || status == "REVOKED") Color(0xFFF1F5F9) else Color(0xFFECFDF5),
-                            shape = RoundedCornerShape(20.dp)
+                            color = when {
+                                expired -> StatusWarningBg
+                                status == "REVOKED" -> Color(0xFFF1F5F9)
+                                else -> Color(0xFFECFDF5)
+                            },
+                            shape = RoundedCornerShape(20.dp),
+                            border = BorderStroke(
+                                1.dp,
+                                when {
+                                    expired -> Color(0xFFFDE68A)
+                                    status == "REVOKED" -> Border
+                                    else -> PrimaryBorder
+                                }
+                            )
                         ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(
+                                            when {
+                                                expired -> Warning
+                                                status == "REVOKED" -> TextMuted
+                                                else -> Primary
+                                            },
+                                            CircleShape
+                                        )
+                                )
+                                Text(
+                                    text = if (expired) "Đã hết hạn" else when (status) {
+                                        "GRANTED" -> "Đang cấp quyền"
+                                        "REVOKED" -> "Đã thu hồi"
+                                        else -> "Chờ xác nhận"
+                                    },
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = when {
+                                        expired -> StatusWarningText
+                                        status == "REVOKED" -> TextMuted
+                                        else -> Color(0xFF064E3B)
+                                    }
+                                )
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(Icons.Outlined.Event, contentDescription = null, tint = TextMuted, modifier = Modifier.size(13.dp))
                             Text(
-                                text = if (expired) "Hết hạn" else when(status) {
-                                    "GRANTED" -> "Đã cấp quyền"
-                                    "REVOKED" -> "Đã thu hồi"
-                                    else -> "Chờ xác nhận"
-                                },
+                                text = "Hạn: ${formatDateStr(expiry)}",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (expired || status == "REVOKED") TextMuted else PrimaryDark,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary
                             )
                         }
                     }
 
-                    val allowed = consent.get("scope")?.takeIf { it.isJsonObject }?.asJsonObject
-                        ?.get("allowedSections")?.takeIf { it.isJsonArray }?.asJsonArray
-                        ?.mapNotNull { if (it.isJsonPrimitive) it.asString else null }
-                        ?.joinToString {
-                            when(it) {
-                                "SUMMARY" -> "Tóm tắt"
-                                "DIAGNOSES" -> "Chẩn đoán"
-                                "OBSERVATIONS" -> "Cận lâm sàng"
-                                else -> "Đơn thuốc"
+                    // Hospital Flow Box (Source -> Target)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Background,
+                        border = BorderStroke(1.dp, BorderLight),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(Modifier.size(8.dp).background(Primary, CircleShape))
+                                Text(
+                                    text = sourceName,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
                             }
-                        }.orEmpty()
-
-                    if (allowed.isNotBlank()) {
-                        Text("Phạm vi: $allowed", fontSize = 12.sp, color = TextSecondary)
+                            Row(
+                                modifier = Modifier.padding(start = 1.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Chia sẻ đến",
+                                    fontSize = 10.5.sp,
+                                    color = TextMuted,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(Modifier.size(8.dp).background(Color(0xFF0C4B39), CircleShape))
+                                Text(
+                                    text = targetHospitalName,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF0C4B39)
+                                )
+                            }
+                        }
                     }
 
-                    Text(
-                        text = "Hạn dùng: ${if (expiry.length >= 10) expiry.substring(0, 10) else expiry}",
-                        fontSize = 11.sp,
-                        color = TextMuted
-                    )
+                    // Allowed Sections Chips
+                    val allowedList = consent.get("scope")?.takeIf { it.isJsonObject }?.asJsonObject
+                        ?.get("allowedSections")?.takeIf { it.isJsonArray }?.asJsonArray
+                        ?.mapNotNull { if (it.isJsonPrimitive) it.asString else null }
+                        .orEmpty()
 
-                    if (!expired && status in listOf("GRANTED", "PENDING")) {
+                    if (allowedList.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                "Phạm vi dữ liệu chia sẻ:",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextMuted
+                            )
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                allowedList.forEach { sec ->
+                                    val label = when (sec) {
+                                        "SUMMARY" -> "Tóm tắt khám"
+                                        "DIAGNOSES" -> "Chẩn đoán"
+                                        "OBSERVATIONS" -> "Cận lâm sàng"
+                                        else -> "Đơn thuốc"
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color(0xFFF1F5F9)
+                                    ) {
+                                        Text(
+                                            label,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = TextPrimary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (isActiveConsent) {
+                        HorizontalDivider(color = BorderLight)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            TextButton(
+                            OutlinedButton(
                                 enabled = !busy,
-                                onClick = {
-                                    scope.launch {
-                                        busy = true
-                                        healthApiResult("Không thu hồi được quyền", { api.revokeConsent(consent.text("id")) }) { it.data }
-                                            .fold({ refresh++ }, { error = it.message })
-                                        busy = false
-                                    }
-                                },
-                                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFDC2626))
+                                onClick = { pendingRevokeId = consent.text("id") },
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color(0xFFFFF1F2),
+                                    contentColor = Color(0xFFBE123C)
+                                ),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                modifier = Modifier.height(36.dp)
                             ) {
+                                Icon(Icons.Outlined.Block, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(5.dp))
                                 Text("Thu hồi quyền", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
@@ -599,36 +767,79 @@ fun ConsentManagement(profileId: String) {
             }
         }
 
-        Text("Nhật ký bệnh viện truy cập", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        // Section Header: Audit Logs
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Nhật ký bệnh viện truy cập",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 14.5.sp,
+                color = TextPrimary
+            )
+            if (logs.isNotEmpty()) {
+                Text("${logs.size} lượt", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+            }
+        }
+
         if (logs.isEmpty()) {
-            Text("Chưa có lượt truy cập hồ sơ nào được ghi nhận.", fontSize = 12.sp, color = TextMuted)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, Border)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(Icons.Outlined.VisibilityOff, contentDescription = null, tint = TextMuted, modifier = Modifier.size(18.dp))
+                    Text("Chưa có lượt truy cập hồ sơ nào được ghi nhận.", fontSize = 12.sp, color = TextSecondary)
+                }
+            }
         }
         logs.forEach { logItem ->
             val hospitalWhoAccessed = logItem.get("user")?.takeIf { it.isJsonObject }?.asJsonObject
                 ?.get("hospital")?.takeIf { it.isJsonObject }?.asJsonObject?.text("name").orEmpty()
-            val accessedAt = logItem.text("createdAt")
+            val accessedAtRaw = logItem.text("createdAt")
+            val accessedAt = runCatching {
+                Instant.parse(accessedAtRaw)
+                    .atZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm · dd/MM/yyyy"))
+            }.getOrElse { formatDateStr(accessedAtRaw) }
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, Border)
             ) {
                 Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(Icons.Outlined.Visibility, null, tint = TextSecondary, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color(0xFFECFDF5), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.Visibility, null, tint = Color(0xFF0C4B39), modifier = Modifier.size(18.dp))
+                    }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             text = if (hospitalWhoAccessed.isNotBlank()) hospitalWhoAccessed else "Cơ sở y tế điều trị",
-                            fontSize = 12.sp,
+                            fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
                         Text(
                             text = "Đã xem lúc $accessedAt",
-                            fontSize = 11.sp,
+                            fontSize = 11.5.sp,
                             color = TextMuted
                         )
                     }
@@ -636,11 +847,96 @@ fun ConsentManagement(profileId: String) {
             }
         }
 
-        TextButton(onClick = { refresh++ }) {
+        OutlinedButton(
+            onClick = { refresh++ },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, PrimaryBorder),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color.White,
+                contentColor = PrimaryDark
+            )
+        ) {
             Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text("Làm mới quyền và nhật ký", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("Làm mới quyền và nhật ký", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
         }
+    }
+
+    pendingRevokeId?.let { consentId ->
+        AlertDialog(
+            onDismissRequest = { if (!busy) pendingRevokeId = null },
+            shape = RoundedCornerShape(22.dp),
+            containerColor = Color.White,
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFFFFF1F2), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.Block,
+                        contentDescription = null,
+                        tint = Color(0xFFDC2626),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    "Thu hồi quyền chia sẻ?",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 17.sp,
+                    color = TextPrimary
+                )
+            },
+            text = {
+                Text(
+                    "Cơ sở y tế đích sẽ không còn xem được hồ sơ bệnh án từ quyền chia sẻ này nữa. Bạn luôn có thể cấp lại quyền khi đặt lịch mới.",
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            healthApiResult("Thu hồi quyền thất bại", { api.revokeConsent(consentId) }) { true }
+                                .fold(
+                                    onSuccess = {
+                                        pendingRevokeId = null
+                                        refresh++
+                                    },
+                                    onFailure = {
+                                        pendingRevokeId = null
+                                        error = it.message
+                                    }
+                                )
+                            busy = false
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                ) {
+                    Text(
+                        if (busy) "Đang thu hồi..." else "Thu hồi quyền",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !busy,
+                    onClick = { pendingRevokeId = null }
+                ) {
+                    Text("Hủy", color = TextSecondary, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
     }
 }
 

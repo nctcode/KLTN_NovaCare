@@ -2,9 +2,12 @@ package com.example.kltn_novacare.data.repository
 
 import com.example.kltn_novacare.data.model.Specialty
 import com.example.kltn_novacare.data.model.Hospital
+import com.example.kltn_novacare.data.model.HospitalBranch
 import com.example.kltn_novacare.data.model.Doctor
 import com.example.kltn_novacare.data.model.AppointmentSlot
 import com.example.kltn_novacare.data.model.MedicalService
+import com.example.kltn_novacare.data.model.PublicReviewPage
+import com.example.kltn_novacare.data.model.PublicReviewStats
 import com.example.kltn_novacare.data.remote.ApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,6 +37,76 @@ class DoctorRepository {
                 Result.success(body.data ?: emptyList())
             } else {
                 Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tải cơ sở y tế"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getHospitalById(id: String): Result<Hospital> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getHospitalById(id).execute()
+            val body = response.body()
+            if (response.isSuccessful && body != null && body.success && body.data != null) {
+                Result.success(body.data)
+            } else {
+                Result.failure(Exception(body?.error ?: body?.message ?: "Không tìm thấy cơ sở y tế"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getHospitalBranches(hospitalId: String): Result<List<HospitalBranch>> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getHospitalBranches(hospitalId).execute()
+            val body = response.body()
+            if (response.isSuccessful && body != null && body.success) {
+                Result.success(body.data ?: emptyList())
+            } else {
+                Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tải danh sách chi nhánh"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getHospitalSpecialties(hospitalId: String): Result<List<Specialty>> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getHospitalSpecialties(hospitalId).execute()
+            val body = response.body()
+            if (response.isSuccessful && body != null && body.success) {
+                Result.success(body.data ?: emptyList())
+            } else {
+                Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tải chuyên khoa của cơ sở"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getPublicHospitalReviewStats(hospitalId: String): Result<PublicReviewStats> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getPublicReviewStats("HOSPITAL", hospitalId).execute()
+            val body = response.body()
+            if (response.isSuccessful && body != null && body.success && body.data != null) {
+                Result.success(body.data)
+            } else {
+                Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tải thống kê đánh giá"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getPublicHospitalReviews(hospitalId: String, page: Int = 1, limit: Int = 20): Result<PublicReviewPage> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getPublicHospitalReviews(hospitalId, page, limit).execute()
+            val body = response.body()
+            if (response.isSuccessful && body != null && body.success && body.data != null) {
+                Result.success(body.data)
+            } else {
+                Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tải danh sách đánh giá"))
             }
         } catch (e: Exception) {
             Result.failure(e)

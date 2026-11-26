@@ -104,7 +104,24 @@ data class Hospital(
     val hotline: String? = null,
     val operatingHours: String? = null,
     val rating: Double? = null,
-    val reviewCount: Int? = null
+    val reviewCount: Int? = null,
+    val emergencyHotline: String? = null,
+    val website: String? = null,
+    val email: String? = null,
+    val googleMapUrl: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val establishedYear: Int? = null,
+    val bedCount: Int? = null,
+    val type: String? = null,
+    val status: String? = null,
+    val hospitalCode: String? = null,
+    val isActive: Boolean = true,
+    val images: List<String>? = null,
+    val branches: List<HospitalBranch>? = null,
+    val workPlaces: List<DoctorWorkplace>? = null,
+    val hospitalSpecialties: List<HospitalSpecialtyRelation>? = null,
+    val services: List<MedicalService>? = null
 ) {
     val displayAddress: String
         get() = address?.takeIf { it.isNotBlank() } ?: city ?: "Việt Nam"
@@ -114,7 +131,34 @@ data class Hospital(
 
     val displayCoverImage: String?
         get() = coverImageUrl?.takeIf { it.isNotBlank() } ?: image
+
+    val displayTypeLabel: String
+        get() = when (type?.uppercase()) {
+            "PUBLIC", "CÔNG" -> "Bệnh viện Công"
+            "PRIVATE", "TƯ NHÂN" -> "Bệnh viện Tư nhân"
+            "INTERNATIONAL", "QUỐC TẾ" -> "Bệnh viện Quốc tế"
+            "CLINIC" -> "Phòng khám Chuyên khoa"
+            null, "" -> "Cơ sở y tế"
+            else -> "Bệnh viện $type"
+        }
+
+    val displayStatusLabel: String
+        get() = when (status?.uppercase()) {
+            "ACTIVE", "HOẠT ĐỘNG" -> "Hoạt động"
+            "PAUSED", "TẠM NGƯNG" -> "Tạm ngưng"
+            "TERMINATED", "NGỪNG HỢP TÁC" -> "Ngừng hợp tác"
+            null, "" -> if (isActive) "Hoạt động" else "Tạm ngưng"
+            else -> status
+        }
 }
+
+data class HospitalSpecialtyRelation(
+    val id: String? = null,
+    val hospitalId: String? = null,
+    val specialtyId: String? = null,
+    val isActive: Boolean = true,
+    val specialty: Specialty? = null
+)
 
 data class Specialty(
     val id: String,
@@ -460,7 +504,63 @@ data class HospitalBranch(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val isActive: Boolean = true,
-    val hospital: Hospital? = null
+    val hospital: Hospital? = null,
+    val workingHours: String? = null,
+    val image: String? = null,
+    val mapEmbedUrl: String? = null
+)
+
+data class StarDistributionEntry(
+    val count: Int = 0,
+    val percentage: Double = 0.0
+)
+
+data class PublicReviewStats(
+    val targetType: String? = null,
+    val targetId: String? = null,
+    val totalReviews: Int = 0,
+    val averageRating: Double = 0.0,
+    val starDistribution: Map<String, StarDistributionEntry>? = null,
+    val criteriaAverages: Map<String, Double>? = null
+)
+
+data class PublicReviewResponseItem(
+    val id: String,
+    val responderName: String? = null,
+    val responderRole: String? = null,
+    val responseContent: String? = null,
+    val createdAt: String? = null
+)
+
+data class PublicReviewItem(
+    val id: String,
+    val rating: Int = 5,
+    val comment: String? = null,
+    val isAnonymous: Boolean = false,
+    val authorName: String? = null,
+    val isVerifiedVisit: Boolean = false,
+    val createdAt: String? = null,
+    val user: ReviewAuthor? = null,
+    val responses: List<PublicReviewResponseItem>? = null
+) {
+    val displayAuthor: String
+        get() = when {
+            isAnonymous -> "Người bệnh ẩn danh"
+            !authorName.isNullOrBlank() -> authorName
+            !user?.fullName.isNullOrBlank() -> user!!.fullName!!
+            else -> "Bệnh nhân NovaCare"
+        }
+}
+
+data class ReviewAuthor(
+    val id: String? = null,
+    val fullName: String? = null
+)
+
+data class PublicReviewPage(
+    val items: List<PublicReviewItem> = emptyList(),
+    val total: Int = 0,
+    val totalPages: Int = 0
 )
 
 // Base API wrapper structures

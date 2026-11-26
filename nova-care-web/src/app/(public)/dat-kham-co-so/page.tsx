@@ -23,7 +23,7 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { Hospital } from '@/types';
-import { BookingType, BOOKING_TYPES_CONFIG } from '@/config/bookingTypes';
+import { ACTIVE_BOOKING_TYPES, BookingType, BOOKING_TYPES_CONFIG } from '@/config/bookingTypes';
 
 function HospitalBookingPageContent() {
   const searchParams = useSearchParams();
@@ -56,20 +56,24 @@ function HospitalBookingPageContent() {
     fetchedDoctorForHospital?.workPlaces?.[0]?.hospitalId ||
     null;
 
-  // Helper to parse valid BookingType from query parameter
+  // Helper to parse valid active BookingType from query parameter (SERVICE | DOCTOR | OUT_OF_HOURS)
   const parseBookingType = (modeStr: string | null): BookingType | null => {
     if (!modeStr) {
       if (doctorIdParam || workplaceIdParam) return 'DOCTOR';
-      if (serviceIdParam) return 'SERVICE';
-      if (specialtyIdParam) return 'GENERAL';
+      if (serviceIdParam || specialtyIdParam) return 'SERVICE';
       return null;
     }
-    const normalized = modeStr.toUpperCase();
-    if (normalized in BOOKING_TYPES_CONFIG) {
-      return normalized as BookingType;
+    const normalized = modeStr.toUpperCase() as BookingType;
+    if (ACTIVE_BOOKING_TYPES.includes(normalized)) {
+      return normalized;
     }
-    // Backward compatibility mappings
-    if (normalized === 'SPECIALTY' || normalized === 'STANDARD') return 'GENERAL';
+    // Map legacy specialty/general links to Khám dịch vụ; drop removed modes so user chooses from the 3 active modes
+    if (normalized === 'GENERAL' || (normalized as string) === 'SPECIALTY' || (normalized as string) === 'STANDARD') {
+      return 'SERVICE';
+    }
+    if ((normalized as string) === 'AFTER_HOURS') {
+      return 'OUT_OF_HOURS';
+    }
     return null;
   };
 
@@ -144,7 +148,7 @@ function HospitalBookingPageContent() {
               Đăng Ký Đặt Khám Tại Bệnh Viện
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Lựa chọn cơ sở y tế • Chọn 1 trong 6 hình thức đăng ký • Giữ chỗ khám ưu tiên
+              Lựa chọn cơ sở y tế • Chọn 1 trong 3 hình thức đăng ký • Giữ chỗ khám ưu tiên
             </p>
           </div>
 

@@ -786,15 +786,24 @@ export function SpecialtyBookingModal({
                   type="button"
                   onClick={async () => {
                     if (createdAppointment?.id) {
-                      await paymentService.simulateSuccess(createdAppointment.id, 'MOMO');
-                      toast.success('Thanh toán thành công (Demo Instant)!');
+                      try {
+                        const res = await paymentService.createPayment(createdAppointment.id);
+                        if (res?.paymentUrl) {
+                          window.location.href = res.paymentUrl;
+                          return;
+                        }
+                      } catch {
+                        // fallback to VNPAY sandbox simulate if gateway unreachable
+                      }
+                      await paymentService.simulateSuccess(createdAppointment.id, 'VNPAY');
+                      toast.success('Thanh toán VNPAY Sandbox thành công!');
                       onClose();
                       window.location.href = `/lich-kham/${createdAppointment.id}`;
                     }
                   }}
-                  className="bg-[#0c4b39] hover:bg-[#09382b] text-white font-extrabold text-xs h-11 px-6 rounded-xl w-full sm:w-auto shadow-md"
+                  className="bg-[#005baa] hover:bg-[#004887] text-white font-extrabold text-xs h-11 px-6 rounded-xl w-full sm:w-auto shadow-md"
                 >
-                  💳 Thanh toán ngay (Demo Instant) ➔
+                  💳 Thanh toán qua VNPAY Sandbox ➔
                 </Button>
 
                 <Button

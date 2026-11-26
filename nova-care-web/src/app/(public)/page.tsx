@@ -185,14 +185,14 @@ const QUICK_BOOKING_SERVICES = [
     iconBg: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white',
   },
   {
-    id: 'inpatient-followup',
-    title: 'Tái khám nội trú',
-    subtitle: 'Nhập mã bệnh án đặt lịch tái khám',
+    id: 'out-of-hours',
+    title: 'Khám ngoài giờ',
+    subtitle: 'Thứ bảy & Chủ nhật · Đồng giá 270.000đ',
     icon: CalendarCheck2,
-    href: '/dat-kham-co-so?mode=inpatient_followup',
-    badge: 'Tái khám nhanh',
-    badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    iconBg: 'bg-emerald-50 text-[#0c4b39] group-hover:bg-[#0c4b39] group-hover:text-white',
+    href: '/dat-kham-co-so?mode=out_of_hours',
+    badge: 'Cuối tuần',
+    badgeColor: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+    iconBg: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white',
   },
   {
     id: 'telehealth',
@@ -600,7 +600,7 @@ export default function HomePage() {
                 {specialties.map((specialty) => (
                   <Link
                     key={specialty.id}
-                    href={`/dat-kham-co-so?specialtyId=${specialty.id}&mode=general`}
+                    href={`/dat-kham-co-so?specialtyId=${specialty.id}&mode=service`}
                     className="min-w-[190px] max-w-[210px] flex-shrink-0 bg-white border border-slate-200 hover:border-emerald-600/50 rounded-2xl p-5 text-gray-800 flex flex-col items-center justify-between h-[180px] group hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 shadow-xs relative overflow-hidden cursor-pointer no-underline"
                   >
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 group-hover:bg-emerald-700 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-xs mb-1">

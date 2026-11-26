@@ -115,6 +115,25 @@ interface ApiService {
     @GET("hospitals")
     fun getHospitals(): Call<ApiResponse<List<Hospital>>>
 
+    @GET("hospitals/{id}")
+    fun getHospitalById(@Path("id") id: String): Call<ApiResponse<Hospital>>
+
+    @GET("hospital-branches/hospital/{hospitalId}")
+    fun getHospitalBranches(@Path("hospitalId") hospitalId: String): Call<ApiResponse<List<HospitalBranch>>>
+
+    @GET("reviews/public/stats")
+    fun getPublicReviewStats(
+        @Query("targetType") targetType: String,
+        @Query("targetId") targetId: String
+    ): Call<ApiResponse<PublicReviewStats>>
+
+    @GET("reviews/public/hospital/{hospitalId}")
+    fun getPublicHospitalReviews(
+        @Path("hospitalId") hospitalId: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Call<ApiResponse<PublicReviewPage>>
+
     @GET("hospitals/{hospitalId}/specialties")
     fun getHospitalSpecialties(@Path("hospitalId") hospitalId: String): Call<ApiResponse<List<Specialty>>>
 
@@ -302,6 +321,9 @@ interface ApiService {
     @POST("payments/create")
     fun createPayment(@Body request: CreatePaymentRequest): Call<ApiResponse<PaymentUrlResponse>>
 
+    @GET("payments/vnpay-ipn")
+    fun verifyVnpayIpn(@QueryMap params: Map<String, String>): Call<com.google.gson.JsonObject>
+
     @GET("payments/status/{appointmentId}")
     fun getPaymentStatus(@Path("appointmentId") appointmentId: String): Call<ApiResponse<PaymentStatusResponse>>
 
@@ -385,7 +407,8 @@ data class RescheduleAppointmentRequest(
 )
 
 data class CreatePaymentRequest(
-    val appointmentId: String
+    val appointmentId: String,
+    val bankCode: String? = null
 )
 
 data class PaymentUrlResponse(

@@ -496,7 +496,7 @@ fun HomeScreen(
                             Card(
                                 modifier = Modifier
                                     .width(240.dp)
-                                    .clickable { navController.navigate(Screen.HospitalBooking.createRoute(hosp.id)) },
+                                    .clickable { navController.navigate(Screen.HospitalDetail.createRoute(hosp.id)) },
                                 colors = CardDefaults.cardColors(containerColor = Color.White),
                                 shape = RoundedCornerShape(16.dp),
                                 border = BorderStroke(1.dp, Border),
@@ -507,7 +507,7 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     AsyncImage(
-                                        model = hosp.image ?: "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=150",
+                                        model = hosp.displayLogo ?: hosp.displayCoverImage ?: "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=150",
                                         contentDescription = hosp.name,
                                         modifier = Modifier
                                             .size(52.dp)

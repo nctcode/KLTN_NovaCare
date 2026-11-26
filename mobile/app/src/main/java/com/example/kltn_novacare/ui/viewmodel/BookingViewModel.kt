@@ -35,6 +35,8 @@ data class BookingUiState(
     val createdAppointment: Appointment? = null,
     val checkoutState: NetworkState<Unit> = NetworkState.Idle,
     val showSimulation: Boolean = false,
+    val vnpayUrl: String? = null,
+    val paidBySimulation: Boolean = false,
     val resumed: Boolean = false
 ) {
     val busy get() = checkoutState is NetworkState.Loading
@@ -132,7 +134,7 @@ class BookingViewModel(
     fun selectProfile(profile: PatientProfile) = draft { it.copy(selectedProfile = profile) }
     fun setDetails(reason: String, symptoms: String) = draft { it.copy(reason = reason, symptoms = symptoms) }
     fun setPaymentMethod(method: String) {
-        if (!_uiState.value.busy && method in listOf("CASH", "MOMO", "VNPAY", "VIETQR", "CARD"))
+        if (!_uiState.value.busy && method in listOf("CASH", "VNPAY"))
             _uiState.value = _uiState.value.copy(paymentMethod = method, checkoutState = NetworkState.Idle)
     }
     fun dismissSimulation() {
@@ -188,7 +190,72 @@ class BookingViewModel(
                     onFailure = { fail(it.message ?: "Không thể xác nhận lịch khám") }
                 )
             } else {
-                _uiState.value = _uiState.value.copy(showSimulation = true, checkoutState = NetworkState.Idle)
+                val urlResult = appointmentRepository.createPayment(appointment.id)
+                urlResult.fold(
+                    onSuccess = { paymentUrl ->
+                        _uiState.value = _uiState.value.copy(
+                            vnpayUrl = paymentUrl,
+                            showSimulation = true,
+                            checkoutState = NetworkState.Idle
+                        )
+                    },
+                    onFailure = { err ->
+                        _uiState.value = _uiState.value.copy(
+                            vnpayUrl = null,
+                            showSimulation = true,
+                            checkoutState = NetworkState.Error(err.message ?: "Không thể tạo liên kết VNPAY Sandbox")
+                        )
+                    }
+                )
+            }
+        }
+    }
+
+    fun refreshVnpayUrl() {
+        val state = _uiState.value
+        val appointment = state.createdAppointment ?: return
+        if (state.busy) return
+        _uiState.value = state.copy(checkoutState = NetworkState.Loading)
+        viewModelScope.launch(dispatcher) {
+            appointmentRepository.createPayment(appointment.id).fold(
+                onSuccess = { url ->
+                    _uiState.value = _uiState.value.copy(vnpayUrl = url, checkoutState = NetworkState.Idle)
+                },
+                onFailure = { err ->
+                    fail(err.message ?: "Không thể tải lại liên kết VNPAY Sandbox")
+                }
+            )
+        }
+    }
+
+    fun handleVnpayReturn(queryParams: Map<String, String>) {
+        val state = _uiState.value
+        val appointment = state.createdAppointment ?: return
+        val responseCode = queryParams["vnp_ResponseCode"]
+        if (responseCode != "00") {
+            val msg = if (responseCode == "24") {
+                "Bạn đã hủy giao dịch thanh toán trên cổng VNPAY."
+            } else {
+                "Giao dịch VNPAY chưa hoàn tất (Mã phản hồi: ${responseCode ?: "N/A"})."
+            }
+            _uiState.value = state.copy(checkoutState = NetworkState.Error(msg))
+            return
+        }
+        _uiState.value = state.copy(checkoutState = NetworkState.Loading)
+        viewModelScope.launch(dispatcher) {
+            // Forward VNPay return params to backend IPN verifier so local/sandbox updates status immediately
+            appointmentRepository.verifyVnpayReturn(queryParams)
+            val status = appointmentRepository.getPaymentStatus(appointment.id).getOrNull()
+            if (status?.paymentStatus == "PAID") {
+                _uiState.value = _uiState.value.copy(
+                    createdAppointment = appointment.copy(status = "PAID", paymentStatus = "PAID", paymentMethod = "VNPAY"),
+                    showSimulation = false,
+                    paidBySimulation = false,
+                    currentStep = 5,
+                    checkoutState = NetworkState.Success(Unit)
+                )
+            } else {
+                fail("Cổng VNPAY đã phản hồi nhưng máy chủ chưa xác nhận thanh toán. Vui lòng thử lại hoặc dùng nút mô phỏng.")
             }
         }
     }
@@ -205,7 +272,7 @@ class BookingViewModel(
                 fail(it.message ?: "Không thể kiểm tra thanh toán"); return@launch
             }
             if (status.paymentStatus != "PAID") {
-                val paid = appointmentRepository.simulatePayment(appointment.id, state.paymentMethod).getOrElse {
+                val paid = appointmentRepository.simulatePayment(appointment.id, "VNPAY").getOrElse {
                     fail(it.message ?: "Thanh toán mô phỏng thất bại"); return@launch
                 }
                 if (paid.status != "PAID" || paid.appointmentId != appointment.id) {
@@ -213,8 +280,11 @@ class BookingViewModel(
                 }
             }
             _uiState.value = _uiState.value.copy(
-                createdAppointment = appointment.copy(status = "PAID", paymentStatus = "PAID", paymentMethod = state.paymentMethod),
-                showSimulation = false, currentStep = 5, checkoutState = NetworkState.Success(Unit)
+                createdAppointment = appointment.copy(status = "PAID", paymentStatus = "PAID", paymentMethod = "VNPAY"),
+                showSimulation = false,
+                paidBySimulation = true,
+                currentStep = 5,
+                checkoutState = NetworkState.Success(Unit)
             )
         }
     }
@@ -226,7 +296,7 @@ class BookingViewModel(
             selectedProfile = appointment.patientProfile, selectedSlot = appointment.slot,
             workplace = appointment.workplace ?: appointment.slot?.doctorWorkplace,
             hospital = (appointment.workplace ?: appointment.slot?.doctorWorkplace)?.hospital,
-            paymentMethod = "MOMO"
+            paymentMethod = "VNPAY"
         )
     }
 }

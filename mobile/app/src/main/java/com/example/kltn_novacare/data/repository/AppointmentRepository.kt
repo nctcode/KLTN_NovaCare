@@ -116,14 +116,29 @@ class AppointmentRepository(private val apiService: ApiService = ApiClient.getSe
         }
     }
 
-    suspend fun createPayment(appointmentId: String): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun createPayment(appointmentId: String, bankCode: String? = null): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val response = apiService.createPayment(CreatePaymentRequest(appointmentId)).execute()
+            val response = apiService.createPayment(CreatePaymentRequest(appointmentId, bankCode)).execute()
             val body = response.body()
             if (response.isSuccessful && body != null && body.success && body.data != null) {
                 Result.success(body.data.paymentUrl)
             } else {
-                Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tạo liên kết thanh toán"))
+                Result.failure(Exception(body?.error ?: body?.message ?: "Không thể tạo liên kết thanh toán VNPAY"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun verifyVnpayReturn(params: Map<String, String>): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.verifyVnpayIpn(params).execute()
+            val rspCode = response.body()?.get("RspCode")?.asString
+            if (response.isSuccessful && (rspCode == "00" || rspCode == "02")) {
+                Result.success(rspCode)
+            } else {
+                val msg = response.body()?.get("Message")?.asString ?: "Không thể xác thực giao dịch VNPAY"
+                Result.failure(Exception(msg))
             }
         } catch (e: Exception) {
             Result.failure(e)

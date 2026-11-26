@@ -99,7 +99,8 @@ fun HospitalFacilityBookingScreen(
     initialHospitalId: String?, navController: NavController, bookingViewModel: BookingViewModel,
     doctorViewModel: DoctorViewModel, patientViewModel: PatientViewModel,
     initialSpecialtyId: String? = null, initialSpecialtyName: String? = null,
-    initialReason: String? = null, initialDoctorId: String? = null
+    initialReason: String? = null, initialDoctorId: String? = null,
+    initialMode: String? = null
 ) {
     var choosingHospital by rememberSaveable { mutableStateOf(initialHospitalId == null) }
     var initialized by rememberSaveable { mutableStateOf(false) }
@@ -142,10 +143,13 @@ fun HospitalFacilityBookingScreen(
         }
     }
 
-    LaunchedEffect(hospitals, initialHospitalId) {
+    LaunchedEffect(hospitals, initialHospitalId, initialMode) {
         if (!appliedInitial && initialHospitalId != null) {
             (hospitals as? NetworkState.Success)?.data?.find { it.id == initialHospitalId }?.let {
                 bookingViewModel.selectHospital(it)
+                if (!initialMode.isNullOrBlank()) {
+                    bookingViewModel.setBookingType(initialMode)
+                }
                 appliedInitial = true
                 choosingHospital = false
             }
@@ -175,12 +179,18 @@ fun HospitalFacilityBookingScreen(
                 Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
             } }) }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)) {
-                StepSelectHospital(doctorViewModel) { hospital, mode ->
-                    bookingViewModel.selectHospital(hospital)
-                    bookingViewModel.setBookingType(mode)
-                    choosingHospital = false
-                    appliedInitial = true
-                }
+                StepSelectHospital(
+                    doctorViewModel = doctorViewModel,
+                    onHospitalDetailClick = { hospital ->
+                        navController.navigate(Screen.HospitalDetail.createRoute(hospital.id))
+                    },
+                    onHospitalAndModeSelected = { hospital, mode ->
+                        bookingViewModel.selectHospital(hospital)
+                        bookingViewModel.setBookingType(mode)
+                        choosingHospital = false
+                        appliedInitial = true
+                    }
+                )
             }
         }
     } else {
@@ -647,13 +657,13 @@ fun CreatePatientProfileModal(
 @Composable
 fun StepSelectHospital(
     doctorViewModel: DoctorViewModel,
+    onHospitalDetailClick: (Hospital) -> Unit,
     onHospitalAndModeSelected: (Hospital, String) -> Unit
 ) {
     val hospitalsState by doctorViewModel.hospitals.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var selectedProvince by remember { mutableStateOf<String?>(null) }
     var selectedDistrict by remember { mutableStateOf<String?>(null) }
-    var detailHospital by remember { mutableStateOf<Hospital?>(null) }
     var bookingModesModalHospital by remember { mutableStateOf<Hospital?>(null) }
 
     LaunchedEffect(Unit) {
@@ -888,7 +898,9 @@ fun StepSelectHospital(
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onHospitalDetailClick(hosp) },
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         AsyncImage(
@@ -974,7 +986,7 @@ fun StepSelectHospital(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         OutlinedButton(
-                                            onClick = { detailHospital = hosp },
+                                            onClick = { onHospitalDetailClick(hosp) },
                                             modifier = Modifier.weight(1f),
                                             shape = RoundedCornerShape(10.dp),
                                             border = BorderStroke(1.dp, Color(0xFF0C4B39)),
@@ -1014,52 +1026,6 @@ fun StepSelectHospital(
             }
             else -> {}
         }
-    }
-
-    detailHospital?.let { hosp ->
-        AlertDialog(
-            onDismissRequest = { detailHospital = null },
-            title = {
-                Text(hosp.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF0F172A))
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AsyncImage(
-                        model = hosp.displayCoverImage ?: hosp.displayLogo ?: "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=600&auto=format&fit=crop&q=80",
-                        contentDescription = hosp.name,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(10.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    Text("📍 Địa chỉ: ${hosp.displayAddress}", fontSize = 12.sp, color = TextSecondary)
-                    hosp.phone?.let { Text("📞 Điện thoại: $it", fontSize = 12.sp, color = TextSecondary) }
-                    hosp.hotline?.let { Text("☎️ Hotline: $it", fontSize = 12.sp, color = Color(0xFF0C4B39), fontWeight = FontWeight.Bold) }
-                    hosp.operatingHours?.let { Text("⏰ Giờ làm việc: $it", fontSize = 12.sp, color = TextSecondary) }
-                    hosp.description?.let {
-                        Text("ℹ️ Giới thiệu: $it", fontSize = 11.sp, color = Color(0xFF475569), modifier = Modifier.padding(top = 4.dp))
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val selected = hosp
-                        detailHospital = null
-                        bookingModesModalHospital = selected
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0C4B39))
-                ) {
-                    Text("Đặt khám ngay", color = Color.White)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { detailHospital = null }) {
-                    Text("Đóng", color = TextSecondary)
-                }
-            }
-        )
     }
 
     bookingModesModalHospital?.let { hosp ->

@@ -16,6 +16,10 @@ sealed class Screen(val route: String) {
     object DoctorDetail : Screen("doctor/{doctorId}") {
         fun createRoute(doctorId: String) = "doctor/$doctorId"
     }
+
+    object HospitalDetail : Screen("hospital/{hospitalId}") {
+        fun createRoute(hospitalId: String) = "hospital/${android.net.Uri.encode(hospitalId)}"
+    }
     
     object Booking : Screen("booking/{doctorId}/{workplaceId}") {
         fun createRoute(doctorId: String, workplaceId: String) = "booking/$doctorId/$workplaceId"
@@ -48,20 +52,22 @@ sealed class Screen(val route: String) {
         fun createRoute(url: String) = "payment/${java.net.URLEncoder.encode(url, "UTF-8")}"
     }
 
-    object HospitalBooking : Screen("hospital_booking?hospitalId={hospitalId}&specialtyId={specialtyId}&specialtyName={specialtyName}&reason={reason}&doctorId={doctorId}") {
+    object HospitalBooking : Screen("hospital_booking?hospitalId={hospitalId}&specialtyId={specialtyId}&specialtyName={specialtyName}&reason={reason}&doctorId={doctorId}&mode={mode}") {
         fun createRoute(
             hospitalId: String? = null,
             specialtyId: String? = null,
             reason: String? = null,
             specialtyName: String? = null,
-            doctorId: String? = null
+            doctorId: String? = null,
+            mode: String? = null
         ): String {
             val parameters = listOfNotNull(
                 hospitalId?.let { "hospitalId=${android.net.Uri.encode(it)}" },
                 specialtyId?.let { "specialtyId=${android.net.Uri.encode(it)}" },
                 specialtyName?.let { "specialtyName=${android.net.Uri.encode(it)}" },
                 reason?.let { "reason=${android.net.Uri.encode(it)}" },
-                doctorId?.let { "doctorId=${android.net.Uri.encode(it)}" }
+                doctorId?.let { "doctorId=${android.net.Uri.encode(it)}" },
+                mode?.let { "mode=${android.net.Uri.encode(it)}" }
             )
             return "hospital_booking" + if (parameters.isEmpty()) "" else "?" + parameters.joinToString("&")
         }

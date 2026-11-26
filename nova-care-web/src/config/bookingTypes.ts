@@ -44,6 +44,8 @@ export interface BookingTypeConfig {
   };
 }
 
+export const ACTIVE_BOOKING_TYPES: BookingType[] = ['SERVICE', 'DOCTOR', 'OUT_OF_HOURS'];
+
 export const BOOKING_TYPES_CONFIG: Record<BookingType, BookingTypeConfig> = {
   SERVICE: {
     id: 'SERVICE',

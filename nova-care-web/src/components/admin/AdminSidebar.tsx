@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAdminTheme } from './AdminThemeContext';
@@ -282,9 +283,19 @@ function AdminSidebarInner() {
       {/* Brand Header */}
       <div className={`h-16 flex items-center px-5 border-b shrink-0 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
         <Link href="/admin" className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
-            {isHospitalAdmin ? 'H' : 'N'}
-          </div>
+          {isHospitalAdmin ? (
+            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
+              H
+            </div>
+          ) : (
+            <Image
+              src="/novacare-icon.png"
+              alt="NovaCare Icon"
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-lg object-contain shrink-0 shadow-xs"
+            />
+          )}
           <div className="min-w-0">
             <span className="font-bold text-sm tracking-tight block truncate">
               {isHospitalAdmin ? (user?.hospital?.name || 'Cổng Bệnh Viện') : 'NovaCare Admin'}

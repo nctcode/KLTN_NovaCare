@@ -1,7 +1,7 @@
 'use client';
 
 import { Sparkles, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { BookingType, BOOKING_TYPES_CONFIG } from '@/config/bookingTypes';
+import { ACTIVE_BOOKING_TYPES, BookingType, BOOKING_TYPES_CONFIG } from '@/config/bookingTypes';
 
 interface BookingTypeStepProps {
   hospitalName: string;
@@ -10,10 +10,10 @@ interface BookingTypeStepProps {
 }
 
 export function BookingTypeStep({ hospitalName, selectedMode, onSelectMode }: BookingTypeStepProps) {
-  const bookingOptions = Object.values(BOOKING_TYPES_CONFIG);
+  const bookingOptions = ACTIVE_BOOKING_TYPES.map((id) => BOOKING_TYPES_CONFIG[id]);
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-2">
+    <div className="space-y-6 max-w-5xl mx-auto py-2">
       {/* Header section - Medpro style */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-extrabold text-[#0c4b39]">
@@ -28,8 +28,8 @@ export function BookingTypeStep({ hospitalName, selectedMode, onSelectMode }: Bo
         </p>
       </div>
 
-      {/* Grid 2-column layout - Medpro style */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+      {/* Grid 3-column layout for the 3 active modes */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
         {bookingOptions.map((opt) => {
           const Icon = opt.icon;
           const isSelected = selectedMode === opt.id;

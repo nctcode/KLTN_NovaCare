@@ -808,7 +808,7 @@ export default function HospitalDetailPage({ params }: PageProps) {
                           size="sm"
                           className="w-full text-xs font-extrabold rounded-2xl bg-[#0c4b39] hover:bg-[#083629] text-white"
                         >
-                          <Link href={`/dat-kham-co-so?hospitalId=${hospital.id}&mode=general`}>Đặt lịch tại đây</Link>
+                          <Link href={`/dat-kham-co-so?hospitalId=${hospital.id}`}>Đặt lịch tại đây</Link>
                         </Button>
                       </div>
                     </Card>

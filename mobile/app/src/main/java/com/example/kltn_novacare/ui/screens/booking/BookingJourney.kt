@@ -57,10 +57,7 @@ fun bookingTime(value: String): String = runCatching {
 fun bookingDate(value: String?): String = value?.substringBefore('T').orEmpty()
 
 fun bookingPaymentLabel(method: String): String = when (method.uppercase()) {
-    "MOMO" -> "Ví MoMo (mô phỏng)"
-    "VNPAY" -> "VNPAY (mô phỏng)"
-    "VIETQR" -> "VietQR (mô phỏng)"
-    "CARD" -> "Thẻ ngân hàng (mô phỏng)"
+    "VNPAY" -> "Cổng thanh toán VNPAY"
     else -> "Thanh toán tại cơ sở y tế"
 }
 
@@ -295,31 +292,16 @@ fun BookingJourney(
     }
 
     if (state.showSimulation) {
-        AlertDialog(
-            onDismissRequest = { bookingViewModel.dismissSimulation() },
-            title = { Text("Thanh toán ${state.paymentMethod} — mô phỏng", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Mã lịch khám: ${state.createdAppointment?.bookingCode.orEmpty()}", fontWeight = FontWeight.Bold)
-                    Text("Số tiền: ${bookingMoney(state.createdAppointment?.totalAmount ?: 0.0)}", fontWeight = FontWeight.Bold, color = NovaCareGreen)
-                    Text("Đây là thanh toán mô phỏng trong môi trường đồ án. Nhấn xác nhận để hoàn tất.")
-                    (state.checkoutState as? NetworkState.Error)?.let { Text(it.message, color = MaterialTheme.colorScheme.error) }
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = !state.busy,
-                    onClick = { bookingViewModel.simulatePayment() },
-                    colors = ButtonDefaults.buttonColors(containerColor = NovaCareGreen)
-                ) {
-                    Text(if (state.busy) "Đang xác nhận..." else "Xác nhận thanh toán mô phỏng", color = Color.White)
-                }
-            },
-            dismissButton = {
-                TextButton(enabled = !state.busy, onClick = { bookingViewModel.dismissSimulation() }) {
-                    Text("Để sau", color = Color(0xFF64748B))
-                }
-            }
+        com.example.kltn_novacare.ui.screens.payment.VnpaySandboxPaymentDialog(
+            bookingCode = state.createdAppointment?.bookingCode.orEmpty(),
+            amount = state.createdAppointment?.totalAmount ?: state.estimatedPrice,
+            vnpayUrl = state.vnpayUrl,
+            busy = state.busy,
+            errorMessage = (state.checkoutState as? NetworkState.Error)?.message,
+            onVnpayReturn = { params -> bookingViewModel.handleVnpayReturn(params) },
+            onSimulatePayment = { bookingViewModel.simulatePayment() },
+            onRefresh = { bookingViewModel.refreshVnpayUrl() },
+            onDismiss = { bookingViewModel.dismissSimulation() }
         )
     }
 }
@@ -1122,11 +1104,8 @@ fun BookingCheckoutStep(state: BookingUiState, vm: BookingViewModel) {
         ?: state.estimatedPrice
 
     val paymentMethodLabel = when (state.paymentMethod) {
-        "CASH" -> "Thanh toán tại cơ sở y tế (Tiền mặt)"
-        "MOMO" -> "Ví điện tử MoMo (mô phỏng)"
-        "VNPAY" -> "Cổng thanh toán VNPAY (mô phỏng)"
-        "VIETQR" -> "Quét mã VietQR (mô phỏng)"
-        "CARD" -> "Thẻ ATM / Quốc tế (mô phỏng)"
+        "CASH" -> "Thanh toán tại cơ sở y tế"
+        "VNPAY" -> "Cổng thanh toán VNPAY"
         else -> "Chọn phương thức thanh toán"
     }
 
@@ -1357,10 +1336,11 @@ fun PaymentMethodSelectionDialog(
 ) {
     val methods = listOf(
         Triple("CASH", "Thanh toán tại cơ sở y tế", Icons.Default.LocalAtm),
-        Triple("MOMO", "Ví điện tử MoMo (mô phỏng)", Icons.Default.AccountBalanceWallet),
-        Triple("VNPAY", "Cổng VNPAY (mô phỏng)", Icons.Default.QrCode2),
-        Triple("VIETQR", "Quét mã VietQR (mô phỏng)", Icons.Default.QrCode),
-        Triple("CARD", "Thẻ ATM / Visa / Master (mô phỏng)", Icons.Default.CreditCard)
+        Triple("VNPAY", "Cổng thanh toán VNPAY", Icons.Default.QrCode2)
+    )
+    val descriptions = mapOf(
+        "CASH" to "Thanh toán trực tiếp tại quầy lễ tân khi đến khám",
+        "VNPAY" to "Quét mã QR VNPAY Sandbox trực tuyến với số tiền tự động"
     )
 
     Dialog(
@@ -1396,7 +1376,7 @@ fun PaymentMethodSelectionDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     methods.forEach { (code, label, icon) ->
                         val isSelected = currentMethod == code
                         Surface(
@@ -1406,7 +1386,7 @@ fun PaymentMethodSelectionDialog(
                                     onSelect(code)
                                     onDismiss()
                                 },
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(14.dp),
                             border = BorderStroke(
                                 if (isSelected) 1.5.dp else 1.dp,
                                 if (isSelected) NovaCareGreen else Color(0xFFE2E8F0)
@@ -1423,16 +1403,26 @@ fun PaymentMethodSelectionDialog(
                                     imageVector = icon,
                                     contentDescription = null,
                                     tint = if (isSelected) NovaCareGreen else Color(0xFF64748B),
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = label,
-                                    fontSize = 14.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) NovaCareGreen else Color(0xFF0F172A),
-                                    modifier = Modifier.weight(1f)
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                        color = if (isSelected) NovaCareGreenDark else Color(0xFF0F172A)
+                                    )
+                                    descriptions[code]?.let { desc ->
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = desc,
+                                            fontSize = 11.5.sp,
+                                            color = Color(0xFF64748B),
+                                            lineHeight = 15.sp
+                                        )
+                                    }
+                                }
                                 RadioButton(
                                     selected = isSelected,
                                     onClick = {
@@ -1520,7 +1510,14 @@ private fun BookingReceipt(state: BookingUiState, onDetails: () -> Unit, onAppoi
                         }.toString()
                     )
                     Text(
-                        text = if (state.createdAppointment.status == "PAID") "ĐÃ THANH TOÁN (MÔ PHỎNG)" else "XÁC NHẬN — THANH TOÁN TẠI BỆNH VIỆN",
+                        text = when {
+                            state.createdAppointment.status == "PAID" && state.paidBySimulation ->
+                                "ĐÃ THANH TOÁN QUA VNPAY (MÔ PHỎNG)"
+                            state.createdAppointment.status == "PAID" ->
+                                "ĐÃ THANH TOÁN QUA CỔNG VNPAY"
+                            else ->
+                                "XÁC NHẬN — THANH TOÁN TẠI CƠ SỞ Y TẾ"
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         color = NovaCareGreen

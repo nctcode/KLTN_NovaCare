@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: 'NovaCare - Đặt lịch khám trực tuyến',
   description: 'Đặt lịch khám bệnh dễ dàng với NovaCare. Tìm bác sĩ, cơ sở y tế và đặt lịch nhanh chóng.',
   keywords: 'đặt lịch khám, bác sĩ, bệnh viện, sức khỏe, NovaCare',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.png',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({

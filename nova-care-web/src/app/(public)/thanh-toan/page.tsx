@@ -7,7 +7,7 @@ import { paymentService } from '@/services/payment.service';
 import { appointmentService } from '@/services/appointment.service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CreditCard, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, CreditCard, CheckCircle, ArrowLeft, Building } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Suspense } from 'react';
@@ -25,12 +25,27 @@ function PaymentPageContent() {
     enabled: !!appointmentId,
   });
 
-  const handleSimulatePayment = async (method: string = 'MOMO') => {
+  const handleConfirmAtHospital = async () => {
     if (!appointmentId) return;
     setIsProcessing(true);
     try {
-      await paymentService.simulateSuccess(appointmentId, method);
-      toast.success('🎉 Thanh toán thành công! Lịch hẹn của bạn đã chuyển sang Đã xác nhận.');
+      await appointmentService.confirm(appointmentId);
+      toast.success('Đã xác nhận lịch hẹn! Vui lòng thanh toán tại cơ sở y tế khi đến khám.');
+      setIsSuccess(true);
+      refetch();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể xác nhận lịch khám');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSimulatePayment = async () => {
+    if (!appointmentId) return;
+    setIsProcessing(true);
+    try {
+      await paymentService.simulateSuccess(appointmentId, 'VNPAY');
+      toast.success('Thanh toán VNPAY Sandbox thành công! Lịch hẹn của bạn đã được xác nhận.');
       setIsSuccess(true);
       refetch();
     } catch (error: any) {
@@ -48,12 +63,10 @@ function PaymentPageContent() {
       if (result && result.paymentUrl) {
         window.location.href = result.paymentUrl;
       } else {
-        toast.error('Không thể tạo liên kết VNPay, đang chuyển sang thanh toán thử nghiệm...');
-        await handleSimulatePayment('VNPAY');
+        toast.error('Không thể tạo liên kết VNPay');
       }
     } catch (error: any) {
-      toast.info('Tự động xác nhận thanh toán thử nghiệm cho Demo...');
-      await handleSimulatePayment('MOMO');
+      toast.error(error.response?.data?.message || 'Không thể khởi tạo cổng thanh toán VNPAY Sandbox');
     } finally {
       setIsProcessing(false);
     }
@@ -181,49 +194,67 @@ function PaymentPageContent() {
               </div>
             </div>
 
-            {/* Payment Options */}
+            {/* Payment Options (Synced with Mobile: VNPAY Sandbox or Pay at Hospital) */}
             <div className="border-t border-slate-100 pt-4 space-y-3">
               <h3 className="font-bold text-slate-900 text-sm">Chọn phương thức thanh toán:</h3>
-              
-              {/* Instant Demo Payment */}
-              <div
-                className="cursor-pointer p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/50 hover:bg-emerald-50 transition-all flex items-center justify-between"
-                onClick={() => handleSimulatePayment('MOMO')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
-                    <CheckCircle className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-emerald-950 text-sm">Thanh toán Thử nghiệm Tức thì (Demo Instant)</p>
-                    <p className="text-xs text-emerald-700">Xác nhận thanh toán ngay lập tức cho buổi khám KLTN</p>
-                  </div>
-                </div>
-                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0" disabled={isProcessing}>
-                  Thanh toán ngay
-                </Button>
-              </div>
 
-              {/* VNPay Online Payment */}
+              {/* Option 1: VNPay Sandbox Gateway */}
               <div
-                className="cursor-pointer p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-center justify-between"
+                className="cursor-pointer p-4 rounded-xl border-2 border-blue-500 bg-blue-50/50 hover:bg-blue-50 transition-all flex items-center justify-between gap-3"
                 onClick={handleVNPayPayment}
               >
                 <div className="flex items-center gap-3">
-                  <CreditCard className="h-6 w-6 text-blue-600 shrink-0" />
+                  <div className="w-10 h-10 rounded-lg bg-[#005baa] text-white flex items-center justify-center shrink-0">
+                    <CreditCard className="h-5 w-5" />
+                  </div>
                   <div>
-                    <p className="font-bold text-slate-900 text-sm">Ví VNPay / Thẻ ATM Ngân hàng</p>
-                    <p className="text-xs text-slate-500">Cổng thanh toán trực tuyến VNPay</p>
+                    <p className="font-bold text-slate-900 text-sm">Cổng thanh toán VNPAY Sandbox</p>
+                    <p className="text-xs text-slate-600">
+                      Thẻ ATM nội địa NCB (9704198526191432198 · OTP 123456), VNPAY-QR
+                    </p>
                   </div>
                 </div>
+                <Button
+                  size="sm"
+                  className="bg-[#005baa] hover:bg-[#004887] text-white text-xs font-bold shrink-0"
+                  disabled={isProcessing}
+                >
+                  Thanh toán VNPAY
+                </Button>
+              </div>
+
+              {/* Option 2: Pay at Hospital */}
+              <div
+                className="cursor-pointer p-4 rounded-xl border border-slate-200 bg-white hover:border-emerald-400 hover:bg-emerald-50/40 transition-all flex items-center justify-between gap-3"
+                onClick={handleConfirmAtHospital}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Building className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900 text-sm">Thanh toán tại cơ sở y tế</p>
+                    <p className="text-xs text-slate-500">
+                      Xác nhận giữ lịch và thanh toán trực tiếp tại quầy lễ tân khi đến khám
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs font-bold shrink-0"
+                  disabled={isProcessing}
+                >
+                  Xác nhận
+                </Button>
               </div>
             </div>
 
-            {/* Main Action Button */}
+            {/* Fallback Simulate VNPay Button */}
             <Button
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm py-3 rounded-xl shadow-xs"
-              size="lg"
-              onClick={() => handleSimulatePayment('MOMO')}
+              variant="outline"
+              className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs py-2.5 rounded-xl"
+              onClick={handleSimulatePayment}
               disabled={isProcessing}
             >
               {isProcessing ? (
@@ -232,7 +263,7 @@ function PaymentPageContent() {
                   Đang xử lý thanh toán...
                 </>
               ) : (
-                'Xác nhận & Thanh toán ngay'
+                'Xác nhận thanh toán mô phỏng VNPAY'
               )}
             </Button>
 

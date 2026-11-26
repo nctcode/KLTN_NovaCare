@@ -7,27 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   CreditCard,
-  Building2,
   CheckCircle2,
-  ShieldCheck,
-  QrCode,
   Wallet,
   Building,
   Loader2,
   Calendar,
-  Clock,
-  User,
-  Stethoscope,
-  ChevronLeft,
-  Sparkles,
-  Printer,
   Home,
   Check,
-  Smartphone,
-  X,
   ExternalLink,
-  Shield,
-  ArrowRight,
+  ShieldCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { Hospital, Specialty, Doctor, MedicalService } from '@/types';
 import { PatientProfile } from '@/types/profile.types';
@@ -74,20 +63,27 @@ export function Step4Payment({
 }: Step4PaymentProps) {
   const router = useRouter();
 
-  const [paymentMethod, setPaymentMethod] = useState<'AT_HOSPITAL' | 'VNPAY' | 'MOMO'>('AT_HOSPITAL');
+  const [paymentMethod, setPaymentMethod] = useState<'AT_HOSPITAL' | 'VNPAY'>('AT_HOSPITAL');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdAppointment, setCreatedAppointment] = useState<any | null>(null);
 
   // Modals state
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
-  const [showMomoModal, setShowMomoModal] = useState(false);
   const [showVnPayModal, setShowVnPayModal] = useState(false);
   const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
+  const [isRefreshingVnpay, setIsRefreshingVnpay] = useState(false);
   const [vnpayRedirectUrl, setVnpayRedirectUrl] = useState<string | null>(null);
+  const [vnpayError, setVnpayError] = useState<string | null>(null);
 
-  const consultationFee = service?.price || (service as any)?.fee || (doctor as any)?.consultationFee || 350000;
+  const consultationFee =
+    service?.price || (service as any)?.fee || (doctor as any)?.consultationFee || 350000;
 
-  const doctorWorkplaceId = doctor?.workPlaces?.find((w) => w.hospitalId === hospital.id)?.id || doctor?.workPlaces?.[0]?.id || null;
+  const defaultReason =
+    bookingMode === 'OUT_OF_HOURS'
+      ? `Khám ngoài giờ - ${specialty?.name || 'Chuyên khoa'}`
+      : bookingMode === 'SERVICE'
+      ? `${service?.name || 'Khám dịch vụ'} - ${specialty?.name || 'Chuyên khoa'}`
+      : `Khám theo bác sĩ - ${specialty?.name || 'Chuyên khoa'}`;
 
   const handleProcessBooking = async () => {
     if (!patientProfile) {
@@ -101,14 +97,19 @@ export function Step4Payment({
     }
 
     setIsSubmitting(true);
+    setVnpayError(null);
     try {
       let appointment = createdAppointment;
 
       // 1. Re-use created appointment if already created for this slot & profile, otherwise create
-      if (!appointment || appointment.slotId !== selectedSlotId || appointment.patientProfileId !== patientProfile.id) {
-        // Only send medicalServiceId if it is a valid UUID and not a virtual/fallback string (e.g. default-service-...)
+      if (
+        !appointment ||
+        appointment.slotId !== selectedSlotId ||
+        appointment.patientProfileId !== patientProfile.id
+      ) {
         const isValidUUID = (id?: string | null): boolean =>
-          typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+          typeof id === 'string' &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
         const validServiceId = isValidUUID(service?.id) ? service?.id : undefined;
 
@@ -122,8 +123,10 @@ export function Step4Payment({
           slotId: selectedSlotId,
           ...(validServiceId ? { medicalServiceId: validServiceId } : {}),
           ...(room?.id ? { clinicRoomId: room.id } : {}),
-          ...(room?.id && bookingMode ? { serviceBookingMode: bookingMode === 'OUT_OF_HOURS' ? 'AFTER_HOURS' : bookingMode } : {}),
-          reason: reason || `Khám theo bác sĩ - ${specialty?.name || 'Chuyên khoa'}`,
+          ...(room?.id && bookingMode
+            ? { serviceBookingMode: bookingMode === 'OUT_OF_HOURS' ? 'AFTER_HOURS' : bookingMode }
+            : {}),
+          reason: reason || defaultReason,
           idempotencyKey,
         } as any);
 
@@ -160,7 +163,7 @@ export function Step4Payment({
         }
       }
 
-      // 2. Handle Payment Method
+      // 2. Handle Payment Method (synced with Mobile: AT_HOSPITAL or VNPAY Sandbox)
       if (paymentMethod === 'AT_HOSPITAL') {
         try {
           await appointmentService.confirm(appointment.id);
@@ -168,21 +171,20 @@ export function Step4Payment({
           console.warn('Confirm appointment warning:', confirmErr);
         }
         setIsTicketModalOpen(true);
-        toast.success('Đặt lịch khám thành công! Vui lòng thanh toán tại viện.');
-      } else if (paymentMethod === 'MOMO') {
-        // Only open MoMo Modal with QR code - DO NOT confirm or mark as paid yet
-        setShowMomoModal(true);
+        toast.success('Đặt lịch khám thành công! Vui lòng thanh toán tại cơ sở y tế.');
       } else if (paymentMethod === 'VNPAY') {
-        // Fetch VNPay Sandbox URL in background
         try {
           const res = await paymentService.createPayment(appointment.id);
           if (res?.paymentUrl) {
             setVnpayRedirectUrl(res.paymentUrl);
+          } else {
+            setVnpayError('Không nhận được liên kết cổng thanh toán VNPAY Sandbox.');
           }
-        } catch (err) {
-          console.warn('VNPay payment url generation warning:', err);
+        } catch (err: any) {
+          setVnpayError(
+            err?.response?.data?.message || 'Không thể khởi tạo liên kết VNPAY Sandbox.',
+          );
         }
-        // Only open VNPay Modal with QR code - DO NOT confirm or mark as paid yet
         setShowVnPayModal(true);
       }
     } catch (error: any) {
@@ -199,18 +201,22 @@ export function Step4Payment({
     }
   };
 
-  const handleConfirmMomoSandbox = async () => {
+  const handleRefreshVnpayUrl = async () => {
     if (!createdAppointment?.id) return;
-    setIsSimulatingPayment(true);
+    setIsRefreshingVnpay(true);
+    setVnpayError(null);
     try {
-      await paymentService.simulateSuccess(createdAppointment.id, 'MOMO');
-      toast.success('Thanh toán MoMo Sandbox thành công!');
-      setShowMomoModal(false);
-      setIsTicketModalOpen(true);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Có lỗi khi xác nhận thanh toán MoMo Sandbox');
+      const res = await paymentService.createPayment(createdAppointment.id);
+      if (res?.paymentUrl) {
+        setVnpayRedirectUrl(res.paymentUrl);
+        toast.success('Đã tạo lại liên kết cổng thanh toán VNPAY Sandbox');
+      } else {
+        setVnpayError('Không thể tạo liên kết VNPAY Sandbox');
+      }
+    } catch (err: any) {
+      setVnpayError(err?.response?.data?.message || 'Lỗi khi tải lại liên kết VNPAY Sandbox');
     } finally {
-      setIsSimulatingPayment(false);
+      setIsRefreshingVnpay(false);
     }
   };
 
@@ -219,11 +225,11 @@ export function Step4Payment({
     setIsSimulatingPayment(true);
     try {
       await paymentService.simulateSuccess(createdAppointment.id, 'VNPAY');
-      toast.success('Thanh toán QR Ngân hàng (VNPay Sandbox) thành công!');
+      toast.success('Thanh toán VNPAY Sandbox thành công!');
       setShowVnPayModal(false);
       setIsTicketModalOpen(true);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Có lỗi khi xác nhận thanh toán VNPay Sandbox');
+      toast.error(error?.response?.data?.message || 'Có lỗi khi xác nhận thanh toán VNPAY Sandbox');
     } finally {
       setIsSimulatingPayment(false);
     }
@@ -238,10 +244,10 @@ export function Step4Payment({
           <span>Bước 4 / 4 • Xác nhận thanh toán</span>
         </div>
         <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-          Chọn Hình Thức Thanh Toán & Hoàn Tất
+          Chọn Hình Thức Thanh Toán &amp; Hoàn Tất
         </h2>
         <p className="text-xs text-emerald-100/80 font-medium">
-          Lựa chọn phương thức thanh toán phù hợp để hoàn thành thủ tục đăng ký giữ chỗ
+          Lựa chọn thanh toán tại cơ sở y tế hoặc thanh toán trực tuyến qua cổng VNPAY Sandbox
         </p>
       </div>
 
@@ -255,7 +261,7 @@ export function Step4Payment({
             </h3>
 
             <div className="space-y-3">
-              {/* Option 1: Thanh toán tại cơ sở */}
+              {/* Option 1: Thanh toán tại cơ sở y tế */}
               <div
                 onClick={() => setPaymentMethod('AT_HOSPITAL')}
                 className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-4 ${
@@ -269,14 +275,16 @@ export function Step4Payment({
                     <Building className="w-6 h-6" />
                   </div>
                   <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-extrabold text-sm text-slate-900">Thanh toán tại cơ sở y tế</h4>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-extrabold text-sm text-slate-900">
+                        Thanh toán tại cơ sở y tế
+                      </h4>
                       <Badge className="bg-emerald-100 text-[#0c4b39] border border-emerald-300 text-[10px] font-bold">
                         Khuyên dùng
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-500 font-medium">
-                      Thanh toán trực tiếp bằng tiền mặt hoặc thẻ tại quầy thu ngân của bệnh viện khi đến khám
+                      Thanh toán trực tiếp bằng tiền mặt hoặc thẻ tại quầy lễ tân của bệnh viện khi đến khám
                     </p>
                   </div>
                 </div>
@@ -292,7 +300,7 @@ export function Step4Payment({
                 </div>
               </div>
 
-              {/* Option 2: Thanh toán QR Ngân hàng (VNPay) */}
+              {/* Option 2: Cổng thanh toán VNPAY Sandbox */}
               <div
                 onClick={() => setPaymentMethod('VNPAY')}
                 className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-4 ${
@@ -306,14 +314,19 @@ export function Step4Payment({
                     <CreditCard className="w-6 h-6" />
                   </div>
                   <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-extrabold text-sm text-slate-900">Thanh toán QR Ngân hàng</h4>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-[10px] font-bold">
-                        Sandbox QR / ATM
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-extrabold text-sm text-slate-900">
+                        Cổng thanh toán VNPAY
+                      </h4>
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-50 text-blue-800 border-blue-200 text-[10px] font-bold"
+                      >
+                        VNPAY Sandbox
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-500 font-medium">
-                      Thanh toán an toàn qua cổng VNPAY (Thẻ ATM nội địa, QR Pay, Thẻ quốc tế Visa/Mastercard)
+                      Thanh toán trực tuyến qua cổng VNPAY Sandbox (Thẻ ATM nội địa NCB, VNPAY-QR, thẻ quốc tế)
                     </p>
                   </div>
                 </div>
@@ -326,43 +339,6 @@ export function Step4Payment({
                   }`}
                 >
                   {paymentMethod === 'VNPAY' && <Check className="w-4 h-4 text-white" />}
-                </div>
-              </div>
-
-              {/* Option 3: Quét mã thanh toán Momo */}
-              <div
-                onClick={() => setPaymentMethod('MOMO')}
-                className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-4 ${
-                  paymentMethod === 'MOMO'
-                    ? 'bg-emerald-50/90 border-[#0c4b39] shadow-sm ring-1 ring-[#0c4b39]'
-                    : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-pink-100/80 text-[#ae2070] flex items-center justify-center shrink-0">
-                    <QrCode className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-extrabold text-sm text-slate-900">Quét mã thanh toán Momo</h4>
-                      <Badge variant="outline" className="bg-pink-50 text-[#ae2070] border-pink-200 text-[10px] font-bold">
-                        Ví MoMo Sandbox
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Quét mã QR qua Ví MoMo thử nghiệm để giữ chỗ tức thì
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                    paymentMethod === 'MOMO'
-                      ? 'border-[#0c4b39] bg-[#0c4b39] text-white'
-                      : 'border-slate-300 bg-white'
-                  }`}
-                >
-                  {paymentMethod === 'MOMO' && <Check className="w-4 h-4 text-white" />}
                 </div>
               </div>
             </div>
@@ -378,25 +354,42 @@ export function Step4Payment({
               </h3>
 
               <div className="space-y-2.5 text-xs text-slate-700">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Cơ sở y tế:</span>
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 shrink-0">Cơ sở y tế:</span>
                   <span className="font-bold text-slate-900 text-right">{hospital.name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Bệnh nhân:</span>
-                  <span className="font-bold text-slate-900">{patientProfile?.fullName}</span>
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 shrink-0">Bệnh nhân:</span>
+                  <span className="font-bold text-slate-900 text-right">
+                    {patientProfile?.fullName}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Bác sĩ:</span>
-                  <span className="font-bold text-slate-900">{doctor?.fullName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Thời gian:</span>
-                  <span className="font-extrabold text-[#0c4b39]">{selectedSlotTime} • {selectedDate}</span>
+                {doctor?.fullName && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-500 shrink-0">Bác sĩ:</span>
+                    <span className="font-bold text-slate-900 text-right">{doctor.fullName}</span>
+                  </div>
+                )}
+                {room?.name && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-500 shrink-0">Phòng khám:</span>
+                    <span className="font-bold text-slate-900 text-right">
+                      {(room as any)?.code ? `${(room as any).code} · ` : ''}
+                      {room.name}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 shrink-0">Thời gian:</span>
+                  <span className="font-extrabold text-[#0c4b39] text-right">
+                    {selectedSlotTime} • {selectedDate}
+                  </span>
                 </div>
                 <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
                   <span className="font-black text-slate-950 text-sm">Thanh toán:</span>
-                  <span className="font-black text-xl text-[#0c4b39]">{formatPrice(consultationFee)}</span>
+                  <span className="font-black text-xl text-[#0c4b39]">
+                    {formatPrice(consultationFee)}
+                  </span>
                 </div>
               </div>
 
@@ -414,7 +407,11 @@ export function Step4Payment({
                 ) : (
                   <>
                     <CheckCircle2 className="w-5 h-5 text-emerald-300" />
-                    <span>Xác Nhận Đặt Lịch Ngay</span>
+                    <span>
+                      {paymentMethod === 'VNPAY'
+                        ? 'Tiếp Tục Thanh Toán VNPAY'
+                        : 'Xác Nhận Đặt Lịch Ngay'}
+                    </span>
                   </>
                 )}
               </Button>
@@ -432,94 +429,7 @@ export function Step4Payment({
         </div>
       </div>
 
-      {/* MOMO SANDBOX MODAL */}
-      <Dialog open={showMomoModal} onOpenChange={setShowMomoModal}>
-        <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto bg-white rounded-3xl p-0 border border-pink-200 shadow-2xl [&>button]:text-white [&>button]:hover:text-white [&>button]:bg-white/20 [&>button]:hover:bg-white/30 [&>button]:rounded-full [&>button]:p-1 font-sans">
-          {/* Top Banner */}
-          <div className="bg-gradient-to-r from-[#ae2070] to-[#d82d8b] p-5 text-white text-center space-y-1.5 relative">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xl font-black text-[#ae2070] mx-auto shadow-md">
-              M
-            </div>
-            <h3 className="text-lg font-black tracking-tight">Cổng Thanh Toán MoMo Sandbox</h3>
-            <p className="text-[11px] text-pink-100 font-medium">Môi trường thử nghiệm Ví điện tử MoMo</p>
-          </div>
-
-          <div className="p-5 space-y-4">
-            {/* Amount Summary */}
-            <div className="bg-pink-50/70 border border-pink-100 rounded-2xl p-3.5 flex justify-between items-center text-xs">
-              <div>
-                <span className="text-slate-500 font-medium">Mã đặt khám:</span>
-                <p className="font-mono font-bold text-slate-900 text-sm">
-                  #{createdAppointment?.bookingCode || createdAppointment?.id?.slice(0, 8).toUpperCase() || 'NC-889922'}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-500 font-medium">Số tiền thanh toán:</span>
-                <p className="font-black text-base text-[#ae2070]">{formatPrice(consultationFee)}</p>
-              </div>
-            </div>
-
-            {/* Native Scannable MoMo Wallet QR */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-44 h-44 bg-white rounded-2xl border-2 border-[#ae2070] p-1.5 relative shadow-md flex flex-col items-center justify-center">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`https://nhantien.momo.vn/0706417103/${consultationFee}`)}`}
-                  alt="MoMo Sandbox QR Code"
-                  className="w-full h-full object-contain rounded-lg"
-                />
-                <div className="absolute inset-x-0 -bottom-2.5 text-center">
-                  <span className="bg-[#ae2070] text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-xs">
-                    VÍ MOMO (0706417103)
-                  </span>
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-600 text-center flex items-center justify-center gap-1 font-medium pt-1">
-                <Smartphone className="w-3.5 h-3.5 text-[#ae2070] shrink-0" />
-                <span>Quét mã QR bằng App MoMo hoặc nhấn nút giả lập bên dưới</span>
-              </p>
-            </div>
-
-            {/* MoMo Account Info Box */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Tên người nhận:</span>
-                <span className="font-bold text-slate-900">NGUYỄN CHÍ THUẬN</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Số điện thoại Ví MoMo:</span>
-                <span className="font-mono font-bold text-[#ae2070]">0706417103</span>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-slate-200">
-                <span className="text-slate-500">Nội dung chuyển tiền:</span>
-                <span className="font-mono font-bold text-emerald-700">
-                  {createdAppointment?.bookingCode || `NOVACARE ${createdAppointment?.id?.slice(0, 8).toUpperCase()}`}
-                </span>
-              </div>
-            </div>
-
-            {/* Action button */}
-            <Button
-              onClick={handleConfirmMomoSandbox}
-              disabled={isSimulatingPayment}
-              className="w-full bg-gradient-to-r from-[#ae2070] to-[#d82d8b] hover:opacity-95 text-white font-extrabold text-xs h-11 rounded-2xl shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform"
-            >
-              {isSimulatingPayment ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Đang xử lý thanh toán MoMo...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-pink-200" />
-                  <span>⚡ Thanh Toán MoMo Sandbox (Nút Giả Lập)</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* VNPAY / BANK QR SANDBOX MODAL */}
+      {/* VNPAY SANDBOX PAYMENT MODAL (Synced with Mobile VnpaySandboxPaymentDialog) */}
       <Dialog open={showVnPayModal} onOpenChange={setShowVnPayModal}>
         <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto bg-white rounded-3xl p-0 border border-blue-200 shadow-2xl [&>button]:text-white [&>button]:hover:text-white [&>button]:bg-white/20 [&>button]:hover:bg-white/30 [&>button]:rounded-full [&>button]:p-1 font-sans">
           {/* Top Banner */}
@@ -527,8 +437,10 @@ export function Step4Payment({
             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-700 mx-auto shadow-md">
               <CreditCard className="w-7 h-7" />
             </div>
-            <h3 className="text-lg font-black tracking-tight">Cổng Thanh Toán QR Ngân Hàng (VNPay)</h3>
-            <p className="text-[11px] text-blue-100 font-medium">Môi trường thử nghiệm VNPay Sandbox & VietQR</p>
+            <h3 className="text-lg font-black tracking-tight">Cổng Thanh Toán VNPAY Sandbox</h3>
+            <p className="text-[11px] text-blue-100 font-medium">
+              Thanh toán trực tuyến an toàn đồng bộ với ứng dụng di động NovaCare
+            </p>
           </div>
 
           <div className="p-5 space-y-4">
@@ -537,7 +449,7 @@ export function Step4Payment({
               <div>
                 <span className="text-slate-500 font-medium">Mã đặt khám:</span>
                 <p className="font-mono font-bold text-slate-900 text-sm">
-                  #{createdAppointment?.bookingCode || createdAppointment?.id?.slice(0, 8).toUpperCase() || 'NC-889922'}
+                  #{createdAppointment?.bookingCode || createdAppointment?.id?.slice(0, 8).toUpperCase()}
                 </p>
               </div>
               <div className="text-right">
@@ -546,81 +458,88 @@ export function Step4Payment({
               </div>
             </div>
 
-            {/* Dynamic Scannable VietQR Code */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-48 h-48 bg-white rounded-2xl border-2 border-[#005baa] p-1.5 relative shadow-md flex flex-col items-center justify-center">
-                <img
-                  src={`https://img.vietqr.io/image/MB-0706417103-compact2.png?amount=${consultationFee}&addInfo=${encodeURIComponent(createdAppointment?.bookingCode || `NOVACARE ${createdAppointment?.id?.slice(0, 8).toUpperCase() || ''}`)}&accountName=NGUYEN%20CHI%20THUAN`}
-                  alt="VietQR Bank QR Code"
-                  className="w-full h-full object-contain rounded-lg"
-                />
-                <div className="absolute inset-x-0 -bottom-2.5 text-center">
-                  <span className="bg-[#005baa] text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-xs">
-                    VIETQR NGÂN HÀNG (MBBANK)
-                  </span>
-                </div>
+            {vnpayError && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-between gap-2">
+                <span>{vnpayError}</span>
+                <button
+                  type="button"
+                  onClick={handleRefreshVnpayUrl}
+                  disabled={isRefreshingVnpay}
+                  className="inline-flex items-center gap-1 font-bold text-blue-700 hover:underline shrink-0"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingVnpay ? 'animate-spin' : ''}`} />
+                  Thử lại
+                </button>
               </div>
-              <p className="text-[11px] text-slate-600 text-center flex items-center justify-center gap-1 font-medium pt-1">
-                <Smartphone className="w-3.5 h-3.5 text-blue-700 shrink-0" />
-                <span>Quét mã bằng App Ngân hàng bất kỳ (hiển thị số tiền {formatPrice(consultationFee)})</span>
-              </p>
-            </div>
+            )}
 
-            {/* VietQR Bank Info Box */}
+            {/* VNPay Sandbox Test Card Guide */}
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Ngân hàng thụ hưởng:</span>
-                <span className="font-bold text-slate-900">MBBank (Ngân hàng TMCP Quân Đội)</span>
+              <div className="flex items-center gap-1.5 font-bold text-slate-800 pb-1 border-b border-slate-200">
+                <ShieldCheck className="w-4 h-4 text-blue-700" />
+                <span>Thẻ thử nghiệm VNPAY Sandbox (Ngân hàng NCB)</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Số tài khoản:</span>
-                <span className="font-mono font-bold text-blue-700">0706417103</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Tên chủ tài khoản:</span>
-                <span className="font-bold text-slate-900">NGUYỄN CHÍ THUẬN</span>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-slate-200">
-                <span className="text-slate-500">Nội dung chuyển khoản:</span>
-                <span className="font-mono font-bold text-emerald-700">
-                  {createdAppointment?.bookingCode || `NOVACARE ${createdAppointment?.id?.slice(0, 8).toUpperCase()}`}
+                <span className="text-slate-500">Số thẻ ATM:</span>
+                <span className="font-mono font-bold text-blue-700 select-all">
+                  9704198526191432198
                 </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Tên chủ thẻ:</span>
+                <span className="font-mono font-bold text-slate-900 select-all">NGUYEN VAN A</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Ngày phát hành / OTP:</span>
+                <span className="font-mono font-bold text-slate-900">07/15 · OTP: 123456</span>
               </div>
             </div>
 
             {/* Action buttons */}
-            <div className="space-y-2">
-              {/* Nút giả lập thành công */}
+            <div className="space-y-2.5">
+              {vnpayRedirectUrl ? (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = vnpayRedirectUrl;
+                  }}
+                  className="w-full bg-[#005baa] hover:bg-[#004887] text-white font-extrabold text-xs h-11 rounded-2xl shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Mở Cổng Thanh Toán VNPAY Sandbox</span>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleRefreshVnpayUrl}
+                  disabled={isRefreshingVnpay}
+                  className="w-full bg-[#005baa] hover:bg-[#004887] text-white font-extrabold text-xs h-11 rounded-2xl shadow-md flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshingVnpay ? 'animate-spin' : ''}`} />
+                  <span>Tải lại liên kết VNPAY Sandbox</span>
+                </Button>
+              )}
+
+              {/* Fallback simulate VNPAY button (synced with Mobile) */}
               <Button
+                type="button"
                 onClick={handleConfirmVnPaySandbox}
                 disabled={isSimulatingPayment}
-                className="w-full bg-[#005baa] hover:bg-[#004887] text-white font-extrabold text-xs h-11 rounded-2xl shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                variant="outline"
+                className="w-full border-blue-300 text-blue-800 hover:bg-blue-50 font-bold text-xs h-10 rounded-2xl flex items-center justify-center gap-1.5"
               >
                 {isSimulatingPayment ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang xử lý thanh toán VNPay...</span>
+                    <span>Đang xác nhận thanh toán VNPAY...</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 className="w-4 h-4 text-blue-200" />
-                    <span>⚡ Thanh Toán QR Ngân Hàng (Nút Giả Lập)</span>
+                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                    <span>Xác nhận thanh toán mô phỏng VNPAY</span>
                   </>
                 )}
               </Button>
-
-              {vnpayRedirectUrl && (
-                <Button
-                  onClick={() => {
-                    window.location.href = vnpayRedirectUrl;
-                  }}
-                  variant="outline"
-                  className="w-full border-blue-300 text-blue-800 hover:bg-blue-50 font-bold text-[11px] h-9 rounded-2xl flex items-center justify-center gap-1.5"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Mở Cổng Thanh Toán VNPay Thực Tế</span>
-                </Button>
-              )}
             </div>
           </div>
         </DialogContent>
@@ -647,35 +566,37 @@ export function Step4Payment({
             <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <span className="text-slate-500 font-bold">Mã số phiếu:</span>
               <span className="font-mono font-black text-[#0c4b39] text-sm">
-                #{createdAppointment?.id?.slice(0, 8).toUpperCase() || 'NC-889922'}
+                #{createdAppointment?.bookingCode || createdAppointment?.id?.slice(0, 8).toUpperCase()}
               </span>
             </div>
 
             <div className="space-y-1.5">
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-2">
                 <span className="text-slate-500">Cơ sở khám:</span>
-                <strong className="text-slate-900">{hospital.name}</strong>
+                <strong className="text-slate-900 text-right">{hospital.name}</strong>
               </p>
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-2">
                 <span className="text-slate-500">Bệnh nhân:</span>
                 <strong className="text-slate-900">{patientProfile?.fullName}</strong>
               </p>
-              <p className="flex justify-between">
-                <span className="text-slate-500">Bác sĩ phụ trách:</span>
-                <strong className="text-slate-900">{doctor?.fullName}</strong>
-              </p>
-              <p className="flex justify-between">
+              {doctor?.fullName && (
+                <p className="flex justify-between gap-2">
+                  <span className="text-slate-500">Bác sĩ phụ trách:</span>
+                  <strong className="text-slate-900">{doctor.fullName}</strong>
+                </p>
+              )}
+              <p className="flex justify-between gap-2">
                 <span className="text-slate-500">Thời gian khám:</span>
-                <strong className="text-[#0c4b39]">{selectedSlotTime} • {selectedDate}</strong>
+                <strong className="text-[#0c4b39]">
+                  {selectedSlotTime} • {selectedDate}
+                </strong>
               </p>
               <p className="flex justify-between border-t border-slate-200 pt-1.5">
                 <span className="text-slate-500">Hình thức thanh toán:</span>
                 <strong className="text-emerald-700">
                   {paymentMethod === 'AT_HOSPITAL'
-                    ? 'Thanh toán tại viện'
-                    : paymentMethod === 'MOMO'
-                    ? 'Ví MoMo Sandbox'
-                    : 'QR Ngân hàng (VNPay Sandbox)'}
+                    ? 'Thanh toán tại cơ sở y tế'
+                    : 'Cổng thanh toán VNPAY Sandbox'}
                 </strong>
               </p>
             </div>
@@ -706,4 +627,3 @@ export function Step4Payment({
     </div>
   );
 }
-

@@ -52,7 +52,20 @@ function PaymentReturnPageContent() {
 
     // VNPay gateway
     if (vnpResponseCode === '00') {
-      verifyPayment();
+      const vnpParams: Record<string, string> = {};
+      searchParams.forEach((value, key) => {
+        if (key.startsWith('vnp_')) {
+          vnpParams[key] = value;
+        }
+      });
+      if (Object.keys(vnpParams).length > 0) {
+        paymentService
+          .verifyVnpayReturn(vnpParams)
+          .catch(() => null)
+          .finally(() => verifyPayment());
+      } else {
+        verifyPayment();
+      }
     } else if (vnpResponseCode) {
       setStatus('failed');
       setMessage('Thanh toán không thành công hoặc giao dịch bị hủy bỏ.');
@@ -64,10 +77,8 @@ function PaymentReturnPageContent() {
   }, [appointmentId, vnpResponseCode, simulateMethod, simulateStatus]);
 
   const methodLabel: Record<string, string> = {
-    momo: 'Ví MoMo',
-    vietqr: 'VietQR',
-    card: 'Thẻ quốc tế',
-    vnpay: 'VNPay',
+    vnpay: 'Cổng thanh toán VNPAY Sandbox',
+    at_hospital: 'Thanh toán tại cơ sở y tế',
   };
   const method = simulateMethod || 'vnpay';
 

@@ -26,7 +26,7 @@ export function Step10Confirm() {
   const queryClient = useQueryClient();
   const { bookingData, resetBooking } = useBookingStore();
   const { appointmentId } = bookingData;
-  const [selectedMethod, setSelectedMethod] = useState<'MOMO' | 'VIETQR' | 'CARD'>('MOMO');
+  const [selectedMethod, setSelectedMethod] = useState<'VNPAY' | 'AT_HOSPITAL'>('VNPAY');
 
   const { data: appointment, refetch } = useQuery({
     queryKey: ['appointment-detail-step10', appointmentId],
@@ -35,9 +35,26 @@ export function Step10Confirm() {
   });
 
   const payMutation = useMutation({
-    mutationFn: () => paymentService.simulateSuccess(appointmentId!, selectedMethod),
-    onSuccess: () => {
-      toast.success('Thanh toán thành công! Lịch khám đã chuyển sang trạng thái Đã thanh toán');
+    mutationFn: async () => {
+      if (selectedMethod === 'AT_HOSPITAL') {
+        await appointmentService.confirm(appointmentId!);
+        return { redirected: false, atHospital: true };
+      }
+      const res = await paymentService.createPayment(appointmentId!);
+      if (res?.paymentUrl) {
+        window.location.href = res.paymentUrl;
+        return { redirected: true, atHospital: false };
+      }
+      await paymentService.simulateSuccess(appointmentId!, 'VNPAY');
+      return { redirected: false, atHospital: false };
+    },
+    onSuccess: (result) => {
+      if (result?.redirected) return;
+      toast.success(
+        result?.atHospital
+          ? 'Đã xác nhận lịch khám! Vui lòng thanh toán tại cơ sở y tế.'
+          : 'Thanh toán VNPAY Sandbox thành công! Lịch khám đã được xác nhận.',
+      );
       refetch();
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
     },
@@ -103,11 +120,10 @@ export function Step10Confirm() {
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-600 block">Chọn phương thức thanh toán:</label>
-            <div className="grid grid-cols-3 gap-2 text-xs font-bold">
+            <div className="grid grid-cols-2 gap-2 text-xs font-bold">
               {[
-                { id: 'MOMO', name: 'Ví MoMo', icon: '💖' },
-                { id: 'VIETQR', name: 'VietQR / CK', icon: '🏦' },
-                { id: 'CARD', name: 'Thẻ Quốc Tế', icon: '💳' },
+                { id: 'VNPAY', name: 'Cổng VNPAY Sandbox', icon: '🏦' },
+                { id: 'AT_HOSPITAL', name: 'Thanh toán tại cơ sở', icon: '🏥' },
               ].map((m) => (
                 <button
                   key={m.id}

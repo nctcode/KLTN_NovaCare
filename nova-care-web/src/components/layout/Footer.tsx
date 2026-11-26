@@ -1,4 +1,5 @@
 "use client";
+import Image from 'next/image';
 import Link from 'next/link';
 import { Phone, Mail, MapPin, Sparkles } from 'lucide-react';
 
@@ -41,12 +42,13 @@ export function Footer() {
           {/* Company Intro */}
           <div className="md:col-span-2 space-y-3">
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 bg-[#66FF33] rounded-lg flex items-center justify-center shadow-sm">
-                <span className="text-[#0c4b39] font-black text-base">N</span>
-              </div>
-              <span className="text-xl font-black text-white tracking-wide">
-                NovaCare
-              </span>
+              <Image
+                src="/novacare-logo-white.png"
+                alt="NovaCare Logo"
+                width={140}
+                height={40}
+                className="h-8 w-auto object-contain"
+              />
             </div>
             <p className="text-xs text-gray-400 leading-relaxed max-w-sm">
               Nền tảng công nghệ y tế và đặt lịch khám trực tuyến hàng đầu Việt Nam.
