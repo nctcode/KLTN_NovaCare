@@ -12,6 +12,8 @@ export interface PaginationParams {
   doctorId?: string;
   startDate?: string;
   endDate?: string;
+  success?: string;
+  entityType?: string;
 }
 
 const extractData = (res: any) => {
@@ -58,6 +60,10 @@ export const adminService = {
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.search) query.append('search', params.search);
+    if (params?.success) query.append('success', params.success);
+    if (params?.entityType) query.append('entityType', params.entityType);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
 
     const response = await apiClient.get<any>(`/admin/dashboard/audit-logs?${query.toString()}`);
     return extractData(response);

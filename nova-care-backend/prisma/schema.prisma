@@ -494,6 +494,8 @@ model AuditLog {
   id         String   @id @default(uuid())
   userId     String
   action     String
+  success    Boolean  @default(true)
+  description String?
   entityType String
   entityId   String?
   oldValue   Json?

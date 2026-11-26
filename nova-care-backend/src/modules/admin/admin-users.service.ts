@@ -233,6 +233,7 @@ export class AdminUsersService {
     await this.auditLogService.logAction({
       userId: adminUserId,
       action: updated.isActive ? 'UNLOCK_USER' : 'LOCK_USER',
+      description: `${updated.isActive ? 'Mở khóa' : 'Khóa'} tài khoản ${user.fullName || user.email}`,
       entityType: 'User',
       entityId: id,
       oldValue: { isActive: user.isActive },

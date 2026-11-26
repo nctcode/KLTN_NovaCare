@@ -54,15 +54,23 @@ export class AdminDashboardController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'success', required: false, type: Boolean })
+  @ApiQuery({ name: 'entityType', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   getAuditLogs(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Query('success') success?: string,
+    @Query('entityType') entityType?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.service.getAuditLogs(
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 20,
-      search,
+      search, success === undefined ? undefined : success === 'true', entityType, startDate, endDate,
     );
   }
 }

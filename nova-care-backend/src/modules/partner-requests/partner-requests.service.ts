@@ -207,6 +207,7 @@ export class PartnerRequestsService {
       await this.auditLogService.logAction({
         userId: actorId,
         action: 'REJECT_PARTNER_REQUEST',
+        description: `Từ chối yêu cầu hợp tác của ${request.hospitalName || request.contactName || request.email}`,
         entityType: 'PartnerRequest',
         entityId: id,
         oldValue: { status: request.status },
@@ -358,6 +359,7 @@ export class PartnerRequestsService {
       await this.auditLogService.logAction({
         userId: adminUserId,
         action: 'APPROVE_PARTNER_REQUEST',
+        description: `Phê duyệt yêu cầu hợp tác của ${request.hospitalName || request.contactName || request.email}`,
         entityType: 'PartnerRequest',
         entityId: id,
         oldValue: { status: request.status },
