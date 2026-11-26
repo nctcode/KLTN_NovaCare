@@ -291,7 +291,8 @@ export default function AdminPartnerRequestsPage() {
                 return (
                   <tr
                     key={req.id}
-                    className="hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition-colors"
+                    onClick={() => setViewingRequest(req)}
+                    className="hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition-colors cursor-pointer"
                   >
                     {/* 1. STT */}
                     <td className="py-3 px-3 text-slate-400">{rowNumber}</td>
@@ -340,12 +341,12 @@ export default function AdminPartnerRequestsPage() {
 
                     {/* 9. Thao tác */}
                     <td className="py-3 px-3 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                         {/* Xem chi tiết */}
                         <button
                           type="button"
                           onClick={() => setViewingRequest(req)}
-                          className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white underline-offset-2 hover:underline cursor-pointer"
+                          className="hidden text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white underline-offset-2 hover:underline cursor-pointer"
                         >
                           Chi tiết
                         </button>
@@ -361,7 +362,7 @@ export default function AdminPartnerRequestsPage() {
                                 adminNote: 'Đã liên hệ trao đổi sơ bộ với đối tác',
                               })
                             }
-                            className="text-blue-600 dark:text-blue-400 hover:underline underline-offset-2 cursor-pointer"
+                            className="hidden text-blue-600 dark:text-blue-400 hover:underline underline-offset-2 cursor-pointer"
                           >
                             Đã liên hệ
                           </button>
@@ -384,7 +385,7 @@ export default function AdminPartnerRequestsPage() {
                             onClick={() => handleOpenApprove(req)}
                             className="bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-2.5 py-1 rounded text-[11px] font-medium hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors cursor-pointer"
                           >
-                            Duyệt
+                            Chấp thuận
                           </button>
                         )}
                       </div>
@@ -538,7 +539,7 @@ export default function AdminPartnerRequestsPage() {
                     adminNote: 'Đã liên hệ trao đổi',
                   });
                 }}
-                className="text-xs"
+                className="hidden text-xs"
               >
                 Đánh dấu Đã liên hệ
               </Button>
@@ -553,7 +554,7 @@ export default function AdminPartnerRequestsPage() {
                   setViewingRequest(null);
                   handleOpenReject(req);
                 }}
-                className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 dark:text-rose-400 dark:border-rose-900"
+                className="hidden text-xs text-rose-600 border-rose-200 hover:bg-rose-50 dark:text-rose-400 dark:border-rose-900"
               >
                 Từ chối yêu cầu
               </Button>
@@ -567,7 +568,7 @@ export default function AdminPartnerRequestsPage() {
                   setViewingRequest(null);
                   handleOpenApprove(req);
                 }}
-                className="bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 text-xs font-medium"
+                className="hidden bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 text-xs font-medium"
               >
                 Duyệt hợp tác
               </Button>
