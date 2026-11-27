@@ -112,7 +112,7 @@ export function Step4Payment({
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
         const validServiceId = isValidUUID(service?.id) ? service?.id : undefined;
-        const validRoomId = isValidUUID(room?.id) ? room.id : undefined;
+        const validRoomId = isValidUUID(room?.id) ? room?.id : undefined;
         const normalizedBookingMode =
           bookingMode === 'OUT_OF_HOURS'
             ? 'AFTER_HOURS'
