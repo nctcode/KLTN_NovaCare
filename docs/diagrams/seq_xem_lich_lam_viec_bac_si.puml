@@ -1,0 +1,68 @@
+@startuml
+title sd Xem lịch làm việc và ca trực (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Bác sĩ\n(DOCTOR)" as Doctor
+boundary "GD_LichTrucBacSi" as UI
+control "CTR_DoctorPortalService" as Ctrl
+entity "E_doctors" as Doc
+entity "E_doctor_schedules" as Sched
+entity "E_appointment_slots" as Slot
+
+activate Doctor
+Doctor -> UI : 1: Chọn chức năng "Lịch trực"
+activate UI
+UI -> UI : 1.1: getCurrentWeekRange() (Thứ Hai - Chủ nhật: startDate, endDate)
+UI -> Ctrl : 1.2: getSchedules(userId, startDate, endDate) [JwtAuthGuard, RolesGuard]
+activate Ctrl
+
+alt JWT hợp lệ, role == "DOCTOR", hồ sơ hoạt động && kết nối thành công
+  Ctrl -> Doc : 1.3: getDoctorOrThrow(userId) [workPlaces]
+  activate Doc
+  Doc --> Ctrl : 1.4: doctor, workplaceIds
+  deactivate Doc
+  Ctrl -> Sched : 1.5: findMany({ doctorWorkplaceId in workplaceIds, isActive: true })
+  activate Sched
+  Sched --> Ctrl : 1.6: recurringSchedules[]
+  deactivate Sched
+  Ctrl -> Slot : 1.7: findMany({ doctorWorkplaceId in workplaceIds, startTime in [from..to], _count: primaryAppointments })
+  activate Slot
+  Slot --> Ctrl : 1.8: slots[] (roomSession.room, maxPatients, bookedCount)
+  deactivate Slot
+  Ctrl --> UI : 1.9: { data: { recurringSchedules, slots } }
+  deactivate Ctrl
+
+  alt slots.length > 0 (có ca trực cụ thể trong tuần)
+    UI --> Doctor : 1.10: Hiển thị khoảng ngày tuần & danh sách ca trực theo thứ tự thời gian (giờ ca, phòng khám/cơ sở, chuyên khoa, số lịch hẹn / sức chứa)
+  else slots.length == 0 && recurringSchedules.length > 0 (Alt 4.1)
+    UI --> Doctor : 1.11: Hiển thị thứ (dayOfWeek), giờ bắt đầu, giờ kết thúc & cơ sở từ lịch lặp lại
+  else tuần được chọn không có ca trực hoặc lịch làm việc (Alt 3.1)
+    UI --> Doctor : 1.12: Hiển thị thông báo "Không có ca trực trong tuần"
+  end
+else phiên đăng nhập hết hạn hoặc không còn quyền truy cập - 401/403 (Alt 2.1)
+  UI --> Doctor : 1.13: Chuyển về màn hình đăng nhập (kết thúc use case)
+else không thể tải lịch do mất kết nối hoặc lỗi máy chủ (Alt 2.2)
+  UI --> Doctor : 1.14: Hiển thị thông báo lỗi & nút "Thử lại" (quay lại bước 2)
+end
+
+Doctor -> UI : 2: Nhấn mũi tên chọn tuần trước / tuần sau (newStartDate, newEndDate)
+UI -> Ctrl : 2.1: getSchedules(userId, newStartDate, newEndDate)
+activate Ctrl
+Ctrl -> Sched : 2.2: findMany({ doctorWorkplaceId, effectiveFrom/To })
+activate Sched
+Sched --> Ctrl : 2.3: recurringSchedules[]
+deactivate Sched
+Ctrl -> Slot : 2.4: findMany({ doctorWorkplaceId, startTime in [newFrom..newTo] })
+activate Slot
+Slot --> Ctrl : 2.5: slots[]
+deactivate Slot
+Ctrl --> UI : 2.6: { data: { recurringSchedules, slots } }
+deactivate Ctrl
+UI --> Doctor : 2.7: Hiển thị lịch làm việc & ca trực của tuần được chọn
+Doctor -> UI : 3: Xem thông tin ca trực (chỉ đọc, không thay đổi phân công)
+
+deactivate UI
+deactivate Doctor
+@enduml

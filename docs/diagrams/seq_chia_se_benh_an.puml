@@ -1,0 +1,87 @@
+@startuml
+title sd Chia sẻ hồ sơ bệnh án cũ (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Bệnh nhân\n(PATIENT)" as Patient
+boundary "GD_ChiaSeBenhAn" as UI
+control "CTR_ConsentService" as Ctrl
+entity "E_patient_profiles" as Prof
+entity "E_medical_encounters" as Enc
+entity "E_patient_consents" as Cons
+actor "Cơ sở y tế tiếp nhận\n(targetHospital)" as Target
+
+activate Patient
+Patient -> UI : 1: Mở xác nhận đặt khám / chi tiết lịch hẹn
+activate UI
+UI -> UI : 1.1: showShareRecordsPanel(patientProfileId, targetHospitalId)
+Patient -> UI : 2: Bật công tắc "Chia sẻ hồ sơ bệnh án cũ"
+UI -> Ctrl : 2.1: getShareableRecords(userId, patientProfileId, targetHospitalId)
+activate Ctrl
+Ctrl -> Prof : 2.2: assertProfileOwner(userId, patientProfileId)
+activate Prof
+Prof --> Ctrl : 2.3: patientProfile
+deactivate Prof
+Ctrl -> Enc : 2.4: findMany({ patientProfileId, hospitalId: { not: targetHospitalId }, status: "PUBLISHED" })
+activate Enc
+Enc --> Ctrl : 2.5: shareableEncounters[]
+deactivate Enc
+
+alt tải thành công && shareableEncounters.length > 0
+  Ctrl --> UI : 2.6: { data: shareableEncounters }
+  deactivate Ctrl
+  UI -> UI : 2.7: selectDefaults(allEncounters, 4 allowedSections, duration = 7 ngày)
+else không có bệnh án đã công bố tại cơ sở khác (Alt 4.1)
+  UI --> Patient : 2.8: Thông báo chưa có bệnh án điện tử khả dụng (tắt chia sẻ / kết thúc)
+else không tải được danh sách bệnh án (Alt 4.2)
+  UI --> Patient : 2.9: Hiển thị thông báo lỗi tải bệnh án (bật lại công tắc quay lại bước 4)
+end
+
+opt bệnh nhân chọn "Tùy chỉnh danh sách hồ sơ & phạm vi" (Alt 5.1)
+  Patient -> UI : 3: Nhấn "Tùy chỉnh danh sách hồ sơ & phạm vi"
+  UI -> UI : 3.1: showConsentConfigModal()
+  Patient -> UI : 3.2: Chọn encounterIds, allowedSections, thời hạn 1-365 ngày & đồng ý điều khoản
+  UI -> UI : 3.3: validateConfig(encounterIds >= 1, allowedSections >= 1, days in [1..365], agreed)
+  Patient -> UI : 3.4: Nhấn "Xác nhận & Cấp quyền chia sẻ"
+end
+
+loop với mỗi sourceHospitalId sau khi nhóm bệnh án theo cơ sở nguồn
+  UI -> Ctrl : 4: createConsent(userId, CreateConsentDto { patientProfileId, sourceHospitalId, targetHospitalId, encounterIds, allowedSections, expiresAt })
+  activate Ctrl
+  Ctrl -> Enc : 4.1: findMany({ id: { in: encounterIds }, patientProfileId, hospitalId: sourceHospitalId, status: "PUBLISHED" })
+  activate Enc
+  Enc --> Ctrl : 4.2: selectedEncounters[]
+  deactivate Enc
+
+  alt selectedEncounters.length == encounterIds.length && expiresAt >= appointmentDate
+    Ctrl -> Cons : 4.3: create/update({ status: "PENDING", scope: { encounterIds, allowedSections }, expiresAt })
+    activate Cons
+    Cons --> Ctrl : 4.4: consent { id, status: "PENDING" }
+    deactivate Cons
+    UI -> Ctrl : 4.5: grantConsent(userId, consent.id)
+    Ctrl -> Cons : 4.6: update({ id: consent.id, status: "GRANTED", grantedAt, confirmedAt })
+    activate Cons
+    Cons --> Ctrl : 4.7: grantedConsent { status: "GRANTED", expiresAt }
+    deactivate Cons
+
+    alt tạo và xác nhận cấp quyền thành công
+      Ctrl -> Target : 4.8: Cấp quyền truy xuất hồ sơ liên thông (status: "GRANTED", scope, expiresAt)
+      activate Target
+      Target --> Ctrl : 4.9: Đã ghi nhận quyền xem bệnh án
+      deactivate Target
+      Ctrl --> UI : 4.10: { status: "GRANTED", expiresAt }
+      deactivate Ctrl
+      UI --> Patient : 4.11: Thông báo cấp quyền thành công (bảo đảm thời hạn không kết thúc trước ngày hẹn)
+    else không tạo hoặc không xác nhận được quyền chia sẻ (Alt 6.2)
+      UI --> Patient : 4.12: Thông báo lỗi (cơ sở đã cấp trước đó vẫn được ghi nhận) -> nhấn xác nhận lại (bước 6)
+    end
+  else bệnh án không thuộc hồ sơ, không thuộc cơ sở nguồn hoặc chưa công bố (Alt 6.1)
+    Ctrl --> UI : 4.13: BadRequestException("Hồ sơ không thuộc cơ sở nguồn hoặc chưa được công bố")
+    UI --> Patient : 4.14: Từ chối tạo quyền & báo lỗi (chọn lại bệnh án, quay lại bước 5.1.2)
+  end
+end
+
+deactivate UI
+deactivate Patient
+@enduml

@@ -1,0 +1,76 @@
+@startuml
+title sd Xem quyền đã cấp và nhật ký bệnh viện truy cập (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Bệnh nhân\n(PATIENT)" as Patient
+boundary "GD_QuyenVaNhatKyChiaSe" as UI
+control "CTR_ConsentService" as Ctrl
+entity "E_patient_profiles" as Prof
+entity "E_patient_consents" as Cons
+entity "E_audit_logs" as Logs
+
+activate Patient
+Patient -> UI : 1: Mở sổ sức khỏe / mục chia sẻ lịch hẹn
+activate UI
+UI -> UI : 1.1: showConsentManagementAction()
+Patient -> UI : 2: Chọn "Xem quyền đã cấp & nhật ký bệnh viện truy cập"
+UI -> Ctrl : 2.1: getPatientConsents(userId, patientProfileId) & getSharedAccessLogs()
+activate Ctrl
+Ctrl -> Prof : 2.2: assertProfileOwner(userId, patientProfileId)
+activate Prof
+Prof --> Ctrl : 2.3: patientProfile
+deactivate Prof
+Ctrl -> Cons : 2.4: findMany({ where: { patientProfileId }, include: sourceHospital, targetHospital })
+activate Cons
+Cons --> Ctrl : 2.5: patientConsents[]
+deactivate Cons
+Ctrl -> Logs : 2.6: findMany({ where: { action: "INTEROPERABILITY_RECORD_VIEWED", entityId: patientProfileId } })
+activate Logs
+Logs --> Ctrl : 2.7: sharedAccessLogs[]
+deactivate Logs
+
+alt tải danh sách quyền và nhật ký truy cập thành công
+  Ctrl --> UI : 2.8: { consents: patientConsents, accessLogs: sharedAccessLogs }
+  deactivate Ctrl
+  alt consents.length > 0
+    UI --> Patient : 2.9: Hiển thị sourceHospital, targetHospital, status, scope, expiresAt (EXPIRED/REVOKED: ẩn nút thu hồi - Alt 7.2)
+  else consents.length == 0 (Alt 5.1)
+    UI --> Patient : 2.10: Hiển thị thông báo chưa có quyền chia sẻ được cấp
+  end
+  alt accessLogs.length > 0
+    UI --> Patient : 2.11: Hiển thị bệnh viện đã truy cập (user.hospital) và thời điểm truy cập (createdAt)
+  else accessLogs.length == 0 (Alt 6.1)
+    UI --> Patient : 2.12: Hiển thị thông báo chưa có lượt truy cập được ghi nhận
+  end
+else không tải được quyền hoặc nhật ký truy cập (Alt 4.1)
+  UI --> Patient : 2.13: Hiển thị thông báo lỗi + nút "Làm mới quyền và nhật ký" (quay lại bước 4)
+end
+
+Patient -> UI : 3: Xem thông tin quyền đã cấp và nhật ký truy cập
+
+opt bệnh nhân nhấn "Thu hồi quyền" tại quyền còn hiệu lực (status in { "GRANTED", "PENDING" } - Alt 7.1)
+  Patient -> UI : 4: Nhấn "Thu hồi quyền" (consentId)
+  UI -> Ctrl : 4.1: revokeConsent(userId, consentId)
+  activate Ctrl
+  Ctrl -> Cons : 4.2: findUnique({ id: consentId, include: patientProfile }) & kiểm tra userId
+  activate Cons
+  Cons --> Ctrl : 4.3: consent
+  deactivate Cons
+  Ctrl -> Cons : 4.4: update({ id: consentId, status: "REVOKED", revokedAt: now })
+  activate Cons
+  Cons --> Ctrl : 4.5: revokedConsent { status: "REVOKED" }
+  deactivate Cons
+  Ctrl --> UI : 4.6: { status: "REVOKED" }
+  deactivate Ctrl
+  UI --> Patient : 4.7: Cập nhật trạng thái "Đã thu hồi", tải lại danh sách & tiếp tục xem (bước 7)
+end
+
+Patient -> UI : 5: Nhấn "Đóng"
+UI -> UI : 5.1: closeConsentHistoryScreen()
+UI --> Patient : 5.2: Đóng màn hình lịch sử và quay lại màn hình trước
+
+deactivate UI
+deactivate Patient
+@enduml

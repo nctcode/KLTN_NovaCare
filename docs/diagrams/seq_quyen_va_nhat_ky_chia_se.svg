@@ -1,0 +1,242 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1520" height="2020" viewBox="0 0 1520 2020">
+  <defs>
+    <style>
+      .lifeline-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.5px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
+      .lifeline-sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12.6px; font-weight: 600; fill: #334155; text-anchor: middle; }
+      .msg { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.2px; font-weight: 600; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .guard { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.2px; font-weight: 800; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .frag-tag { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: 800; fill: #0f172a; }
+      .lifeline { stroke: #475569; stroke-width: 1.8; stroke-dasharray: 7 6; }
+      .act { fill: #7DD3FC; stroke: #0f172a; stroke-width: 1.6; }
+      .arrow { stroke: #0f172a; stroke-width: 2px; fill: none; }
+      .ret { stroke: #0f172a; stroke-width: 1.8; stroke-dasharray: 7 5; fill: none; }
+      .frag-box { fill: none; stroke: #1e293b; stroke-width: 2; }
+      .frag-div { stroke: #1e293b; stroke-width: 1.6; stroke-dasharray: 8 5; }
+      .icon-fill { fill: #7DD3FC; stroke: #0f172a; stroke-width: 2; }
+      .icon-stroke { fill: none; stroke: #0f172a; stroke-width: 2; }
+    </style>
+    <marker id="solidArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0f172a"/>
+    </marker>
+    <marker id="openArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#0f172a" stroke-width="1.8"/>
+    </marker>
+  </defs>
+
+  <!-- White Background -->
+  <rect x="0" y="0" width="1520" height="2020" fill="#FFFFFF"/>
+
+  <!-- Frame -->
+  <rect x="14" y="14" width="1492" height="1992" fill="none" stroke="#64748b" stroke-width="1.6"/>
+  <polygon points="14,14 585,14 585,46 567,62 14,62" fill="#F1F5F9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="30" y="45" class="frag-tag" style="font-size:17px;">sd Xem quyền đã cấp và nhật ký bệnh viện truy cập (NovaCare)</text>
+
+  <!-- ================= LIFELINES (6) ================= -->
+  <!-- X: Patient=95, GD=365, CTR_Consent=675, E_prof=955, E_cons=1190, E_logs=1410 -->
+
+  <!-- 1. Actor: Bệnh nhân -->
+  <g transform="translate(95, 112)">
+    <circle cx="0" cy="-18" r="12" class="icon-fill"/>
+    <line x1="0" y1="-6" x2="0" y2="20" class="icon-stroke"/>
+    <line x1="-18" y1="3" x2="18" y2="3" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="-14" y2="38" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="14" y2="38" class="icon-stroke"/>
+    <text x="0" y="58" class="lifeline-label">Bệnh nhân</text>
+    <text x="0" y="75" class="lifeline-sub">(PATIENT)</text>
+  </g>
+  <line x1="95" y1="204" x2="95" y2="1985" class="lifeline"/>
+
+  <!-- 2. Boundary: GD_QuyenVaNhatKyChiaSe -->
+  <g transform="translate(365, 124)">
+    <line x1="-30" y1="-19" x2="-30" y2="19" class="icon-stroke"/>
+    <line x1="-30" y1="0" x2="-18" y2="0" class="icon-stroke"/>
+    <circle cx="3" cy="0" r="21" class="icon-fill"/>
+    <text x="0" y="45" class="lifeline-label" style="font-size:15px;">GD_QuyenVaNhatKy</text>
+    <text x="0" y="62" class="lifeline-label" style="font-size:15px;">ChiaSe</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;boundary&gt;&gt;</text>
+  </g>
+  <line x1="365" y1="204" x2="365" y2="1985" class="lifeline"/>
+
+  <!-- 3. Control: CTR_ConsentService -->
+  <g transform="translate(675, 124)">
+    <circle cx="0" cy="0" r="21" class="icon-fill"/>
+    <path d="M -5,-27 L 5,-21 L -5,-15" fill="none" stroke="#0f172a" stroke-width="2"/>
+    <text x="0" y="48" class="lifeline-label">CTR_ConsentService</text>
+    <text x="0" y="66" class="lifeline-sub">&lt;&lt;control&gt;&gt;</text>
+  </g>
+  <line x1="675" y1="204" x2="675" y2="1985" class="lifeline"/>
+
+  <!-- 4. Entity: E_patient_profiles -->
+  <g transform="translate(955, 124)">
+    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
+    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
+    <text x="0" y="45" class="lifeline-label" style="font-size:15px;">E_patient_</text>
+    <text x="0" y="62" class="lifeline-label" style="font-size:15px;">profiles</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="955" y1="204" x2="955" y2="1985" class="lifeline"/>
+
+  <!-- 5. Entity: E_patient_consents -->
+  <g transform="translate(1190, 124)">
+    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
+    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
+    <text x="0" y="45" class="lifeline-label" style="font-size:15px;">E_patient_</text>
+    <text x="0" y="62" class="lifeline-label" style="font-size:15px;">consents</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="1190" y1="204" x2="1190" y2="1985" class="lifeline"/>
+
+  <!-- 6. Entity: E_audit_logs -->
+  <g transform="translate(1410, 124)">
+    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
+    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
+    <text x="0" y="48" class="lifeline-label">E_audit_logs</text>
+    <text x="0" y="66" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="1410" y1="204" x2="1410" y2="1985" class="lifeline"/>
+
+  <!-- ================= ACTIVATION BARS ================= -->
+  <!-- Bệnh nhân -->
+  <rect x="87" y="228" width="16" height="1730" class="act"/>
+
+  <!-- GD_QuyenVaNhatKyChiaSe -->
+  <rect x="357" y="242" width="16" height="1704" class="act"/>
+  <rect x="365" y="266" width="14" height="24" class="act"/>
+  <rect x="365" y="1852" width="14" height="24" class="act"/>
+
+  <!-- CTR_ConsentService -->
+  <rect x="667" y="370" width="16" height="398" class="act"/>
+  <rect x="667" y="1428" width="16" height="240" class="act"/>
+
+  <!-- E_patient_profiles -->
+  <rect x="947" y="410" width="16" height="46" class="act"/>
+
+  <!-- E_patient_consents -->
+  <rect x="1182" y="502" width="16" height="46" class="act"/>
+  <rect x="1182" y="1474" width="16" height="46" class="act"/>
+  <rect x="1182" y="1564" width="16" height="46" class="act"/>
+
+  <!-- E_audit_logs -->
+  <rect x="1402" y="594" width="16" height="46" class="act"/>
+
+  <!-- ================= PHASE 1: TẢI QUYỀN ĐÃ CẤP & NHẬT KÝ TRUY CẬP (Steps 1-6, Alt 4.1, 5.1, 6.1, 7.2) ================= -->
+  <line x1="103" y1="244" x2="357" y2="244" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="116" y="235" class="msg">1: Mở sổ sức khỏe / mục chia sẻ lịch hẹn</text>
+
+  <path d="M 373 262 L 418 262 L 418 286 L 379 286" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="428" y="280" class="msg">1.1: showConsentManagementAction()</text>
+
+  <line x1="103" y1="330" x2="357" y2="330" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="116" y="321" class="msg">2: Chọn "Xem quyền đã cấp &amp; nhật ký bệnh viện truy cập"</text>
+
+  <line x1="373" y1="372" x2="667" y2="372" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="386" y="363" class="msg">2.1: getPatientConsents(userId, patientProfileId) &amp; getSharedAccessLogs()</text>
+
+  <line x1="683" y1="412" x2="947" y2="412" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="696" y="403" class="msg">2.2: assertProfileOwner(userId, patientProfileId)</text>
+
+  <line x1="947" y1="456" x2="683" y2="456" class="ret" marker-end="url(#openArrow)"/>
+  <text x="770" y="447" class="msg">2.3: patientProfile</text>
+
+  <line x1="683" y1="504" x2="1182" y2="504" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="696" y="495" class="msg">2.4: findMany({ where: { patientProfileId }, include: sourceHospital, targetHospital })</text>
+
+  <line x1="1182" y1="548" x2="683" y2="548" class="ret" marker-end="url(#openArrow)"/>
+  <text x="890" y="539" class="msg">2.5: patientConsents[]</text>
+
+  <line x1="683" y1="596" x2="1402" y2="596" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="696" y="587" class="msg">2.6: findMany({ where: { action: "INTEROPERABILITY_RECORD_VIEWED", entityId: patientProfileId } })</text>
+
+  <line x1="1402" y1="640" x2="683" y2="640" class="ret" marker-end="url(#openArrow)"/>
+  <text x="990" y="631" class="msg">2.7: sharedAccessLogs[]</text>
+
+  <!-- ALT 1: Kết quả tải quyền & nhật ký (Alt 4.1, 5.1, 6.1, 7.2) -->
+  <rect x="28" y="666" width="1464" height="536" class="frag-box"/>
+  <polygon points="28,666 92,666 92,690 78,702 28,702" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="46" y="690" class="frag-tag">alt</text>
+  <text x="114" y="691" class="guard">[tải danh sách quyền và nhật ký truy cập thành công]</text>
+
+  <line x1="667" y1="744" x2="373" y2="744" class="ret" marker-end="url(#openArrow)"/>
+  <text x="386" y="735" class="msg">2.8: { consents: patientConsents, accessLogs: sharedAccessLogs }</text>
+
+  <!-- ALT 1.1: Danh sách quyền (Alt 5.1 & Alt 7.2) -->
+  <rect x="44" y="766" width="1432" height="156" class="frag-box"/>
+  <polygon points="44,766 106,766 106,788 92,800 44,800" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="61" y="789" class="frag-tag">alt</text>
+  <text x="118" y="790" class="guard">[consents.length &gt; 0]</text>
+
+  <line x1="357" y1="830" x2="103" y2="830" class="ret" marker-end="url(#openArrow)"/>
+  <text x="116" y="821" class="msg">2.9: Hiển thị sourceHospital, targetHospital, status, scope, expiresAt (EXPIRED/REVOKED: ẩn nút thu hồi - Alt 7.2)</text>
+
+  <line x1="44" y1="852" x2="1476" y2="852" class="frag-div"/>
+  <text x="118" y="876" class="guard">[consents.length == 0 (Alt 5.1)]</text>
+
+  <line x1="357" y1="908" x2="103" y2="908" class="ret" marker-end="url(#openArrow)"/>
+  <text x="116" y="899" class="msg">2.10: Hiển thị thông báo chưa có quyền chia sẻ được cấp</text>
+
+  <!-- ALT 1.2: Nhật ký truy cập (Alt 6.1) -->
+  <rect x="44" y="938" width="1432" height="152" class="frag-box"/>
+  <polygon points="44,938 106,938 106,960 92,972 44,972" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="61" y="961" class="frag-tag">alt</text>
+  <text x="118" y="962" class="guard">[accessLogs.length &gt; 0]</text>
+
+  <line x1="357" y1="1002" x2="103" y2="1002" class="ret" marker-end="url(#openArrow)"/>
+  <text x="116" y="993" class="msg">2.11: Hiển thị bệnh viện đã truy cập (user.hospital) và thời điểm truy cập (createdAt)</text>
+
+  <line x1="44" y1="1024" x2="1476" y2="1024" class="frag-div"/>
+  <text x="118" y="1048" class="guard">[accessLogs.length == 0 (Alt 6.1)]</text>
+
+  <line x1="357" y1="1078" x2="103" y2="1078" class="ret" marker-end="url(#openArrow)"/>
+  <text x="116" y="1069" class="msg">2.12: Hiển thị thông báo chưa có lượt truy cập được ghi nhận</text>
+
+  <!-- ELSE của ALT 1: Lỗi tải (Alt 4.1) -->
+  <line x1="28" y1="1114" x2="1492" y2="1114" class="frag-div"/>
+  <text x="114" y="1140" class="guard">[không tải được quyền hoặc nhật ký truy cập (Alt 4.1)]</text>
+
+  <line x1="357" y1="1184" x2="103" y2="1184" class="ret" marker-end="url(#openArrow)"/>
+  <text x="116" y="1175" class="msg">2.13: Hiển thị thông báo lỗi + nút "Làm mới quyền và nhật ký" (quay lại bước 4)</text>
+
+  <!-- ================= PHASE 2: XEM & THU HỒI QUYỀN (Steps 7-9, Alt 7.1) ================= -->
+  <line x1="103" y1="1264" x2="357" y2="1264" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="116" y="1255" class="msg">3: Xem thông tin quyền đã cấp và nhật ký truy cập</text>
+
+  <!-- OPT: Thu hồi quyền còn hiệu lực (Alt 7.1) -->
+  <rect x="28" y="1302" width="1464" height="444" class="frag-box"/>
+  <polygon points="28,1302 92,1302 92,1326 78,1338 28,1338" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="46" y="1326" class="frag-tag">opt</text>
+  <text x="114" y="1327" class="guard">[bệnh nhân nhấn "Thu hồi quyền" tại quyền còn hiệu lực (status ∈ { "GRANTED", "PENDING" } - Alt 7.1)]</text>
+
+  <line x1="103" y1="1386" x2="357" y2="1386" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="116" y="1377" class="msg">4: Nhấn "Thu hồi quyền" (consentId)</text>
+
+  <line x1="373" y1="1430" x2="667" y2="1430" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="386" y="1421" class="msg">4.1: revokeConsent(userId, consentId)</text>
+
+  <line x1="683" y1="1476" x2="1182" y2="1476" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="696" y="1467" class="msg">4.2: findUnique({ id: consentId, include: patientProfile }) &amp; kiểm tra userId</text>
+
+  <line x1="1182" y1="1520" x2="683" y2="1520" class="ret" marker-end="url(#openArrow)"/>
+  <text x="890" y="1511" class="msg">4.3: consent</text>
+
+  <line x1="683" y1="1566" x2="1182" y2="1566" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="696" y="1557" class="msg">4.4: update({ id: consentId, status: "REVOKED", revokedAt: now })</text>
+
+  <line x1="1182" y1="1610" x2="683" y2="1610" class="ret" marker-end="url(#openArrow)"/>
+  <text x="860" y="1601" class="msg">4.5: revokedConsent { status: "REVOKED" }</text>
+
+  <line x1="667" y1="1664" x2="373" y2="1664" class="ret" marker-end="url(#openArrow)"/>
+  <text x="386" y="1655" class="msg">4.6: { status: "REVOKED" }</text>
+
+  <line x1="357" y1="1720" x2="103" y2="1720" class="ret" marker-end="url(#openArrow)"/>
+  <text x="116" y="1711" class="msg">4.7: Cập nhật trạng thái "Đã thu hồi", tải lại danh sách &amp; tiếp tục xem (bước 7)</text>
+
+  <!-- Steps 8-9: Đóng màn hình -->
+  <line x1="103" y1="1814" x2="357" y2="1814" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="116" y="1805" class="msg">5: Nhấn "Đóng"</text>
+
+  <path d="M 373 1848 L 418 1848 L 418 1872 L 379 1872" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="428" y="1866" class="msg">5.1: closeConsentHistoryScreen()</text>
+
+  <line x1="357" y1="1932" x2="103" y2="1932" class="ret" marker-end="url(#openArrow)"/>
+  <text x="116" y="1923" class="msg">5.2: Đóng màn hình lịch sử và quay lại màn hình trước</text>
+</svg>

@@ -1,0 +1,78 @@
+@startuml
+title sd Xem hồ sơ sức khỏe (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Bệnh nhân\n(PATIENT)" as Patient
+boundary "GD_HoSoSucKhoe" as UI
+control "CTR_PatientProfilesService" as ProfCtrl
+control "CTR_AppointmentsService" as ApptCtrl
+entity "E_patient_profiles" as Prof
+entity "E_medical_encounters" as Enc
+
+activate Patient
+Patient -> UI : 1: Chọn chức năng "Hồ sơ sức khỏe"
+activate UI
+UI -> ProfCtrl : 1.1: findAll(userId) [JwtAuthGuard]
+activate ProfCtrl
+
+alt JWT hợp lệ && kết nối máy chủ thành công
+  ProfCtrl -> Prof : 1.2: findMany({ where: { userId, deletedAt: null } })
+  activate Prof
+  Prof --> ProfCtrl : 1.3: patientProfiles[]
+  deactivate Prof
+
+  alt patientProfiles.length > 0
+    ProfCtrl --> UI : 1.4: { data: patientProfiles }
+    deactivate ProfCtrl
+    UI --> Patient : 1.5: Hiển thị danh sách hồ sơ & "Sổ sức khỏe điện tử & Bệnh án"
+  else patientProfiles.length == 0 (Alt 3.1)
+    UI --> Patient : 1.6: Thông báo "Chưa có hồ sơ bệnh nhân nào" & nút "Thêm hồ sơ mới"
+  end
+else phiên đăng nhập hết hạn / không hợp lệ - 401 Unauthorized (Alt 2.1)
+  UI --> Patient : 1.7: Yêu cầu bệnh nhân đăng nhập lại (kết thúc use case)
+else mất kết nối hoặc lỗi máy chủ (Alt 2.2)
+  UI --> Patient : 1.8: Thông báo không thể tải hồ sơ + nút "Thử lại" (quay lại bước 2)
+end
+
+Patient -> UI : 2: Chọn hồ sơ cần xem (patientProfileId)
+UI -> ApptCtrl : 2.1: getHistory(userId) & lọc theo patientProfileId
+activate ApptCtrl
+ApptCtrl -> Enc : 2.2: findMany({ where: { patientProfileId } })
+activate Enc
+Enc --> ApptCtrl : 2.3: medicalEncounters[]
+deactivate Enc
+
+alt tải lịch sử khám thành công
+  alt filteredEncounters.length > 0
+    ApptCtrl --> UI : 2.4: { data: filteredEncounters }
+    deactivate ApptCtrl
+    UI --> Patient : 2.5: Hiển thị danh sách bệnh án (ngày khám, cơ sở y tế & nút "Xem hồ sơ khám bệnh")
+  else hồ sơ được chọn chưa có bệnh án (Alt 5.2)
+    UI --> Patient : 2.6: Thông báo "Chưa có bệnh án được trả về" (quay lại bước 4 chọn hồ sơ khác)
+  end
+else không thể tải lịch sử khám (Alt 5.1)
+  UI --> Patient : 2.7: Hiển thị thông báo lỗi & nút "Làm mới" (quay lại bước 5)
+end
+
+Patient -> UI : 3: Nhấn "Xem hồ sơ khám bệnh" (encounterId)
+UI -> ApptCtrl : 3.1: ClinicalService.getEncounter(encounterId)
+activate ApptCtrl
+ApptCtrl -> Enc : 3.2: findUnique({ id, include: diagnoses, observations, prescriptions })
+activate Enc
+Enc --> ApptCtrl : 3.3: encounterDetail
+deactivate Enc
+ApptCtrl --> UI : 3.4: { data: encounterDetail }
+deactivate ApptCtrl
+UI -> UI : 3.5: filterAvailableSections(encounterDetail) (Alt 8.1: ẩn mục chưa có dữ liệu)
+UI --> Patient : 3.6: Hiển thị chi tiết bệnh án (mã hồ sơ, ngày khám, bác sĩ, CSYT, chuyên khoa, lý do, tóm tắt lâm sàng, chẩn đoán, sinh hiệu, cận lâm sàng, đơn thuốc, điều trị)
+
+Patient -> UI : 4: Xem thông tin bệnh án (dữ liệu chỉ đọc, không thay đổi)
+Patient -> UI : 5: Nhấn "Đóng" (hoặc nút quay lại / vuốt đóng / nhấn ngoài cửa sổ - Alt 11.1)
+UI -> UI : 5.1: closeEncounterDetailModal()
+UI --> Patient : 5.2: Quay lại sổ sức khỏe điện tử của hồ sơ đã chọn (bước 6)
+
+deactivate UI
+deactivate Patient
+@enduml

@@ -1,0 +1,133 @@
+@startuml
+title sd Đặt khám cơ sở y tế (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Bệnh nhân\n(PATIENT)" as Patient
+boundary "GD_DatKhamCSYT" as UI
+control "CTR_AppointmentsService" as ApptCtrl
+control "CTR_PaymentsService" as PayCtrl
+entity "E_hospitals" as Hosp
+entity "E_patient_profiles" as Prof
+entity "E_appointments" as Appt
+actor "Hệ thống thanh toán\n(VNPay)" as PayGW
+
+activate Patient
+Patient -> UI : 1: Chọn "Đặt khám cơ sở y tế"
+activate UI
+UI -> ApptCtrl : 1.1: HospitalsService.findAll()
+activate ApptCtrl
+ApptCtrl -> Hosp : 1.2: findMany({ isActive: true })
+activate Hosp
+Hosp --> ApptCtrl : 1.3: hospitals[]
+deactivate Hosp
+
+alt tải danh sách cơ sở y tế thành công
+  ApptCtrl --> UI : 1.4: showHospitalList(hospitals) & tìm kiếm, lọc
+  deactivate ApptCtrl
+else không tải được danh sách cơ sở y tế (Alt 2.1)
+  UI --> Patient : 1.5: Báo lỗi & nút "Tải lại" (quay lại bước 2)
+end
+
+Patient -> UI : 2: Nhập query hoặc chọn khu vực lọc
+UI -> UI : 2.1: validateSearchFilter(query, region)
+
+alt thông tin tìm kiếm / lọc hợp lệ
+  UI -> ApptCtrl : 2.2: search(query, region)
+  activate ApptCtrl
+  ApptCtrl -> Hosp : 2.3: findMany({ where: { name/address } })
+  activate Hosp
+  Hosp --> ApptCtrl : 2.4: filteredHospitals[]
+  deactivate Hosp
+  ApptCtrl --> UI : 2.5: Hiển thị CSYT phù hợp (nếu rỗng -> báo không tìm thấy - Alt 5.1)
+  deactivate ApptCtrl
+else thông tin tìm kiếm / lọc không hợp lệ (Alt 4.1)
+  UI --> Patient : 2.6: Yêu cầu kiểm tra lại thông tin (quay lại bước 3)
+end
+
+Patient -> UI : 3: Nhấn "Đặt khám ngay" tại CSYT
+UI -> UI : 3.1: showBookingModes(DOCTOR / SERVICE / AFTER_HOURS) (Alt 8.1: đóng)
+Patient -> UI : 4: Chọn hình thức khám (bookingType)
+UI -> ApptCtrl : 4.1: getBookingOptions(hospitalId, bookingType)
+activate ApptCtrl
+ApptCtrl -> Hosp : 4.2: findUnique({ doctors, medical_services, clinic_rooms, appointment_slots })
+activate Hosp
+Hosp --> ApptCtrl : 4.3: bookingOptions, availableSlots
+deactivate Hosp
+
+alt tải dữ liệu thành công && có phòng/lịch khám
+  ApptCtrl --> UI : 4.4: Hiển thị biểu mẫu chọn thông tin theo hình thức khám
+  deactivate ApptCtrl
+else lỗi tải dữ liệu (Alt 9.1) hoặc chưa thiết lập phòng/lịch khám (Alt 9.2)
+  UI --> Patient : 4.5: Báo lỗi + "Tải lại" (Alt 9.1) hoặc chưa có lịch phù hợp (Alt 9.2)
+end
+
+Patient -> UI : 5: Chọn thông tin khám, slotId, nhấn "Tiếp tục"
+UI -> UI : 5.1: validateStepInfo() (Alt 10.1: thiếu -> khóa nút; Alt 10.2: hết slot; Alt 10.3: quay lại)
+
+UI -> ApptCtrl : 6: getPatientProfiles(userId)
+activate ApptCtrl
+ApptCtrl -> Prof : 6.1: findMany({ where: { userId, deletedAt: null } })
+activate Prof
+Prof --> ApptCtrl : 6.2: patientProfiles[]
+deactivate Prof
+
+alt tải hồ sơ thành công && patientProfiles.length > 0
+  ApptCtrl --> UI : 6.3: showPatientProfiles(patientProfiles)
+  deactivate ApptCtrl
+else lỗi tải hồ sơ (Alt 11.1) hoặc chưa có hồ sơ (Alt 12.1)
+  UI --> Patient : 6.4: Báo lỗi + "Thử lại" (Alt 11.1) hoặc mở tạo hồ sơ mới (Alt 12.1)
+end
+
+Patient -> UI : 7: Chọn patientProfileId, nhấn "Tiếp tục" (Alt 12.2: quay lại)
+UI -> UI : 7.1: showBookingSummary() & tùy chọn chia sẻ hồ sơ (patient_consents)
+Patient -> UI : 8: Nhập reason, chọn chia sẻ hồ sơ (Alt 14.1, 14.2), nhấn "Tiếp tục"
+UI --> Patient : 8.1: Hiển thị chi phí & phương thức thanh toán (VNPAYQR, VNBANK, INTCARD)
+
+Patient -> UI : 9: Chọn phương thức (bankCode), nhấn "Thanh toán" (Alt 16.1: quay lại)
+UI -> ApptCtrl : 9.1: create(userId, CreateAppointmentDto, bookingType)
+activate ApptCtrl
+ApptCtrl -> Prof : 9.2: findFirst({ id: patientProfileId, userId })
+activate Prof
+Prof --> ApptCtrl : 9.3: patientProfile
+deactivate Prof
+ApptCtrl -> Appt : 9.4: checkSlotAvailability(slotId) & checkOverlap(patientProfileId)
+activate Appt
+Appt --> ApptCtrl : 9.5: validationResult (slotAvailable, noOverlap)
+deactivate Appt
+
+alt hồ sơ, phòng/dịch vụ hợp lệ && slot còn chỗ && không trùng lịch
+  ApptCtrl -> Appt : 9.6: create({ patientProfileId, slotId, status: "PENDING_PAYMENT", idempotencyKey })
+  activate Appt
+  Appt --> ApptCtrl : 9.7: appointment { id, bookingCode }
+  deactivate Appt
+  ApptCtrl -> PayCtrl : 9.8: createPaymentUrl(appointmentId, ip, bankCode)
+  deactivate ApptCtrl
+  activate PayCtrl
+  PayCtrl -> PayGW : 9.9: Gửi yêu cầu thanh toán VNPay (paymentUrl, amount, txnRef)
+  activate PayGW
+
+  alt giao dịch thanh toán thành công (vnp_ResponseCode == "00")
+    PayGW --> PayCtrl : 9.10: handleIpn(vnpParams) -> thanh toán thành công
+    deactivate PayGW
+    PayCtrl -> Appt : 9.11: update({ status: "CONFIRMED", paymentStatus: "PAID" })
+    activate Appt
+    Appt --> PayCtrl : 9.12: confirmedAppointment { bookingCode, qrCode }
+    deactivate Appt
+    PayCtrl --> UI : 9.13: { status: "CONFIRMED", bookingCode, qrCode }
+    UI --> Patient : 9.14: Xác nhận lịch khám & hiển thị mã phiếu, thông tin lịch khám, mã QR
+  else giao dịch thanh toán thất bại (Alt 18.1)
+    UI --> Patient : 9.15: Thông báo thanh toán thất bại -> chọn thanh toán lại (quay lại bước 16)
+  else mất kết nối khi thanh toán (Alt 18.2)
+    UI -> PayCtrl : 9.16: getPaymentStatus(appointmentId) -> kiểm tra kết quả (chưa xong -> bước 16)
+  else lịch chờ thanh toán hết thời hạn (Alt 18.3)
+    UI --> Patient : 9.17: Thông báo lịch đã hết hạn & yêu cầu đặt lịch mới (quay lại bước 1)
+  end
+  deactivate PayCtrl
+else vi phạm: phòng/dịch vụ lỗi (17.1) | slot hết chỗ (17.2) | trùng lịch (17.3) | hồ sơ không hợp lệ (17.4)
+  UI --> Patient : 9.18: Từ chối tạo lịch & thông báo lỗi tương ứng (quay lại bước 10 hoặc bước 12)
+end
+deactivate UI
+deactivate Patient
+@enduml

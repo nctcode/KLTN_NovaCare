@@ -1,0 +1,105 @@
+@startuml seq_quen_mat_khau
+title sd UC-AUTH-04: Quên mật khẩu (NovaCare)
+autonumber off
+skinparam sequenceMessageAlign left
+skinparam backgroundColor #FFFFFF
+skinparam sequence {
+  LifeLineBorderColor #475569
+  LifeLineBackgroundColor #7DD3FC
+  ActorBorderColor #0F172A
+  ActorBackgroundColor #7DD3FC
+  BoundaryBorderColor #0F172A
+  BoundaryBackgroundColor #7DD3FC
+  ControlBorderColor #0F172A
+  ControlBackgroundColor #7DD3FC
+  EntityBorderColor #0F172A
+  EntityBackgroundColor #7DD3FC
+  ArrowColor #0F172A
+}
+
+actor "Người dùng\n(Khách / PATIENT / DOCTOR)" as User
+boundary "GD_QuenMatKhau" as GD_Forgot
+control "CTR_PasswordResetService" as CTR_Reset
+entity "E_users" as E_Users
+entity "E_password_reset_challenges" as E_Challenge
+entity "E_refresh_tokens" as E_Tokens
+actor "Dịch vụ gửi SMS\n(SmsService)" as SMS
+
+activate User
+User -> GD_Forgot : 1: Chọn "Quên mật khẩu?"
+activate GD_Forgot
+GD_Forgot -> GD_Forgot : 1.1: showForgotPasswordForm()
+
+User -> GD_Forgot : 2: Nhập phone, chọn "Nhận mã xác thực"
+GD_Forgot -> CTR_Reset : 2.1: request(ForgotPasswordDto { phone })
+activate CTR_Reset
+CTR_Reset -> E_Users : 2.2: findFirst({ phone, deletedAt: null, isActive: true })
+activate E_Users
+E_Users --> CTR_Reset : 2.3: user
+deactivate E_Users
+
+alt user != null && phone hợp lệ
+  CTR_Reset -> E_Challenge : 2.4: upsert({ userId: user.id, otpHash, destination: phone, expiresAt: +5m })
+  activate E_Challenge
+  E_Challenge --> CTR_Reset : 2.5: challenge
+  deactivate E_Challenge
+  CTR_Reset -> SMS : 2.6: sendResetOtp(phone, otp)
+  activate SMS
+  SMS --> CTR_Reset : 2.7: Đã gửi SMS mã OTP (6 số)
+  deactivate SMS
+  CTR_Reset --> GD_Forgot : 2.8: { message, maskedPhone }
+else phone không tồn tại / không hợp lệ — Luồng 3.1
+  CTR_Reset --> GD_Forgot : 3: BadRequestException (400)
+  deactivate CTR_Reset
+  GD_Forgot -> GD_Forgot : 3.1: showError("Số điện thoại không hợp lệ")
+  User -> User : 3.2: Quay về bước 2
+end
+
+User -> GD_Forgot : 4: Nhập otpCode, chọn "Xác thực OTP"
+GD_Forgot -> CTR_Reset : 4.1: verify(VerifyOtpDto { phone, otpCode })
+activate CTR_Reset
+CTR_Reset -> E_Challenge : 4.2: findUnique({ userId: user.id })
+activate E_Challenge
+E_Challenge --> CTR_Reset : 4.3: challenge (otpHash, destination, expiresAt, attempts)
+deactivate E_Challenge
+CTR_Reset -> CTR_Reset : 4.4: argon2.verify(otpHash, otpCode) & check expiresAt
+
+alt otpValid == true && expiresAt > now
+  CTR_Reset -> E_Challenge : 4.5: update({ otpHash: null, verificationTokenHash, verificationExpiresAt })
+  activate E_Challenge
+  deactivate E_Challenge
+  CTR_Reset --> GD_Forgot : 4.6: { resetToken }
+  GD_Forgot -> GD_Forgot : 4.7: showResetPasswordForm()
+else otpValid == false || expiresAt <= now — Luồng 5.1
+  CTR_Reset --> GD_Forgot : 5: BadRequestException (400)
+  deactivate CTR_Reset
+  GD_Forgot -> GD_Forgot : 5.1: showError("Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại")
+  User -> User : 5.2: Quay về bước 4
+end
+
+User -> GD_Forgot : 6: Nhập newPassword, confirmPassword, chọn "Đổi mật khẩu"
+GD_Forgot -> CTR_Reset : 6.1: reset(ResetPasswordDto { resetToken, newPassword })
+activate CTR_Reset
+CTR_Reset -> E_Challenge : 6.2: findFirst({ verificationTokenHash, verificationExpiresAt > now })
+activate E_Challenge
+E_Challenge --> CTR_Reset : 6.3: challenge (userId)
+deactivate E_Challenge
+CTR_Reset -> E_Users : 6.4: update({ id: userId, passwordHash, authVersion: { increment: 1 } })
+activate E_Users
+E_Users --> CTR_Reset : 6.5: updatedUser
+deactivate E_Users
+CTR_Reset -> E_Challenge : 6.6: update({ userId, verificationTokenHash: null, verificationExpiresAt: null })
+activate E_Challenge
+E_Challenge --> CTR_Reset : 6.7: clearedChallenge
+deactivate E_Challenge
+CTR_Reset -> E_Tokens : 6.8: updateMany({ userId, isRevoked: false }, { isRevoked: true })
+activate E_Tokens
+E_Tokens --> CTR_Reset : 6.9: revokedSessions
+deactivate E_Tokens
+CTR_Reset --> GD_Forgot : 6.10: { message }
+deactivate CTR_Reset
+GD_Forgot -> GD_Forgot : 6.11: showToast("Đổi mật khẩu thành công") & navigateToLogin()
+
+deactivate GD_Forgot
+deactivate User
+@enduml
