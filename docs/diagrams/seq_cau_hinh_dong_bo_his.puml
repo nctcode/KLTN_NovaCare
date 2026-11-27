@@ -1,0 +1,132 @@
+@startuml
+title sd Cấu hình & đồng bộ HIS (NovaCare)
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam sequence {
+  ArrowColor #0f172a
+  LifeLineBorderColor #475569
+  LifeLineBackgroundColor #7DD3FC
+  ParticipantBorderColor #0f172a
+  ParticipantBackgroundColor #7DD3FC
+  ActorBorderColor #0f172a
+  ActorBackgroundColor #7DD3FC
+  GroupBorderColor #1e293b
+  GroupBackgroundColor #F1F5F9
+}
+
+actor "Quản trị viên\ncơ sở y tế\n(HOSPITAL_ADMIN)" as Admin
+boundary "GD_CauHinh\nDongBoHIS" as GD
+control "CTR_HospitalAdmin\nService" as CTR
+entity "ObjDoctor_new" as ObjDoc
+boundary "HIS_BenhVien\n<<external>>" as HIS
+entity "E_hospitals" as EHosp
+entity "E_hospital_\nspecialties" as ESpec
+entity "E_doctors" as EDoc
+
+activate Admin
+
+== Tải trạng thái tích hợp HIS (Bước 1 - 2, Alt 2.1 - 2.2) ==
+Admin -> GD : 1: Truy cập màn hình "Cổng Đồng bộ HIS" (/admin/his-sync)
+activate GD
+GD -> CTR : 1.1: getIntegrationStatus(hospitalId)
+activate CTR
+CTR -> EHosp : 1.2: findUnique(hospitalId)
+activate EHosp
+EHosp --> CTR : 1.3: Trả về thông tin cơ sở & cấu hình HIS
+deactivate EHosp
+CTR --> GD : 1.4: Trả về trạng thái kết nối (isConnected, endpointUrl, authType)
+deactivate CTR
+
+alt Chưa kết nối HIS (isConnected = false)
+  GD --> Admin : 1.5: Hiển thị màn hình thiết lập kết nối lần đầu
+  Admin -> GD : 2: Chọn REST API, xem hướng dẫn và nhấn "Kiểm Tra API Ngay"
+else Đã kết nối HIS từ trước (Alt 2.1, 2.2)
+  GD --> Admin : 2.1: Hiển thị Dashboard trạng thái kết nối HIS hiện tại
+  Admin -> GD : 2.2: Nhấn "Đồng bộ theo quy trình" (hoặc "Cấu hình" / "Kiểm tra kết nối")
+end
+
+== Nhập cấu hình & Kiểm tra bắt tay Handshake (Bước 4 - 7, Alt 6.1 - 6.2) ==
+GD --> Admin : 2.3: Hiển thị biểu mẫu nhập Endpoint URL, Auth và API Key/Token
+Admin -> GD : 3: Nhập Endpoint URL, chọn Auth, nhập API Key/Token và nhấn "Kiểm Tra API Ngay"
+GD -> CTR : 3.1: testHandshake(endpointUrl, authType, authToken)
+activate CTR
+CTR -> HIS : 3.2: fetchHisCatalog(endpointUrl, authType, authToken)
+activate HIS
+
+alt Kết nối HIS thành công & JSON hợp lệ (có hospital_code, doctors)
+  HIS --> CTR : 3.3: Trả về danh mục khoa phòng, bác sĩ và ca trực (JSON)
+  deactivate HIS
+  CTR --> GD : 3.4: Trả về kết quả kiểm tra & danh mục xem trước (chưa lưu CSDL)
+  deactivate CTR
+  GD --> Admin : 3.5: Hiển thị kết quả bắt tay thành công (mã viện, số khoa, số bác sĩ, độ trễ)
+
+  == Xem trước, Ánh xạ chuyên khoa & Đối chiếu (Bước 8 - 13) ==
+  Admin -> GD : 4: Chuyển qua giai đoạn 1/5 Kết nối -> 2/5 Preview
+  GD --> Admin : 4.1: Hiển thị thông tin cơ sở y tế và bảng danh sách bác sĩ từ HIS
+  Admin -> GD : 5: Ánh xạ khoa HIS sang chuyên khoa NovaCare (3/5 Mapping)
+  GD -> GD : 5.1: reconcileDoctors(handshakeResult, existingDoctors)
+  GD --> Admin : 5.2: Hiển thị đối chiếu dự kiến (Tạo mới / Cập nhật / Không đổi / Bỏ qua)
+  Admin -> GD : 6: Chọn bác sĩ đồng bộ (4/5), tích xác nhận kế hoạch và nhấn "Thực thi đồng bộ" (5/5)
+
+  alt Đã xác nhận kế hoạch && selectedDoctorIds.length > 0
+    == Thực thi đồng bộ Idempotent (Bước 15 - 17) ==
+    GD -> CTR : 6.1: syncHospitalCatalog(hospitalId, dto)
+    activate CTR
+    CTR -> HIS : 6.2: fetchHisCatalog(endpointUrl, authType, authToken)
+    activate HIS
+    HIS --> CTR : 6.3: Trả về dữ liệu danh mục HIS mới nhất
+    deactivate HIS
+
+    CTR -> EHosp : 6.4: updateHospitalAndConfig(hospitalId, externalId, endpointUrl)
+    activate EHosp
+    EHosp --> CTR : 6.5: Trả về kết quả cập nhật cơ sở & cấu hình HIS
+    deactivate EHosp
+
+    CTR -> ESpec : 6.6: upsertHospitalSpecialties(hospitalId, specialtyMappings)
+    activate ESpec
+    ESpec --> CTR : 6.7: Trả về bản đồ chuyên khoa đã liên kết
+    deactivate ESpec
+
+    loop Với từng bác sĩ trong selectedDoctorIds
+      CTR -> EDoc : 6.8: findUnique(externalId)
+      activate EDoc
+      EDoc --> CTR : 6.9: Trả về hồ sơ bác sĩ (nếu đã tồn tại)
+      deactivate EDoc
+
+      alt Bác sĩ chưa tồn tại trong NovaCare
+        create ObjDoc
+        CTR -->> ObjDoc : 6.10: <<create>> CreateObjDoctor_new
+        activate ObjDoc
+        ObjDoc --> CTR : 6.11: Trả về ObjDoctor_new
+        CTR -> EDoc : 6.12: create(ObjDoctor_new)
+        activate EDoc
+        destroy ObjDoc
+        EDoc --> CTR : 6.13: Trả về bác sĩ mới tạo (CREATED)
+        deactivate EDoc
+      else Bác sĩ đã tồn tại
+        CTR -> EDoc : 6.14: updateIfChanged(doctor, workplace, weeklyShifts)
+        activate EDoc
+        EDoc --> CTR : 6.15: Trả về trạng thái UPDATED hoặc UNCHANGED
+        deactivate EDoc
+      end
+    end
+
+    CTR --> GD : 6.16: Trả về báo cáo đồng bộ (createdCount, updatedCount, unchangedCount, details)
+    deactivate CTR
+    GD --> Admin : 6.17: Hiển thị báo cáo kết quả đồng bộ & nhật ký chi tiết (Audit Trail)
+  else Chưa tích xác nhận kế hoạch hoặc chưa chọn bác sĩ (Alt 15.1, 15.2)
+    GD --> Admin : 6.18: Hiển thị thông báo lỗi và không thực thi đồng bộ
+  end
+else Thiếu đầu vào / Kết nối HIS thất bại / JSON sai chuẩn (Alt 6.1, 6.2)
+  HIS --> CTR : 3.6: Trả về lỗi kết nối / 401 Unauthorized / dữ liệu không hợp lệ
+  CTR --> GD : 3.7: Trả về BadRequestException kèm nguyên nhân lỗi
+  GD --> Admin : 3.8: Hiển thị nguyên nhân lỗi, gợi ý khắc phục và không cho chuyển sang Preview
+end
+
+deactivate GD
+deactivate Admin
+@enduml

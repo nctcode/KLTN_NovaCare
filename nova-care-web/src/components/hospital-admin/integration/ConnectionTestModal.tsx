@@ -63,11 +63,13 @@ export function ConnectionTestModal({
   // Reset or initialize when modal opens
   useEffect(() => {
     if (open) {
+      const normalizedAuthType: HisAuthType =
+        defaultAuthType === 'bearer' ? 'bearer' : 'api_key';
       setEndpointUrl(defaultEndpointUrl);
-      setAuthType(defaultAuthType || 'api_key');
+      setAuthType(normalizedAuthType);
       setAuthToken(defaultAuthToken || '');
-      if (defaultEndpointUrl.trim()) {
-        handleRunTest(defaultEndpointUrl, defaultAuthType || 'api_key', defaultAuthToken || '');
+      if (defaultEndpointUrl.trim() && (defaultAuthToken || '').trim()) {
+        handleRunTest(defaultEndpointUrl, normalizedAuthType, defaultAuthToken || '');
       } else {
         setTestState('idle');
         setTestResult(null);
@@ -84,7 +86,12 @@ export function ConnectionTestModal({
     }
 
     const currentAuthType = authTypeToTest !== undefined ? authTypeToTest : authType;
-    const currentToken = tokenToTest !== undefined ? tokenToTest : authToken;
+    const currentToken = (tokenToTest !== undefined ? tokenToTest : authToken).trim();
+    if (!currentToken) {
+      toast.error(`Vui lòng nhập mã khóa xác thực ${currentAuthType === 'api_key' ? 'X-API-KEY' : 'Bearer Token'}`);
+      setTestState('idle');
+      return;
+    }
 
     setTestState('testing');
     setTestError(null);
@@ -186,7 +193,7 @@ export function ConnectionTestModal({
               <div className="border-t border-slate-100 pt-1" />
 
               <p className="text-[11px] text-slate-400 italic">
-                Đây là trạng thái minh họa; giao diện thật chỉ hiển thị khi yêu cầu kiểm tra đang chạy.
+                Yêu cầu kiểm tra đang chờ phản hồi từ máy chủ HIS; thao tác này không ghi dữ liệu vào NovaCare.
               </p>
             </div>
           )}
@@ -430,6 +437,17 @@ export function ConnectionTestModal({
                       <option value="api_key">X-API-KEY (Header)</option>
                       <option value="bearer">Bearer Token (Authorization)</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-medium">Mã API Key / Secret Token:</label>
+                    <Input
+                      type="password"
+                      value={authToken}
+                      onChange={(e) => setAuthToken(e.target.value)}
+                      placeholder="Nhập secret token được cấp..."
+                      className="font-mono text-xs bg-white"
+                    />
                   </div>
                 </div>
 

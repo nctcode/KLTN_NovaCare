@@ -44,7 +44,7 @@ export class PaymentsService {
     });
 
     if (!appointment) throw new NotFoundException('Lịch khám không tồn tại');
-    if (appointment.status !== 'AWAITING_PAYMENT' && appointment.status !== 'PENDING') {
+    if (appointment.status !== 'PENDING') {
       throw new BadRequestException(`Lịch khám không ở trạng thái chờ thanh toán (Trạng thái hiện tại: ${appointment.status})`);
     }
 
@@ -193,13 +193,13 @@ export class PaymentsService {
         if (isSuccess) {
           await tx.appointment.update({
             where: { id: payment.appointmentId },
-            data: { status: 'PAID' },
+            data: { status: payment.appointment.status },
           });
 
           await tx.appointmentStatusHistory.create({
             data: {
               appointmentId: payment.appointmentId,
-              status: 'PAID',
+              status: payment.appointment.status,
               note: 'Thanh toán qua cổng VNPay thành công',
             },
           });
@@ -232,7 +232,7 @@ export class PaymentsService {
       if (!appt) throw new NotFoundException('Lịch khám không tồn tại');
       return {
         appointmentId,
-        paymentStatus: appt.status === 'PAID' ? 'PAID' : 'UNPAID',
+        paymentStatus: 'PENDING',
         bookingCode: appt.bookingCode,
       };
     }
@@ -295,13 +295,13 @@ export class PaymentsService {
 
       await tx.appointment.update({
         where: { id: appointmentId },
-        data: { status: 'PAID' },
+        data: { status: appointment.status },
       });
 
       await tx.appointmentStatusHistory.create({
         data: {
           appointmentId,
-          status: 'PAID',
+          status: appointment.status,
           note: `Thanh toán giả lập qua ${paymentMethod} thành công`,
         },
       });

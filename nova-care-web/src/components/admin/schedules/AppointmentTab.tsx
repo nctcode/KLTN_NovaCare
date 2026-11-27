@@ -37,12 +37,9 @@ import { toast } from 'sonner';
 
 const STATUS_MAP: Record<string, { label: string; styleDark: string; styleLight: string }> = {
   PENDING: { label: 'Chờ xác nhận', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800/60', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
-  AWAITING_PAYMENT: { label: 'Chờ thanh toán', styleDark: 'bg-orange-950/40 text-orange-400 border-orange-800/60', styleLight: 'bg-orange-50 text-orange-700 border-orange-200' },
   CONFIRMED: { label: 'Đã xác nhận', styleDark: 'bg-blue-950/40 text-blue-400 border-blue-800/60', styleLight: 'bg-blue-50 text-blue-700 border-blue-200' },
-  PAID: { label: 'Đã thanh toán', styleDark: 'bg-purple-950/40 text-purple-400 border-purple-800/60', styleLight: 'bg-purple-50 text-purple-700 border-purple-200' },
   COMPLETED: { label: 'Hoàn thành khám', styleDark: 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60', styleLight: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   CANCELLED: { label: 'Đã hủy', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
-  EXPIRED: { label: 'Quá hạn', styleDark: 'bg-slate-800 text-slate-400 border-slate-700', styleLight: 'bg-slate-100 text-slate-600 border-slate-200' },
   NO_SHOW: { label: 'Vắng mặt', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
   FAILED: { label: 'Thất bại', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800/60', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
   REFUNDED: { label: 'Đã hoàn tiền', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800/60', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -157,6 +154,34 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
       toast.error(error?.response?.data?.message || error.message || 'Không thể check-in tiếp đón');
     },
   });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status, note }: { id: string; status: string; note?: string }) =>
+      adminService.updateAppointmentStatus(id, status, note),
+    onSuccess: (_, variables) => {
+      const message = variables.status === 'CONFIRMED'
+        ? 'Đã xác nhận lịch hẹn'
+        : variables.status === 'COMPLETED'
+          ? 'Đã hoàn thành khám'
+          : 'Đã hủy lịch hẹn';
+      toast.success(message);
+      queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || 'Không thể cập nhật lịch hẹn');
+    },
+  });
+
+  const handleStatusAction = (id: string, status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED') => {
+    if (status === 'CANCELLED') {
+      const reason = window.prompt('Nhập lý do hủy lịch hẹn:');
+      if (!reason?.trim()) return;
+      updateStatusMutation.mutate({ id, status, note: reason.trim() });
+      return;
+    }
+    updateStatusMutation.mutate({ id, status });
+  };
 
   const handleResetFilters = () => {
     setSearch('');
@@ -400,12 +425,9 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
           >
             <option value="">Trạng thái (Tất cả)</option>
             <option value="PENDING">Chờ xác nhận</option>
-            <option value="AWAITING_PAYMENT">Chờ thanh toán</option>
             <option value="CONFIRMED">Đã xác nhận</option>
-            <option value="PAID">Đã thanh toán</option>
             <option value="COMPLETED">Hoàn thành khám</option>
             <option value="CANCELLED">Đã hủy</option>
-            <option value="EXPIRED">Quá hạn</option>
             <option value="NO_SHOW">Vắng mặt</option>
             <option value="OVERDUE">Quá giờ — chưa tiếp nhận</option>
           </select>
@@ -455,7 +477,8 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                     <th className="py-2.5 px-3 min-w-[140px] font-semibold">Bác sĩ</th>
                     <th className="py-2.5 px-3 min-w-[180px] font-semibold">Bệnh viện</th>
                     <th className="py-2.5 px-3 min-w-[140px] font-semibold">Ngày giờ khám</th>
-                    <th className="py-2.5 px-3 text-center min-w-[120px] font-semibold">Trạng thái</th>
+                    <th className="py-2.5 px-3 text-center min-w-[120px] font-semibold">Trạng thái lịch</th>
+                    <th className="py-2.5 px-3 text-center min-w-[130px] font-semibold">Thanh toán</th>
                     <th className="py-2.5 px-3 text-right min-w-[90px] font-semibold">Thao tác</th>
                   </tr>
                 </thead>
@@ -555,11 +578,48 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                             </span>
                           </td>
 
+                          {/* Payment status: independent from appointment status */}
+                          <td className="py-2.5 px-3 text-center align-middle whitespace-nowrap">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${
+                              (appt.paymentStatus || appt.payment?.status || (appt.status === 'COMPLETED' ? 'PAID' : 'PENDING')) === 'PAID'
+                                ? (isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-950/40 text-emerald-400 border-emerald-800')
+                              : (appt.paymentStatus || appt.payment?.status) === 'FAILED'
+                                  ? (isLight ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-rose-950/40 text-rose-400 border-rose-800')
+                                  : (isLight ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-700')
+                            }`}>
+                              {(appt.paymentStatus || appt.payment?.status || (appt.status === 'COMPLETED' ? 'PAID' : 'PENDING')) === 'PAID' ? 'Đã thanh toán' : (appt.paymentStatus || appt.payment?.status) === 'FAILED' ? 'Thất bại' : (appt.paymentStatus || appt.payment?.status) === 'REFUNDED' ? 'Đã hoàn tiền' : 'Chưa thanh toán'}
+                            </span>
+                          </td>
+
                           {/* Actions */}
                           <td className="py-2.5 px-3 text-right align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Quick Check-in button */}
-                              {isHospitalAdmin && !appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                              {/* PENDING: Confirm / Cancel */}
+                              {isHospitalAdmin && appt.status === 'PENDING' && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={updateStatusMutation.isPending}
+                                    onClick={() => handleStatusAction(appt.id, 'CONFIRMED')}
+                                    className="h-7 text-xs font-semibold rounded-lg px-2 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-800"
+                                  >
+                                    Xác nhận
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={updateStatusMutation.isPending}
+                                    onClick={() => handleStatusAction(appt.id, 'CANCELLED')}
+                                    className="h-7 text-xs font-semibold rounded-lg px-2 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800"
+                                  >
+                                    Hủy lịch
+                                  </Button>
+                                </>
+                              )}
+
+                              {/* CONFIRMED: Check-in / Complete / Contact / Cancel */}
+                              {isHospitalAdmin && appt.status === 'CONFIRMED' && !appt.checkInAt && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -572,8 +632,20 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                                 </Button>
                               )}
 
-                              {/* Contact Log button */}
-                              {isHospitalAdmin && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
+                              {isHospitalAdmin && appt.status === 'CONFIRMED' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={updateStatusMutation.isPending}
+                                  onClick={() => handleStatusAction(appt.id, 'COMPLETED')}
+                                  className="h-7 text-xs font-semibold rounded-lg px-2 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800"
+                                >
+                                  Hoàn thành khám
+                                </Button>
+                              )}
+
+                              {isHospitalAdmin && appt.status === 'CONFIRMED' && (
+                                <>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -583,19 +655,16 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                                 >
                                   <Phone className="w-3 h-3 mr-1" /> Liên hệ
                                 </Button>
-                              )}
-
-                              {/* Confirm NO_SHOW button */}
-                              {isHospitalAdmin && slotStart && slotStart.getTime() < Date.now() && !appt.checkInAt && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setNoShowModalAppt(appt)}
-                                  className="h-7 text-xs font-semibold rounded-lg px-2 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/50"
-                                  title="Thẩm định điều kiện và xác nhận vắng mặt"
+                                  disabled={updateStatusMutation.isPending}
+                                  onClick={() => handleStatusAction(appt.id, 'CANCELLED')}
+                                  className="h-7 text-xs font-semibold rounded-lg px-2 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800"
                                 >
-                                  Vắng mặt
+                                  Hủy lịch
                                 </Button>
+                                </>
                               )}
 
                               {/* Revert NO_SHOW button */}
@@ -766,7 +835,6 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
         appointment={noShowModalAppt}
         open={!!noShowModalAppt}
         onClose={() => setNoShowModalAppt(null)}
-        onOpenContactLog={(appt) => setContactModalAppt(appt)}
       />}
 
       {isHospitalAdmin && <RevertNoShowModal

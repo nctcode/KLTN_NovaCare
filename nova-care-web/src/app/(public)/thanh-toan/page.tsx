@@ -29,8 +29,7 @@ function PaymentPageContent() {
     if (!appointmentId) return;
     setIsProcessing(true);
     try {
-      await appointmentService.confirm(appointmentId);
-      toast.success('Đã xác nhận lịch hẹn! Vui lòng thanh toán tại cơ sở y tế khi đến khám.');
+      toast.success('Đã ghi nhận lựa chọn thanh toán tại cơ sở y tế. Lịch đang chờ cơ sở xác nhận.');
       setIsSuccess(true);
       refetch();
     } catch (error: any) {
@@ -91,7 +90,7 @@ function PaymentPageContent() {
     );
   }
 
-  if (isSuccess || appointment.status === 'PAID' || appointment.status === 'CONFIRMED') {
+  if (isSuccess || appointment.payment?.status === 'PAID') {
     return (
       <div className="min-h-screen bg-gray-50 py-12 flex items-center justify-center p-4">
         <Card className="border-emerald-200 bg-white shadow-md max-w-lg w-full rounded-2xl overflow-hidden">

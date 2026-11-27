@@ -1,0 +1,280 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="2760" viewBox="0 0 1560 2760">
+  <defs>
+    <style>
+      .lifeline-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
+      .lifeline-sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #334155; text-anchor: middle; }
+      .msg { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .guard { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; font-weight: 800; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .frag-tag { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: 800; fill: #0f172a; }
+      .lifeline { stroke: #475569; stroke-width: 1.8; stroke-dasharray: 7 6; }
+      .act { fill: #7DD3FC; stroke: #0f172a; stroke-width: 1.6; }
+      .arrow { stroke: #0f172a; stroke-width: 2.1px; fill: none; }
+      .ret { stroke: #0f172a; stroke-width: 1.8; stroke-dasharray: 7 5; fill: none; }
+      .frag-box { fill: none; stroke: #1e293b; stroke-width: 2; }
+      .frag-div { stroke: #1e293b; stroke-width: 1.6; stroke-dasharray: 8 5; }
+      .icon-fill { fill: #7DD3FC; stroke: #0f172a; stroke-width: 2; }
+      .icon-stroke { fill: none; stroke: #0f172a; stroke-width: 2; }
+    </style>
+    <marker id="solidArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0f172a"/>
+    </marker>
+    <marker id="openArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#0f172a" stroke-width="1.8"/>
+    </marker>
+  </defs>
+
+  <!-- White Background -->
+  <rect x="0" y="0" width="1560" height="2760" fill="#FFFFFF"/>
+
+  <!-- Frame -->
+  <rect x="14" y="14" width="1532" height="2732" fill="none" stroke="#64748b" stroke-width="1.6"/>
+  <polygon points="14,14 496,14 496,46 478,62 14,62" fill="#F1F5F9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="30" y="45" class="frag-tag" style="font-size:17px;">sd Giám sát lịch hẹn toàn hệ thống (NovaCare)</text>
+
+  <!-- ================= LIFELINES (5) ================= -->
+  <!-- X: Admin=100, GD_GiamSatLichHen=380, GD_ChiTietLichHen=675, CTR_AdminAppointmentsService=995, E_appointments=1280 -->
+
+  <!-- 1. Actor: Quản trị viên hệ thống -->
+  <g transform="translate(100, 110)">
+    <circle cx="0" cy="-18" r="12" class="icon-fill"/>
+    <line x1="0" y1="-6" x2="0" y2="20" class="icon-stroke"/>
+    <line x1="-18" y1="3" x2="18" y2="3" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="-14" y2="38" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="14" y2="38" class="icon-stroke"/>
+    <text x="0" y="56" class="lifeline-label" style="font-size:15.5px;">Quản trị viên</text>
+    <text x="0" y="73" class="lifeline-label" style="font-size:15.5px;">hệ thống</text>
+    <text x="0" y="89" class="lifeline-sub">(ADMIN)</text>
+  </g>
+  <line x1="100" y1="208" x2="100" y2="2712" class="lifeline"/>
+
+  <!-- 2. Boundary: GD_GiamSatLichHen -->
+  <g transform="translate(380, 124)">
+    <line x1="-30" y1="-19" x2="-30" y2="19" class="icon-stroke"/>
+    <line x1="-30" y1="0" x2="-18" y2="0" class="icon-stroke"/>
+    <circle cx="3" cy="0" r="21" class="icon-fill"/>
+    <text x="0" y="48" class="lifeline-label">GD_GiamSatLichHen</text>
+    <text x="0" y="68" class="lifeline-sub">&lt;&lt;boundary&gt;&gt;</text>
+  </g>
+  <line x1="380" y1="208" x2="380" y2="2712" class="lifeline"/>
+
+  <!-- 3. Boundary: GD_ChiTietLichHen -->
+  <g transform="translate(675, 124)">
+    <line x1="-30" y1="-19" x2="-30" y2="19" class="icon-stroke"/>
+    <line x1="-30" y1="0" x2="-18" y2="0" class="icon-stroke"/>
+    <circle cx="3" cy="0" r="21" class="icon-fill"/>
+    <text x="0" y="48" class="lifeline-label">GD_ChiTietLichHen</text>
+    <text x="0" y="68" class="lifeline-sub">&lt;&lt;boundary&gt;&gt;</text>
+  </g>
+  <line x1="675" y1="208" x2="675" y2="2712" class="lifeline"/>
+
+  <!-- 4. Control: CTR_AdminAppointmentsService -->
+  <g transform="translate(995, 124)">
+    <circle cx="0" cy="0" r="21" class="icon-fill"/>
+    <path d="M -5,-27 L 5,-21 L -5,-15" fill="none" stroke="#0f172a" stroke-width="2"/>
+    <text x="0" y="45" class="lifeline-label" style="font-size:15.5px;">CTR_AdminAppointments</text>
+    <text x="0" y="62" class="lifeline-label" style="font-size:15.5px;">Service</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;control&gt;&gt;</text>
+  </g>
+  <line x1="995" y1="208" x2="995" y2="2712" class="lifeline"/>
+
+  <!-- 5. Entity: E_appointments -->
+  <g transform="translate(1280, 124)">
+    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
+    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
+    <text x="0" y="48" class="lifeline-label">E_appointments</text>
+    <text x="0" y="68" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="1280" y1="208" x2="1280" y2="2712" class="lifeline"/>
+
+  <!-- ================= ACTIVATION BARS ================= -->
+  <!-- Quản trị viên hệ thống -->
+  <rect x="92" y="232" width="16" height="2454" class="act"/>
+
+  <!-- GD_GiamSatLichHen -->
+  <rect x="372" y="248" width="16" height="2430" class="act"/>
+  <rect x="380" y="950" width="14" height="24" class="act"/>
+  <rect x="380" y="1108" width="14" height="24" class="act"/>
+
+  <!-- GD_ChiTietLichHen -->
+  <rect x="667" y="1926" width="16" height="654" class="act"/>
+
+  <!-- CTR_AdminAppointmentsService -->
+  <rect x="987" y="296" width="16" height="204" class="act"/>
+  <rect x="987" y="542" width="16" height="204" class="act"/>
+  <rect x="987" y="1260" width="16" height="258" class="act"/>
+  <rect x="995" y="1292" width="14" height="24" class="act"/>
+  <rect x="987" y="1974" width="16" height="430" class="act"/>
+
+  <!-- E_appointments -->
+  <rect x="1272" y="342" width="16" height="106" class="act"/>
+  <rect x="1280" y="374" width="14" height="24" class="act"/>
+  <rect x="1272" y="588" width="16" height="106" class="act"/>
+  <rect x="1280" y="620" width="14" height="24" class="act"/>
+  <rect x="1272" y="1360" width="16" height="106" class="act"/>
+  <rect x="1280" y="1392" width="14" height="24" class="act"/>
+  <rect x="1272" y="2022" width="16" height="106" class="act"/>
+  <rect x="1280" y="2054" width="14" height="24" class="act"/>
+
+  <!-- ================= PHASE 1: TRUY CẬP & TẢI TỔNG QUAN + DANH SÁCH (Steps 1-4) ================= -->
+  <line x1="108" y1="250" x2="372" y2="250" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="120" y="240" class="msg">1: Truy cập chức năng "Giám sát đặt lịch"</text>
+
+  <line x1="388" y1="298" x2="987" y2="298" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="404" y="288" class="msg">1.1: getStats()</text>
+
+  <line x1="1003" y1="344" x2="1272" y2="344" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1020" y="334" class="msg">1.2: count(statsFilter)</text>
+
+  <path d="M 1288 370 L 1328 370 L 1328 394 L 1294 394" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1338" y="378" class="msg">1.3: Truy vấn chỉ số</text>
+  <text x="1370" y="397" class="msg">tổng quan lịch hẹn</text>
+
+  <line x1="1272" y1="446" x2="1003" y2="446" class="ret" marker-end="url(#openArrow)"/>
+  <text x="1018" y="436" class="msg">1.4: Trả về 4 chỉ số tổng quan</text>
+
+  <line x1="987" y1="494" x2="388" y2="494" class="ret" marker-end="url(#openArrow)"/>
+  <text x="545" y="484" class="msg">1.5: Trả về các chỉ số tổng quan</text>
+
+  <line x1="388" y1="544" x2="987" y2="544" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="404" y="534" class="msg">1.6: findAll(params)</text>
+
+  <line x1="1003" y1="590" x2="1272" y2="590" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1020" y="580" class="msg">1.7: findMany(params)</text>
+
+  <path d="M 1288 616 L 1328 616 L 1328 640 L 1294 640" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1338" y="624" class="msg">1.8: Truy vấn danh sách</text>
+  <text x="1370" y="643" class="msg">lịch hẹn</text>
+
+  <line x1="1272" y1="692" x2="1003" y2="692" class="ret" marker-end="url(#openArrow)"/>
+  <text x="1018" y="682" class="msg">1.9: Trả về danh sách lịch hẹn</text>
+
+  <line x1="987" y1="740" x2="388" y2="740" class="ret" marker-end="url(#openArrow)"/>
+  <text x="515" y="730" class="msg">1.10: Trả về danh sách lịch hẹn và phân trang</text>
+
+  <line x1="372" y1="810" x2="108" y2="810" class="ret" marker-end="url(#openArrow)"/>
+  <text x="120" y="781" class="msg">1.11: Hiển thị 4 thẻ chỉ số tổng quan và bảng danh sách lịch hẹn</text>
+  <text x="158" y="800" class="msg">(mã lịch, bệnh nhân, CSYT, bác sĩ, ngày giờ, trạng thái lịch &amp; thanh toán)</text>
+
+  <!-- ================= LOOP: TRA CỨU, LỌC & XEM CHI TIẾT LỊCH HẸN (Steps 5-17, Alt 5.1-7.1) ================= -->
+  <rect x="28" y="838" width="1504" height="1834" class="frag-box"/>
+  <polygon points="28,838 98,838 98,862 84,874 28,874" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="44" y="862" class="frag-tag">loop</text>
+  <text x="116" y="863" class="guard">[Quản trị viên thực hiện hoặc tiếp tục tra cứu lịch hẹn]</text>
+
+  <!-- PHASE 2: TÌM KIẾM & LỌC ĐA CHIỀU -->
+  <line x1="108" y1="922" x2="372" y2="922" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="120" y="912" class="msg">2: Nhập từ khóa tìm kiếm (mã lịch / tên BN / SĐT) hoặc bỏ trống (Alt 5.1)</text>
+
+  <path d="M 388 946 L 433 946 L 433 970 L 394 970" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="443" y="964" class="msg">2.1: setSearch(keyword)</text>
+
+  <!-- OPT 1: Chọn thêm bộ lọc đa chiều (Steps 7-8) -->
+  <rect x="44" y="994" width="1472" height="166" class="frag-box"/>
+  <polygon points="44,994 108,994 108,1016 94,1028 44,1028" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="61" y="1017" class="frag-tag">opt</text>
+  <text x="122" y="1018" class="guard">[Quản trị viên chọn thêm các bộ lọc cần thiết]</text>
+
+  <line x1="108" y1="1076" x2="372" y2="1076" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="120" y="1066" class="msg">3: Chọn bộ lọc (cơ sở y tế, bác sĩ, chuyên khoa, dịch vụ, trạng thái, ngày khám)</text>
+
+  <path d="M 388 1104 L 433 1104 L 433 1128 L 394 1128" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="443" y="1122" class="msg">3.1: updateFilters(filters)</text>
+
+  <!-- Thực hiện truy vấn lọc (Steps 9-11) -->
+  <line x1="108" y1="1212" x2="372" y2="1212" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="120" y="1202" class="msg">4: Nhấn tìm kiếm hoặc thay đổi bộ lọc</text>
+
+  <line x1="388" y1="1262" x2="987" y2="1262" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="404" y="1252" class="msg">4.1: findAll(filters)</text>
+
+  <path d="M 1003 1288 L 1048 1288 L 1048 1312 L 1009 1312" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1058" y="1306" class="msg">4.2: buildWhereClause(filters)</text>
+
+  <line x1="1003" y1="1362" x2="1272" y2="1362" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1020" y="1352" class="msg">4.3: findMany(where)</text>
+
+  <path d="M 1288 1388 L 1328 1388 L 1328 1412 L 1294 1412" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1338" y="1396" class="msg">4.4: Truy vấn và lọc</text>
+  <text x="1370" y="1415" class="msg">lịch hẹn phù hợp</text>
+
+  <line x1="1272" y1="1464" x2="1003" y2="1464" class="ret" marker-end="url(#openArrow)"/>
+  <text x="1010" y="1435" class="msg">4.5: Trả về danh sách</text>
+  <text x="1042" y="1454" class="msg">lịch hẹn phù hợp</text>
+
+  <line x1="987" y1="1512" x2="388" y2="1512" class="ret" marker-end="url(#openArrow)"/>
+  <text x="515" y="1502" class="msg">4.6: Trả về kết quả tìm kiếm và phân trang</text>
+
+  <!-- ALT 1: Kết quả tìm kiếm / lọc (Step 12 & Alt 5.1, 6.1, 7.1) -->
+  <rect x="44" y="1540" width="1472" height="230" class="frag-box"/>
+  <polygon points="44,1540 108,1540 108,1562 94,1574 44,1574" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="61" y="1563" class="frag-tag">alt</text>
+  <text x="122" y="1564" class="guard">[Có lịch hẹn phù hợp]</text>
+
+  <line x1="372" y1="1624" x2="108" y2="1624" class="ret" marker-end="url(#openArrow)"/>
+  <text x="120" y="1614" class="msg">4.7: Hiển thị danh sách lịch hẹn phù hợp theo điều kiện đã chọn</text>
+
+  <line x1="44" y1="1652" x2="1516" y2="1652" class="frag-div"/>
+  <text x="122" y="1682" class="guard">[Không tìm thấy kết quả (từ khóa bỏ trống / không phù hợp - Alt 5.1, 6.1, 7.1)]</text>
+
+  <line x1="372" y1="1740" x2="108" y2="1740" class="ret" marker-end="url(#openArrow)"/>
+  <text x="120" y="1730" class="msg">4.8: Hiển thị thông báo "Không tìm thấy lịch hẹn phù hợp." và nút "Đặt lại bộ lọc"</text>
+
+  <!-- ================= PHASE 3: XEM CHI TIẾT LỊCH HẸN & QUAY LẠI (Steps 13-17) ================= -->
+  <rect x="44" y="1800" width="1472" height="850" class="frag-box"/>
+  <polygon points="44,1800 108,1800 108,1822 94,1834 44,1834" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="61" y="1823" class="frag-tag">opt</text>
+  <text x="122" y="1824" class="guard">[Có kết quả và quản trị viên chọn một lịch hẹn xem chi tiết]</text>
+
+  <line x1="108" y1="1880" x2="372" y2="1880" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="120" y="1870" class="msg">5: Chọn một lịch hẹn trong danh sách</text>
+
+  <line x1="388" y1="1928" x2="667" y2="1928" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="398" y="1918" class="msg">5.1: openDetailDrawer(appointmentId)</text>
+
+  <line x1="683" y1="1976" x2="987" y2="1976" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="705" y="1966" class="msg">5.2: findOne(appointmentId)</text>
+
+  <line x1="1003" y1="2024" x2="1272" y2="2024" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1030" y="2014" class="msg">5.3: findUnique(id)</text>
+
+  <path d="M 1288 2050 L 1328 2050 L 1328 2074 L 1294 2074" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1338" y="2058" class="msg">5.4: Truy vấn thông tin</text>
+  <text x="1370" y="2077" class="msg">chi tiết lịch hẹn</text>
+
+  <line x1="1272" y1="2126" x2="1003" y2="2126" class="ret" marker-end="url(#openArrow)"/>
+  <text x="1012" y="2097" class="msg">5.5: Trả về dữ liệu</text>
+  <text x="1044" y="2116" class="msg">chi tiết lịch hẹn</text>
+
+  <!-- ALT 2: Kết quả truy vấn chi tiết lịch hẹn -->
+  <rect x="60" y="2152" width="1440" height="320" class="frag-box"/>
+  <polygon points="60,2152 122,2152 122,2174 108,2186 60,2186" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="77" y="2175" class="frag-tag">alt</text>
+  <text x="136" y="2176" class="guard">[Tìm thấy thông tin lịch hẹn]</text>
+
+  <line x1="987" y1="2220" x2="683" y2="2220" class="ret" marker-end="url(#openArrow)"/>
+  <text x="698" y="2210" class="msg">5.6: Trả về thông tin chi tiết lịch hẹn</text>
+
+  <line x1="667" y1="2284" x2="108" y2="2284" class="ret" marker-end="url(#openArrow)"/>
+  <text x="120" y="2255" class="msg">5.7: Hiển thị chi tiết lịch hẹn (bệnh nhân, CSYT, bác sĩ, chuyên khoa,</text>
+  <text x="154" y="2274" class="msg">dịch vụ, thời gian khám, thanh toán, lịch sử trạng thái &amp; liên hệ)</text>
+
+  <line x1="60" y1="2312" x2="1500" y2="2312" class="frag-div"/>
+  <text x="136" y="2340" class="guard">[Không tìm thấy lịch hẹn]</text>
+
+  <line x1="987" y1="2398" x2="683" y2="2398" class="ret" marker-end="url(#openArrow)"/>
+  <text x="708" y="2369" class="msg">5.8: Trả về lỗi không tìm thấy</text>
+  <text x="740" y="2388" class="msg">lịch hẹn (404)</text>
+
+  <line x1="667" y1="2450" x2="108" y2="2450" class="ret" marker-end="url(#openArrow)"/>
+  <text x="120" y="2440" class="msg">5.9: Hiển thị thông báo "Không tìm thấy thông tin lịch khám"</text>
+
+  <!-- Steps 16-17: Đóng màn hình chi tiết & quay lại danh sách -->
+  <line x1="108" y1="2524" x2="667" y2="2524" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="120" y="2514" class="msg">6: Nhấn "Đóng" màn hình chi tiết</text>
+
+  <line x1="667" y1="2574" x2="388" y2="2574" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="475" y="2564" class="msg">6.1: onClose()</text>
+
+  <line x1="372" y1="2624" x2="108" y2="2624" class="ret" marker-end="url(#openArrow)"/>
+  <text x="120" y="2614" class="msg">6.2: Quay lại danh sách lịch hẹn (tiếp tục tra cứu)</text>
+</svg>

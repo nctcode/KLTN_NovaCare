@@ -474,6 +474,24 @@ export class AdminAppointmentsService {
         },
       });
 
+      if (status === AppointmentStatus.COMPLETED) {
+        await tx.paymentTransaction.upsert({
+          where: { appointmentId: id },
+          update: {
+            status: 'PAID',
+            paidAt: new Date(),
+          },
+          create: {
+            appointmentId: id,
+            amount: existing.totalPrice,
+            paymentMethod: 'CASH',
+            transactionCode: `CASH-${existing.bookingCode}`,
+            status: 'PAID',
+            paidAt: new Date(),
+          },
+        });
+      }
+
       if (status !== existing.status) {
         await tx.notification.create({
           data: {

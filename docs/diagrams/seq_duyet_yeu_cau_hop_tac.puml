@@ -1,0 +1,103 @@
+@startuml
+title sd Duyệt yêu cầu hợp tác (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Quản trị viên\nhệ thống\n(ADMIN)" as Admin
+boundary "GD_DuyetYeuCauHopTac" as UI
+control "CTR_PartnerRequestsService" as Ctrl
+entity "E_partner_requests" as Req
+entity "E_hospitals" as Hosp
+entity "E_users" as Usr
+entity "E_audit_logs" as Audit
+
+activate Admin
+Admin -> UI : 1: Nhấn nút "Chấp thuận" trên yêu cầu đang chờ xử lý
+activate UI
+UI -> UI : 1.1: handleOpenApprove(req)
+UI --> Admin : 1.2: Hiển thị hộp thoại phê duyệt (tên cơ sở, tệp PDF, email xác nhận, họ tên QTV, ghi chú)
+
+Admin -> UI : 2: Kiểm tra / chỉnh sửa tên cơ sở y tế, email nhận thông báo và họ tên QTV
+
+opt Tải lên văn bản chấp thuận PDF và nhập ghi chú nội bộ (Bước 4)
+  Admin -> UI : 3: Chọn tệp văn bản chấp thuận PDF và nhập ghi chú nội bộ
+  UI -> UI : 3.1: checkPdfFile(file)
+
+  alt Định dạng application/pdf && dung lượng <= 5MB
+    UI -> UI : 3.2: readAsDataURL(file)
+    UI --> Admin : 3.3: Hiển thị tên tệp PDF đã chọn
+  else Không phải PDF hoặc dung lượng > 5MB (Alt 4.1, 5.1)
+    UI --> Admin : 3.4: Xóa tệp vừa chọn và hiển thị lỗi "Chỉ chấp nhận file PDF tối đa 5MB"
+  end
+end
+
+alt Nhấn nút "Xác nhận Duyệt & Gửi mail" (Bước 6)
+  Admin -> UI : 4: Nhấn nút "Xác nhận Duyệt & Gửi mail"
+  UI -> UI : 4.1: validateForm(approveForm)
+  UI -> Ctrl : 4.2: approveRequest(id, dto)
+  activate Ctrl
+  Ctrl -> Req : 4.3: findUnique(id)
+  activate Req
+  Req -> Req : 4.4: Truy vấn yêu cầu hợp tác
+  Req --> Ctrl : 4.5: Trả về thông tin yêu cầu hợp tác
+  deactivate Req
+  Ctrl -> Ctrl : 4.6: validateRequestAndPdf(request, dto)
+
+  Ctrl -> Hosp : 4.7: findFirst(hospitalName)
+  activate Hosp
+  Hosp --> Ctrl : 4.8: Trả về cơ sở y tế (nếu đã tồn tại)
+  deactivate Hosp
+
+  opt Chưa tồn tại cơ sở y tế trong hệ thống
+    create entity "ObjHospital_new" as NewHosp
+    Ctrl -->> NewHosp : 4.9: <<create>> CreateObjHospital_new
+    activate NewHosp
+    NewHosp --> Ctrl : 4.10: Trả về ObjHospital_new
+    deactivate NewHosp
+    Ctrl -> Hosp : 4.11: create(ObjHospital_new)
+    activate Hosp
+    Hosp -> Hosp : 4.12: Lưu cơ sở y tế mới
+    destroy NewHosp
+    Hosp --> Ctrl : 4.13: Trả về thông tin cơ sở y tế mới tạo
+    deactivate Hosp
+  end
+
+  Ctrl -> Ctrl : 4.14: Sinh activationToken (48h) & băm mật khẩu tạm
+
+  create entity "ObjUser_new" as NewUser
+  Ctrl -->> NewUser : 4.15: <<create>> CreateObjUser_new
+  activate NewUser
+  NewUser --> Ctrl : 4.16: Trả về ObjUser_new
+  deactivate NewUser
+  Ctrl -> Usr : 4.17: create(ObjUser_new)
+  activate Usr
+  Usr -> Usr : 4.18: Lưu tài khoản chờ kích hoạt (isActive = false)
+  destroy NewUser
+  Usr --> Ctrl : 4.19: Trả về thông tin tài khoản quản trị cơ sở
+  deactivate Usr
+
+  Ctrl -> Req : 4.20: update(id, APPROVED)
+  activate Req
+  Req -> Req : 4.21: Cập nhật trạng thái APPROVED & lưu PDF
+  Req --> Ctrl : 4.22: Trả về yêu cầu đã duyệt
+  deactivate Req
+
+  Ctrl -> Audit : 4.23: logAction(APPROVE_PARTNER_REQUEST)
+  activate Audit
+  Audit --> Ctrl : 4.24: Trả về kết quả ghi nhật ký
+  deactivate Audit
+
+  Ctrl -> Ctrl : 4.25: sendHospitalActivationEmail(email, hospitalName, activationUrl)
+  Ctrl --> UI : 4.26: Trả về kết quả duyệt hợp tác thành công
+  deactivate Ctrl
+  UI --> Admin : 4.27: Đóng hộp thoại, làm mới danh sách, thông báo duyệt thành công\nvà mở hộp thoại "Đã Phê Duyệt Thành Công"
+else Nhấn nút "Hủy" hoặc đóng hộp thoại phê duyệt (Alt 6.1, 7.1)
+  Admin -> UI : 5: Nhấn nút "Hủy" hoặc đóng hộp thoại phê duyệt
+  UI -> UI : 5.1: closeApproveDialog()
+  UI --> Admin : 5.2: Đóng biểu mẫu, không lưu thay đổi và giữ nguyên trạng thái chờ xử lý
+end
+
+deactivate UI
+deactivate Admin
+@enduml

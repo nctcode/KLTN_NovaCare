@@ -108,10 +108,10 @@ export function HospitalIntegrationView() {
     }
     return '';
   });
-  const [authType, setAuthType] = useState<'none' | 'api_key' | 'bearer'>(() => {
+  const [authType, setAuthType] = useState<'api_key' | 'bearer'>(() => {
     if (typeof window !== 'undefined') {
       const savedAuth = localStorage.getItem(storageKey('auth_type'));
-      if (savedAuth === 'bearer' || savedAuth === 'none') return savedAuth;
+      if (savedAuth === 'bearer') return 'bearer';
       return 'api_key';
     }
     return 'api_key';
@@ -124,7 +124,9 @@ export function HospitalIntegrationView() {
   });
   React.useEffect(() => {
     if (statusData?.endpointUrl) setEndpointUrl(statusData.endpointUrl);
-    if (statusData?.authType) setAuthType(statusData.authType);
+    if (statusData?.authType === 'api_key' || statusData?.authType === 'bearer') {
+      setAuthType(statusData.authType);
+    }
   }, [statusData?.endpointUrl, statusData?.authType]);
   const [handshakeResult, setHandshakeResult] = useState<any>(null);
   const [handshakeError, setHandshakeError] = useState<string | null>(null);
@@ -340,7 +342,7 @@ export function HospitalIntegrationView() {
       if (variables.persistConfig) {
         if (typeof window !== 'undefined') {
           localStorage.setItem(storageKey('endpoint_url'), variables.endpointUrl.trim());
-          localStorage.setItem(storageKey('auth_type'), variables.authType || 'none');
+          localStorage.setItem(storageKey('auth_type'), variables.authType || 'api_key');
           localStorage.setItem(storageKey('auth_token'), variables.authToken?.trim() || '');
         }
         queryClient.invalidateQueries({ queryKey: ['hospital-admin-integration-status', hospitalId] });
@@ -444,7 +446,7 @@ export function HospitalIntegrationView() {
       toast.error('Vui lòng nhập đường dẫn Endpoint URL của bệnh viện');
       return;
     }
-    if (authType !== 'none' && (!authToken || !authToken.trim())) {
+    if (!authToken || !authToken.trim()) {
       toast.error(`Vui lòng nhập mã khóa xác thực ${authType === 'api_key' ? 'X-API-KEY' : 'Bearer Token'}`);
       return;
     }
@@ -465,10 +467,9 @@ export function HospitalIntegrationView() {
         statusData?.endpointUrl || localStorage.getItem(storageKey('endpoint_url')) || ''
       );
       setAuthType(
-        (statusData?.authType || localStorage.getItem(storageKey('auth_type')) || 'none') as
-          | 'none'
-          | 'api_key'
-          | 'bearer'
+        (statusData?.authType === 'bearer' || localStorage.getItem(storageKey('auth_type')) === 'bearer')
+          ? 'bearer'
+          : 'api_key'
       );
       setAuthToken(localStorage.getItem(storageKey('auth_token')) || '');
     }
@@ -548,7 +549,11 @@ export function HospitalIntegrationView() {
         open={showConnectionTestModal}
         onOpenChange={setShowConnectionTestModal}
         defaultEndpointUrl={configuredEndpointUrl}
-        defaultAuthType={statusData?.authType || authType}
+        defaultAuthType={
+          statusData?.authType === 'api_key' || statusData?.authType === 'bearer'
+            ? statusData.authType
+            : authType
+        }
         defaultAuthToken={authToken}
         hospitalName={hospitalDisplayName}
         hospitalCode={hospitalCodeDisplay}
@@ -848,6 +853,10 @@ export function HospitalIntegrationView() {
                       setHandshakeResult(null);
                       setHandshakeError(null);
                       setTestLatencyMs(0);
+                      setFormalStep(1);
+                      setSyncExecutionState('ready');
+                      setIsPlanConfirmed(false);
+                      setSyncFinalReport(null);
                       setSetupStep('validation');
                     }}
                     disabled={syncMutation.isPending}
@@ -973,7 +982,7 @@ export function HospitalIntegrationView() {
                       </td>
                       <td className="p-3 text-center">
                         <Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-700 text-[10px]">
-                          {statusData?.apiDoctorCount || 3} bác sĩ
+                          {statusData?.apiDoctorCount ?? 0} bác sĩ
                         </Badge>
                       </td>
                       <td className="p-3 text-right pr-4">
@@ -1167,9 +1176,20 @@ export function HospitalIntegrationView() {
                     <p className="text-xs text-slate-500">Hoàn thành các bước chuẩn bị trước khi gửi yêu cầu kiểm tra bắt tay</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-600 text-xs">
-                  Bước 2 / 3
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFullGuideModal(true)}
+                    className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs rounded-xl gap-1.5 h-8"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                    Xem bản đầy đủ (In / Markdown)
+                  </Button>
+                  <Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-600 text-xs">
+                    Bước 2 / 3
+                  </Badge>
+                </div>
               </div>
 
               {/* 3 Steps Horizontal Cards */}
@@ -1191,11 +1211,11 @@ export function HospitalIntegrationView() {
                   <div className="space-y-2 pt-2 border-t border-slate-200">
                     <Button
                       size="sm"
-                      onClick={() => setShowFullGuideModal(true)}
+                      onClick={() => setShowContractModal(true)}
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl gap-1.5 shadow-sm"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
-                      Xem Tài Liệu Quy Chuẩn (Full Spec)
+                      Xem Hợp Đồng Kỹ Thuật (Contract)
                     </Button>
                     <div className="grid grid-cols-2 gap-2">
                       <a
@@ -1248,7 +1268,7 @@ export function HospitalIntegrationView() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowFullGuideModal(true)}
+                      onClick={() => setShowGuideModal(true)}
                       className="w-full border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100 font-bold text-xs rounded-xl gap-1.5"
                     >
                       <Code2 className="w-3.5 h-3.5" />
@@ -1412,18 +1432,6 @@ export function HospitalIntegrationView() {
                             ✕ Xóa trống
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEndpointUrl('http://localhost:4000/api/hospital-catalog');
-                            setAuthType('bearer');
-                            setAuthToken('novacare_live_his_token_2025');
-                            toast.info('Đã điền thông số mẫu của Mock HIS (Port 4000)');
-                          }}
-                          className="text-emerald-600 hover:text-emerald-700 font-bold hover:underline"
-                        >
-
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -1603,10 +1611,10 @@ export function HospitalIntegrationView() {
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                       </div>
                       <div className="font-bold text-slate-900 text-xs mt-1 truncate">
-                        {authType === 'api_key' ? 'X-API-KEY' : authType === 'bearer' ? 'Bearer Token' : 'Public API'}
+                        {authType === 'api_key' ? 'X-API-KEY' : 'Bearer Token'}
                       </div>
                       <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                        {authType === 'none' ? 'Không gửi thông tin xác thực' : 'Đã gửi request với header này'}
+                        Đã gửi request với header này
                       </div>
                     </div>
 
@@ -1706,7 +1714,13 @@ export function HospitalIntegrationView() {
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => setSetupStep('formal_connect')}
+                        onClick={() => {
+                          setFormalStep(1);
+                          setSyncExecutionState('ready');
+                          setIsPlanConfirmed(false);
+                          setSyncFinalReport(null);
+                          setSetupStep('formal_connect');
+                        }}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-6 rounded-xl gap-2 shadow-sm shadow-emerald-600/20"
                       >
                         Tiếp tục xem trước và ánh xạ
@@ -2583,7 +2597,7 @@ export function HospitalIntegrationView() {
                     <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 flex items-start gap-3 text-xs leading-relaxed">
                       <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <p>
-                        Bảng tương tác minh họa cách xem và chọn bản ghi. Kết quả, trạng thái và lý do trong ứng dụng thật do backend đối chiếu dựa trên mã nhân sự và cấu hình ánh xạ; giao diện này chưa thực hiện đồng bộ.
+                        Kết quả đối chiếu dự kiến dựa trên mã nhân sự và cấu hình ánh xạ chuyên khoa đã chọn; chưa có dữ liệu nào được ghi vào cơ sở dữ liệu NovaCare ở bước này.
                       </p>
                     </div>
 
@@ -2866,7 +2880,9 @@ export function HospitalIntegrationView() {
                               <div className="flex items-center gap-2">
                                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                                 <strong className="font-bold text-sm text-rose-950">
-                                  Bản ghi lỗi: {syncFinalReport?.errorStaffId || 'AB_DOC_005'}
+                                  {syncFinalReport?.errorStaffId
+                                    ? `Bản ghi lỗi: ${syncFinalReport.errorStaffId}`
+                                    : 'Lỗi khi thực thi đồng bộ HIS'}
                                 </strong>
                               </div>
                               <p className="text-rose-800">
@@ -2875,7 +2891,7 @@ export function HospitalIntegrationView() {
                               </p>
                               <div className="pt-1 text-[11px] text-rose-700 bg-white/70 p-2.5 rounded-xl border border-rose-200">
                                 <strong>Hành động: </strong>
-                                Xem chi tiết lỗi, sửa dữ liệu nguồn hoặc cấu hình liên quan, sau đó đưa bản ghi vào một lần đồng bộ lại có kiểm soát.
+                                Kiểm tra lại thông số kết nối, dữ liệu nguồn hoặc cấu hình ánh xạ, sau đó thực hiện đồng bộ lại.
                               </div>
                             </div>
                           )}
@@ -2911,18 +2927,13 @@ export function HospitalIntegrationView() {
                                       </tr>
                                     ))
                                   ) : (
-                                    handshakeResult?.doctors?.slice(0, 5).map((doc: any) => (
-                                      <tr key={doc.staffId} className="hover:bg-slate-50">
-                                        <td className="p-2.5 pl-3 font-mono font-bold text-emerald-700">{doc.staffId}</td>
-                                        <td className="p-2.5 font-semibold text-slate-900">{doc.fullName}</td>
-                                        <td className="p-2.5 text-slate-600">{doc.deptCode}</td>
-                                        <td className="p-2.5 text-right pr-3">
-                                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold">
-                                            Hoàn tất
-                                          </Badge>
-                                        </td>
-                                      </tr>
-                                    ))
+                                    <tr>
+                                      <td colSpan={4} className="p-4 text-center text-slate-400 text-xs">
+                                        {hasErrors
+                                          ? 'Không có bản ghi nào được ghi vào cơ sở dữ liệu do quá trình đồng bộ gặp lỗi.'
+                                          : 'Không có bản ghi chi tiết nào trong đợt đồng bộ này.'}
+                                      </td>
+                                    </tr>
                                   )}
                                 </tbody>
                               </table>
@@ -2936,6 +2947,8 @@ export function HospitalIntegrationView() {
                               size="sm"
                               onClick={() => {
                                 setSyncExecutionState('ready');
+                                setIsPlanConfirmed(false);
+                                setSyncFinalReport(null);
                                 setFormalStep(1);
                               }}
                               className="text-slate-500 hover:text-slate-800 text-xs rounded-xl"
@@ -2944,7 +2957,7 @@ export function HospitalIntegrationView() {
                             </Button>
 
                             <div className="flex items-center gap-2">
-                              <a href="/hospital-admin/doctors">
+                              <a href="/admin/doctors">
                                 <Button
                                   variant="outline"
                                   className="border-slate-300 text-slate-700 hover:bg-slate-50 text-xs rounded-xl h-10 px-4"

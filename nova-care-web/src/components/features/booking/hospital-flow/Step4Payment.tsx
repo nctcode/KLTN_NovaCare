@@ -112,6 +112,21 @@ export function Step4Payment({
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
         const validServiceId = isValidUUID(service?.id) ? service?.id : undefined;
+        const validRoomId = isValidUUID(room?.id) ? room.id : undefined;
+        const normalizedBookingMode =
+          bookingMode === 'OUT_OF_HOURS'
+            ? 'AFTER_HOURS'
+            : bookingMode === 'SERVICE'
+              ? 'SERVICE'
+              : undefined;
+
+        if (
+          (bookingMode === 'SERVICE' || bookingMode === 'OUT_OF_HOURS') &&
+          !validRoomId
+        ) {
+          toast.error('Phòng khám không hợp lệ. Vui lòng chọn lại phòng khám.');
+          return;
+        }
 
         const idempotencyKey =
           typeof window !== 'undefined' && window.crypto?.randomUUID
@@ -122,9 +137,11 @@ export function Step4Payment({
           patientProfileId: patientProfile.id,
           slotId: selectedSlotId,
           ...(validServiceId ? { medicalServiceId: validServiceId } : {}),
-          ...(room?.id ? { clinicRoomId: room.id } : {}),
-          ...(room?.id && bookingMode
-            ? { serviceBookingMode: bookingMode === 'OUT_OF_HOURS' ? 'AFTER_HOURS' : bookingMode }
+          ...(validRoomId && normalizedBookingMode
+            ? {
+                clinicRoomId: validRoomId,
+                serviceBookingMode: normalizedBookingMode,
+              }
             : {}),
           reason: reason || defaultReason,
           idempotencyKey,
@@ -165,13 +182,8 @@ export function Step4Payment({
 
       // 2. Handle Payment Method (synced with Mobile: AT_HOSPITAL or VNPAY Sandbox)
       if (paymentMethod === 'AT_HOSPITAL') {
-        try {
-          await appointmentService.confirm(appointment.id);
-        } catch (confirmErr) {
-          console.warn('Confirm appointment warning:', confirmErr);
-        }
         setIsTicketModalOpen(true);
-        toast.success('Đặt lịch khám thành công! Vui lòng thanh toán tại cơ sở y tế.');
+        toast.success('Đặt lịch khám thành công! Lịch đang chờ cơ sở y tế xác nhận.');
       } else if (paymentMethod === 'VNPAY') {
         try {
           const res = await paymentService.createPayment(appointment.id);

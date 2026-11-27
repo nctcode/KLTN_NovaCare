@@ -16,12 +16,9 @@ import { AiScreeningAppointmentCard } from './AiScreeningAppointmentCard';
 
 const STATUS_BADGE: Record<string, { label: string; styleDark: string; styleLight: string }> = {
   PENDING: { label: 'Chờ xác nhận', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
-  AWAITING_PAYMENT: { label: 'Chờ thanh toán', styleDark: 'bg-orange-950/40 text-orange-400 border-orange-800', styleLight: 'bg-orange-50 text-orange-700 border-orange-200' },
   CONFIRMED: { label: 'Đã xác nhận', styleDark: 'bg-blue-950/40 text-blue-400 border-blue-800', styleLight: 'bg-blue-50 text-blue-700 border-blue-200' },
-  PAID: { label: 'Đã thanh toán', styleDark: 'bg-purple-950/40 text-purple-400 border-purple-800', styleLight: 'bg-purple-50 text-purple-700 border-purple-200' },
   COMPLETED: { label: 'Hoàn tất khám', styleDark: 'bg-emerald-950/40 text-emerald-400 border-emerald-800', styleLight: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   CANCELLED: { label: 'Đã hủy', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
-  EXPIRED: { label: 'Quá hạn', styleDark: 'bg-slate-800 text-slate-400 border-slate-700', styleLight: 'bg-slate-100 text-slate-600 border-slate-200' },
   NO_SHOW: { label: 'Vắng mặt', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
   FAILED: { label: 'Thất bại', styleDark: 'bg-rose-950/40 text-rose-400 border-rose-800', styleLight: 'bg-rose-50 text-rose-700 border-rose-200' },
   REFUNDED: { label: 'Đã hoàn tiền', styleDark: 'bg-amber-950/40 text-amber-400 border-amber-800', styleLight: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -91,7 +88,7 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
   const payment = appt?.payment;
   const service = appt?.medicalService;
 
-  const editableStatuses = ['PENDING', 'CONFIRMED', 'PAID', 'COMPLETED', 'CANCELLED'];
+  const editableStatuses = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
   const requiresStatusNote = nextStatus === 'CANCELLED';
 
   const slotStartTime = slot?.startTime ? new Date(slot.startTime) : null;
@@ -433,113 +430,7 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
           </div>
         )}
 
-        {canOperateAppointments && appt && showStatusEditor && (
-          <div className={`mb-3 rounded-lg border p-3 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-900'}`}>
-            <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-end">
-              <label className="flex-1 w-full text-xs font-semibold">
-                Trạng thái mới
-                <select
-                  value={nextStatus}
-                  onChange={(e) => setNextStatus(e.target.value)}
-                  className="mt-1 w-full h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 text-xs font-normal"
-                >
-                  <option value="">Chọn trạng thái</option>
-                  {editableStatuses.filter((status) => status !== appt.status).map((status) => (
-                    <option key={status} value={status}>{STATUS_BADGE[status]?.label || status}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex-1 w-full text-xs font-semibold">
-                Ghi chú / lý do {requiresStatusNote ? '(bắt buộc)' : '(tùy chọn)'}
-                <input
-                  value={statusNote}
-                  onChange={(e) => setStatusNote(e.target.value)}
-                  placeholder="Nhập lý do cập nhật..."
-                  className="mt-1 w-full h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 text-xs font-normal"
-                />
-              </label>
-              <Button
-                size="sm"
-                disabled={!nextStatus || (requiresStatusNote && !statusNote.trim()) || statusMutation.isPending}
-                onClick={() => statusMutation.mutate()}
-                className="h-9 rounded-md bg-emerald-600 text-xs text-white hover:bg-emerald-700"
-              >
-                {statusMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Lưu'}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setShowStatusEditor(false)} className="h-9 rounded-md text-xs">
-                Hủy
-              </Button>
-            </div>
-          </div>
-        )}
-
         <DialogFooter className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {canOperateAppointments && appt && !showStatusEditor && editableStatuses.includes(appt.status) && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => { setNextStatus(''); setStatusNote(''); setShowStatusEditor(true); }}
-                className="text-xs text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 font-medium rounded-lg gap-1"
-              >
-                <Pencil className="w-3.5 h-3.5" /> Cập nhật trạng thái
-              </Button>
-            )}
-            {/* Check-in */}
-            {canOperateAppointments && appt && !appt.checkInAt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={checkInMutation.isPending}
-                onClick={() => checkInMutation.mutate()}
-                className="text-xs text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 font-semibold rounded-lg"
-              >
-                Check-in tiếp đón
-              </Button>
-            )}
-
-            {/* Record contact */}
-            {canOperateAppointments && appt && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setShowContactModal(true)}
-                className="text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 font-medium rounded-lg gap-1"
-              >
-                <Phone className="w-3.5 h-3.5" /> Ghi nhận liên hệ
-              </Button>
-            )}
-
-            {/* Mark NO_SHOW */}
-            {canOperateAppointments && appt && slotStartTime && slotStartTime.getTime() < Date.now() && !appt.checkInAt && !appt.medicalEncounter && ['PENDING', 'CONFIRMED', 'PAID'].includes(appt.status) && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setShowNoShowModal(true)}
-                className="text-xs text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 font-semibold rounded-lg"
-              >
-                Xác nhận vắng mặt (NO_SHOW)
-              </Button>
-            )}
-
-            {/* Revert NO_SHOW */}
-            {canOperateAppointments && appt && appt.status === 'NO_SHOW' && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setShowRevertModal(true)}
-                className="text-xs text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/50 font-semibold rounded-lg gap-1"
-              >
-                <RotateCcw className="w-3.5 h-3.5" /> Khôi phục lịch hẹn
-              </Button>
-            )}
-          </div>
-
           <Button
             variant="outline"
             size="sm"
@@ -550,25 +441,6 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
           </Button>
         </DialogFooter>
 
-        {/* Modals for actions */}
-        {canOperateAppointments && <RecordContactModal
-          appointment={appt}
-          open={showContactModal}
-          onClose={() => setShowContactModal(false)}
-        />}
-
-        {canOperateAppointments && <NoShowConfirmModal
-          appointment={appt}
-          open={showNoShowModal}
-          onClose={() => setShowNoShowModal(false)}
-          onOpenContactLog={() => setShowContactModal(true)}
-        />}
-
-        {canOperateAppointments && <RevertNoShowModal
-          appointment={appt}
-          open={showRevertModal}
-          onClose={() => setShowRevertModal(false)}
-        />}
       </DialogContent>
     </Dialog>
   );

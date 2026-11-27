@@ -71,7 +71,15 @@ export class AppointmentsService {
           throw new NotFoundException('Nơi làm việc của bác sĩ không tồn tại');
         }
         if (roomSession) {
-          if (roomSession.roomId !== createDto.clinicRoomId || roomSession.mode !== createDto.serviceBookingMode || roomSession.medicalServiceId !== medicalServiceId || !roomSession.room.isActive || !roomSession.service.isActive) {
+          if (
+            !roomSession.room ||
+            !roomSession.service ||
+            roomSession.roomId !== createDto.clinicRoomId ||
+            roomSession.mode !== createDto.serviceBookingMode ||
+            roomSession.medicalServiceId !== medicalServiceId ||
+            !roomSession.room.isActive ||
+            !roomSession.service.isActive
+          ) {
             throw new BadRequestException('Phòng khám, dịch vụ hoặc hình thức khám không hợp lệ');
           }
           if (primaryStartTime <= new Date() || (roomSession.mode === 'AFTER_HOURS' && ![0, 6].includes(new Date(primaryStartTime.getTime() + 25200000).getUTCDay()))) {
@@ -231,7 +239,7 @@ export class AppointmentsService {
             clinicRoomId: roomSession?.roomId,
             serviceBookingMode: isVideoConsultation ? 'ONLINE' : (roomSession?.mode || createDto.serviceBookingMode || 'DOCTOR'),
             userId,
-            status: AppointmentStatus.AWAITING_PAYMENT,
+            status: AppointmentStatus.PENDING,
             reason: appointmentReason,
             symptoms: appointmentSymptoms,
             totalPrice,
@@ -303,8 +311,8 @@ export class AppointmentsService {
         await tx.appointmentStatusHistory.create({
           data: {
             appointmentId: appointment.id,
-            status: AppointmentStatus.AWAITING_PAYMENT,
-            note: 'Tạo lịch khám thành công, chờ thanh toán',
+            status: AppointmentStatus.PENDING,
+            note: 'Tạo lịch khám thành công, chờ cơ sở xác nhận',
           },
         });
 
@@ -333,7 +341,10 @@ export class AppointmentsService {
       if (appointment.status === AppointmentStatus.CONFIRMED) {
         return appointment;
       }
-      if (appointment.status !== AppointmentStatus.AWAITING_PAYMENT) {
+      if (
+        appointment.status !== AppointmentStatus.PENDING &&
+        appointment.status !== AppointmentStatus.AWAITING_PAYMENT
+      ) {
         throw new BadRequestException(`Không thể xác nhận lịch ở trạng thái ${appointment.status}`);
       }
 
@@ -879,7 +890,7 @@ export class AppointmentsService {
     const now = new Date();
     const expiredAppointments = await this.prisma.appointment.findMany({
       where: {
-        status: AppointmentStatus.AWAITING_PAYMENT,
+        status: AppointmentStatus.PENDING,
         expiresAt: { lt: now },
       },
       include: { slot: true },
@@ -893,7 +904,7 @@ export class AppointmentsService {
           await tx.appointment.update({
             where: { id: appointment.id },
             data: {
-              status: AppointmentStatus.EXPIRED,
+              status: AppointmentStatus.CANCELLED,
             },
           });
 
@@ -910,8 +921,8 @@ export class AppointmentsService {
           await tx.appointmentStatusHistory.create({
             data: {
               appointmentId: appointment.id,
-              status: AppointmentStatus.EXPIRED,
-              note: 'Hết hạn giữ chỗ do không thanh toán',
+              status: AppointmentStatus.CANCELLED,
+              note: 'Tự động hủy do quá thời hạn thanh toán',
             },
           });
           expiredCount++;

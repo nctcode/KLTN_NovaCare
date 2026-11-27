@@ -619,8 +619,8 @@ export default function AdminPartnerRequestsPage() {
 
       {/* 6. MODAL PHÊ DUYỆT - CSS cơ bản, không màu mè, bỏ khung viền */}
       <Dialog open={!!approvingRequest} onOpenChange={(open) => !open && setApprovingRequest(null)}>
-        <DialogContent className="max-w-md border-0 shadow-lg dark:bg-slate-950">
-          <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto border-0 shadow-lg dark:bg-slate-950">
+          <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
             <DialogTitle className="text-base font-semibold text-slate-900 dark:text-white">
               Phê Duyệt Hợp Tác Cơ Sở Y Tế
             </DialogTitle>
@@ -629,7 +629,7 @@ export default function AdminPartnerRequestsPage() {
             </p>
           </DialogHeader>
 
-          <div className="space-y-3 py-3 text-xs">
+          <div className="space-y-4 py-4 text-xs">
             <div className="space-y-1">
               <label className="text-slate-700 dark:text-slate-300 font-medium">
                 Tên Cơ sở y tế chính thức:
@@ -648,7 +648,7 @@ export default function AdminPartnerRequestsPage() {
               <input
                 type="file"
                 accept="application/pdf,.pdf"
-                className="w-full text-xs"
+                className="w-full cursor-pointer rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-600 transition-colors hover:border-slate-500 hover:bg-slate-100 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-900 file:dark:bg-white file:dark:text-slate-900"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
@@ -712,7 +712,7 @@ export default function AdminPartnerRequestsPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t border-slate-100 dark:border-slate-800 pt-3 gap-2">
+          <DialogFooter className="border-t border-slate-100 dark:border-slate-800 pt-4 gap-2 sm:justify-between">
             <Button
               variant="ghost"
               size="sm"

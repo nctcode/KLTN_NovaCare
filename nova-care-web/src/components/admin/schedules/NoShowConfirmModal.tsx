@@ -5,14 +5,13 @@ import { adminService } from '@/services/admin.service';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle2, XCircle, Clock, Phone, Loader2, UserX, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, Clock, Loader2, UserX, ShieldAlert } from 'lucide-react';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 
 interface NoShowConfirmModalProps {
   appointment: any | null;
   open: boolean;
   onClose: () => void;
-  onOpenContactLog?: (appointment: any) => void;
   onSuccess?: () => void;
 }
 
@@ -20,7 +19,6 @@ export function NoShowConfirmModal({
   appointment,
   open,
   onClose,
-  onOpenContactLog,
   onSuccess,
 }: NoShowConfirmModalProps) {
   const queryClient = useQueryClient();
@@ -209,23 +207,6 @@ export function NoShowConfirmModal({
           >
             Đóng
           </Button>
-
-          {/* Quick action to add contact log if ineligible due to contact */}
-          {!isEligible && onOpenContactLog && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                onClose();
-                onOpenContactLog(appointment);
-              }}
-              className="rounded-lg text-xs text-blue-600 border-blue-200 hover:bg-blue-50 font-semibold gap-1.5"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              Ghi nhận liên hệ ngay
-            </Button>
-          )}
 
           {/* Confirm Button */}
           <Button

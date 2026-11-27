@@ -1,0 +1,96 @@
+@startuml
+title sd Giám sát lịch hẹn toàn hệ thống (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Quản trị viên\nhệ thống\n(ADMIN)" as Admin
+boundary "GD_GiamSatLichHen" as UIList
+boundary "GD_ChiTietLichHen" as UIDetail
+control "CTR_AdminAppointmentsService" as Ctrl
+entity "E_appointments" as Appt
+
+activate Admin
+Admin -> UIList : 1: Truy cập chức năng "Giám sát đặt lịch"
+activate UIList
+
+UIList -> Ctrl : 1.1: getStats()
+activate Ctrl
+Ctrl -> Appt : 1.2: count(statsFilter)
+activate Appt
+Appt -> Appt : 1.3: Truy vấn chỉ số tổng quan lịch hẹn
+Appt --> Ctrl : 1.4: Trả về 4 chỉ số tổng quan
+deactivate Appt
+Ctrl --> UIList : 1.5: Trả về các chỉ số tổng quan
+deactivate Ctrl
+
+UIList -> Ctrl : 1.6: findAll(params)
+activate Ctrl
+Ctrl -> Appt : 1.7: findMany(params)
+activate Appt
+Appt -> Appt : 1.8: Truy vấn danh sách lịch hẹn
+Appt --> Ctrl : 1.9: Trả về danh sách lịch hẹn
+deactivate Appt
+Ctrl --> UIList : 1.10: Trả về danh sách lịch hẹn và phân trang
+deactivate Ctrl
+
+UIList --> Admin : 1.11: Hiển thị 4 thẻ chỉ số tổng quan và bảng danh sách lịch hẹn\n(mã lịch, bệnh nhân, CSYT, bác sĩ, ngày giờ, trạng thái lịch & thanh toán)
+
+loop Quản trị viên thực hiện hoặc tiếp tục tra cứu lịch hẹn
+  Admin -> UIList : 2: Nhập từ khóa tìm kiếm (mã lịch / tên BN / SĐT) hoặc bỏ trống (Alt 5.1)
+  UIList -> UIList : 2.1: setSearch(keyword)
+
+  opt Quản trị viên chọn thêm các bộ lọc cần thiết
+    Admin -> UIList : 3: Chọn bộ lọc (cơ sở y tế, bác sĩ, chuyên khoa, dịch vụ, trạng thái, ngày khám)
+    UIList -> UIList : 3.1: updateFilters(filters)
+  end
+
+  Admin -> UIList : 4: Nhấn tìm kiếm hoặc thay đổi bộ lọc
+  UIList -> Ctrl : 4.1: findAll(filters)
+  activate Ctrl
+  Ctrl -> Ctrl : 4.2: buildWhereClause(filters)
+  Ctrl -> Appt : 4.3: findMany(where)
+  activate Appt
+  Appt -> Appt : 4.4: Truy vấn và lọc lịch hẹn phù hợp
+  Appt --> Ctrl : 4.5: Trả về danh sách lịch hẹn phù hợp
+  deactivate Appt
+  Ctrl --> UIList : 4.6: Trả về kết quả tìm kiếm và phân trang
+  deactivate Ctrl
+
+  alt Có lịch hẹn phù hợp
+    UIList --> Admin : 4.7: Hiển thị danh sách lịch hẹn phù hợp theo điều kiện đã chọn
+  else Không tìm thấy kết quả (từ khóa bỏ trống / không phù hợp - Alt 5.1, 6.1, 7.1)
+    UIList --> Admin : 4.8: Hiển thị thông báo "Không tìm thấy lịch hẹn phù hợp." và nút "Đặt lại bộ lọc"
+  end
+
+  opt Có kết quả và quản trị viên chọn một lịch hẹn xem chi tiết
+    Admin -> UIList : 5: Chọn một lịch hẹn trong danh sách
+    UIList -> UIDetail : 5.1: openDetailDrawer(appointmentId)
+    activate UIDetail
+    UIDetail -> Ctrl : 5.2: findOne(appointmentId)
+    activate Ctrl
+    Ctrl -> Appt : 5.3: findUnique(id)
+    activate Appt
+    Appt -> Appt : 5.4: Truy vấn thông tin chi tiết lịch hẹn
+    Appt --> Ctrl : 5.5: Trả về dữ liệu chi tiết lịch hẹn
+    deactivate Appt
+
+    alt Tìm thấy thông tin lịch hẹn
+      Ctrl --> UIDetail : 5.6: Trả về thông tin chi tiết lịch hẹn
+      UIDetail --> Admin : 5.7: Hiển thị chi tiết lịch hẹn (bệnh nhân, CSYT, bác sĩ, chuyên khoa,\ndịch vụ, thời gian khám, thanh toán, lịch sử trạng thái & liên hệ)
+    else Không tìm thấy lịch hẹn
+      Ctrl --> UIDetail : 5.8: Trả về lỗi không tìm thấy lịch hẹn (404)
+      deactivate Ctrl
+      UIDetail --> Admin : 5.9: Hiển thị thông báo "Không tìm thấy thông tin lịch khám"
+    end
+
+    Admin -> UIDetail : 6: Nhấn "Đóng" màn hình chi tiết
+    UIDetail -> UIList : 6.1: onClose()
+    deactivate UIDetail
+    UIList --> Admin : 6.2: Quay lại danh sách lịch hẹn (tiếp tục tra cứu)
+  end
+end
+
+deactivate UIList
+deactivate Admin
+@enduml

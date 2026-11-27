@@ -204,7 +204,7 @@ export class HospitalAdminService {
         },
       },
       ...(params?.status === 'OVERDUE' ? {
-        status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.PAID] },
+        status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] },
         medicalEncounter: { is: null },
         checkInAt: null,
         AND: [{ slot: { startTime: { lt: new Date() } } }],
@@ -277,12 +277,12 @@ export class HospitalAdminService {
         startTime: a.slot.startTime,
         endTime: a.slot.endTime,
         status: a.status,
+        paymentStatus: a.payment?.status || (a.status === AppointmentStatus.COMPLETED ? 'PAID' : 'PENDING'),
         checkInAt: a.checkInAt,
         noShowAt: a.noShowAt,
         contactCount: a.contactLogs.length,
         contactLogs: a.contactLogs,
         totalPrice: Number(a.totalPrice),
-        paymentStatus: a.payment?.status || 'PENDING',
         createdAt: a.createdAt,
       })),
       pagination: {
@@ -341,7 +341,7 @@ export class HospitalAdminService {
       };
     }
 
-    if (!([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.PAID] as AppointmentStatus[]).includes(appointment.status)) {
+    if (!([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] as AppointmentStatus[]).includes(appointment.status)) {
       reasons.push(`Không thể xác nhận NO_SHOW từ trạng thái ${appointment.status}`);
     }
 
@@ -404,6 +404,10 @@ export class HospitalAdminService {
       throw new NotFoundException('Lịch hẹn không tồn tại hoặc không thuộc cơ sở y tế của bạn');
     }
 
+    if (appointment.status !== AppointmentStatus.CONFIRMED) {
+      throw new BadRequestException('Chỉ có thể ghi nhận liên hệ khi lịch hẹn đã được xác nhận');
+    }
+
     return this.prisma.appointmentContactLog.create({
       data: {
         appointmentId,
@@ -436,7 +440,7 @@ export class HospitalAdminService {
       throw new NotFoundException('Lịch hẹn không tồn tại hoặc không thuộc cơ sở y tế của bạn');
     }
 
-    if (['CANCELLED', 'EXPIRED', 'NO_SHOW'].includes(appointment.status)) {
+    if (appointment.status !== AppointmentStatus.CONFIRMED) {
       throw new BadRequestException(`Không thể tiếp đón lịch khám ở trạng thái ${appointment.status}`);
     }
 
@@ -487,8 +491,7 @@ export class HospitalAdminService {
       throw new BadRequestException(`Lịch khám không ở trạng thái NO_SHOW (hiện tại: ${appointment.status}). Không thể khôi phục.`);
     }
 
-    const restoredStatus: AppointmentStatus =
-      appointment.payment?.status === 'PAID' ? AppointmentStatus.PAID : AppointmentStatus.CONFIRMED;
+    const restoredStatus: AppointmentStatus = AppointmentStatus.CONFIRMED;
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.appointment.update({
@@ -542,6 +545,16 @@ export class HospitalAdminService {
       throw new NotFoundException(
         'Lịch hẹn không tồn tại hoặc không thuộc cơ sở y tế của bạn'
       );
+    }
+
+    const allowedTransitions: Record<string, AppointmentStatus[]> = {
+      [AppointmentStatus.CONFIRMED]: [AppointmentStatus.PENDING],
+      [AppointmentStatus.COMPLETED]: [AppointmentStatus.CONFIRMED],
+      [AppointmentStatus.CANCELLED]: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+      [AppointmentStatus.NO_SHOW]: [AppointmentStatus.CONFIRMED],
+    };
+    if (newStatus !== appointment.status && !allowedTransitions[newStatus]?.includes(appointment.status)) {
+      throw new BadRequestException(`Không thể chuyển từ ${appointment.status} sang ${newStatus}`);
     }
 
     const cancellationReason = note?.trim();
@@ -646,6 +659,26 @@ export class HospitalAdminService {
                   : `Cập nhật bởi Quản trị viên Bệnh viện`),
         },
       });
+
+      // Khi cơ sở hoàn tất buổi khám, ghi nhận đã thu đủ phí.
+      // Với lịch tiền mặt chưa có giao dịch, tạo giao dịch CASH tại thời điểm này.
+      if (newStatus === AppointmentStatus.COMPLETED) {
+        await tx.paymentTransaction.upsert({
+          where: { appointmentId },
+          update: {
+            status: 'PAID',
+            paidAt: new Date(),
+          },
+          create: {
+            appointmentId,
+            amount: appointment.totalPrice,
+            paymentMethod: 'CASH',
+            transactionCode: `CASH-${appointment.bookingCode}`,
+            status: 'PAID',
+            paidAt: new Date(),
+          },
+        });
+      }
 
       if (newStatus !== appointment.status) {
         await tx.notification.create({
@@ -1277,6 +1310,43 @@ export class HospitalAdminService {
             });
           }
 
+          if (doc.weeklyShifts.length > 0) {
+            const activeSchedules = currentWorkplace.schedules.filter((s) => s.isActive);
+            const incomingKeySet = new Set(
+              doc.weeklyShifts.map((s) => `${s.day_of_week}|${s.start_time}|${s.end_time}`),
+            );
+            const existingKeySet = new Set(
+              activeSchedules.map((s) => `${s.dayOfWeek}|${s.startTime}|${s.endTime}`),
+            );
+
+            const schedulesToRemove = activeSchedules
+              .filter((s) => !incomingKeySet.has(`${s.dayOfWeek}|${s.startTime}|${s.endTime}`))
+              .map((s) => s.id);
+            const shiftsToAdd = doc.weeklyShifts.filter(
+              (s) => !existingKeySet.has(`${s.day_of_week}|${s.start_time}|${s.end_time}`),
+            );
+
+            if (schedulesToRemove.length > 0 || shiftsToAdd.length > 0) {
+              hasChanges = true;
+              if (schedulesToRemove.length > 0) {
+                await this.prisma.doctorSchedule.deleteMany({
+                  where: { id: { in: schedulesToRemove } },
+                });
+              }
+              if (shiftsToAdd.length > 0) {
+                await this.prisma.doctorSchedule.createMany({
+                  data: shiftsToAdd.map((shift) => ({
+                    doctorWorkplaceId: currentWorkplace.id,
+                    dayOfWeek: shift.day_of_week,
+                    startTime: shift.start_time,
+                    endTime: shift.end_time,
+                    isActive: true,
+                  })),
+                });
+              }
+            }
+          }
+
           if (hasChanges) {
             updatedCount++;
             details.push({
@@ -1353,7 +1423,10 @@ export class HospitalAdminService {
       externalId: hospital?.externalId || null,
       source: hospital?.source || 'MANUAL',
       endpointUrl: hospital?.integrationConfig?.endpointUrl || null,
-      authType: hospital?.integrationConfig?.authType || 'none',
+      authType:
+        hospital?.integrationConfig?.authType === 'bearer'
+          ? 'bearer'
+          : 'api_key',
       apiDoctorCount,
       totalDoctorCount,
       specialtyCount,

@@ -13,7 +13,7 @@ export class ExpireAppointmentsProcessor {
 
     const expiredAppointments = await this.prisma.appointment.findMany({
       where: {
-        status: 'AWAITING_PAYMENT',
+        status: 'PENDING',
         expiresAt: { lt: now },
       } as any,
       include: { slot: true },
@@ -27,7 +27,7 @@ export class ExpireAppointmentsProcessor {
         await this.prisma.$transaction(async (tx) => {
           await tx.appointment.update({
             where: { id: appt.id },
-            data: { status: 'EXPIRED' },
+            data: { status: 'CANCELLED' },
           });
 
           await tx.appointmentSlot.update({
@@ -41,8 +41,8 @@ export class ExpireAppointmentsProcessor {
           await tx.appointmentStatusHistory.create({
             data: {
               appointmentId: appt.id,
-              status: 'EXPIRED',
-              note: 'Hết hạn giữ chỗ do không thực hiện thanh toán đúng thời hạn',
+              status: 'CANCELLED',
+              note: 'Tự động hủy do quá thời hạn thanh toán',
             },
           });
         });
