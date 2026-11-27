@@ -1,0 +1,280 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="2220" viewBox="0 0 1480 2220">
+  <defs>
+    <style>
+      .lifeline-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 17px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
+      .lifeline-sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #334155; text-anchor: middle; }
+      .msg { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.5px; font-weight: 600; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .guard { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.5px; font-weight: 800; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .frag-tag { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16.5px; font-weight: 800; fill: #0f172a; }
+      .lifeline { stroke: #475569; stroke-width: 1.8; stroke-dasharray: 7 6; }
+      .act { fill: #7DD3FC; stroke: #0f172a; stroke-width: 1.6; }
+      .arrow { stroke: #0f172a; stroke-width: 2px; fill: none; }
+      .ret { stroke: #0f172a; stroke-width: 1.8; stroke-dasharray: 7 5; fill: none; }
+      .frag-box { fill: none; stroke: #1e293b; stroke-width: 2; }
+      .frag-div { stroke: #1e293b; stroke-width: 1.6; stroke-dasharray: 8 5; }
+      .icon-fill { fill: #7DD3FC; stroke: #0f172a; stroke-width: 2; }
+      .icon-stroke { fill: none; stroke: #0f172a; stroke-width: 2; }
+    </style>
+    <marker id="solidArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0f172a"/>
+    </marker>
+    <marker id="openArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#0f172a" stroke-width="1.8"/>
+    </marker>
+  </defs>
+
+  <!-- White Background -->
+  <rect x="0" y="0" width="1480" height="2220" fill="#FFFFFF"/>
+
+  <!-- Frame -->
+  <rect x="14" y="14" width="1452" height="2192" fill="none" stroke="#64748b" stroke-width="1.6"/>
+  <polygon points="14,14 340,14 340,46 322,62 14,62" fill="#F1F5F9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="30" y="45" class="frag-tag" style="font-size:17px;">sd Đăng ký (NovaCare)</text>
+
+  <!-- ================= LIFELINES ================= -->
+  <!-- X: Actor=110, GD_DangKy=380, CTR_AuthService=695, E_users=955, E_registration_otp_challenges=1185, SMS=1385 -->
+
+  <!-- 1. Actor: Khách vãng lai -->
+  <g transform="translate(110, 112)">
+    <circle cx="0" cy="-18" r="12" class="icon-fill"/>
+    <line x1="0" y1="-6" x2="0" y2="20" class="icon-stroke"/>
+    <line x1="-18" y1="3" x2="18" y2="3" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="-14" y2="38" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="14" y2="38" class="icon-stroke"/>
+    <text x="0" y="62" class="lifeline-label">Khách vãng lai</text>
+  </g>
+  <line x1="110" y1="196" x2="110" y2="2185" class="lifeline"/>
+
+  <!-- 2. Boundary: GD_DangKy -->
+  <g transform="translate(380, 124)">
+    <line x1="-30" y1="-19" x2="-30" y2="19" class="icon-stroke"/>
+    <line x1="-30" y1="0" x2="-18" y2="0" class="icon-stroke"/>
+    <circle cx="3" cy="0" r="21" class="icon-fill"/>
+    <text x="0" y="48" class="lifeline-label">GD_DangKy</text>
+    <text x="0" y="66" class="lifeline-sub">&lt;&lt;boundary&gt;&gt;</text>
+  </g>
+  <line x1="380" y1="196" x2="380" y2="2185" class="lifeline"/>
+
+  <!-- 3. Control: CTR_AuthService -->
+  <g transform="translate(695, 124)">
+    <circle cx="0" cy="0" r="21" class="icon-fill"/>
+    <path d="M -5,-27 L 5,-21 L -5,-15" fill="none" stroke="#0f172a" stroke-width="2"/>
+    <text x="0" y="48" class="lifeline-label">CTR_AuthService</text>
+    <text x="0" y="66" class="lifeline-sub">&lt;&lt;control&gt;&gt;</text>
+  </g>
+  <line x1="695" y1="196" x2="695" y2="2185" class="lifeline"/>
+
+  <!-- 4. Entity: E_users -->
+  <g transform="translate(955, 124)">
+    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
+    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
+    <text x="0" y="48" class="lifeline-label">E_users</text>
+    <text x="0" y="66" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="955" y1="196" x2="955" y2="2185" class="lifeline"/>
+
+  <!-- 5. Entity: E_registration_otp_challenges -->
+  <g transform="translate(1185, 124)">
+    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
+    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
+    <text x="0" y="44" class="lifeline-label" style="font-size:15px;">E_registration_</text>
+    <text x="0" y="61" class="lifeline-label" style="font-size:15px;">otp_challenges</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="1185" y1="204" x2="1185" y2="2185" class="lifeline"/>
+
+  <!-- 6. Secondary Actor: Dịch vụ gửi SMS -->
+  <g transform="translate(1385, 112)">
+    <circle cx="0" cy="-18" r="12" class="icon-fill"/>
+    <line x1="0" y1="-6" x2="0" y2="20" class="icon-stroke"/>
+    <line x1="-18" y1="3" x2="18" y2="3" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="-14" y2="38" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="14" y2="38" class="icon-stroke"/>
+    <text x="0" y="60" class="lifeline-label" style="font-size:16px;">Dịch vụ gửi SMS</text>
+    <text x="0" y="77" class="lifeline-sub">(SmsService)</text>
+  </g>
+  <line x1="1385" y1="204" x2="1385" y2="2185" class="lifeline"/>
+
+  <!-- ================= ACTIVATION BARS ================= -->
+  <!-- Actor -->
+  <rect x="102" y="220" width="16" height="1940" class="act"/>
+
+  <!-- GD_DangKy -->
+  <rect x="372" y="232" width="16" height="1905" class="act"/>
+  <rect x="380" y="266" width="14" height="24" class="act"/>
+  <rect x="380" y="752" width="14" height="24" class="act"/>
+  <rect x="380" y="1220" width="14" height="24" class="act"/>
+  <rect x="380" y="1364" width="14" height="24" class="act"/>
+  <rect x="380" y="1548" width="14" height="24" class="act"/>
+  <rect x="380" y="1976" width="14" height="24" class="act"/>
+  <rect x="380" y="2082" width="14" height="24" class="act"/>
+
+  <!-- CTR_AuthService -->
+  <rect x="687" y="362" width="16" height="388" class="act"/>
+  <rect x="687" y="906" width="16" height="444" class="act"/>
+  <rect x="695" y="1010" width="14" height="24" class="act"/>
+  <rect x="687" y="1664" width="16" height="304" class="act"/>
+
+  <!-- E_users -->
+  <rect x="947" y="394" width="16" height="44" class="act"/>
+  <rect x="947" y="1798" width="16" height="44" class="act"/>
+
+  <!-- E_registration_otp_challenges -->
+  <rect x="1177" y="514" width="16" height="44" class="act"/>
+  <rect x="1177" y="942" width="16" height="42" class="act"/>
+  <rect x="1177" y="1126" width="16" height="38" class="act"/>
+  <rect x="1177" y="1714" width="16" height="42" class="act"/>
+  <rect x="1177" y="1878" width="16" height="36" class="act"/>
+
+  <!-- SMS -->
+  <rect x="1377" y="592" width="16" height="44" class="act"/>
+
+  <!-- ================= PHASE 1: PHONE & OTP REQUEST ================= -->
+  <line x1="118" y1="234" x2="372" y2="234" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="130" y="225" class="msg">1: Chọn chức năng "Đăng ký"</text>
+
+  <path d="M 388 252 L 434 252 L 434 276 L 394 276" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="444" y="270" class="msg">1.1: showRegisterPhoneForm()</text>
+
+  <line x1="118" y1="322" x2="372" y2="322" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="130" y="313" class="msg">2: Nhập phone, nhấn "Gửi mã OTP"</text>
+
+  <line x1="388" y1="364" x2="687" y2="364" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="402" y="355" class="msg">2.1: requestRegistrationOtp(phone)</text>
+
+  <line x1="703" y1="396" x2="947" y2="396" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="716" y="387" class="msg">2.2: findUnique({ phone })</text>
+
+  <line x1="947" y1="438" x2="703" y2="438" class="ret" marker-end="url(#openArrow)"/>
+  <text x="760" y="429" class="msg">2.3: existingUser</text>
+
+  <!-- ALT 1: PHONE EXISTS CHECK (Alt 3.1) -->
+  <rect x="34" y="458" width="1412" height="366" class="frag-box"/>
+  <polygon points="34,458 100,458 100,482 86,494 34,494" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="52" y="482" class="frag-tag">alt</text>
+  <text x="132" y="484" class="guard">[existingUser == null]</text>
+
+  <line x1="703" y1="516" x2="1177" y2="516" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="716" y="507" class="msg">2.4: upsert({ phone, otpHash, expiresAt: +5m })</text>
+
+  <line x1="1177" y1="558" x2="703" y2="558" class="ret" marker-end="url(#openArrow)"/>
+  <text x="975" y="549" class="msg">2.5: challenge</text>
+
+  <line x1="703" y1="594" x2="1377" y2="594" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="716" y="585" class="msg">2.6: sendResetOtp(phone, otp)</text>
+
+  <line x1="1377" y1="636" x2="703" y2="636" class="ret" marker-end="url(#openArrow)"/>
+  <text x="1150" y="627" class="msg">2.7: Đã gửi SMS mã OTP</text>
+
+  <line x1="687" y1="668" x2="388" y2="668" class="ret" marker-end="url(#openArrow)"/>
+  <text x="410" y="659" class="msg">2.8: { message, maskedPhone }</text>
+
+  <!-- ALT 1 ELSE: Luồng 3.1 -->
+  <line x1="34" y1="688" x2="1446" y2="688" class="frag-div"/>
+  <text x="132" y="712" class="guard">[existingUser != null — Luồng 3.1]</text>
+
+  <line x1="687" y1="742" x2="388" y2="742" class="ret" marker-end="url(#openArrow)"/>
+  <text x="418" y="733" class="msg">3: ConflictException (409)</text>
+
+  <path d="M 388 754 L 434 754 L 434 776 L 394 776" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="444" y="770" class="msg">3.1: showError("Số điện thoại đã được đăng ký.")</text>
+
+  <path d="M 118 790 L 164 790 L 164 812 L 118 812" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="176" y="806" class="msg">3.2: Quay lại bước 2 (Nhập lại phone)</text>
+
+  <!-- ================= PHASE 2: VERIFY OTP ================= -->
+  <line x1="118" y1="868" x2="372" y2="868" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="130" y="859" class="msg">4: Nhập otpCode, nhấn "Xác minh"</text>
+
+  <line x1="388" y1="908" x2="687" y2="908" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="402" y="899" class="msg">4.1: verifyRegistrationOtp(phone, otpCode)</text>
+
+  <line x1="703" y1="944" x2="1177" y2="944" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="716" y="935" class="msg">4.2: findUnique({ phone })</text>
+
+  <line x1="1177" y1="984" x2="703" y2="984" class="ret" marker-end="url(#openArrow)"/>
+  <text x="780" y="975" class="msg">4.3: challenge (otpHash, expiresAt, attempts)</text>
+
+  <path d="M 703 998 L 750 998 L 750 1022 L 709 1022" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="760" y="1016" class="msg">4.4: argon2.verify(otpHash, otpCode) &amp; check expiresAt</text>
+
+  <!-- ALT 2: VERIFY OTP RESULT (Alt 7.1) -->
+  <rect x="34" y="1050" width="1412" height="408" class="frag-box"/>
+  <polygon points="34,1050 100,1050 100,1074 86,1086 34,1086" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="52" y="1074" class="frag-tag">alt</text>
+  <text x="132" y="1076" class="guard">[otpValid == true &amp;&amp; expiresAt &gt; now]</text>
+
+  <line x1="703" y1="1128" x2="1177" y2="1128" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="716" y="1106" class="msg">4.5: update({ otpHash: null, verificationTokenHash,</text>
+  <text x="750" y="1123" class="msg">verificationExpiresAt })</text>
+
+  <line x1="687" y1="1186" x2="388" y2="1186" class="ret" marker-end="url(#openArrow)"/>
+  <text x="404" y="1177" class="msg">4.6: { verificationToken, phone }</text>
+
+  <path d="M 388 1206 L 434 1206 L 434 1230 L 394 1230" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="444" y="1224" class="msg">4.7: showRegisterInfoForm()</text>
+
+  <!-- ALT 2 ELSE: Luồng 7.1 -->
+  <line x1="34" y1="1264" x2="1446" y2="1264" class="frag-div"/>
+  <text x="132" y="1288" class="guard">[otpValid == false || expiresAt &lt;= now — Luồng 7.1]</text>
+
+  <line x1="687" y1="1330" x2="388" y2="1330" class="ret" marker-end="url(#openArrow)"/>
+  <text x="414" y="1321" class="msg">5: BadRequestException (400)</text>
+
+  <path d="M 388 1348 L 434 1348 L 434 1372 L 394 1372" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="444" y="1366" class="msg">5.1: showError("Mã OTP không chính xác hoặc đã hết hạn...")</text>
+
+  <path d="M 118 1408 L 164 1408 L 164 1432 L 118 1432" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="176" y="1426" class="msg">5.2: Quay lại bước 4 (Nhập lại otpCode)</text>
+
+  <!-- ================= PHASE 3: REGISTER ACCOUNT ================= -->
+  <line x1="118" y1="1504" x2="372" y2="1504" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="130" y="1484" class="msg">6: Nhập fullName, gender, password,</text>
+  <text x="150" y="1500" class="msg">confirmPassword, nhấn "Đăng ký"</text>
+
+  <path d="M 388 1532 L 434 1532 L 434 1556 L 394 1556" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="444" y="1550" class="msg">6.1: validatePassword(password, confirmPassword)</text>
+
+  <!-- ALT 3: VALIDATE PASSWORD (Alt 10.1) -->
+  <rect x="34" y="1586" width="1412" height="584" class="frag-box"/>
+  <polygon points="34,1586 100,1586 100,1610 86,1622 34,1622" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="52" y="1610" class="frag-tag">alt</text>
+  <text x="132" y="1612" class="guard">[password.length &gt;= 6 &amp;&amp; password == confirmPassword]</text>
+
+  <line x1="388" y1="1668" x2="687" y2="1668" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="400" y="1646" class="msg">6.2: register(RegisterDto { phone,</text>
+  <text x="424" y="1663" class="msg">fullName, password, verificationToken })</text>
+
+  <line x1="703" y1="1716" x2="1177" y2="1716" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="716" y="1707" class="msg">6.3: findUnique({ phone }) &amp; verify verificationTokenHash</text>
+
+  <line x1="1177" y1="1756" x2="703" y2="1756" class="ret" marker-end="url(#openArrow)"/>
+  <text x="955" y="1747" class="msg">6.4: validChallenge</text>
+
+  <line x1="703" y1="1800" x2="947" y2="1800" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="714" y="1778" class="msg">6.5: create({ phone, fullName,</text>
+  <text x="742" y="1795" class="msg">passwordHash, isActive: true })</text>
+
+  <line x1="947" y1="1842" x2="703" y2="1842" class="ret" marker-end="url(#openArrow)"/>
+  <text x="766" y="1833" class="msg">6.6: createdUser</text>
+
+  <line x1="703" y1="1880" x2="1177" y2="1880" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="716" y="1871" class="msg">6.7: delete({ phone })</text>
+
+  <line x1="687" y1="1946" x2="388" y2="1946" class="ret" marker-end="url(#openArrow)"/>
+  <text x="400" y="1924" class="msg">6.8: AuthResponse { accessToken,</text>
+  <text x="428" y="1941" class="msg">refreshToken, user }</text>
+
+  <path d="M 388 1962 L 434 1962 L 434 1986 L 394 1986" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="444" y="1980" class="msg">6.9: showToast("Đăng ký thành công")</text>
+
+  <!-- ALT 3 ELSE: Luồng 10.1 -->
+  <line x1="34" y1="2018" x2="1446" y2="2018" class="frag-div"/>
+  <text x="132" y="2042" class="guard">[password.length &lt; 6 || password != confirmPassword — Luồng 10.1]</text>
+
+  <path d="M 388 2066 L 434 2066 L 434 2090 L 394 2090" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="444" y="2084" class="msg">7: showError("Mật khẩu phải ≥ 6 ký tự và trùng khớp xác nhận")</text>
+
+  <path d="M 118 2122 L 164 2122 L 164 2146 L 118 2146" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="176" y="2140" class="msg">7.1: Quay lại bước 6 (Chỉnh sửa mật khẩu)</text>
+</svg>

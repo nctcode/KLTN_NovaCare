@@ -1,0 +1,65 @@
+@startuml
+title sd Theo dõi lịch hẹn bệnh nhân được phân công (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Bác sĩ\n(DOCTOR)" as Doctor
+boundary "GD_LichHenBacSi" as UI
+control "CTR_DoctorPortalService" as Ctrl
+entity "E_doctors" as Doc
+entity "E_appointments" as Appt
+
+activate Doctor
+Doctor -> UI : 1: Chọn chức năng "Lịch hẹn"
+activate UI
+UI -> Ctrl : 1.1: getAppointments(userId, { startDate: -7d, endDate: +30d })
+activate Ctrl
+
+alt JWT hợp lệ, role == "DOCTOR", hồ sơ hoạt động && kết nối thành công
+  Ctrl -> Doc : 1.2: getDoctorOrThrow(userId)
+  activate Doc
+  Doc --> Ctrl : 1.3: doctor, workplaceIds
+  deactivate Doc
+  Ctrl -> Appt : 1.4: findMany({ doctorWorkplaceId in workplaceIds, startTime in [-7d..+30d] })
+  activate Appt
+  Appt --> Ctrl : 1.5: appointments[], total
+  deactivate Appt
+  Ctrl --> UI : 1.6: { data: { items: appointments, total } }
+  deactivate Ctrl
+
+  alt appointments.length > 0
+    UI --> Doctor : 1.7: Hiển thị tổng số lịch hẹn (total) & từng lịch gồm tên bệnh nhân, thời gian, trạng thái (chỉ đọc)
+  else không có lịch hẹn trong phạm vi thời gian hiện tại (Alt 3.1)
+    UI --> Doctor : 1.8: Hiển thị thông báo "Không có lịch hẹn phù hợp"
+  end
+else phiên đăng nhập hết hạn hoặc không còn quyền truy cập - 401/403 (Alt 2.1)
+  UI --> Doctor : 1.9: Chuyển về màn hình đăng nhập (kết thúc use case)
+else không thể tải danh sách do mất kết nối hoặc lỗi máy chủ (Alt 2.2)
+  UI --> Doctor : 1.10: Hiển thị thông báo lỗi & nút "Thử lại" (quay lại bước 2)
+end
+
+Doctor -> UI : 2: Chọn bộ lọc status (ALL / CONFIRMED / PAID / COMPLETED)
+UI -> Ctrl : 2.1: getAppointments(userId, { startDate, endDate, status })
+activate Ctrl
+Ctrl -> Ctrl : 2.2: validateStatusFilter(status)
+Ctrl -> Appt : 2.3: findMany({ doctorWorkplaceId in workplaceIds, startTime, status })
+activate Appt
+Appt --> Ctrl : 2.4: filteredAppointments[]
+deactivate Appt
+
+alt filteredAppointments.length > 0
+  Ctrl --> UI : 2.5: { data: { items: filteredAppointments } }
+  deactivate Ctrl
+  UI --> Doctor : 2.6: Hiển thị danh sách lịch hẹn phù hợp với trạng thái đã chọn
+else không có lịch hẹn phù hợp với trạng thái đã chọn (Alt 6.1)
+  UI --> Doctor : 2.7: Hiển thị "Không có lịch hẹn phù hợp" (chọn bộ lọc khác quay lại bước 5)
+end
+
+Doctor -> UI : 3: Chọn một lịch hẹn (appointmentId)
+UI -> UI : 3.1: navigateTo(GD_ChiTietLichHen, appointmentId)
+UI --> Doctor : 3.2: Mở màn hình chi tiết lịch hẹn đã chọn
+
+deactivate UI
+deactivate Doctor
+@enduml

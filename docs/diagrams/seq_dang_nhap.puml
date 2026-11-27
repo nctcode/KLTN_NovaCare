@@ -1,0 +1,78 @@
+@startuml seq_dang_nhap
+title sd Đăng nhập (NovaCare)
+autonumber off
+skinparam sequenceMessageAlign left
+skinparam backgroundColor #FFFFFF
+skinparam sequence {
+  LifeLineBorderColor #475569
+  LifeLineBackgroundColor #7DD3FC
+  ActorBorderColor #0F172A
+  ActorBackgroundColor #7DD3FC
+  BoundaryBorderColor #0F172A
+  BoundaryBackgroundColor #7DD3FC
+  ControlBorderColor #0F172A
+  ControlBackgroundColor #7DD3FC
+  EntityBorderColor #0F172A
+  EntityBackgroundColor #7DD3FC
+  ArrowColor #0F172A
+}
+
+actor "Người dùng\n(PATIENT / DOCTOR / ADMIN / HOSPITAL_ADMIN)" as User
+boundary "GD_TrangChu" as GD_Home
+boundary "GD_DangNhap" as GD_Login
+control "CTR_AuthService" as CTR_Auth
+entity "E_users" as E_Users
+entity "E_refresh_tokens" as E_Tokens
+
+activate User
+User -> GD_Home : 1: Chọn chức năng "Đăng nhập"
+activate GD_Home
+GD_Home -> GD_Login : 1.1: showLoginForm()
+activate GD_Login
+deactivate GD_Home
+
+User -> GD_Login : 2: Nhập username (email / phone) và password
+User -> GD_Login : 3: Chọn nút "Đăng nhập"
+GD_Login -> GD_Login : 3.1: validate(username, password)
+
+alt username != "" && password != ""
+  GD_Login -> CTR_Auth : 4: login(LoginDto { username, password })
+  activate CTR_Auth
+  CTR_Auth -> E_Users : 4.1: findFirst(email=username || phone=username, deletedAt=null)
+  activate E_Users
+  E_Users --> CTR_Auth : 4.2: user (id, passwordHash, role, isActive, hospitalId)
+  deactivate E_Users
+  CTR_Auth -> CTR_Auth : 4.3: argon2.verify(user.passwordHash, password) & check user.isActive
+
+  alt user != null && user.isActive == true && isPasswordValid == true
+    CTR_Auth -> E_Users : 4.4: update(where: { id: user.id }, data: { lastLoginAt })
+    activate E_Users
+    E_Users --> CTR_Auth : 4.5: updatedUser
+    deactivate E_Users
+    CTR_Auth -> CTR_Auth : 4.6: generateTokens(user) & hashToken(refreshToken)
+    CTR_Auth -> E_Tokens : 4.7: create({ userId: user.id, tokenHash, expiresAt })
+    activate E_Tokens
+    E_Tokens --> CTR_Auth : 4.8: savedRefreshToken
+    deactivate E_Tokens
+    CTR_Auth --> GD_Login : 5: AuthResponse { accessToken, refreshToken, expiresIn, user }
+    GD_Login -> GD_Login : 5.1: showToast("Đăng nhập thành công")
+    GD_Login -> GD_Home : 5.2: navigateByRole(user.role)
+    activate GD_Home
+    deactivate GD_Home
+  else user == null || isPasswordValid == false — Luồng 3.2
+    CTR_Auth --> GD_Login : 6: UnauthorizedException (401)
+    GD_Login -> GD_Login : 6.1: showError("Tài khoản không tồn tại hoặc sai mật khẩu")
+    User -> User : 6.2: Quay lại bước 2
+  else user.isActive == false — Luồng 3.3
+    CTR_Auth --> GD_Login : 7: UnauthorizedException ("Tài khoản đã bị khóa")
+    deactivate CTR_Auth
+    GD_Login -> GD_Login : 7.1: showError("Tài khoản đã bị khóa")
+  end
+else username == "" || password == "" — Luồng 3.1
+  GD_Login -> GD_Login : 8: showError("Vui lòng điền đầy đủ thông tin hợp lệ")
+  User -> User : 8.1: Quay lại bước 2
+end
+
+deactivate GD_Login
+deactivate User
+@enduml

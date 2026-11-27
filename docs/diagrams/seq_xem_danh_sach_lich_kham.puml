@@ -1,0 +1,56 @@
+@startuml
+title sd Xem danh sách lịch khám (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Bệnh nhân\n(PATIENT)" as Patient
+boundary "GD_LichKhamCuaToi" as UI
+control "CTR_AppointmentsService" as Ctrl
+entity "E_appointments" as Appt
+
+activate Patient
+Patient -> UI : 1: Chọn chức năng "Lịch khám của tôi"
+activate UI
+UI -> Ctrl : 1.1: getUpcoming(userId) [JwtAuthGuard]
+activate Ctrl
+Ctrl -> Appt : 1.2: findMany({ userId, status: upcoming, include: slot, patientProfile, doctor, hospital })
+activate Appt
+Appt --> Ctrl : 1.3: upcomingAppointments[]
+deactivate Appt
+
+alt tải danh sách lịch khám sắp tới thành công
+  alt upcomingAppointments.length > 0
+    Ctrl --> UI : 1.4: { data: upcomingAppointments }
+    deactivate Ctrl
+    UI --> Patient : 1.5: Hiển thị bookingCode, status, specialty, patientProfile, doctor, hospital, thời gian khám
+  else không có lịch khám sắp tới (Alt 3.1)
+    UI --> Patient : 1.6: Thông báo chưa có lịch khám & nút "Đặt khám ngay"
+  end
+else không tải được danh sách lịch sắp tới (Alt 2.1)
+  UI --> Patient : 1.7: Hiển thị lỗi kết nối & nút "Thử lại" (quay lại bước 2)
+end
+
+Patient -> UI : 2: Chọn thẻ "Lịch sử khám"
+UI -> Ctrl : 2.1: getHistory(userId) [JwtAuthGuard]
+activate Ctrl
+Ctrl -> Appt : 2.2: findMany({ userId, status in { COMPLETED, CANCELLED, EXPIRED, NO_SHOW }, orderBy: desc })
+activate Appt
+Appt --> Ctrl : 2.3: historyAppointments[]
+deactivate Appt
+
+alt tải danh sách lịch sử khám thành công
+  alt historyAppointments.length > 0
+    Ctrl --> UI : 2.4: { data: historyAppointments }
+    deactivate Ctrl
+    UI --> Patient : 2.5: Hiển thị danh sách lịch sử khám theo thời gian (chỉ đọc)
+  else chưa có lịch sử khám (Alt 6.1)
+    UI --> Patient : 2.6: Hiển thị thông báo chưa có lịch sử khám bệnh
+  end
+else không tải được lịch sử khám (Alt 5.1)
+  UI --> Patient : 2.7: Hiển thị lỗi kết nối & nút "Thử lại" (quay lại bước 5)
+end
+
+deactivate UI
+deactivate Patient
+@enduml

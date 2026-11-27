@@ -1,0 +1,120 @@
+@startuml
+title sd Sàng lọc triệu chứng AI (NovaCare)
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontStyle bold
+
+actor "Bệnh nhân\n(PATIENT)" as Patient
+boundary "GD_SangLocAI" as UI
+control "CTR_PreExamV2Service" as Ctrl
+control "CTR_AiScreeningOrchestrator" as Orch
+entity "E_hospitals" as Hosp
+entity "E_pre_exam_sessions" as Sess
+actor "Dịch vụ AI\n(ScreeningLLMService)" as AI
+
+activate Patient
+Patient -> UI : 1: Chọn "Sàng lọc AI"
+activate UI
+UI -> Ctrl : 1.1: getScreeningCatalog() & getHospitals()
+activate Ctrl
+Ctrl -> Hosp : 1.2: findMany({ isActive: true, include: specialties })
+activate Hosp
+Hosp --> Ctrl : 1.3: hospitals, specialties
+deactivate Hosp
+
+alt tải danh mục & cơ sở y tế thành công
+  Ctrl --> UI : 1.4: { SCREENING_CATALOG, hospitals }
+  deactivate Ctrl
+  UI -> UI : 1.5: showStep1(regions, age, symptoms)
+else mất kết nối / lỗi tải danh mục (Alt 2.1)
+  UI --> Patient : 1.6: Báo lỗi kết nối + "Thử lại" (quay lại bước 1)
+end
+
+Patient -> UI : 2: Chọn regions, nhập age, nhấn "Tiếp tục"
+UI -> UI : 2.1: validateStep1(regions, age)
+
+alt regions.length > 0 && age in [0..120]
+  UI -> UI : 2.2: loadQuestions(regions) & showStep2(painLevel, duration)
+else chưa chọn vùng hoặc age ngoài 0-120 (Alt 2.2)
+  UI --> Patient : 2.3: Báo lỗi yêu cầu bổ sung (tiếp tục bước 3)
+end
+
+Patient -> UI : 3: Trả lời trắc nghiệm, chọn painLevel, nhấn "Tiếp tục"
+UI -> UI : 3.1: showStep3_Images(max=3, mediaConsent)
+Patient -> UI : 4: Tải ảnh (hoặc "Bỏ qua"), xác nhận consent, "Tiếp tục"
+
+opt bệnh nhân có tải ảnh tổn thương
+  UI -> UI : 4.1: validateImages(size <= 5MB, JPEG/PNG/WebP)
+  alt tệp ảnh hợp lệ
+    UI -> Ctrl : 4.2: submitImages(imageFiles, mediaConsent)
+    activate Ctrl
+    Ctrl -> AI : 4.3: inspectImage(imageFiles)
+    activate AI
+    alt phân tích ảnh thành công
+      AI --> Ctrl : 4.4: imageAssessments, imageAnalysisFindings
+      deactivate AI
+    else lỗi phân tích ảnh (Alt 9.1)
+      Ctrl -> Ctrl : 4.5: markImageUnprocessed() (giữ dữ liệu & tiếp tục)
+    end
+    deactivate Ctrl
+  else ảnh > 5MB hoặc sai định dạng (Alt 6.1)
+    UI --> Patient : 4.6: Báo lỗi tệp ảnh (chọn lại hoặc bỏ qua)
+  end
+end
+
+UI -> UI : 5: showStep4_PpgHeartRate()
+Patient -> UI : 6: Đo nhịp tim PPG (hoặc "Bỏ qua"), nhấn "Tiếp tục"
+UI -> UI : 6.1: showStep5_VoiceSymptom()
+Patient -> UI : 7: Ghi âm lời kể triệu chứng & gửi (hoặc bỏ qua)
+
+opt có tệp âm thanh && consent == "true"
+  UI -> Ctrl : 7.1: transcribe(file, { consent: "true" })
+  activate Ctrl
+  Ctrl -> AI : 7.2: ScreeningLLMService.transcribe(file)
+  activate AI
+  alt nhận diện giọng nói thành công
+    AI --> Ctrl : 7.3: { transcript, status: "NEEDS_CONFIRMATION" }
+    deactivate AI
+    Ctrl --> UI : 7.4: showTranscriptForEdit(transcript)
+  else lỗi nhận diện giọng nói (Alt 15.1)
+    UI --> Patient : 7.5: Báo lỗi STT, cho phép nhập thủ công / ghi âm lại
+  end
+  deactivate Ctrl
+end
+
+Patient -> UI : 8: Xác nhận transcript, nhấn "Phân tích và xem gợi ý"
+UI -> Ctrl : 8.1: analyzeSmartphoneInputs(userId, dto, files)
+activate Ctrl
+Ctrl -> Orch : 8.2: orchestrateScreening(sessionId, input)
+activate Orch
+Orch -> Orch : 8.3: RedFlagEngineService.evaluate(facts, ppg, transcript)
+Orch -> Hosp : 8.4: findMany({ specialties, isActive: true })
+activate Hosp
+Hosp --> Orch : 8.5: matchedSpecialties, hospitals
+deactivate Hosp
+Orch --> Ctrl : 8.6: result { riskLevel, redFlags, nextAction, specialties }
+deactivate Orch
+
+alt phân tích thành công && máy chủ ổn định
+  Ctrl -> Sess : 8.7: create({ id, userId, structuredData, recommendations, riskLevel, questions, media })
+  activate Sess
+  Sess --> Ctrl : 8.8: preExamSession { screeningSessionId }
+  deactivate Sess
+  Ctrl --> UI : 8.9: { ...result, screeningSessionId }
+  deactivate Ctrl
+  alt riskLevel == "EMERGENCY" (phát hiện Red Flags - Alt 18.1)
+    UI --> Patient : 8.10: Hiển thị cảnh báo đỏ khẩn cấp, khuyến cáo gọi cấp cứu 115
+  else không có dấu hiệu cấp cứu (LOW / MODERATE / HIGH)
+    UI --> Patient : 8.11: Hiển thị "Kết quả sàng lọc" (tóm tắt, chuyên khoa gợi ý)
+    alt nhấn "Đặt khám"
+      Patient -> UI : 9: Nhấn "Đặt khám" -> điều hướng GD_DatKham(screeningSessionId, specialtyId)
+    else chọn "Kiểm tra lại thông tin" hoặc đóng (Alt 20.1)
+      Patient -> UI : 9.1: Quay lại các bước trước hoặc đóng màn hình sàng lọc
+    end
+  end
+else lỗi tổng hợp dữ liệu / gián đoạn máy chủ (Alt 18.2)
+  UI --> Patient : 8.12: Thông báo lỗi hệ thống + nút "Thử lại" (quay lại bước 17)
+end
+deactivate UI
+deactivate Patient
+@enduml

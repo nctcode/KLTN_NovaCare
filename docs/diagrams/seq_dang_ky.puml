@@ -1,0 +1,106 @@
+@startuml seq_dang_ky
+title sd Đăng ký (NovaCare)
+autonumber off
+skinparam sequenceMessageAlign left
+skinparam backgroundColor #FFFFFF
+skinparam sequence {
+  LifeLineBorderColor #475569
+  LifeLineBackgroundColor #7DD3FC
+  ActorBorderColor #0F172A
+  ActorBackgroundColor #7DD3FC
+  BoundaryBorderColor #0F172A
+  BoundaryBackgroundColor #7DD3FC
+  ControlBorderColor #0F172A
+  ControlBackgroundColor #7DD3FC
+  EntityBorderColor #0F172A
+  EntityBackgroundColor #7DD3FC
+  ArrowColor #0F172A
+}
+
+actor "Khách vãng lai" as Guest
+boundary "GD_DangKy" as GD_Reg
+control "CTR_AuthService" as CTR_Auth
+entity "E_users" as E_Users
+entity "E_registration_otp_challenges" as E_Otp
+actor "Dịch vụ gửi SMS\n(SmsService)" as SMS
+
+activate Guest
+Guest -> GD_Reg : 1: Chọn chức năng "Đăng ký"
+activate GD_Reg
+GD_Reg -> GD_Reg : 1.1: showRegisterPhoneForm()
+
+Guest -> GD_Reg : 2: Nhập phone, nhấn "Gửi mã OTP"
+GD_Reg -> CTR_Auth : 2.1: requestRegistrationOtp(phone)
+activate CTR_Auth
+CTR_Auth -> E_Users : 2.2: findUnique({ phone })
+activate E_Users
+E_Users --> CTR_Auth : 2.3: existingUser
+deactivate E_Users
+
+alt existingUser == null
+  CTR_Auth -> E_Otp : 2.4: upsert({ phone, otpHash, expiresAt: +5m })
+  activate E_Otp
+  E_Otp --> CTR_Auth : 2.5: challenge
+  deactivate E_Otp
+  CTR_Auth -> SMS : 2.6: sendResetOtp(phone, otp)
+  activate SMS
+  SMS --> CTR_Auth : 2.7: Đã gửi SMS mã OTP
+  deactivate SMS
+  CTR_Auth --> GD_Reg : 2.8: { message, maskedPhone }
+else existingUser != null — Luồng 3.1
+  CTR_Auth --> GD_Reg : 3: ConflictException (409)
+  deactivate CTR_Auth
+  GD_Reg -> GD_Reg : 3.1: showError("Số điện thoại đã được đăng ký.")
+  Guest -> Guest : 3.2: Quay lại bước 2
+end
+
+Guest -> GD_Reg : 4: Nhập otpCode, nhấn "Xác minh"
+GD_Reg -> CTR_Auth : 4.1: verifyRegistrationOtp(phone, otpCode)
+activate CTR_Auth
+CTR_Auth -> E_Otp : 4.2: findUnique({ phone })
+activate E_Otp
+E_Otp --> CTR_Auth : 4.3: challenge (otpHash, expiresAt, attempts)
+deactivate E_Otp
+CTR_Auth -> CTR_Auth : 4.4: argon2.verify(otpHash, otpCode) & check expiresAt
+
+alt otpValid == true && expiresAt > now
+  CTR_Auth -> E_Otp : 4.5: update({ otpHash: null, verificationTokenHash, verificationExpiresAt })
+  activate E_Otp
+  deactivate E_Otp
+  CTR_Auth --> GD_Reg : 4.6: { verificationToken, phone }
+  GD_Reg -> GD_Reg : 4.7: showRegisterInfoForm()
+else otpValid == false || expiresAt <= now — Luồng 7.1
+  CTR_Auth --> GD_Reg : 5: BadRequestException (400)
+  deactivate CTR_Auth
+  GD_Reg -> GD_Reg : 5.1: showError("Mã OTP không chính xác hoặc đã hết hạn...")
+  Guest -> Guest : 5.2: Quay lại bước 4
+end
+
+Guest -> GD_Reg : 6: Nhập fullName, gender, password, confirmPassword, nhấn "Đăng ký"
+GD_Reg -> GD_Reg : 6.1: validatePassword(password, confirmPassword)
+
+alt password.length >= 6 && password == confirmPassword
+  GD_Reg -> CTR_Auth : 6.2: register(RegisterDto { phone, fullName, password, verificationToken })
+  activate CTR_Auth
+  CTR_Auth -> E_Otp : 6.3: findUnique({ phone }) & verify verificationTokenHash
+  activate E_Otp
+  E_Otp --> CTR_Auth : 6.4: validChallenge
+  deactivate E_Otp
+  CTR_Auth -> E_Users : 6.5: create({ phone, fullName, passwordHash, isActive: true })
+  activate E_Users
+  E_Users --> CTR_Auth : 6.6: createdUser
+  deactivate E_Users
+  CTR_Auth -> E_Otp : 6.7: delete({ phone })
+  activate E_Otp
+  deactivate E_Otp
+  CTR_Auth --> GD_Reg : 6.8: AuthResponse { accessToken, refreshToken, user }
+  deactivate CTR_Auth
+  GD_Reg -> GD_Reg : 6.9: showToast("Đăng ký thành công")
+else password.length < 6 || password != confirmPassword — Luồng 10.1
+  GD_Reg -> GD_Reg : 7: showError("Mật khẩu phải ≥ 6 ký tự và trùng khớp xác nhận")
+  Guest -> Guest : 7.1: Quay lại bước 6
+end
+
+deactivate GD_Reg
+deactivate Guest
+@enduml
