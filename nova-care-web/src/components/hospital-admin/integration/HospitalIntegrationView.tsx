@@ -116,12 +116,13 @@ export function HospitalIntegrationView() {
     }
     return 'api_key';
   });
-  const [authToken, setAuthToken] = useState(() => {
+  // Không lưu API secret/token vào localStorage để đảm bảo an toàn thông tin y tế
+  const [authToken, setAuthToken] = useState('');
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(storageKey('auth_token')) || '';
+      localStorage.removeItem(storageKey('auth_token'));
     }
-    return '';
-  });
+  }, [hospitalId]);
   React.useEffect(() => {
     if (statusData?.endpointUrl) setEndpointUrl(statusData.endpointUrl);
     if (statusData?.authType === 'api_key' || statusData?.authType === 'bearer') {
@@ -148,7 +149,7 @@ export function HospitalIntegrationView() {
   const [dashboardTestError, setDashboardTestError] = useState<string | null>(null);
   const [dashboardTestAt, setDashboardTestAt] = useState<Date | null>(null);
 
-  // Keep endpointUrl, authType, authToken persisted in localStorage
+  // Keep endpointUrl & authType persisted in localStorage (never persist secret authToken)
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       if (isEditingConfig) return;
@@ -158,9 +159,8 @@ export function HospitalIntegrationView() {
         localStorage.removeItem(storageKey('endpoint_url'));
       }
       localStorage.setItem(storageKey('auth_type'), authType);
-      localStorage.setItem(storageKey('auth_token'), authToken.trim());
     }
-  }, [endpointUrl, authType, authToken, isEditingConfig, hospitalId]);
+  }, [endpointUrl, authType, isEditingConfig, hospitalId]);
 
   // Mapping & Selection states
   const [specialtyMappings, setSpecialtyMappings] = useState<Record<string, string>>({});
@@ -343,7 +343,6 @@ export function HospitalIntegrationView() {
         if (typeof window !== 'undefined') {
           localStorage.setItem(storageKey('endpoint_url'), variables.endpointUrl.trim());
           localStorage.setItem(storageKey('auth_type'), variables.authType || 'api_key');
-          localStorage.setItem(storageKey('auth_token'), variables.authToken?.trim() || '');
         }
         queryClient.invalidateQueries({ queryKey: ['hospital-admin-integration-status', hospitalId] });
       }
@@ -389,6 +388,7 @@ export function HospitalIntegrationView() {
         `Đồng bộ thành công! Tạo mới: ${data.createdCount}, Cập nhật: ${data.updatedCount}, Giữ nguyên: ${data.unchangedCount}`
       );
       queryClient.invalidateQueries({ queryKey: ['hospital-admin-integration-status'] });
+      queryClient.invalidateQueries({ queryKey: ['hospital-admin-existing-doctors'] });
       queryClient.invalidateQueries({ queryKey: ['hospital-admin-dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['hospital-admin-doctors'] });
       queryClient.invalidateQueries({ queryKey: ['hospital-admin-specialties'] });
@@ -961,36 +961,69 @@ export function HospitalIntegrationView() {
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px] uppercase tracking-wider">
                     <tr>
                       <th className="p-3 pl-4">Thời gian</th>
-                      <th className="p-3">Loại tác vụ</th>
+                      <th className="p-3">Loại tác vụ &amp; Người thực hiện</th>
                       <th className="p-3">Endpoint nguồn</th>
-                      <th className="p-3 text-center">Bản ghi cập nhật</th>
+                      <th className="p-3 text-center">Kết quả đồng bộ</th>
+                      <th className="p-3 text-center">Thời lượng</th>
                       <th className="p-3 text-right pr-4">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    <tr className="hover:bg-slate-50">
-                      <td className="p-3 pl-4 font-mono text-[11px]">
-                        {statusData?.lastSyncAt
-                          ? new Date(statusData.lastSyncAt).toLocaleString('vi-VN')
-                          : 'Vừa xong'}
-                      </td>
-                      <td className="p-3 font-semibold text-slate-900">
-                        Đồng bộ Catalog (Bác sĩ & Lịch)
-                      </td>
-                      <td className="p-3 font-mono text-[11px] text-slate-500">
-                        {endpointUrl.trim() || 'Chưa lưu URL'}
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-700 text-[10px]">
-                          {statusData?.apiDoctorCount ?? 0} bác sĩ
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-right pr-4">
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold">
-                          Thành công
-                        </Badge>
-                      </td>
-                    </tr>
+                    {Array.isArray(statusData?.recentSyncLogs) && statusData.recentSyncLogs.length > 0 ? (
+                      statusData.recentSyncLogs.map((log: any) => (
+                        <tr key={log.id} className="hover:bg-slate-50">
+                          <td className="p-3 pl-4 font-mono text-[11px] whitespace-nowrap">
+                            {new Date(log.createdAt).toLocaleString('vi-VN')}
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-slate-900">Đồng bộ Catalog (Bác sĩ &amp; Lịch trực)</div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">{log.actorName || 'Quản trị cơ sở'}</div>
+                          </td>
+                          <td className="p-3 font-mono text-[11px] text-slate-500 max-w-[260px] truncate" title={log.endpointUrl || ''}>
+                            {log.endpointUrl || '—'}
+                          </td>
+                          <td className="p-3 text-center whitespace-nowrap">
+                            {log.success ? (
+                              <div className="inline-flex items-center gap-1.5 text-[11px]">
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                                  +{log.createdCount} mới
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 font-semibold">
+                                  ↻ {log.updatedCount} cập nhật
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
+                                  ={log.unchangedCount} giữ nguyên
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-rose-600 max-w-[220px] inline-block truncate" title={log.errorMessage || ''}>
+                                {log.errorMessage || 'Lỗi kết nối HIS'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                            {typeof log.durationMs === 'number' ? `${log.durationMs} ms` : '—'}
+                          </td>
+                          <td className="p-3 text-right pr-4 whitespace-nowrap">
+                            {log.success ? (
+                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold">
+                                Thành công
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-bold">
+                                Thất bại
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-slate-400 text-xs">
+                          Chưa có phiên đồng bộ dữ liệu nào được ghi nhận. Nhấn <strong>“Đồng bộ theo quy trình”</strong> để thực hiện lần đồng bộ đầu tiên.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

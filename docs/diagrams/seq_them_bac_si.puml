@@ -1,0 +1,95 @@
+@startuml
+title sd Thêm bác sĩ (NovaCare)
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam sequence {
+  ArrowColor #0f172a
+  LifeLineBorderColor #475569
+  LifeLineBackgroundColor #7DD3FC
+  ParticipantBorderColor #0f172a
+  ParticipantBackgroundColor #7DD3FC
+  ActorBorderColor #0f172a
+  ActorBackgroundColor #7DD3FC
+  GroupBorderColor #1e293b
+  GroupBackgroundColor #F1F5F9
+}
+
+actor "Quản trị viên\ncơ sở y tế\n(HOSPITAL_ADMIN)" as Admin
+boundary "GD_ThemBacSi" as GD
+control "CTR_AdminDoctors\nService" as CTR
+entity "ObjDoctor_new" as ObjDoc
+entity "ObjWorkplace_new" as ObjWp
+entity "E_specialties" as ESpec
+entity "E_doctors" as EDoc
+entity "E_doctor_\nworkplaces" as EWp
+entity "E_audit_logs" as ELog
+
+activate Admin
+
+== Mở biểu mẫu & Nhập thông tin bác sĩ (Bước 1 - 4) ==
+Admin -> GD : 1: Nhấn nút "Thêm Bác sĩ Mới" tại trang "Đội ngũ Bác sĩ"
+activate GD
+GD -> GD : 1.1: openCreateDoctorDialog()
+GD --> Admin : 1.2: Hiển thị hộp thoại "Thêm Bác Sĩ Mới" (hồ sơ bác sĩ & thông tin công tác tại cơ sở y tế)
+
+Admin -> GD : 2: Nhập thông tin hồ sơ bác sĩ và chọn chuyên khoa, giá khám, chức vụ/chi nhánh
+Admin -> GD : 3: Nhấn nút "Lưu bác sĩ"
+GD -> GD : 3.1: validateCreateForm(createForm)
+
+== Kiểm tra hợp lệ & Tạo hồ sơ bác sĩ (Bước 5 - 6, Alt 3.1, 5.1) ==
+alt Dữ liệu hợp lệ (đủ họ tên, bằng cấp, chuyên khoa, kinh nghiệm & giá khám >= 0)
+  GD -> CTR : 3.2: create(createDoctorDto)
+  activate CTR
+  CTR -> CTR : 3.3: validateDtoAndScope(dto, hospitalId)
+
+  CTR -> ESpec : 3.4: findUnique(specialtyId)
+  activate ESpec
+  ESpec --> CTR : 3.5: Trả về thông tin chuyên khoa hợp lệ
+  deactivate ESpec
+
+  create ObjDoc
+  CTR -->> ObjDoc : 3.6: <<create>> CreateObjDoctor_new
+  activate ObjDoc
+  ObjDoc --> CTR : 3.7: Trả về ObjDoctor_new
+  CTR -> EDoc : 3.8: create(ObjDoctor_new)
+  activate EDoc
+  EDoc -> EDoc : 3.9: Lưu hồ sơ bác sĩ mới (MANUAL)
+  destroy ObjDoc
+  EDoc --> CTR : 3.10: Trả về hồ sơ bác sĩ mới tạo
+  deactivate EDoc
+
+  CTR -> ESpec : 3.11: upsertHospitalSpecialty(hospitalId, specialtyId)
+  activate ESpec
+  ESpec --> CTR : 3.12: Trả về liên kết chuyên khoa đang hoạt động
+  deactivate ESpec
+
+  create ObjWp
+  CTR -->> ObjWp : 3.13: <<create>> CreateObjWorkplace_new
+  activate ObjWp
+  ObjWp --> CTR : 3.14: Trả về ObjWorkplace_new
+  CTR -> EWp : 3.15: create(ObjWorkplace_new)
+  activate EWp
+  EWp -> EWp : 3.16: Lưu nơi công tác chính
+  destroy ObjWp
+  EWp --> CTR : 3.17: Trả về thông tin nơi công tác mới tạo
+  deactivate EWp
+
+  CTR -> ELog : 3.18: logAction(CREATE_DOCTOR)
+  activate ELog
+  ELog --> CTR : 3.19: Trả về kết quả ghi nhật ký
+  deactivate ELog
+
+  CTR --> GD : 3.20: Trả về hồ sơ bác sĩ đầy đủ vừa tạo
+  deactivate CTR
+  GD --> Admin : 3.21: Đóng hộp thoại, đặt lại biểu mẫu, thông báo "Thêm bác sĩ mới thành công!" và làm mới danh sách
+else Thiếu thông tin bắt buộc hoặc dữ liệu không hợp lệ (Alt 3.1, 5.1)
+  GD --> Admin : 3.22: Từ chối lưu, giữ nguyên hộp thoại và hiển thị thông báo lỗi tương ứng
+end
+
+deactivate GD
+deactivate Admin
+@enduml

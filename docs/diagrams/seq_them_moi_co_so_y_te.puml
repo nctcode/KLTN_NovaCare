@@ -1,92 +1,84 @@
-@startuml
-title sd Thêm mới cơ sở y tế (NovaCare)
-skinparam shadowing false
-skinparam sequenceArrowThickness 1.5
-skinparam participantFontStyle bold
+@startuml seq_them_moi_co_so_y_te
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam participantBorderColor #0f172a
+skinparam participantBackgroundColor #7DD3FC
+skinparam actorBorderColor #0f172a
+skinparam actorBackgroundColor #7DD3FC
 
-actor "Quản trị viên\nhệ thống\n(ADMIN)" as Admin
-boundary "GD_QuanLyCoSoYTe" as UIList
-boundary "GD_ThemBenhVien" as UIModal
-control "CTR_AdminHospitalsService" as Ctrl
-entity "E_hospitals" as Hosp
-entity "E_audit_logs" as Audit
+title sd Thêm mới cơ sở y tế (NovaCare)
+
+actor "Quản trị viên hệ thống\n(ADMIN)" as Admin
+boundary "GD_QuanLyCoSoYTe" as GD
+control "CTR_AdminHospitalsService" as CTR
+entity "ObjHospital_new" as ObjHosp
+entity "E_hospitals" as E_HOSP
+entity "E_audit_logs" as E_AUDIT
 
 activate Admin
-Admin -> UIList : 1: Truy cập trang "Quản lý Cơ sở y tế"
-activate UIList
-UIList -> Ctrl : 1.1: findAll(params)
-activate Ctrl
-Ctrl -> Hosp : 1.2: findMany(filter)
-activate Hosp
-Hosp -> Hosp : 1.3: Truy vấn danh sách bệnh viện
-Hosp --> Ctrl : 1.4: Trả về danh sách bệnh viện
-deactivate Hosp
-Ctrl --> UIList : 1.5: Trả về danh sách bệnh viện và thống kê
-deactivate Ctrl
-UIList --> Admin : 1.6: Hiển thị danh sách cơ sở y tế, thẻ thống kê và nút "Thêm bệnh viện"
+Admin -> GD : 1: Truy cập trang "Quản lý Cơ sở y tế"
+activate GD
+GD -> CTR : 1.1: findAll(page, limit)
+activate CTR
+CTR -> E_HOSP : 1.2: findMany(where, stats)
+activate E_HOSP
+E_HOSP --> CTR : 1.3: Trả về danh sách cơ sở y tế & số liệu thống kê
+deactivate E_HOSP
+CTR --> GD : 1.4: Trả về danh sách cơ sở y tế đối tác & thống kê tổng quan
+deactivate CTR
+GD --> Admin : 1.5: Hiển thị danh sách cơ sở y tế, các thẻ thống kê và nút "Thêm bệnh viện"
 
-Admin -> UIList : 2: Nhấn nút "Thêm bệnh viện"
-UIList -> UIModal : 2.1: openCreateHospitalDialog()
-activate UIModal
-UIModal --> Admin : 2.2: Hiển thị hộp thoại 3 bước — Bước 1/3: Thông tin chung
+Admin -> GD : 2: Nhấn nút "Thêm bệnh viện"
+GD --> Admin : 2.1: Mở hộp thoại "Thêm bệnh viện đối tác" (Bước 1/3 – Thông tin chung)
 
-Admin -> UIModal : 3: Nhập tên bệnh viện, loại hình, năm thành lập, quy mô giường,\nmô tả, hình ảnh (tùy chọn) và nhấn "Tiếp tục"
-UIModal -> UIModal : 3.1: validateStep(1)
+Admin -> GD : 3: Nhập thông tin chung (tên bệnh viện, loại hình, năm thành lập, giường bệnh, mô tả, hình ảnh) và nhấn "Tiếp tục"
+GD -> GD : 3.1: validateStep(1)
 
-alt Tên bệnh viện hợp lệ
-  UIModal --> Admin : 3.2: Hiển thị Bước 2/3: Liên hệ & địa chỉ
-else Bỏ trống tên bệnh viện (Alt 5.1, 6.1)
-  UIModal --> Admin : 3.3: Giữ Bước 1 và hiển thị lỗi "Vui lòng nhập tên bệnh viện." (quay lại Bước 5)
+alt Tên bệnh viện hợp lệ (không để trống)
+  GD --> Admin : 3.2: Chuyển sang Bước 2/3 – Liên hệ & địa chỉ
+  Admin -> GD : 4: Nhập thông tin liên hệ & vị trí (hotline/SĐT, email, website, tỉnh/TP, địa chỉ, bản đồ/GPS) và nhấn "Tiếp tục"
+  GD -> GD : 4.1: validateStep(2)
+
+  alt Đủ thông tin bắt buộc Bước 2 (hotline/SĐT, tỉnh/thành phố, địa chỉ chi tiết)
+    GD --> Admin : 4.2: Chuyển sang Bước 3/3 – Vận hành
+    Admin -> GD : 5: Thiết lập giờ làm việc, trạng thái hợp tác, hiển thị NovaCare, rà soát và nhấn "Tạo bệnh viện"
+    GD -> GD : 5.1: validateAndNormalizePayload(formData)
+    GD -> CTR : 5.2: create(payload, adminUserId)
+    activate CTR
+    CTR -> E_HOSP : 5.3: findMany(hospitalCode != null)
+    activate E_HOSP
+    E_HOSP --> CTR : 5.4: Trả về danh sách mã cơ sở y tế đã sử dụng
+    deactivate E_HOSP
+    CTR -> CTR : 5.5: generateHospitalCode(usedCodes)
+
+    CTR --> ObjHosp ** : 5.6: <<create>> CreateObjHospital_new
+    activate ObjHosp
+    ObjHosp --> CTR : 5.7: Trả về ObjHospital_new
+    deactivate ObjHosp
+
+    CTR -> E_HOSP : 5.8: create(ObjHospital_new)
+    activate E_HOSP
+    E_HOSP -> E_HOSP : 5.9: Lưu hồ sơ cơ sở y tế mới
+    destroy ObjHosp
+    E_HOSP --> CTR : 5.10: Trả về hồ sơ cơ sở y tế mới tạo
+    deactivate E_HOSP
+
+    CTR -> E_AUDIT : 5.11: logAction(CREATE_HOSPITAL, hospitalId)
+    activate E_AUDIT
+    E_AUDIT -> E_AUDIT : 5.12: Ghi nhật ký thao tác
+    E_AUDIT --> CTR : 5.13: Hoàn tất ghi nhật ký
+    deactivate E_AUDIT
+
+    CTR --> GD : 5.14: Trả về hồ sơ cơ sở y tế mới tạo thành công
+    deactivate CTR
+    GD --> Admin : 5.15: Đóng hộp thoại, đặt lại biểu mẫu, hiển thị "Đã thêm bệnh viện mới thành công" và làm mới danh sách & thống kê
+  else Bỏ trống đồng thời Hotline & SĐT khác, Tỉnh/Thành phố hoặc Địa chỉ chi tiết (Alt 7.1, 8.1)
+    GD --> Admin : 4.3: Giữ nguyên Bước 2 và hiển thị thông báo lỗi tương ứng tại từng trường thiếu
+  end
+else Quản trị viên bỏ trống trường Tên bệnh viện ở Bước 1 (Alt 5.1, 6.1)
+  GD --> Admin : 3.3: Giữ nguyên Bước 1 và hiển thị lỗi "Vui lòng nhập tên bệnh viện." dưới trường nhập
 end
 
-Admin -> UIModal : 4: Nhập hotline, số điện thoại, email, website, tỉnh/thành phố,\nđịa chỉ chi tiết, Google Maps, tọa độ GPS và nhấn "Tiếp tục"
-UIModal -> UIModal : 4.1: validateStep(2)
-
-alt Đủ hotline/SĐT, tỉnh/thành phố và địa chỉ chi tiết
-  UIModal --> Admin : 4.2: Hiển thị Bước 3/3: Vận hành & "Kiểm tra trước khi tạo"
-else Thiếu hotline & SĐT, hoặc tỉnh/thành phố, hoặc địa chỉ chi tiết (Alt 7.1, 8.1)
-  UIModal --> Admin : 4.3: Giữ Bước 2 và hiển thị lỗi tương ứng tại từng trường thiếu
-end
-
-Admin -> UIModal : 5: Thiết lập giờ làm việc, trạng thái hợp tác, tùy chọn hiển thị,\nkiểm tra tóm tắt và nhấn "Tạo bệnh viện"
-UIModal -> UIModal : 5.1: validateStep(1), validateStep(2) & chuẩn hóa payload
-UIModal -> Ctrl : 5.2: create(payload)
-activate Ctrl
-Ctrl -> Hosp : 5.3: findMany(hospitalCode)
-activate Hosp
-Hosp -> Hosp : 5.4: Truy vấn mã cơ sở đã tồn tại
-Hosp --> Ctrl : 5.5: Trả về danh sách mã cơ sở
-deactivate Hosp
-Ctrl -> Ctrl : 5.6: Sinh mã cơ sở y tế mới (BV-xxx)
-
-create entity "ObjHospital_new" as NewHosp
-Ctrl -->> NewHosp : 5.7: <<create>> CreateObjHospital_new
-activate NewHosp
-NewHosp --> Ctrl : 5.8: Trả về ObjHospital_new
-deactivate NewHosp
-
-Ctrl -> Hosp : 5.9: create(ObjHospital_new)
-activate Hosp
-Hosp -> Hosp : 5.10: Lưu hồ sơ cơ sở y tế mới
-destroy NewHosp
-
-alt Lưu cơ sở y tế thành công
-  Hosp --> Ctrl : 5.11: Trả về thông tin bệnh viện mới tạo
-  deactivate Hosp
-  Ctrl -> Audit : 5.12: logAction(CREATE_HOSPITAL)
-  activate Audit
-  Audit --> Ctrl : 5.13: Trả về kết quả ghi nhật ký
-  deactivate Audit
-  Ctrl --> UIModal : 5.14: Trả về thông tin bệnh viện
-  UIModal -> UIList : 5.15: resetForm(), onClose() & onSuccess()
-  UIList --> Admin : 5.16: Đóng hộp thoại, làm mới danh sách và hiển thị thông báo "Đã thêm bệnh viện mới thành công"
-else Lỗi lưu dữ liệu phía máy chủ (trùng tên bệnh viện / lỗi kết nối)
-  Ctrl --> UIModal : 5.17: Trả về thông báo lỗi tạo bệnh viện
-  deactivate Ctrl
-  UIModal --> Admin : 5.18: Giữ mở hộp thoại và hiển thị thông báo lỗi\n("Không thể tạo bệnh viện. Vui lòng kiểm tra thông tin và thử lại.")
-end
-
-deactivate UIModal
-deactivate UIList
+deactivate GD
 deactivate Admin
 @enduml

@@ -41,7 +41,16 @@ export class AuditLogService {
     }
   }
 
-  async getLogs(page = 1, limit = 20, search?: string, success?: boolean, entityType?: string, startDate?: string, endDate?: string) {
+  async getLogs(
+    page = 1,
+    limit = 20,
+    search?: string,
+    success?: boolean,
+    entityType?: string,
+    startDate?: string,
+    endDate?: string,
+    action?: string,
+  ) {
     const skip = (page - 1) * limit;
     const where: any = search
       ? {
@@ -56,6 +65,13 @@ export class AuditLogService {
       : {};
     if (success !== undefined) where.success = success;
     if (entityType) where.entityType = entityType;
+    if (action) {
+      const actions = action
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean);
+      where.action = actions.length > 1 ? { in: actions } : actions[0];
+    }
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) where.createdAt.gte = new Date(`${startDate}T00:00:00.000Z`);
@@ -129,6 +145,7 @@ export class AuditLogService {
       REFUND_PAYMENT_TRANSACTION: 'Hoàn tiền giao dịch thanh toán',
       CHECK_IN_APPOINTMENT: 'Xác nhận bệnh nhân đã đến khám',
       REVERT_NO_SHOW_APPOINTMENT: 'Khôi phục lịch hẹn vắng mặt',
+      HIS_CATALOG_SYNC: 'Đồng bộ danh mục từ cổng HIS',
     };
     Object.assign(descriptions, {
       ACTIVATE_SPECIALTY: 'K\u00edch ho\u1ea1t chuy\u00ean khoa',

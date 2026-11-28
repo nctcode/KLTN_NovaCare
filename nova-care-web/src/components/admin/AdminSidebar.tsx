@@ -68,7 +68,7 @@ const ADMIN_MENU_CONFIG: MenuGroup[] = [
   },
   {
     id: 'hospital-admins',
-    label: 'Quản lý vai trò và phân quyền người dùng',
+    label: 'Quản lý vai trò và phân quyền',
     icon: ShieldCheck,
     href: '/admin/users/roles',
   },
@@ -276,8 +276,8 @@ function AdminSidebarInner() {
   return (
     <aside
       className={`w-64 flex flex-col shrink-0 border-r select-none ${isLight
-          ? 'bg-white text-slate-800 border-slate-200'
-          : 'bg-slate-900 text-slate-200 border-slate-800'
+        ? 'bg-white text-slate-800 border-slate-200'
+        : 'bg-slate-900 text-slate-200 border-slate-800'
         }`}
     >
       {/* Brand Header */}
@@ -332,20 +332,20 @@ function AdminSidebarInner() {
                 key={group.id}
                 href={group.href}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${isSingleActive
-                    ? isLight
-                      ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60 shadow-xs'
-                      : 'bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-800/50'
-                    : isLight
-                      ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                  ? isLight
+                    ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60 shadow-xs'
+                    : 'bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-800/50'
+                  : isLight
+                    ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
                   }`}
               >
                 <GroupIcon
                   className={`w-4 h-4 shrink-0 ${isSingleActive
-                      ? isLight
-                        ? 'text-emerald-700'
-                        : 'text-emerald-400'
-                      : 'text-slate-400'
+                    ? isLight
+                      ? 'text-emerald-700'
+                      : 'text-emerald-400'
+                    : 'text-slate-400'
                     }`}
                 />
                 <span className="truncate">{group.label}</span>
@@ -364,19 +364,19 @@ function AdminSidebarInner() {
                 type="button"
                 onClick={() => toggleGroup(group.id)}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition text-left ${hasActiveChild
-                    ? isLight
-                      ? 'text-slate-900 bg-slate-50'
-                      : 'text-white bg-slate-800/40'
-                    : isLight
-                      ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                      : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                  ? isLight
+                    ? 'text-slate-900 bg-slate-50'
+                    : 'text-white bg-slate-800/40'
+                  : isLight
+                    ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
                   }`}
               >
                 <div className="flex items-center gap-3 truncate">
                   <GroupIcon
                     className={`w-4 h-4 shrink-0 ${hasActiveChild
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-slate-400'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-slate-400'
                       }`}
                   />
                   <span className="truncate">{group.label}</span>
@@ -399,28 +399,28 @@ function AdminSidebarInner() {
                         key={sub.id}
                         href={sub.href}
                         className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] font-medium transition ${isSubActive
-                            ? isLight
-                              ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60 shadow-xs'
-                              : 'bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-800/50'
-                            : isLight
-                              ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                              : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                          ? isLight
+                            ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60 shadow-xs'
+                            : 'bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-800/50'
+                          : isLight
+                            ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
                           }`}
                       >
                         {SubIcon ? (
                           <SubIcon
                             className={`w-3.5 h-3.5 shrink-0 ${isSubActive
-                                ? isLight
-                                  ? 'text-emerald-700'
-                                  : 'text-emerald-400'
-                                : 'text-slate-400'
+                              ? isLight
+                                ? 'text-emerald-700'
+                                : 'text-emerald-400'
+                              : 'text-slate-400'
                               }`}
                           />
                         ) : (
                           <div
                             className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubActive
-                                ? 'bg-emerald-600'
-                                : 'bg-slate-300 dark:bg-slate-600'
+                              ? 'bg-emerald-600'
+                              : 'bg-slate-300 dark:bg-slate-600'
                               }`}
                           />
                         )}
@@ -443,8 +443,8 @@ function AdminSidebarInner() {
           href="/"
           target="_blank"
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition ${isLight
-              ? 'text-slate-600 hover:bg-slate-100'
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            ? 'text-slate-600 hover:bg-slate-100'
+            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
             }`}
         >
           <ExternalLink className="w-4 h-4 shrink-0" />

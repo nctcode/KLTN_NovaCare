@@ -293,7 +293,16 @@ export class AdminDashboardService {
     return list.slice(0, 5);
   }
 
-  async getAuditLogs(page = 1, limit = 20, search?: string, success?: boolean, entityType?: string, startDate?: string, endDate?: string) {
-    return this.auditLogService.getLogs(page, limit, search, success, entityType, startDate, endDate);
+  async getAuditLogs(
+    page = 1,
+    limit = 20,
+    search?: string,
+    success?: boolean,
+    entityType?: string,
+    startDate?: string,
+    endDate?: string,
+    action?: string,
+  ) {
+    return this.auditLogService.getLogs(page, limit, search, success, entityType, startDate, endDate, action);
   }
 }

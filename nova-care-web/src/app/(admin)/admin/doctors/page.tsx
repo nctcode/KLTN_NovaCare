@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth.store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
@@ -68,18 +70,21 @@ export default function AdminDoctorsPage() {
   const [dialogEditing, setDialogEditing] = useState(false);
 
   // Form State for creating new Doctor
-  const [createForm, setCreateForm] = useState({
+  const defaultCreateForm = {
     fullName: '',
     title: 'BS.CKI',
     gender: 'MALE',
     specialtyId: '',
+    branchId: '',
+    consultationFee: 300000,
+    position: '',
     avatarUrl: '',
     qualification: '',
     yearsOfExperience: 5,
     bio: '',
-    externalId: '',
     source: 'MANUAL',
-  });
+  };
+  const [createForm, setCreateForm] = useState(defaultCreateForm);
 
   const cardStyle = isLight
     ? 'bg-white border-slate-200 text-slate-900 shadow-sm rounded-xl'
@@ -134,6 +139,14 @@ export default function AdminDoctorsPage() {
     ? rawHospitalSpecialties
     : [];
 
+  const { data: myHospitalDetail } = useQuery({
+    queryKey: ['doctor-create-hospital-detail', user?.hospitalId],
+    queryFn: () => hospitalService.getById(user!.hospitalId!),
+    enabled: isHospitalAdmin && !!user?.hospitalId,
+  });
+  const hospitalBranches: Array<{ id: string; name?: string | null; address?: string | null }> =
+    Array.isArray((myHospitalDetail as any)?.branches) ? (myHospitalDetail as any).branches : [];
+
   // Fetch Doctors with Filters
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -160,22 +173,14 @@ export default function AdminDoctorsPage() {
     mutationFn: (newDoc: any) => adminService.createDoctor(newDoc),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-doctors'] });
+      toast.success('Thêm bác sĩ mới thành công!');
       setShowCreateModal(false);
-      setCreateForm({
-        fullName: '',
-        title: 'BS.CKI',
-        gender: 'MALE',
-        specialtyId: '',
-        avatarUrl: '',
-        qualification: '',
-        yearsOfExperience: 5,
-        bio: '',
-        externalId: '',
-        source: 'MANUAL',
-      });
+      setCreateForm(defaultCreateForm);
     },
     onError: (err: any) => {
-      alert('Lỗi tạo bác sĩ: ' + (err.message || 'Vui lòng kiểm tra dữ liệu đầu vào'));
+      const apiMsg = err?.response?.data?.message;
+      const msg = Array.isArray(apiMsg) ? apiMsg.join(', ') : apiMsg || err?.message || 'Vui lòng kiểm tra dữ liệu đầu vào';
+      toast.error(`Không thể tạo bác sĩ: ${msg}`);
     },
   });
 
@@ -199,15 +204,23 @@ export default function AdminDoctorsPage() {
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.fullName.trim()) {
-      alert('Vui lòng nhập Họ và Tên bác sĩ');
+      toast.error('Vui lòng nhập Họ và Tên bác sĩ');
+      return;
+    }
+    if (!createForm.qualification.trim()) {
+      toast.error('Vui lòng nhập Bằng cấp / Chuyên môn của bác sĩ');
       return;
     }
     if (isHospitalAdmin && !user?.hospitalId) {
-      alert('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      toast.error('Tài khoản chưa được liên kết với cơ sở y tế nào');
       return;
     }
     if (isHospitalAdmin && !createForm.specialtyId) {
-      alert('Vui lòng chọn chuyên khoa của cơ sở y tế');
+      toast.error('Vui lòng chọn chuyên khoa của cơ sở y tế');
+      return;
+    }
+    if (Number(createForm.consultationFee) < 0) {
+      toast.error('Giá khám không được âm');
       return;
     }
 
@@ -216,16 +229,15 @@ export default function AdminDoctorsPage() {
       title: createForm.title,
       gender: createForm.gender,
       hospitalId: isHospitalAdmin ? user?.hospitalId : undefined,
+      branchId: isHospitalAdmin && createForm.branchId ? createForm.branchId : undefined,
       specialtyId: isHospitalAdmin ? createForm.specialtyId : undefined,
+      consultationFee: isHospitalAdmin ? Number(createForm.consultationFee) || 0 : undefined,
+      position: isHospitalAdmin && createForm.position.trim() ? createForm.position.trim() : undefined,
       avatarUrl: createForm.avatarUrl.trim() || undefined,
-      qualification: createForm.qualification.trim() || 'Bác sĩ chuyên khoa',
+      qualification: createForm.qualification.trim(),
       yearsOfExperience: Number(createForm.yearsOfExperience) || 0,
       bio: createForm.bio.trim() || undefined,
-      externalId: createForm.externalId.trim() || undefined,
       source: createForm.source || 'MANUAL',
-      rating: 0,
-      reviewCount: 0,
-      consultationCount: 0,
       isActive: true,
     });
   };
@@ -531,96 +543,229 @@ export default function AdminDoctorsPage() {
       {/* 5. MODAL: THÊM BÁC SĨ MỚI */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className={`border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-xl ${isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
+          <div className={`border rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-xl overflow-hidden ${isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
             }`}>
-            <div className={`flex justify-between items-center border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <h3 className="font-bold text-sm">Thêm Bác Sĩ Mới</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600">
+            <div className={`flex justify-between items-center px-6 py-4 border-b shrink-0 ${isLight ? 'border-slate-200 bg-slate-50/70' : 'border-slate-800 bg-slate-900/50'}`}>
+              <div>
+                <h3 className="font-bold text-base">Thêm Bác Sĩ Mới</h3>
+                <p className={`text-[11px] mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Nhập đầy đủ hồ sơ chuyên môn và thông tin công tác tại cơ sở y tế
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-3 text-xs">
-              <div className="space-y-1">
-                <label className="font-medium block">Họ và Tên Bác sĩ *</label>
-                <Input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Nguyễn Văn An"
-                  value={createForm.fullName}
-                  onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
-                  className={isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-medium block">Chức danh</label>
-                  <select
-                    value={createForm.title}
-                    onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                    className={`w-full text-xs font-medium rounded-lg p-2 border ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-                      }`}
-                  >
-                    <option value="BS.">BS.</option>
-                    <option value="BS.CKI">BS.CKI</option>
-                    <option value="BS.CKII">BS.CKII</option>
-                    <option value="ThS.BS">ThS.BS</option>
-                    <option value="TS.BS">TS.BS</option>
-                    <option value="PGS.TS">PGS.TS</option>
-                    <option value="GS.TS">GS.TS</option>
-                  </select>
+            <form onSubmit={handleCreateSubmit} className="overflow-y-auto px-6 py-5 space-y-5 text-xs">
+              {/* Nhóm 1: Thông tin hồ sơ bác sĩ */}
+              <div className="space-y-3">
+                <div className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                  1. Thông tin hồ sơ bác sĩ
                 </div>
 
-                <div className="space-y-1">
-                  <label className="font-medium block">Số năm kinh nghiệm</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    required
-                    value={createForm.yearsOfExperience}
-                    onChange={(e) => setCreateForm({ ...createForm, yearsOfExperience: parseInt(e.target.value) || 0 })}
-                    className={isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="font-medium block">Họ và Tên Bác sĩ *</label>
+                    <Input
+                      type="text"
+                      required
+                      placeholder="Ví dụ: Nguyễn Văn An"
+                      value={createForm.fullName}
+                      onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
+                      className={isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:col-span-2">
+                    <div className="space-y-1">
+                      <label className="font-medium block">Học hàm / Chức danh</label>
+                      <select
+                        value={createForm.title}
+                        onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                        className={`w-full text-xs font-medium rounded-lg p-2 border h-9 ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                          }`}
+                      >
+                        <option value="BS.">BS.</option>
+                        <option value="BS.CKI">BS.CKI</option>
+                        <option value="BS.CKII">BS.CKII</option>
+                        <option value="ThS.BS">ThS.BS</option>
+                        <option value="TS.BS">TS.BS</option>
+                        <option value="PGS.TS">PGS.TS</option>
+                        <option value="GS.TS">GS.TS</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-medium block">Giới tính *</label>
+                      <select
+                        value={createForm.gender}
+                        onChange={(e) => setCreateForm({ ...createForm, gender: e.target.value })}
+                        className={`w-full text-xs font-medium rounded-lg p-2 border h-9 ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                          }`}
+                      >
+                        <option value="MALE">Nam</option>
+                        <option value="FEMALE">Nữ</option>
+                        <option value="OTHER">Khác</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-medium block">Số năm kinh nghiệm *</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={70}
+                        required
+                        value={createForm.yearsOfExperience}
+                        onChange={(e) => setCreateForm({ ...createForm, yearsOfExperience: parseInt(e.target.value, 10) || 0 })}
+                        className={isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="font-medium block">Bằng cấp / Chuyên môn *</label>
+                    <Input
+                      type="text"
+                      required
+                      placeholder="Ví dụ: Bác sĩ Chuyên khoa I Tim mạch, Thạc sĩ Y khoa..."
+                      value={createForm.qualification}
+                      onChange={(e) => setCreateForm({ ...createForm, qualification: e.target.value })}
+                      className={isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}
+                    />
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="font-medium block">URL Ảnh đại diện (Avatar)</label>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full shrink-0 border overflow-hidden flex items-center justify-center text-xs font-bold ${isLight ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>
+                        {createForm.avatarUrl.trim() ? (
+                          <img
+                            src={createForm.avatarUrl.trim()}
+                            alt="Avatar preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : (
+                          createForm.fullName.trim().charAt(0).toUpperCase() || 'BS'
+                        )}
+                      </div>
+                      <Input
+                        type="url"
+                        placeholder="https://images.unsplash.com/..."
+                        value={createForm.avatarUrl}
+                        onChange={(e) => setCreateForm({ ...createForm, avatarUrl: e.target.value })}
+                        className={isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="font-medium block">Giới thiệu / Tiểu sử chuyên môn</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Kinh nghiệm khám chữa bệnh, quá trình đào tạo, thế mạnh chuyên môn..."
+                      value={createForm.bio}
+                      onChange={(e) => setCreateForm({ ...createForm, bio: e.target.value })}
+                      className={`w-full text-xs rounded-lg p-2.5 border outline-none resize-none ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white' : 'bg-slate-900 border-slate-800 text-white'}`}
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* Nhóm 2: Thông tin công tác tại cơ sở y tế */}
               {isHospitalAdmin && (
-                <div className="space-y-1">
-                  <label className="font-medium block">Chuyên khoa tại cơ sở y tế *</label>
-                  <select
-                    required
-                    value={createForm.specialtyId}
-                    onChange={(e) => setCreateForm({ ...createForm, specialtyId: e.target.value })}
-                    disabled={isLoadingHospitalSpecialties || hospitalSpecialties.length === 0}
-                    className={`w-full text-xs font-medium rounded-lg p-2 border ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-                      }`}
-                  >
-                    <option value="">
-                      {isLoadingHospitalSpecialties ? 'Đang tải chuyên khoa...' : '-- Chọn chuyên khoa --'}
-                    </option>
-                    {hospitalSpecialties.map((specialty) => (
-                      <option key={specialty.id} value={specialty.id}>{specialty.name}</option>
-                    ))}
-                  </select>
-                  {!isLoadingHospitalSpecialties && hospitalSpecialties.length === 0 && (
-                    <p className="text-[11px] text-rose-600">Cơ sở y tế chưa có chuyên khoa để gán cho bác sĩ.</p>
-                  )}
+                <div className={`space-y-3 pt-4 border-t ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                    2. Thông tin công tác tại cơ sở y tế
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="font-medium block">Chuyên khoa tại cơ sở y tế *</label>
+                      <select
+                        required
+                        value={createForm.specialtyId}
+                        onChange={(e) => setCreateForm({ ...createForm, specialtyId: e.target.value })}
+                        disabled={isLoadingHospitalSpecialties || hospitalSpecialties.length === 0}
+                        className={`w-full text-xs font-medium rounded-lg p-2 border h-9 ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                          }`}
+                      >
+                        <option value="">
+                          {isLoadingHospitalSpecialties ? 'Đang tải chuyên khoa...' : '-- Chọn chuyên khoa --'}
+                        </option>
+                        {hospitalSpecialties.map((specialty) => (
+                          <option key={specialty.id} value={specialty.id}>{specialty.name}</option>
+                        ))}
+                      </select>
+                      {!isLoadingHospitalSpecialties && hospitalSpecialties.length === 0 && (
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <p className="text-[11px] text-rose-600">Cơ sở y tế chưa có chuyên khoa để gán cho bác sĩ.</p>
+                          <Link
+                            href="/admin/specialties"
+                            className="text-[11px] font-semibold text-emerald-700 hover:underline shrink-0"
+                          >
+                            Thiết lập chuyên khoa →
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-medium block">Giá khám (VNĐ) *</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={10000}
+                        required
+                        value={createForm.consultationFee}
+                        onChange={(e) => setCreateForm({ ...createForm, consultationFee: parseInt(e.target.value, 10) || 0 })}
+                        className={`font-mono ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+                      />
+                      <span className="text-[11px] text-slate-500 block">
+                        Hiển thị: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(createForm.consultationFee || 0)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-medium block">Chức vụ tại khoa (tùy chọn)</label>
+                      <Input
+                        type="text"
+                        placeholder="Ví dụ: Trưởng khoa, Bác sĩ điều trị..."
+                        value={createForm.position}
+                        onChange={(e) => setCreateForm({ ...createForm, position: e.target.value })}
+                        className={isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}
+                      />
+                    </div>
+
+                    {hospitalBranches.length > 0 && (
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="font-medium block">Chi nhánh công tác (tùy chọn)</label>
+                        <select
+                          value={createForm.branchId}
+                          onChange={(e) => setCreateForm({ ...createForm, branchId: e.target.value })}
+                          className={`w-full text-xs font-medium rounded-lg p-2 border h-9 ${isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                            }`}
+                        >
+                          <option value="">-- Trụ sở chính --</option>
+                          {hospitalBranches.map((branch) => (
+                            <option key={branch.id} value={branch.id}>
+                              {branch.name || branch.address || branch.id}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              <div className="space-y-1">
-                <label className="font-medium block">URL Ảnh đại diện (Avatar)</label>
-                <Input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={createForm.avatarUrl}
-                  onChange={(e) => setCreateForm({ ...createForm, avatarUrl: e.target.value })}
-                  className={isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}
-                />
-              </div>
-
-              <div className={`flex justify-end gap-2 pt-3 border-t ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+              <div className={`flex justify-end gap-2 pt-4 border-t ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
                 <Button
                   type="button"
                   variant="outline"
@@ -632,7 +777,7 @@ export default function AdminDoctorsPage() {
                 <Button
                   type="submit"
                   disabled={createMutation.isPending}
-                  className="bg-[#0c4b39] hover:bg-[#083629] text-white text-xs font-medium rounded-lg px-4"
+                  className="bg-[#0c4b39] hover:bg-[#083629] text-white text-xs font-medium rounded-lg px-5"
                 >
                   {createMutation.isPending ? 'Đang lưu...' : 'Lưu bác sĩ'}
                 </Button>

@@ -18,6 +18,14 @@ describe('AdminAppointmentsService - NO_SHOW Workflow & Policy Enforcement', () 
         count: jest.fn(),
         findMany: jest.fn(),
       },
+      appointmentSlot: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'slot-1', bookedCount: 0, capacity: 1, isAvailable: false }),
+        update: jest.fn().mockResolvedValue({ id: 'slot-1', bookedCount: 1, capacity: 1, isAvailable: false }),
+      },
+      paymentTransaction: {
+        upsert: jest.fn(),
+      },
       hospitalBookingConfig: {
         findFirst: jest.fn().mockResolvedValue({
           gracePeriodMinutes: 15,
@@ -247,19 +255,20 @@ describe('AdminAppointmentsService - NO_SHOW Workflow & Policy Enforcement', () 
       bookingCode: 'NOVA-108',
       status: AppointmentStatus.NO_SHOW,
       userId: 'user-patient',
+      slotId: 'slot-1',
       payment: { status: 'PAID' },
     };
     db.appointment.findUnique.mockResolvedValue(noShowAppt);
-    db.appointment.update.mockResolvedValue({ ...noShowAppt, status: AppointmentStatus.PAID, noShowAt: null });
+    db.appointment.update.mockResolvedValue({ ...noShowAppt, status: AppointmentStatus.CONFIRMED, noShowAt: null });
 
     const restored = await service.revertNoShow('apt-8', { reason: 'Bệnh nhân đến muộn do tai nạn kẹt xe, tiếp nhận khám bù' }, 'admin-1');
 
-    expect(restored.status).toBe(AppointmentStatus.PAID);
+    expect(restored.status).toBe(AppointmentStatus.CONFIRMED);
     expect(db.appointment.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'apt-8' },
         data: expect.objectContaining({
-          status: AppointmentStatus.PAID,
+          status: AppointmentStatus.CONFIRMED,
           noShowAt: null,
         }),
       })

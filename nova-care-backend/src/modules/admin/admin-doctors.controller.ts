@@ -19,6 +19,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { AdminDoctorsService } from './admin-doctors.service';
 import { CreateDoctorAccountDto } from './dto/create-doctor-account.dto';
+import { CreateDoctorDto } from './dto/create-doctor.dto';
 
 @ApiTags('Admin - Quản lý Bác sĩ')
 @ApiBearerAuth('access-token')
@@ -81,7 +82,7 @@ export class AdminDoctorsController {
   @Post()
   @ApiOperation({ summary: 'Tạo bác sĩ mới' })
   create(
-    @Body() body: any,
+    @Body() body: CreateDoctorDto,
     @Req() req: any,
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
@@ -159,20 +160,41 @@ export class AdminDoctorsController {
   // Schedule management endpoints
   @Post('workplaces/:workplaceId/schedules')
   @ApiOperation({ summary: 'Thêm lịch làm việc cho nơi công tác' })
-  createSchedule(@Param('workplaceId') workplaceId: string, @Body() body: any) {
-    return this.service.createSchedule(workplaceId, body);
+  createSchedule(@Param('workplaceId') workplaceId: string, @Body() body: any, @Req() req: any) {
+    let scopedHospitalId: string | undefined;
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      scopedHospitalId = req.user.hospitalId;
+    }
+    return this.service.createSchedule(workplaceId, body, scopedHospitalId);
   }
 
   @Patch('schedules/:scheduleId')
   @ApiOperation({ summary: 'Cập nhật ca làm việc' })
-  updateSchedule(@Param('scheduleId') scheduleId: string, @Body() body: any) {
-    return this.service.updateSchedule(scheduleId, body);
+  updateSchedule(@Param('scheduleId') scheduleId: string, @Body() body: any, @Req() req: any) {
+    let scopedHospitalId: string | undefined;
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      scopedHospitalId = req.user.hospitalId;
+    }
+    return this.service.updateSchedule(scheduleId, body, scopedHospitalId);
   }
 
   @Delete('schedules/:scheduleId')
   @ApiOperation({ summary: 'Xóa ca làm việc' })
-  deleteSchedule(@Param('scheduleId') scheduleId: string) {
-    return this.service.deleteSchedule(scheduleId);
+  deleteSchedule(@Param('scheduleId') scheduleId: string, @Req() req: any) {
+    let scopedHospitalId: string | undefined;
+    if (req.user?.role === 'HOSPITAL_ADMIN') {
+      if (!req.user.hospitalId) {
+        throw new ForbiddenException('Tài khoản chưa được liên kết với cơ sở y tế nào');
+      }
+      scopedHospitalId = req.user.hospitalId;
+    }
+    return this.service.deleteSchedule(scheduleId, scopedHospitalId);
   }
 }
 

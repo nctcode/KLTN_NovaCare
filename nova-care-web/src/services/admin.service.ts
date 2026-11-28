@@ -14,6 +14,7 @@ export interface PaginationParams {
   endDate?: string;
   success?: string;
   entityType?: string;
+  action?: string;
 }
 
 const extractData = (res: any) => {
@@ -62,6 +63,7 @@ export const adminService = {
     if (params?.search) query.append('search', params.search);
     if (params?.success) query.append('success', params.success);
     if (params?.entityType) query.append('entityType', params.entityType);
+    if (params?.action) query.append('action', params.action);
     if (params?.startDate) query.append('startDate', params.startDate);
     if (params?.endDate) query.append('endDate', params.endDate);
 
@@ -70,12 +72,13 @@ export const adminService = {
   },
 
   // Users
-  async getUsers(params?: PaginationParams): Promise<any> {
+  async getUsers(params?: PaginationParams & { roles?: string[] }): Promise<any> {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.search) query.append('search', params.search);
     if (params?.role) query.append('role', params.role);
+    if (params?.roles && params.roles.length > 0) query.append('roles', params.roles.join(','));
     if (params?.status === 'ACTIVE') query.append('isActive', 'true');
     if (params?.status === 'LOCKED') query.append('isActive', 'false');
     if (params?.startDate) query.append('startDate', params.startDate);

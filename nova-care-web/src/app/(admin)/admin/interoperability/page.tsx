@@ -520,7 +520,7 @@ function AdminInteroperabilityContent() {
                         <Legend
                           verticalAlign="bottom"
                           height={36}
-                          formatter={(val) => <span className={`text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{val}</span>}
+                          formatter={(val: any) => <span className={`text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{val}</span>}
                         />
                         <Bar dataKey="success" name="Thành công" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
                         <Bar dataKey="failed" name="Bị từ chối / Sai PIN" stackId="a" fill="#ef4444" radius={[6, 6, 0, 0]} />

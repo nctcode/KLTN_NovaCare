@@ -1,0 +1,238 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1960" viewBox="0 0 1600 1960">
+  <defs>
+    <style>
+      .lifeline-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14.6px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
+      .lifeline-sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12.2px; font-weight: 600; fill: #334155; text-anchor: middle; }
+      .msg { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14.2px; font-weight: 600; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .guard { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14.4px; font-weight: 800; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .frag-tag { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.5px; font-weight: 800; fill: #0f172a; }
+      .lifeline { stroke: #475569; stroke-width: 1.8; stroke-dasharray: 7 6; }
+      .act { fill: #7DD3FC; stroke: #0f172a; stroke-width: 1.6; }
+      .arrow { stroke: #0f172a; stroke-width: 2.1px; fill: none; }
+      .ret { stroke: #0f172a; stroke-width: 1.8; stroke-dasharray: 7 5; fill: none; }
+      .frag-box { fill: none; stroke: #1e293b; stroke-width: 2; }
+      .frag-div { stroke: #1e293b; stroke-width: 1.6; stroke-dasharray: 8 5; }
+      .icon-fill { fill: #7DD3FC; stroke: #0f172a; stroke-width: 2; }
+      .icon-stroke { fill: none; stroke: #0f172a; stroke-width: 2; }
+    </style>
+    <marker id="solidArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0f172a"/>
+    </marker>
+    <marker id="openArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#0f172a" stroke-width="1.8"/>
+    </marker>
+  </defs>
+
+  <!-- White Background -->
+  <rect x="0" y="0" width="1600" height="1960" fill="#FFFFFF"/>
+
+  <!-- Frame -->
+  <rect x="14" y="14" width="1572" height="1932" fill="none" stroke="#64748b" stroke-width="1.6"/>
+  <polygon points="14,14 520,14 520,46 502,62 14,62" fill="#F1F5F9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="30" y="45" class="frag-tag" style="font-size:17px;">sd Thay đổi trạng thái lịch hẹn (NovaCare)</text>
+
+  <!-- ================= LIFELINES (6 columns) ================= -->
+  <!-- X: Admin=85, GD=320, CTR=605, E_appointments=890, E_appointment_slots=1145, E_history_notifications=1385 -->
+
+  <!-- 1. Actor: Quản trị viên cơ sở y tế -->
+  <g transform="translate(85, 110)">
+    <circle cx="0" cy="-18" r="12" class="icon-fill"/>
+    <line x1="0" y1="-6" x2="0" y2="20" class="icon-stroke"/>
+    <line x1="-18" y1="3" x2="18" y2="3" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="-14" y2="38" class="icon-stroke"/>
+    <line x1="0" y1="20" x2="14" y2="38" class="icon-stroke"/>
+    <text x="0" y="55" class="lifeline-label">Quản trị viên</text>
+    <text x="0" y="72" class="lifeline-label">cơ sở y tế</text>
+    <text x="0" y="88" class="lifeline-sub">(HOSPITAL_ADMIN)</text>
+  </g>
+  <line x1="85" y1="208" x2="85" y2="1920" class="lifeline"/>
+
+  <!-- 2. Boundary: GD_QuanLyLichHen -->
+  <g transform="translate(320, 124)">
+    <line x1="-29" y1="-19" x2="-29" y2="19" class="icon-stroke"/>
+    <line x1="-29" y1="0" x2="-17" y2="0" class="icon-stroke"/>
+    <circle cx="3" cy="0" r="20" class="icon-fill"/>
+    <text x="0" y="45" class="lifeline-label">GD_QuanLy</text>
+    <text x="0" y="62" class="lifeline-label">LichHen</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;boundary&gt;&gt;</text>
+  </g>
+  <line x1="320" y1="208" x2="320" y2="1920" class="lifeline"/>
+
+  <!-- 3. Control: CTR_AdminAppointmentsService -->
+  <g transform="translate(605, 124)">
+    <circle cx="0" cy="0" r="20" class="icon-fill"/>
+    <path d="M -5,-26 L 5,-20 L -5,-14" fill="none" stroke="#0f172a" stroke-width="2"/>
+    <text x="0" y="45" class="lifeline-label">CTR_AdminAppointments</text>
+    <text x="0" y="62" class="lifeline-label">Service</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;control&gt;&gt;</text>
+  </g>
+  <line x1="605" y1="208" x2="605" y2="1920" class="lifeline"/>
+
+  <!-- 4. Entity: E_appointments -->
+  <g transform="translate(890, 124)">
+    <circle cx="0" cy="-2" r="20" class="icon-fill"/>
+    <line x1="-22" y1="20" x2="22" y2="20" class="icon-stroke"/>
+    <text x="0" y="48" class="lifeline-label">E_appointments</text>
+    <text x="0" y="66" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="890" y1="208" x2="890" y2="1920" class="lifeline"/>
+
+  <!-- 5. Entity: E_appointment_slots -->
+  <g transform="translate(1145, 124)">
+    <circle cx="0" cy="-2" r="20" class="icon-fill"/>
+    <line x1="-22" y1="20" x2="22" y2="20" class="icon-stroke"/>
+    <text x="0" y="45" class="lifeline-label">E_appointment_</text>
+    <text x="0" y="62" class="lifeline-label">slots</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="1145" y1="208" x2="1145" y2="1920" class="lifeline"/>
+
+  <!-- 6. Entity: E_history_notifications -->
+  <g transform="translate(1385, 124)">
+    <circle cx="0" cy="-2" r="20" class="icon-fill"/>
+    <line x1="-22" y1="20" x2="22" y2="20" class="icon-stroke"/>
+    <text x="0" y="45" class="lifeline-label">E_history_</text>
+    <text x="0" y="62" class="lifeline-label">notifications</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  </g>
+  <line x1="1385" y1="208" x2="1385" y2="1920" class="lifeline"/>
+
+  <!-- ================= ACTIVATION BARS ================= -->
+  <!-- Actor -->
+  <rect x="77" y="236" width="16" height="1654" class="act"/>
+
+  <!-- GD_QuanLyLichHen -->
+  <rect x="312" y="250" width="16" height="1632" class="act"/>
+
+  <!-- CTR_AdminAppointmentsService -->
+  <rect x="597" y="382" width="16" height="134" class="act"/>
+  <rect x="597" y="780" width="16" height="798" class="act"/>
+  <rect x="605" y="924" width="14" height="24" class="act"/>
+  <rect x="597" y="1748" width="16" height="50" class="act"/>
+
+  <!-- E_appointments -->
+  <rect x="882" y="424" width="16" height="52" class="act"/>
+  <rect x="882" y="830" width="16" height="60" class="act"/>
+  <rect x="882" y="1000" width="16" height="106" class="act"/>
+  <rect x="890" y="1028" width="14" height="24" class="act"/>
+
+  <!-- E_appointment_slots -->
+  <rect x="1137" y="1198" width="16" height="114" class="act"/>
+  <rect x="1145" y="1226" width="14" height="24" class="act"/>
+
+  <!-- E_history_notifications -->
+  <rect x="1377" y="1394" width="16" height="122" class="act"/>
+  <rect x="1385" y="1424" width="14" height="24" class="act"/>
+
+  <!-- ================= PHASE 1: CHỌN LỊCH HẸN & MỞ HỘP THOẠI (Steps 1 - 3) ================= -->
+  <line x1="93" y1="266" x2="312" y2="266" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="106" y="238" class="msg">1: Chọn dòng lịch hẹn và nhấn nút thao tác trạng thái</text>
+  <text x="122" y="256" class="msg">(Xác nhận / Hoàn thành khám / Hủy lịch / Vắng mặt / Khôi phục)</text>
+
+  <!-- OPT: Nếu chọn Hủy lịch / Vắng mặt / Khôi phục -->
+  <rect x="28" y="286" width="1544" height="394" class="frag-box"/>
+  <polygon points="28,286 92,286 92,310 78,322 28,322" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="44" y="310" class="frag-tag">opt</text>
+  <text x="110" y="311" class="guard">[Nếu chọn Hủy lịch / Vắng mặt (NO_SHOW) / Khôi phục]</text>
+
+  <!-- Nested OPT: Nếu chọn Vắng mặt (NO_SHOW) -->
+  <rect x="46" y="334" width="1508" height="200" class="frag-box"/>
+  <polygon points="46,334 110,334 110,358 96,370 46,370" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="62" y="358" class="frag-tag">opt</text>
+  <text x="128" y="359" class="guard">[Nếu chọn "Vắng mặt" (NO_SHOW)]</text>
+
+  <line x1="328" y1="386" x2="597" y2="386" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="342" y="377" class="msg">1.1: checkNoShowEligibility(appointmentId)</text>
+
+  <line x1="613" y1="428" x2="882" y2="428" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="626" y="419" class="msg">1.2: findUnique(id, contactLogs, encounter)</text>
+
+  <line x1="882" y1="472" x2="613" y2="472" class="ret" marker-end="url(#openArrow)"/>
+  <text x="626" y="463" class="msg">1.3: Trả về lịch hẹn, nhật ký liên hệ &amp; cấu hình ân hạn</text>
+
+  <line x1="597" y1="512" x2="328" y2="512" class="ret" marker-end="url(#openArrow)"/>
+  <text x="342" y="503" class="msg">1.4: Trả về kết quả thẩm định (eligible, details, reasons)</text>
+
+  <!-- Modal display & user confirm -->
+  <line x1="312" y1="588" x2="93" y2="588" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="562" class="msg">1.5: Mở hộp thoại tương ứng (nhập lý do hủy / khôi phục</text>
+  <text x="134" y="580" class="msg">hoặc hiển thị bảng kiểm tra điều kiện NO_SHOW)</text>
+
+  <line x1="93" y1="652" x2="312" y2="652" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="106" y="642" class="msg">2: Nhập lý do (nếu có) và nhấn nút xác nhận trên hộp thoại</text>
+
+  <!-- ================= PHASE 2: ALT HỢP LỆ vs LỖI NGHIỆP VỤ (Steps 4 - 6, Alt 3.1 - 3.3) ================= -->
+  <rect x="28" y="704" width="1544" height="1202" class="frag-box"/>
+  <polygon points="28,704 92,704 92,728 78,740 28,740" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="46" y="728" class="frag-tag">alt</text>
+  <text x="112" y="729" class="guard">[Hợp lệ: đúng cơ sở, đúng luật chuyển trạng thái và đủ điều kiện nghiệp vụ]</text>
+
+  <line x1="328" y1="784" x2="597" y2="784" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="342" y="758" class="msg">2.1: updateStatus(id, status, note)</text>
+  <text x="374" y="776" class="msg">/ revertNoShow(id, reason)</text>
+
+  <line x1="613" y1="834" x2="882" y2="834" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="626" y="824" class="msg">2.2: findUnique(id, slot, medicalEncounter)</text>
+
+  <line x1="882" y1="886" x2="613" y2="886" class="ret" marker-end="url(#openArrow)"/>
+  <text x="626" y="876" class="msg">2.3: Trả về thông tin lịch hẹn hiện tại</text>
+
+  <path d="M 613 920 L 656 920 L 656 944 L 619 944" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="666" y="938" class="msg">2.4: validateTransitionAndPolicy(existing, status, note)</text>
+
+  <line x1="613" y1="1004" x2="882" y2="1004" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="626" y="994" class="msg">2.5: update(id, status, timestamps)</text>
+
+  <path d="M 898 1024 L 936 1024 L 936 1048 L 904 1048" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="946" y="1032" class="msg" style="font-size:13.6px;">2.6: Cập nhật trạng</text>
+  <text x="976" y="1050" class="msg" style="font-size:13.6px;">thái lịch hẹn</text>
+
+  <line x1="882" y1="1102" x2="613" y2="1102" class="ret" marker-end="url(#openArrow)"/>
+  <text x="626" y="1092" class="msg">2.7: Trả về lịch hẹn đã cập nhật</text>
+
+  <!-- OPT: Giải phóng / Khôi phục suất khám -->
+  <rect x="46" y="1132" width="1508" height="212" class="frag-box"/>
+  <polygon points="46,1132 110,1132 110,1156 96,1168 46,1168" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="62" y="1156" class="frag-tag">opt</text>
+  <text x="128" y="1157" class="guard">[Khi Hủy lịch (CANCELLED), Vắng mặt (NO_SHOW) hoặc Khôi phục (NO_SHOW -&gt; CONFIRMED)]</text>
+
+  <line x1="613" y1="1202" x2="1137" y2="1202" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="742" y="1192" class="msg">2.8: updateSlotCapacity(slotId, delta)</text>
+
+  <path d="M 1153 1222 L 1190 1222 L 1190 1246 L 1159 1246" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1200" y="1230" class="msg" style="font-size:13.6px;">2.9: Cập nhật bookedCount</text>
+  <text x="1228" y="1248" class="msg" style="font-size:13.6px;">&amp; trạng thái isAvailable</text>
+
+  <line x1="1137" y1="1308" x2="613" y2="1308" class="ret" marker-end="url(#openArrow)"/>
+  <text x="742" y="1298" class="msg">2.10: Trả về suất khám đã cập nhật</text>
+
+  <!-- Lưu lịch sử, thanh toán, thông báo & Audit Log -->
+  <line x1="613" y1="1398" x2="1377" y2="1398" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="820" y="1388" class="msg">2.11: recordHistoryPaymentNotification(appt, status, note)</text>
+
+  <path d="M 1393 1420 L 1428 1420 L 1428 1444 L 1399 1444" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1436" y="1426" class="msg" style="font-size:13.2px;">2.12: Lưu lịch sử,</text>
+  <text x="1444" y="1444" class="msg" style="font-size:13.2px;">thanh toán, thông</text>
+  <text x="1444" y="1462" class="msg" style="font-size:13.2px;">báo &amp; Audit Log</text>
+
+  <line x1="1377" y1="1512" x2="613" y2="1512" class="ret" marker-end="url(#openArrow)"/>
+  <text x="760" y="1502" class="msg">2.13: Hoàn tất lưu lịch sử, thanh toán (nếu COMPLETED), thông báo &amp; Audit Log</text>
+
+  <line x1="597" y1="1574" x2="328" y2="1574" class="ret" marker-end="url(#openArrow)"/>
+  <text x="342" y="1564" class="msg">2.14: Trả về kết quả cập nhật thành công</text>
+
+  <line x1="312" y1="1644" x2="93" y2="1644" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="1616" class="msg">2.15: Đóng hộp thoại (nếu có), hiển thị thông báo thành công</text>
+  <text x="140" y="1634" class="msg">và làm mới bảng danh sách cùng thẻ thống kê</text>
+
+  <!-- ELSE của ALT: Lỗi nghiệp vụ (Alt 3.1 - 3.3) -->
+  <line x1="28" y1="1684" x2="1572" y2="1684" class="frag-div"/>
+  <text x="112" y="1714" class="guard">[Thiếu lý do, chưa đủ điều kiện NO_SHOW, đã có hồ sơ khám hoặc chuyển trạng thái không hợp lệ (Alt 3.1 - 3.3)]</text>
+
+  <line x1="597" y1="1788" x2="328" y2="1788" class="ret" marker-end="url(#openArrow)"/>
+  <text x="342" y="1760" class="msg">2.16: Trả về lỗi kiểm tra điều kiện</text>
+  <text x="376" y="1778" class="msg">nghiệp vụ (400 Bad Request)</text>
+
+  <line x1="312" y1="1868" x2="93" y2="1868" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="1840" class="msg">2.17: Khóa nút xác nhận hoặc giữ nguyên giao diện và hiển thị thông báo lỗi tương ứng</text>
+</svg>

@@ -1011,7 +1011,7 @@ export class HospitalAdminService {
   /**
    * 13. Đồng bộ Catalog từ HIS vào Bệnh viện cụ thể (Hospital Scope)
    */
-  async syncHospitalCatalog(hospitalId: string, dto: SyncHospitalCatalogDto) {
+  async syncHospitalCatalog(hospitalId: string, dto: SyncHospitalCatalogDto, actorUserId?: string) {
     if (!dto.endpointUrl || !dto.endpointUrl.trim()) {
       throw new BadRequestException('Vui lòng nhập đường dẫn Endpoint URL của hệ thống HIS');
     }
@@ -1023,11 +1023,37 @@ export class HospitalAdminService {
     }
 
     const targetHospitalId = await this.resolveHospitalId(hospitalId);
-    const rawCatalog = await this.catalogSyncService.fetchHisCatalog(
-      dto.endpointUrl,
-      dto.authType,
-      dto.authToken
-    );
+    const startedAt = Date.now();
+    let rawCatalog: Awaited<ReturnType<CatalogSyncService['fetchHisCatalog']>>;
+    try {
+      rawCatalog = await this.catalogSyncService.fetchHisCatalog(
+        dto.endpointUrl,
+        dto.authType,
+        dto.authToken
+      );
+    } catch (error: any) {
+      const durationMs = Date.now() - startedAt;
+      const errMsg = error?.message || 'Không thể kết nối đến hệ thống HIS';
+      if (actorUserId) {
+        await this.prisma.auditLog.create({
+          data: {
+            userId: actorUserId,
+            action: 'HIS_CATALOG_SYNC',
+            entityType: 'Hospital',
+            entityId: targetHospitalId,
+            success: false,
+            description: errMsg,
+            newValue: {
+              endpointUrl: dto.endpointUrl.trim(),
+              authType: dto.authType || 'api_key',
+              errorMessage: errMsg,
+              durationMs,
+            },
+          },
+        }).catch(() => undefined);
+      }
+      throw error;
+    }
 
     // 1. Cập nhật thông tin Bệnh viện
     await this.prisma.hospital.update({
@@ -1368,6 +1394,32 @@ export class HospitalAdminService {
       }
     }
 
+    const durationMs = Date.now() - startedAt;
+
+    if (actorUserId) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId: actorUserId,
+          action: 'HIS_CATALOG_SYNC',
+          entityType: 'Hospital',
+          entityId: targetHospitalId,
+          success: true,
+          description: `Đồng bộ HIS thành công: +${createdCount} mới, ${updatedCount} cập nhật, ${unchangedCount} giữ nguyên`,
+          newValue: {
+            endpointUrl: dto.endpointUrl.trim(),
+            authType: dto.authType || 'api_key',
+            hospitalCode: rawCatalog.hospital_code || null,
+            hospitalName: rawCatalog.hospital_name || null,
+            createdCount,
+            updatedCount,
+            unchangedCount,
+            totalSynced: doctorsToSync.length,
+            durationMs,
+          },
+        },
+      }).catch(() => undefined);
+    }
+
     return {
       hospitalId: targetHospitalId,
       hospitalName: rawCatalog.hospital_name,
@@ -1375,6 +1427,7 @@ export class HospitalAdminService {
       updatedCount,
       unchangedCount,
       totalSynced: doctorsToSync.length,
+      durationMs,
       details,
     };
   }
@@ -1396,12 +1449,13 @@ export class HospitalAdminService {
           select: {
             endpointUrl: true,
             authType: true,
+            updatedAt: true,
           },
         },
       },
     });
 
-    const [apiDoctorCount, totalDoctorCount, specialtyCount] = await Promise.all([
+    const [apiDoctorCount, totalDoctorCount, specialtyCount, syncLogs] = await Promise.all([
       this.prisma.doctorWorkplace.count({
         where: {
           hospitalId: targetHospitalId,
@@ -1415,11 +1469,43 @@ export class HospitalAdminService {
       this.prisma.hospitalSpecialty.count({
         where: { hospitalId: targetHospitalId, isActive: true },
       }),
+      this.prisma.auditLog.findMany({
+        where: {
+          entityType: 'Hospital',
+          entityId: targetHospitalId,
+          action: 'HIS_CATALOG_SYNC',
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: {
+          user: { select: { fullName: true, email: true } },
+        },
+      }),
     ]);
+
+    const recentSyncLogs = syncLogs.map((log) => {
+      const payload = (log.newValue || {}) as Record<string, any>;
+      return {
+        id: log.id,
+        createdAt: log.createdAt,
+        success: log.success,
+        errorMessage: !log.success ? (log.description || payload.errorMessage || null) : null,
+        endpointUrl: payload.endpointUrl || hospital?.integrationConfig?.endpointUrl || null,
+        authType: payload.authType || hospital?.integrationConfig?.authType || 'api_key',
+        createdCount: Number(payload.createdCount ?? 0),
+        updatedCount: Number(payload.updatedCount ?? 0),
+        unchangedCount: Number(payload.unchangedCount ?? 0),
+        totalSynced: Number(payload.totalSynced ?? 0),
+        durationMs: typeof payload.durationMs === 'number' ? payload.durationMs : null,
+        actorName: log.user?.fullName || log.user?.email || 'Quản trị cơ sở',
+      };
+    });
+
+    const latestSuccessSync = recentSyncLogs.find((item) => item.success);
 
     return {
       hospital,
-      isConnected: !!hospital?.externalId,
+      isConnected: !!hospital?.externalId || !!hospital?.integrationConfig?.endpointUrl,
       externalId: hospital?.externalId || null,
       source: hospital?.source || 'MANUAL',
       endpointUrl: hospital?.integrationConfig?.endpointUrl || null,
@@ -1430,7 +1516,8 @@ export class HospitalAdminService {
       apiDoctorCount,
       totalDoctorCount,
       specialtyCount,
-      lastSyncAt: hospital?.updatedAt,
+      lastSyncAt: latestSuccessSync?.createdAt || (hospital?.externalId ? hospital.updatedAt : null),
+      recentSyncLogs,
     };
   }
 }

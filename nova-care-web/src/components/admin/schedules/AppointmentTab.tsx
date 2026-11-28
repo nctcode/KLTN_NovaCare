@@ -12,6 +12,7 @@ import { AppointmentDetailDrawer } from './AppointmentDetailDrawer';
 import { RecordContactModal } from './RecordContactModal';
 import { NoShowConfirmModal } from './NoShowConfirmModal';
 import { RevertNoShowModal } from './RevertNoShowModal';
+import { CancelAppointmentModal } from './CancelAppointmentModal';
 import {
   CalendarCheck,
   Search,
@@ -31,7 +32,7 @@ import {
   RotateCcw,
   AlertCircle,
   Phone,
-  UserCheck,
+  UserX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -87,6 +88,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
   const [contactModalAppt, setContactModalAppt] = useState<any | null>(null);
   const [noShowModalAppt, setNoShowModalAppt] = useState<any | null>(null);
   const [revertModalAppt, setRevertModalAppt] = useState<any | null>(null);
+  const [cancelModalAppt, setCancelModalAppt] = useState<any | null>(null);
 
   const cardStyle = isLight
     ? 'bg-white border-slate-200 text-slate-900 shadow-sm'
@@ -173,13 +175,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
     },
   });
 
-  const handleStatusAction = (id: string, status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED') => {
-    if (status === 'CANCELLED') {
-      const reason = window.prompt('Nhập lý do hủy lịch hẹn:');
-      if (!reason?.trim()) return;
-      updateStatusMutation.mutate({ id, status, note: reason.trim() });
-      return;
-    }
+  const handleStatusAction = (id: string, status: 'CONFIRMED' | 'COMPLETED') => {
     updateStatusMutation.mutate({ id, status });
   };
 
@@ -485,7 +481,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                 <tbody className={`divide-y ${isLight ? 'divide-slate-100' : 'divide-slate-800/60'}`}>
                   {data?.items?.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center text-slate-500 font-normal">
+                      <td colSpan={8} className="py-10 text-center text-slate-500 font-normal">
                         <div className="flex flex-col items-center gap-2">
                           <AlertCircle className="w-5 h-5 text-slate-400" />
                           <span>Chưa có lịch khám phù hợp với bộ lọc hiện tại.</span>
@@ -610,7 +606,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                                     variant="outline"
                                     size="sm"
                                     disabled={updateStatusMutation.isPending}
-                                    onClick={() => handleStatusAction(appt.id, 'CANCELLED')}
+                                    onClick={() => setCancelModalAppt(appt)}
                                     className="h-7 text-xs font-semibold rounded-lg px-2 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800"
                                   >
                                     Hủy lịch
@@ -618,7 +614,7 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                                 </>
                               )}
 
-                              {/* CONFIRMED: Check-in / Complete / Contact / Cancel */}
+                              {/* CONFIRMED: Check-in / Complete / Contact / No-show / Cancel */}
                               {isHospitalAdmin && appt.status === 'CONFIRMED' && !appt.checkInAt && (
                                 <Button
                                   variant="outline"
@@ -655,11 +651,22 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
                                 >
                                   <Phone className="w-3 h-3 mr-1" /> Liên hệ
                                 </Button>
+                                {!appt.checkInAt && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setNoShowModalAppt(appt)}
+                                    className="h-7 text-xs font-semibold rounded-lg px-2 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/50"
+                                    title="Kiểm tra điều kiện & đánh dấu bệnh nhân không đến khám (NO_SHOW)"
+                                  >
+                                    <UserX className="w-3 h-3 mr-1" /> Vắng mặt
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   disabled={updateStatusMutation.isPending}
-                                  onClick={() => handleStatusAction(appt.id, 'CANCELLED')}
+                                  onClick={() => setCancelModalAppt(appt)}
                                   className="h-7 text-xs font-semibold rounded-lg px-2 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800"
                                 >
                                   Hủy lịch
@@ -841,6 +848,12 @@ export function AppointmentTab({ initialMode = 'all', pageTitle, pageSubtitle }:
         appointment={revertModalAppt}
         open={!!revertModalAppt}
         onClose={() => setRevertModalAppt(null)}
+      />}
+
+      {isHospitalAdmin && <CancelAppointmentModal
+        appointment={cancelModalAppt}
+        open={!!cancelModalAppt}
+        onClose={() => setCancelModalAppt(null)}
       />}
     </div>
   );

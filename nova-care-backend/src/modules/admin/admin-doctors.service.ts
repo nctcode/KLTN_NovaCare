@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { AuditLogService } from '@/common/services/audit-log.service';
-import { Role } from '@prisma/client';
+import { DataSource, Role } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { CreateDoctorAccountDto } from './dto/create-doctor-account.dto';
+import { CreateDoctorDto } from './dto/create-doctor.dto';
 
 @Injectable()
 export class AdminDoctorsService {
@@ -105,46 +106,96 @@ export class AdminDoctorsService {
     return doctor;
   }
 
-  async create(data: any, adminUserId?: string, ipAddress?: string, userAgent?: string) {
-    const doctor = await this.prisma.doctor.create({
-      data: {
-        fullName: data.fullName,
-        title: data.title || null,
-        qualification: data.qualification || 'Bác sĩ chuyên khoa',
-        yearsOfExperience: data.yearsOfExperience !== undefined ? Number(data.yearsOfExperience) : 0,
-        gender: data.gender || null,
-        bio: data.bio || null,
-        avatarUrl: data.avatarUrl || null,
-        externalId: data.externalId || null,
-        source: data.source || 'MANUAL',
-        rating: 0,
-        reviewCount: 0,
-        consultationCount: 0,
-        isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
-      },
-    });
+  async create(data: CreateDoctorDto, adminUserId?: string, ipAddress?: string, userAgent?: string) {
+    const fullName = data.fullName?.trim();
+    if (!fullName) {
+      throw new BadRequestException('Vui lòng nhập họ và tên bác sĩ');
+    }
+
+    const externalId = data.externalId?.trim() || null;
+    if (externalId) {
+      const existingByExternalId = await this.prisma.doctor.findUnique({
+        where: { externalId },
+        select: { id: true },
+      });
+      if (existingByExternalId) {
+        throw new ConflictException(`Mã bác sĩ "${externalId}" đã tồn tại trong hệ thống`);
+      }
+    }
 
     if (data.hospitalId && data.specialtyId) {
-      if (data.isPrimary) {
-        await this.prisma.doctorWorkplace.updateMany({
-          where: { doctorId: doctor.id },
-          data: { isPrimary: false },
-        });
+      const [specialty, branch] = await Promise.all([
+        this.prisma.specialty.findUnique({
+          where: { id: data.specialtyId },
+          select: { id: true },
+        }),
+        data.branchId
+          ? this.prisma.hospitalBranch.findFirst({
+              where: { id: data.branchId, hospitalId: data.hospitalId },
+              select: { id: true },
+            })
+          : Promise.resolve(null),
+      ]);
+      if (!specialty) {
+        throw new BadRequestException('Chuyên khoa không tồn tại trong hệ thống');
       }
-      await this.prisma.doctorWorkplace.create({
+      if (data.branchId && !branch) {
+        throw new BadRequestException('Chi nhánh không thuộc cơ sở y tế hiện tại');
+      }
+    }
+
+    const doctor = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.doctor.create({
         data: {
-          doctorId: doctor.id,
-          hospitalId: data.hospitalId,
-          branchId: data.branchId || null,
-          specialtyId: data.specialtyId,
-          consultationFee: data.consultationFee !== undefined ? Number(data.consultationFee) : 300000,
-          position: data.position || null,
-          joinedAt: data.joinedAt ? new Date(data.joinedAt) : new Date(),
-          isPrimary: data.isPrimary !== undefined ? Boolean(data.isPrimary) : true,
+          fullName,
+          title: data.title?.trim() || null,
+          qualification: data.qualification?.trim() || 'Bác sĩ chuyên khoa',
+          yearsOfExperience: data.yearsOfExperience !== undefined ? Number(data.yearsOfExperience) : 0,
+          gender: data.gender || null,
+          bio: data.bio?.trim() || null,
+          avatarUrl: data.avatarUrl?.trim() || null,
+          externalId,
+          source: data.source || DataSource.MANUAL,
+          rating: 0,
+          reviewCount: 0,
+          consultationCount: 0,
           isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
         },
       });
-    }
+
+      if (data.hospitalId && data.specialtyId) {
+        await tx.hospitalSpecialty.upsert({
+          where: {
+            hospitalId_specialtyId: {
+              hospitalId: data.hospitalId,
+              specialtyId: data.specialtyId,
+            },
+          },
+          update: { isActive: true },
+          create: {
+            hospitalId: data.hospitalId,
+            specialtyId: data.specialtyId,
+            isActive: true,
+          },
+        });
+
+        await tx.doctorWorkplace.create({
+          data: {
+            doctorId: created.id,
+            hospitalId: data.hospitalId,
+            branchId: data.branchId || null,
+            specialtyId: data.specialtyId,
+            consultationFee: data.consultationFee !== undefined ? Number(data.consultationFee) : 300000,
+            position: data.position?.trim() || null,
+            joinedAt: data.joinedAt ? new Date(data.joinedAt) : new Date(),
+            isPrimary: data.isPrimary !== undefined ? Boolean(data.isPrimary) : true,
+            isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+          },
+        });
+      }
+
+      return created;
+    });
 
     if (adminUserId) {
       await this.auditLogService.logAction({
@@ -328,11 +379,46 @@ export class AdminDoctorsService {
   }
 
   // Doctor Schedule Methods
-  async createSchedule(workplaceId: string, data: any) {
+  async createSchedule(workplaceId: string, data: any, scopedHospitalId?: string) {
+    const workplace = await this.prisma.doctorWorkplace.findUnique({
+      where: { id: workplaceId },
+    });
+    if (!workplace || !workplace.isActive) {
+      throw new NotFoundException('Nơi công tác không tồn tại hoặc đã ngừng hoạt động');
+    }
+    if (scopedHospitalId && workplace.hospitalId !== scopedHospitalId) {
+      throw new ForbiddenException('Bạn không có quyền thêm lịch làm việc cho cơ sở y tế khác');
+    }
+
+    const dayOfWeek = Number(data.dayOfWeek);
+    if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+      throw new BadRequestException('Ngày làm việc trong tuần không hợp lệ (0 - 6)');
+    }
+
+    const startTime = String(data.startTime || '').trim();
+    const endTime = String(data.endTime || '').trim();
+    if (!startTime || !endTime || startTime >= endTime) {
+      throw new BadRequestException('Giờ bắt đầu làm việc phải sớm hơn giờ kết thúc');
+    }
+
+    const breakStart = data.breakStart ? String(data.breakStart).trim() : null;
+    const breakEnd = data.breakEnd ? String(data.breakEnd).trim() : null;
+    if (breakStart || breakEnd) {
+      if (!breakStart || !breakEnd) {
+        throw new BadRequestException('Phải nhập đầy đủ giờ bắt đầu và kết thúc nghỉ giữa ca');
+      }
+      if (breakStart >= breakEnd) {
+        throw new BadRequestException('Giờ bắt đầu nghỉ phải sớm hơn giờ kết thúc nghỉ');
+      }
+      if (breakStart < startTime || breakEnd > endTime) {
+        throw new BadRequestException('Khoảng thời gian nghỉ phải nằm trong khung giờ làm việc');
+      }
+    }
+
     const existing = await this.prisma.doctorSchedule.findFirst({
       where: {
         doctorWorkplaceId: workplaceId,
-        dayOfWeek: Number(data.dayOfWeek),
+        dayOfWeek,
       },
     });
     if (existing) {
@@ -342,24 +428,66 @@ export class AdminDoctorsService {
     return this.prisma.doctorSchedule.create({
       data: {
         doctorWorkplaceId: workplaceId,
-        dayOfWeek: Number(data.dayOfWeek),
-        startTime: data.startTime,
-        endTime: data.endTime,
-        breakStart: data.breakStart || null,
-        breakEnd: data.breakEnd || null,
+        dayOfWeek,
+        startTime,
+        endTime,
+        breakStart,
+        breakEnd,
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
       },
     });
   }
 
-  async updateSchedule(scheduleId: string, data: any) {
+  async updateSchedule(scheduleId: string, data: any, scopedHospitalId?: string) {
+    const existing = await this.prisma.doctorSchedule.findUnique({
+      where: { id: scheduleId },
+      include: { doctorWorkplace: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Ca làm việc không tồn tại');
+    }
+    if (scopedHospitalId && existing.doctorWorkplace.hospitalId !== scopedHospitalId) {
+      throw new ForbiddenException('Bạn không có quyền cập nhật ca làm việc của cơ sở y tế khác');
+    }
+
+    const startTime = data.startTime !== undefined ? String(data.startTime).trim() : existing.startTime;
+    const endTime = data.endTime !== undefined ? String(data.endTime).trim() : existing.endTime;
+    if (startTime >= endTime) {
+      throw new BadRequestException('Giờ bắt đầu làm việc phải sớm hơn giờ kết thúc');
+    }
+
+    const breakStart = data.breakStart !== undefined ? (data.breakStart || null) : existing.breakStart;
+    const breakEnd = data.breakEnd !== undefined ? (data.breakEnd || null) : existing.breakEnd;
+    if (breakStart || breakEnd) {
+      if (!breakStart || !breakEnd) {
+        throw new BadRequestException('Phải nhập đầy đủ giờ bắt đầu và kết thúc nghỉ giữa ca');
+      }
+      if (breakStart >= breakEnd) {
+        throw new BadRequestException('Giờ bắt đầu nghỉ phải sớm hơn giờ kết thúc nghỉ');
+      }
+      if (breakStart < startTime || breakEnd > endTime) {
+        throw new BadRequestException('Khoảng thời gian nghỉ phải nằm trong khung giờ làm việc');
+      }
+    }
+
     return this.prisma.doctorSchedule.update({
       where: { id: scheduleId },
       data,
     });
   }
 
-  async deleteSchedule(scheduleId: string) {
+  async deleteSchedule(scheduleId: string, scopedHospitalId?: string) {
+    const existing = await this.prisma.doctorSchedule.findUnique({
+      where: { id: scheduleId },
+      include: { doctorWorkplace: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Ca làm việc không tồn tại');
+    }
+    if (scopedHospitalId && existing.doctorWorkplace.hospitalId !== scopedHospitalId) {
+      throw new ForbiddenException('Bạn không có quyền xóa ca làm việc của cơ sở y tế khác');
+    }
+
     return this.prisma.doctorSchedule.delete({
       where: { id: scheduleId },
     });

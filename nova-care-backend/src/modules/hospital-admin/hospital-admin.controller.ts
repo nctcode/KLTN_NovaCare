@@ -326,7 +326,7 @@ export class HospitalAdminController {
     @Req() req: any,
     @Body() dto: SyncHospitalCatalogDto
   ) {
-    const data = await this.service.syncHospitalCatalog(req.targetHospitalId, dto);
+    const data = await this.service.syncHospitalCatalog(req.targetHospitalId, dto, req.user?.id);
     return {
       statusCode: HttpStatus.OK,
       message: 'Đồng bộ dữ liệu từ HIS vào bệnh viện thành công',

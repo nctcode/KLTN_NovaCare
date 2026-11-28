@@ -31,7 +31,7 @@ type ApiResponse<T = any> = {
 const unwrap = <T>(body: ApiResponse<T>): T =>
   (body.data ?? body.items ?? body) as T;
 
-describe('TC-ADMIN-RBAC-001 - Quản lý vai trò và phân quyền người dùng', () => {
+describe('TC-ADMIN-RBAC-001 - Quản lý vai trò và phân quyền', () => {
   let token: string;
   let users: any[] = [];
   let hospitalId: string;
@@ -41,7 +41,7 @@ describe('TC-ADMIN-RBAC-001 - Quản lý vai trò và phân quyền người dù
     if (!adminEmail || !adminPassword) {
       throw new Error(
         'Thiếu TEST_ADMIN_EMAIL hoặc TEST_ADMIN_PASSWORD. ' +
-          'Hãy cấu hình tài khoản ADMIN trước khi chạy test.',
+        'Hãy cấu hình tài khoản ADMIN trước khi chạy test.',
       );
     }
 

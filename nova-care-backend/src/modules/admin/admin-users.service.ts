@@ -20,6 +20,7 @@ export class AdminUsersService {
     limit?: number;
     search?: string;
     role?: Role;
+    roles?: Role[];
     isActive?: boolean;
     startDate?: string;
     endDate?: string;
@@ -30,7 +31,11 @@ export class AdminUsersService {
 
     const where: any = {
       deletedAt: null,
-      ...(params.role ? { role: params.role } : {}),
+      ...(params.role
+        ? { role: params.role }
+        : params.roles && params.roles.length > 0
+          ? { role: { in: params.roles } }
+          : {}),
     };
 
     if (params.isActive !== undefined) {
@@ -106,12 +111,15 @@ export class AdminUsersService {
     ipAddress?: string,
     userAgent?: string,
   ) {
-    // 1. Kiểm tra bệnh viện có tồn tại không
+    // 1. Kiểm tra bệnh viện có tồn tại và chưa ngừng hợp tác
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: dto.hospitalId },
     });
-    if (!hospital) {
+    if (!hospital || hospital.deletedAt) {
       throw new NotFoundException('Cơ sở y tế không tồn tại');
+    }
+    if (hospital.status === 'TERMINATED') {
+      throw new BadRequestException('Không thể cấp tài khoản quản trị cho cơ sở y tế đã ngừng hợp tác');
     }
 
     // 2. Kiểm tra email đã được đăng ký chưa
@@ -258,30 +266,56 @@ export class AdminUsersService {
     ipAddress?: string,
     userAgent?: string,
   ) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { hospital: { select: { id: true, name: true } } },
+    });
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
 
-    let finalHospitalId: string | null = null;
+    if (adminUserId && id === adminUserId) {
+      throw new BadRequestException(
+        'Không thể tự thay đổi quyền hoặc phạm vi quản trị của chính tài khoản đang đăng nhập',
+      );
+    }
 
-    if (role === Role.HOSPITAL_ADMIN) {
-      finalHospitalId = hospitalId !== undefined ? hospitalId : user.hospitalId;
-      if (!finalHospitalId) {
-        throw new BadRequestException('Vui lòng chọn cơ sở y tế cho Quản trị viên Bệnh viện (HOSPITAL_ADMIN)');
-      }
-      const hospital = await this.prisma.hospital.findUnique({ where: { id: finalHospitalId } });
-      if (!hospital) {
-        throw new NotFoundException('Cơ sở y tế được chỉ định không tồn tại');
-      }
-    } else {
-      // Khi chuyển sang vai trò khác (PATIENT hoặc ADMIN), hủy liên kết bệnh viện
-      finalHospitalId = null;
+    // Identity Separation: Chỉ hỗ trợ điều chuyển cơ sở y tế phụ trách cho HOSPITAL_ADMIN
+    if (user.role !== Role.HOSPITAL_ADMIN) {
+      throw new BadRequestException(
+        'Theo nguyên tắc tách bạch danh tính y tế, chỉ hỗ trợ điều chuyển cơ sở phụ trách cho tài khoản Quản trị cơ sở y tế (HOSPITAL_ADMIN)',
+      );
+    }
+
+    if (role !== Role.HOSPITAL_ADMIN) {
+      throw new BadRequestException(
+        'Không cho phép chuyển đổi chéo vai trò của Quản trị cơ sở y tế sang vai trò khác. Vui lòng khóa tài khoản tại mục Quản lý người dùng nếu thu hồi quyền.',
+      );
+    }
+
+    const finalHospitalId = hospitalId?.trim();
+    if (!finalHospitalId) {
+      throw new BadRequestException('Vui lòng chọn cơ sở y tế cho Quản trị viên Bệnh viện (HOSPITAL_ADMIN)');
+    }
+
+    if (finalHospitalId === user.hospitalId) {
+      throw new BadRequestException('Tài khoản này hiện đã phụ trách cơ sở y tế được chọn');
+    }
+
+    const hospital = await this.prisma.hospital.findUnique({ where: { id: finalHospitalId } });
+    if (!hospital || hospital.deletedAt) {
+      throw new NotFoundException('Cơ sở y tế được chỉ định không tồn tại');
+    }
+    if (hospital.status === 'TERMINATED') {
+      throw new BadRequestException('Không thể điều chuyển sang cơ sở y tế đã ngừng hợp tác');
     }
 
     const updated = await this.prisma.user.update({
       where: { id },
       data: {
-        role,
+        role: Role.HOSPITAL_ADMIN,
         hospitalId: finalHospitalId,
+        authVersion: { increment: 1 },
       },
       select: {
         id: true,
@@ -289,6 +323,7 @@ export class AdminUsersService {
         fullName: true,
         role: true,
         hospitalId: true,
+        authVersion: true,
         hospital: {
           select: { id: true, name: true },
         },
@@ -299,10 +334,11 @@ export class AdminUsersService {
       await this.auditLogService.logAction({
         userId: adminUserId,
         action: 'UPDATE_USER_ROLE',
+        description: `Điều chuyển cơ sở phụ trách của ${user.fullName || user.email} từ ${user.hospital?.name || 'Chưa gán'} sang ${hospital.name}`,
         entityType: 'User',
         entityId: id,
-        oldValue: { role: user.role, hospitalId: user.hospitalId },
-        newValue: { role: updated.role, hospitalId: updated.hospitalId },
+        oldValue: { role: user.role, hospitalId: user.hospitalId, hospitalName: user.hospital?.name || null },
+        newValue: { role: updated.role, hospitalId: updated.hospitalId, hospitalName: hospital.name, sessionRevoked: true },
         ipAddress,
         userAgent,
       });
@@ -314,7 +350,7 @@ export class AdminUsersService {
       role: updated.role,
       hospitalId: updated.hospitalId,
       hospital: updated.hospital,
-      message: 'Cập nhật quyền và cơ sở y tế người dùng thành công',
+      message: 'Đã điều chuyển cơ sở y tế phụ trách và thu hồi phiên đăng nhập cũ thành công',
     };
   }
 

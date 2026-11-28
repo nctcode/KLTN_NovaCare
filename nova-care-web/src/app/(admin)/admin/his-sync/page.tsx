@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,81 +21,83 @@ import { toast } from 'sonner';
 import {
   Network,
   Activity,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
   RefreshCw,
   Search,
   Server,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   Copy,
-  Plus,
   ShieldCheck,
   Building2,
   Terminal,
-  FileCode2,
-  Check,
-  ExternalLink,
   Users,
   Eye,
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  Clock,
+  ExternalLink,
+  Layers,
+  UserCheck,
 } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/auth.store';
 import { HospitalIntegrationView } from '@/components/hospital-admin/integration/HospitalIntegrationView';
+
+interface HospitalSyncLogItem {
+  id: string;
+  createdAt: string;
+  success: boolean;
+  errorMessage: string | null;
+  endpointUrl: string | null;
+  createdCount: number;
+  updatedCount: number;
+  unchangedCount: number;
+  totalSynced: number;
+  durationMs: number | null;
+  actorName: string;
+}
 
 interface GatewayItem {
   id: string;
   hospitalId: string;
   hospitalName: string;
   hospitalCode: string;
-  protocol: 'REST API v1' | 'HL7 FHIR R4' | 'Webhook Direct';
-  endpoint: string;
-  status: 'ONLINE' | 'OFFLINE' | 'DEGRADED';
-  latencyMs: number;
-  lastSyncAt: string;
+  authLabel: string;
+  endpoint: string | null;
+  configUpdatedAt: string | null;
+  status: 'CONFIGURED' | 'FAILED' | 'MANUAL';
+  lastSyncDurationMs: number | null;
+  lastSyncAt: string | null;
+  lastSyncStatus: 'SUCCESS' | 'FAILED' | null;
+  lastSyncError: string | null;
   syncedDoctors: number;
+  apiDoctorCount: number;
+  manualDoctorCount: number;
+  specialtyCount: number;
   syncedServices: number;
-  errorCount: number;
-  autoSync: boolean;
-  syncIntervalMinutes: number;
-  apiKeyMasked: string;
   source: string;
   city?: string;
   address?: string;
+  recentSyncLogs: HospitalSyncLogItem[];
 }
 
 function PlatformAdminHisSync() {
-  const queryClient = useQueryClient();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
 
-  // Filters & Tabs
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ONLINE' | 'OFFLINE'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'CONFIGURED' | 'MANUAL' | 'FAILED'>('ALL');
+  const [logStatusFilter, setLogStatusFilter] = useState<'ALL' | 'SUCCESS' | 'FAILED'>('ALL');
   const [activeTab, setActiveTab] = useState<'GATEWAYS' | 'LOGS'>('GATEWAYS');
 
-  // Interactive state
-  const [pingingId, setPingingId] = useState<string | null>(null);
-  const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [isSyncingAll, setIsSyncingAll] = useState(false);
-  const [livePings, setLivePings] = useState<Record<string, { latency: number; testedAt: string }>>({});
-
-  // Modals
   const [selectedGateway, setSelectedGateway] = useState<GatewayItem | null>(null);
   const [selectedAuditLog, setSelectedAuditLog] = useState<any | null>(null);
-  const [isAddGatewayOpen, setIsAddGatewayOpen] = useState(false);
-  const [newGatewayForm, setNewGatewayForm] = useState({
-    hospitalId: '',
-    protocol: 'REST API v1' as const,
-    endpoint: 'http://localhost:5055/api/v1/his',
-    apiKey: 'novacare_sec_his_' + Math.random().toString(36).substring(2, 10),
-    autoSync: true,
-  });
+  const [pingingId, setPingingId] = useState<string | null>(null);
+  const [pingResults, setPingResults] = useState<
+    Record<string, { online: boolean; latencyMs?: number; message: string; checkedAt: string }>
+  >({});
 
-  // 1. QUERY REAL HOSPITALS FROM DATABASE
+  // 1. Dữ liệu thật từ PostgreSQL (bao gồm integrationConfig & trạng thái đồng bộ HIS gần nhất)
   const {
     data: rawHospitalsData,
     isLoading: loadingHospitals,
@@ -110,14 +113,14 @@ function PlatformAdminHisSync() {
     return rawHospitalsData?.items || rawHospitalsData?.data || [];
   }, [rawHospitalsData]);
 
-  // 2. QUERY REAL AUDIT LOGS FROM DATABASE
+  // 2. Nhật ký đồng bộ HIS chuyên biệt từ PostgreSQL (chỉ lọc action=HIS_CATALOG_SYNC)
   const {
     data: rawAuditLogsData,
     isLoading: loadingAuditLogs,
     refetch: refetchAuditLogs,
   } = useQuery({
     queryKey: ['admin-audit-logs-his'],
-    queryFn: () => adminService.getAuditLogs({ limit: 50 }),
+    queryFn: () => adminService.getAuditLogs({ limit: 50, action: 'HIS_CATALOG_SYNC' }),
   });
 
   const auditLogsList: any[] = useMemo(() => {
@@ -126,139 +129,169 @@ function PlatformAdminHisSync() {
     return rawAuditLogsData?.items || rawAuditLogsData?.data || [];
   }, [rawAuditLogsData]);
 
-  // Transform real hospitals into real GatewayItems
-  const gateways: GatewayItem[] = useMemo(() => {
-    return hospitalsList.map((h: any, idx: number) => {
-      const isOnline = h.isActive !== false && h.status !== 'PAUSED' && h.status !== 'TERMINATED';
-      const doctorCount = h.workPlaces?.length ?? h._count?.workPlaces ?? 0;
-      const serviceCount = h.services?.length ?? h._count?.services ?? 0;
-      const isApi = h.source === 'API' || !!h.externalId;
-      const code = h.hospitalCode || (h.externalId ? `HIS-${h.externalId}` : `BV-${h.id.substring(0, 6).toUpperCase()}`);
-      
-      const live = livePings[h.id];
-      const latencyMs = live ? live.latency : (isOnline ? 24 + ((idx * 9) % 35) : 0);
+  const hospitalMapById = useMemo(() => {
+    const map = new Map<string, any>();
+    hospitalsList.forEach((h: any) => {
+      if (h?.id) map.set(h.id, h);
+    });
+    return map;
+  }, [hospitalsList]);
 
-      // Determine realistic endpoint based on source
-      const endpoint = isApi
-        ? (h.name.includes('An Bình') ? 'http://localhost:5055/api/v1/his' : `https://gateway.${h.id.substring(0, 8)}.novacare.vn/api/v1/his`)
-        : `http://localhost:3000/api/v1/hospitals/${h.id}/his-gateway`;
+  const hisSyncLogs = useMemo(() => {
+    return auditLogsList.map((log: any) => {
+      const payload = (log.newValue || {}) as Record<string, any>;
+      const hospital = log.entityId ? hospitalMapById.get(log.entityId) : null;
+      const isSuccess = log.success !== false;
+      const hospitalName =
+        hospital?.name ||
+        payload.hospitalName ||
+        (log.entityId ? `Cơ sở #${String(log.entityId).substring(0, 8)}` : 'Cơ sở y tế');
+      const hospitalCode =
+        hospital?.externalId ||
+        payload.hospitalCode ||
+        (log.entityId ? `BV-${String(log.entityId).substring(0, 6).toUpperCase()}` : '—');
+      const endpointUrl =
+        payload.endpointUrl || hospital?.integrationConfig?.endpointUrl || null;
+      const authType = payload.authType || hospital?.integrationConfig?.authType || 'api_key';
+      const actorName = log.user?.fullName || log.user?.email || 'Quản trị cơ sở';
+      const errorMessage = !isSuccess
+        ? log.description || payload.errorMessage || 'Đồng bộ HIS thất bại'
+        : null;
+
+      return {
+        ...log,
+        isSuccess,
+        hospitalName,
+        hospitalCode,
+        endpointUrl,
+        authLabel: authType === 'bearer' ? 'Bearer Token' : 'X-API-KEY',
+        actorName,
+        createdCount: Number(payload.createdCount ?? 0),
+        updatedCount: Number(payload.updatedCount ?? 0),
+        unchangedCount: Number(payload.unchangedCount ?? 0),
+        totalSynced: Number(payload.totalSynced ?? 0),
+        durationMs: typeof payload.durationMs === 'number' ? payload.durationMs : null,
+        errorMessage,
+      };
+    });
+  }, [auditLogsList, hospitalMapById]);
+
+  // Ánh xạ 100% dữ liệu thật từ DB, tuyệt đối không sinh URL / độ trễ / API key giả
+  const gateways: GatewayItem[] = useMemo(() => {
+    return hospitalsList.map((h: any) => {
+      const cfg = h.integrationConfig || null;
+      const endpoint = cfg?.endpointUrl?.trim() || null;
+      const hasConfig = Boolean(endpoint);
+      const isApi = hasConfig || h.source === 'API' || Boolean(h.externalId);
+      const code = h.externalId || h.hospitalCode || `BV-${h.id.substring(0, 6).toUpperCase()}`;
+
+      let status: GatewayItem['status'] = 'MANUAL';
+      if (hasConfig) {
+        status = h.lastSyncStatus === 'FAILED' ? 'FAILED' : 'CONFIGURED';
+      } else if (isApi) {
+        status = h.lastSyncStatus === 'FAILED' ? 'FAILED' : 'CONFIGURED';
+      }
+
+      const authLabel = !hasConfig
+        ? 'Nhập liệu thủ công'
+        : cfg.authType === 'bearer'
+          ? 'REST API · Bearer Token'
+          : 'REST API · X-API-KEY';
 
       return {
         id: h.id,
         hospitalId: h.id,
         hospitalName: h.name,
         hospitalCode: code,
-        protocol: isApi ? 'REST API v1' : 'HL7 FHIR R4',
+        authLabel,
         endpoint,
-        status: isOnline ? 'ONLINE' : 'OFFLINE',
-        latencyMs,
-        lastSyncAt: live ? live.testedAt : (h.updatedAt ? new Date(h.updatedAt).toLocaleString('vi-VN') : 'Sẵn sàng'),
-        syncedDoctors: doctorCount,
-        syncedServices: serviceCount,
-        errorCount: isOnline ? 0 : 1,
-        autoSync: isOnline,
-        syncIntervalMinutes: 15,
-        apiKeyMasked: `novacare_sec_${h.id.substring(0, 6)}******************${h.id.substring(h.id.length - 4)}`,
+        configUpdatedAt: cfg?.updatedAt || null,
+        status,
+        lastSyncDurationMs: typeof h.lastSyncDurationMs === 'number' ? h.lastSyncDurationMs : null,
+        lastSyncAt: h.lastSyncAt || null,
+        lastSyncStatus: h.lastSyncStatus || null,
+        lastSyncError: h.lastSyncError || null,
+        syncedDoctors: Number(h.doctorCount ?? h.workPlaces?.length ?? 0),
+        apiDoctorCount: Number(h.apiDoctorCount ?? 0),
+        manualDoctorCount: Number(h.manualDoctorCount ?? 0),
+        specialtyCount: Number(h.specialtyCount ?? 0),
+        syncedServices: Number(h.serviceCount ?? h.services?.length ?? 0),
         source: h.source || 'MANUAL',
         city: h.city || 'TP. Hồ Chí Minh',
         address: h.address || '',
+        recentSyncLogs: Array.isArray(h.recentSyncLogs) ? h.recentSyncLogs : [],
       };
     });
-  }, [hospitalsList, livePings]);
+  }, [hospitalsList]);
 
-  // Filtered Gateways
-  const filteredGateways = useMemo(() => {
-    return gateways.filter((gw) => {
-      const matchSearch =
-        search.trim() === '' ||
-        gw.hospitalName.toLowerCase().includes(search.toLowerCase()) ||
-        gw.hospitalCode.toLowerCase().includes(search.toLowerCase()) ||
-        gw.endpoint.toLowerCase().includes(search.toLowerCase());
-
-      const matchStatus = statusFilter === 'ALL' || gw.status === statusFilter;
-
-      return matchSearch && matchStatus;
-    });
-  }, [gateways, search, statusFilter]);
-
-  // Filtered Logs
-  const filteredAuditLogs = useMemo(() => {
-    return auditLogsList.filter((log: any) => {
-      if (search.trim() === '') return true;
-      const q = search.toLowerCase();
-      return (
-        log.action?.toLowerCase().includes(q) ||
-        log.entityType?.toLowerCase().includes(q) ||
-        log.user?.fullName?.toLowerCase().includes(q) ||
-        log.user?.email?.toLowerCase().includes(q) ||
-        log.ipAddress?.toLowerCase().includes(q)
-      );
-    });
-  }, [auditLogsList, search]);
-
-  // KPIs directly computed from real DB data
-  const totalGateways = gateways.length;
-  const onlineCount = gateways.filter((g) => g.status === 'ONLINE').length;
-  const apiCount = gateways.filter((g) => g.source === 'API').length;
-  const totalDoctors = gateways.reduce((acc, g) => acc + g.syncedDoctors, 0);
-
-  // REAL PING TEST
-  const handlePingTest = async (gw: GatewayItem) => {
+  const handlePingGateway = async (gw: GatewayItem) => {
+    if (!gw.endpoint) return;
     setPingingId(gw.id);
     try {
-      const result = await adminService.testHisGateway({ endpointUrl: gw.endpoint });
-      const latency = Number(result?.latencyMs || 0);
-      setLivePings((prev) => ({
+      const res = await adminService.testHisGateway({ endpointUrl: gw.endpoint });
+      const latencyMs = typeof res?.latencyMs === 'number' ? res.latencyMs : undefined;
+      const msg = res?.message || `Máy chủ HIS đang Online (${latencyMs ?? 0} ms)`;
+      setPingResults((prev) => ({
         ...prev,
-        [gw.id]: { latency, testedAt: 'Vừa xong' },
+        [gw.id]: {
+          online: true,
+          latencyMs,
+          message: msg,
+          checkedAt: new Date().toLocaleTimeString('vi-VN'),
+        },
       }));
-      toast.success(`API HIS hoạt động: ${result?.hospitalName || gw.hospitalName} (${latency}ms)`);
+      toast.success(`${gw.hospitalName}: ${msg}`);
     } catch (error: any) {
-      setLivePings((prev) => ({
+      const msg = error?.response?.data?.message || error?.message || 'Máy chủ HIS không phản hồi';
+      setPingResults((prev) => ({
         ...prev,
-        [gw.id]: { latency: 0, testedAt: 'Mất kết nối' },
+        [gw.id]: {
+          online: false,
+          message: msg,
+          checkedAt: new Date().toLocaleTimeString('vi-VN'),
+        },
       }));
-      const message = error?.response?.data?.message || error?.message || 'Endpoint HIS không phản hồi';
-      toast.error(`API HIS không hoạt động: ${message}`);
+      toast.error(`${gw.hospitalName}: ${msg}`);
     } finally {
       setPingingId(null);
     }
   };
 
-  // REAL SYNC ACTION
-  const handleSyncNow = async (gw: GatewayItem) => {
-    setSyncingId(gw.id);
-    try {
-      // Trigger actual sync via integration controller
-      await adminService.syncHisCatalog(gw.endpoint);
-      await queryClient.invalidateQueries({ queryKey: ['admin-hospitals-for-his'] });
-      await queryClient.invalidateQueries({ queryKey: ['admin-audit-logs-his'] });
-      toast.success(`Đồng bộ dữ liệu thành công cho ${gw.hospitalName}!`);
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Không thể kết nối đến HIS';
-      toast.error(`Đồng bộ thất bại tại ${gw.hospitalName}: ${message}`);
-    } finally {
-      setSyncingId(null);
-    }
-  };
+  const filteredGateways = useMemo(() => {
+    return gateways.filter((gw) => {
+      const q = search.trim().toLowerCase();
+      const matchSearch =
+        !q ||
+        gw.hospitalName.toLowerCase().includes(q) ||
+        gw.hospitalCode.toLowerCase().includes(q) ||
+        (gw.endpoint || '').toLowerCase().includes(q);
+      const matchStatus = statusFilter === 'ALL' || gw.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [gateways, search, statusFilter]);
 
-  // REAL SYNC ALL
-  const handleSyncAll = async () => {
-    setIsSyncingAll(true);
-    try {
-      await adminService.syncHisCatalog('http://localhost:5055/api/v1/his/catalog');
-      await queryClient.invalidateQueries({ queryKey: ['admin-hospitals-for-his'] });
-      await queryClient.invalidateQueries({ queryKey: ['admin-audit-logs-his'] });
-      toast.success('Đã gửi yêu cầu đồng bộ toàn hệ thống HIS thành công!');
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Không thể kết nối đến HIS';
-      toast.error(`Đồng bộ toàn hệ thống thất bại: ${message}`);
-    } finally {
-      setIsSyncingAll(false);
-    }
-  };
+  const filteredAuditLogs = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return hisSyncLogs.filter((log: any) => {
+      if (logStatusFilter === 'SUCCESS' && !log.isSuccess) return false;
+      if (logStatusFilter === 'FAILED' && log.isSuccess) return false;
+      if (!q) return true;
+      return (
+        log.hospitalName?.toLowerCase().includes(q) ||
+        log.hospitalCode?.toLowerCase().includes(q) ||
+        log.endpointUrl?.toLowerCase().includes(q) ||
+        log.actorName?.toLowerCase().includes(q) ||
+        log.errorMessage?.toLowerCase().includes(q) ||
+        log.description?.toLowerCase().includes(q)
+      );
+    });
+  }, [hisSyncLogs, search, logStatusFilter]);
 
-  // Copy helper
+  const totalHospitals = gateways.length;
+  const configuredCount = gateways.filter((g) => g.status === 'CONFIGURED').length;
+  const failedCount = gateways.filter((g) => g.status === 'FAILED').length;
+  const totalDoctors = gateways.reduce((acc, g) => acc + g.syncedDoctors, 0);
+
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`Đã sao chép ${label}`);
@@ -266,76 +299,66 @@ function PlatformAdminHisSync() {
 
   return (
     <div className={`p-6 max-w-7xl mx-auto space-y-6 ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
-      {/* 1. Header Banner */}
+      {/* 1. Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-800/60">
               <Network className="w-5 h-5" />
             </div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
-              Tích hợp HIS & Quản lý API Gateway
+            <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+              Giám sát Tích hợp HIS Đối tác
             </h1>
-            <Badge variant="outline" className="font-normal border-emerald-300 text-emerald-700 bg-emerald-50/50 dark:border-emerald-800 dark:text-emerald-400">
-              Live Production
+            <Badge
+              variant="outline"
+              className="font-medium border-emerald-200 text-emerald-700 bg-emerald-50/70 dark:border-emerald-800 dark:text-emerald-400 dark:bg-emerald-950/40"
+            >
+              NC-HIS-SPEC-2026-V1
             </Badge>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Theo dõi trạng thái kết nối, cấu hình API và đồng bộ danh mục Bác sĩ, Lịch trực thực tế từ cơ sở y tế đối tác.
+            Giám sát cấu hình cổng kết nối HIS thực tế, thời gian đồng bộ gần nhất và nhật ký kiểm toán trên toàn nền tảng.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetchHospitals();
-              refetchAuditLogs();
-            }}
-            disabled={loadingHospitals || loadingAuditLogs}
-            className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loadingHospitals || loadingAuditLogs ? 'animate-spin' : ''}`} />
-            Làm mới
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={handleSyncAll}
-            disabled={isSyncingAll}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
-          >
-            {isSyncingAll ? (
-              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-            ) : (
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-            )}
-            Đồng bộ toàn viện
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => setIsAddGatewayOpen(true)}
-            className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-medium"
-          >
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Thêm cổng HIS
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            refetchHospitals();
+            refetchAuditLogs();
+          }}
+          disabled={loadingHospitals || loadingAuditLogs}
+          className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 rounded-lg text-xs"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loadingHospitals || loadingAuditLogs ? 'animate-spin' : ''}`} />
+          Làm mới dữ liệu
+        </Button>
       </div>
 
-      {/* 2. Technical KPIs (Real Data from PostgreSQL) */}
+      {/* Ghi chú phân tách trách nhiệm */}
+      <div
+        className={`flex items-start gap-2.5 px-4 py-3 rounded-xl border text-xs ${isLight
+          ? 'bg-emerald-50/60 border-emerald-200/80 text-emerald-900'
+          : 'bg-emerald-950/30 border-emerald-800/60 text-emerald-200'
+          }`}
+      >
+        <Info className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          Quản trị nền tảng (<strong>ADMIN</strong>) theo dõi tập trung trạng thái kết nối và nhật ký đồng bộ toàn hệ thống. Việc cấu hình Endpoint, khóa bảo mật và ánh xạ khoa phòng được thực hiện độc lập bởi từng cơ sở y tế (<strong>HOSPITAL_ADMIN</strong>).
+        </p>
+      </div>
+
+      {/* 2. KPI Cards (100% Real DB Data) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1 */}
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs rounded-xl">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tổng cơ sở y tế đối tác</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tổng cơ sở y tế</p>
               <h3 className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">
-                {loadingHospitals ? '...' : totalGateways}
+                {loadingHospitals ? '...' : totalHospitals}
               </h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Dữ liệu thực tế từ cơ sở dữ liệu</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Cơ sở đối tác trên NovaCare</p>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
               <Building2 className="w-5 h-5" />
@@ -343,49 +366,48 @@ function PlatformAdminHisSync() {
           </CardContent>
         </Card>
 
-        {/* Card 2 */}
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs rounded-xl">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Đang hoạt động Online</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Đã cấu hình cổng HIS</p>
               <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
-                {loadingHospitals ? '...' : onlineCount}
+                {loadingHospitals ? '...' : configuredCount}
               </h3>
               <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
-                {totalGateways > 0 ? `${Math.round((onlineCount / totalGateways) * 100)}% trực tuyến` : '100%'}
+                {totalHospitals > 0 ? `${Math.round((configuredCount / totalHospitals) * 100)}% cơ sở đã kết nối` : '0%'}
               </p>
             </div>
             <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50">
-              <Activity className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 3 */}
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tích hợp qua API ngoài</p>
-              <h3 className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">
-                {loadingHospitals ? '...' : apiCount}
-              </h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Cổng HIS tự động (An Bình, NovaLife)</p>
-            </div>
-            <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
               <Server className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Card 4 */}
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs rounded-xl">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tổng bác sĩ đã liên kết</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Cảnh báo lỗi đồng bộ</p>
+              <h3 className={`text-2xl font-bold mt-1 ${failedCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+                {loadingHospitals ? '...' : failedCount}
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {failedCount > 0 ? 'Cần kiểm tra lại kết nối HIS' : 'Không có lỗi đồng bộ gần nhất'}
+              </p>
+            </div>
+            <div className={`p-2.5 rounded-lg ${failedCount > 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+              <Activity className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs rounded-xl">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tổng hồ sơ bác sĩ</p>
               <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
                 {loadingHospitals ? '...' : totalDoctors}
               </h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Nhân sự thực tế thuộc các viện</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Đang hoạt động tại các cơ sở</p>
             </div>
             <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50">
               <Users className="w-5 h-5" />
@@ -394,103 +416,138 @@ function PlatformAdminHisSync() {
         </Card>
       </div>
 
-      {/* 3. Navigation Tabs & Search Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+      {/* 3. Tabs & Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-lg w-fit border border-slate-200 dark:border-slate-800">
           <button
+            type="button"
             onClick={() => setActiveTab('GATEWAYS')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              activeTab === 'GATEWAYS'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeTab === 'GATEWAYS'
+              ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
           >
-            Cổng kết nối HIS ({gateways.length})
+            Trạng thái HIS cơ sở ({gateways.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('LOGS')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              activeTab === 'LOGS'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeTab === 'LOGS'
+              ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
           >
-            Nhật ký Hệ thống ({auditLogsList.length})
+            Nhật ký đồng bộ HIS ({hisSyncLogs.length})
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[240px]">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm kiếm bệnh viện, mã cơ sở, API..."
+              placeholder={
+                activeTab === 'GATEWAYS'
+                  ? 'Tìm bệnh viện, mã HIS, endpoint...'
+                  : 'Tìm bệnh viện, người thực hiện, lỗi...'
+              }
               className="pl-8 h-8 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             />
           </div>
 
-          {activeTab === 'GATEWAYS' && (
+          {activeTab === 'GATEWAYS' ? (
             <div className="flex items-center gap-1 text-xs">
-              {(['ALL', 'ONLINE', 'OFFLINE'] as const).map((st) => (
+              {([
+                { key: 'ALL', label: 'Tất cả' },
+                { key: 'CONFIGURED', label: 'Đã kết nối HIS' },
+                { key: 'MANUAL', label: 'Thủ công' },
+                { key: 'FAILED', label: 'Lỗi gần nhất' },
+              ] as const).map((item) => (
                 <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-medium border transition-colors ${
-                    statusFilter === st
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent'
-                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800'
-                  }`}
+                  key={item.key}
+                  type="button"
+                  onClick={() => setStatusFilter(item.key)}
+                  className={`px-2.5 py-1 rounded text-[11px] font-medium border transition-colors ${statusFilter === item.key
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800'
+                    }`}
                 >
-                  {st === 'ALL' ? 'Tất cả' : st === 'ONLINE' ? 'Online' : 'Offline'}
+                  {item.label}
                 </button>
               ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              {([
+                { key: 'ALL', label: 'Tất cả' },
+                { key: 'SUCCESS', label: 'Thành công' },
+                { key: 'FAILED', label: 'Thất bại' },
+              ] as const).map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setLogStatusFilter(item.key)}
+                  className={`px-2.5 py-1 rounded text-[11px] font-medium border transition-colors ${logStatusFilter === item.key
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800'
+                    }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <Link
+                href="/admin/audit-logs"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-emerald-300 hover:text-emerald-700 transition-colors"
+              >
+                Nhật ký toàn hệ thống
+                <ExternalLink className="w-3 h-3" />
+              </Link>
             </div>
           )}
         </div>
       </div>
 
-      {/* 4. Tab: Danh sách Cổng kết nối HIS */}
+      {/* 4. Tab: Danh sách trạng thái HIS thật */}
       {activeTab === 'GATEWAYS' && (
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+              <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold">
                 <tr>
                   <th className="py-3 px-4">Cơ sở y tế đối tác</th>
-                  <th className="py-3 px-4">Mã cơ sở</th>
-                  <th className="py-3 px-4">Giao thức & Endpoint</th>
-                  <th className="py-3 px-4 text-center">Trạng thái</th>
-                  <th className="py-3 px-4 text-center">Độ trễ</th>
+                  <th className="py-3 px-4">Mã HIS / Cơ sở</th>
+                  <th className="py-3 px-4">Phương thức &amp; Endpoint thực tế</th>
+                  <th className="py-3 px-4 text-center">Trạng thái tích hợp</th>
+                  <th className="py-3 px-4 text-center">Thời lượng sync</th>
                   <th className="py-3 px-4 text-center">Bác sĩ / Dịch vụ</th>
-                  <th className="py-3 px-4">Lần cập nhật cuối</th>
+                  <th className="py-3 px-4">Đồng bộ gần nhất</th>
                   <th className="py-3 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {loadingHospitals ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400">
-                      <Loader2 className="w-5 h-5 mx-auto animate-spin mb-2" />
-                      Đang tải danh sách cơ sở y tế thực tế...
+                    <td colSpan={8} className="py-10 text-center text-slate-400">
+                      <Loader2 className="w-5 h-5 mx-auto animate-spin mb-2 text-emerald-600" />
+                      Đang tải cấu hình tích hợp HIS thực tế từ cơ sở dữ liệu...
                     </td>
                   </tr>
                 ) : filteredGateways.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400">
-                      Không tìm thấy cổng kết nối nào phù hợp với bộ lọc.
+                    <td colSpan={8} className="py-10 text-center text-slate-400">
+                      Không tìm thấy cơ sở y tế nào phù hợp với bộ lọc.
                     </td>
                   </tr>
                 ) : (
                   filteredGateways.map((gw) => (
                     <tr key={gw.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
-                      {/* Tên viện */}
                       <td className="py-3 px-4">
                         <div className="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
                           <span>{gw.hospitalName}</span>
-                          {gw.source === 'API' && (
-                            <Badge variant="outline" className="text-[10px] py-0 px-1 border-emerald-300 text-emerald-700 bg-emerald-50/50">
-                              API
+                          {gw.status === 'CONFIGURED' && (
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-emerald-300 text-emerald-700 bg-emerald-50/60">
+                              HIS API
                             </Badge>
                           )}
                         </div>
@@ -499,97 +556,96 @@ function PlatformAdminHisSync() {
                         </p>
                       </td>
 
-                      {/* Mã cơ sở */}
                       <td className="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                         {gw.hospitalCode}
                       </td>
 
-                      {/* Protocol & Endpoint */}
                       <td className="py-3 px-4">
-                        <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">{gw.protocol}</span>
-                        <div className="font-mono text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[230px] flex items-center gap-1">
-                          <span>{gw.endpoint}</span>
+                        <div className="font-medium text-[11px] text-slate-700 dark:text-slate-300">
+                          {gw.authLabel}
+                        </div>
+                        <div
+                          className="font-mono text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[260px]"
+                          title={gw.endpoint || ''}
+                        >
+                          {gw.endpoint || 'Chưa cấu hình Endpoint HIS'}
                         </div>
                       </td>
 
-                      {/* Status */}
-                      <td className="py-3 px-4 text-center">
-                        {gw.status === 'ONLINE' ? (
-                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-normal hover:bg-emerald-50">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mr-1 inline-block" />
-                            Online
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        {gw.status === 'CONFIGURED' ? (
+                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-medium hover:bg-emerald-50">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Đã kết nối HIS
+                          </Badge>
+                        ) : gw.status === 'FAILED' ? (
+                          <Badge className="bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-medium hover:bg-rose-50">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Lỗi đồng bộ
                           </Badge>
                         ) : (
-                          <Badge className="bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-normal hover:bg-slate-100">
-                            Offline
+                          <Badge className="bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-normal hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                            Nhập thủ công
                           </Badge>
                         )}
                       </td>
 
-                      {/* Latency */}
-                      <td className="py-3 px-4 text-center font-mono text-[11px]">
-                        {gw.status === 'ONLINE' ? (
-                          <span className={gw.latencyMs < 60 ? 'text-emerald-600 font-medium' : 'text-slate-600'}>
-                            {gw.latencyMs}ms
+                      <td className="py-3 px-4 text-center font-mono text-[11px] whitespace-nowrap">
+                        {pingResults[gw.id] ? (
+                          pingResults[gw.id].online ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold" title={pingResults[gw.id].message}>
+                              {pingResults[gw.id].latencyMs ?? 0} ms (Ping)
+                            </span>
+                          ) : (
+                            <span className="text-rose-600 dark:text-rose-400 font-semibold" title={pingResults[gw.id].message}>
+                              Offline
+                            </span>
+                          )
+                        ) : gw.lastSyncDurationMs !== null ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                            {gw.lastSyncDurationMs} ms
                           </span>
                         ) : (
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
 
-                      {/* Synced counts */}
-                      <td className="py-3 px-4 text-center">
-                        <span className="font-medium text-slate-800 dark:text-slate-200">{gw.syncedDoctors}</span>
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{gw.syncedDoctors}</span>
                         <span className="text-slate-400 mx-1">/</span>
                         <span className="text-slate-500">{gw.syncedServices} dv</span>
                       </td>
 
-                      {/* Last Sync */}
-                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
-                        {gw.lastSyncAt}
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px] whitespace-nowrap">
+                        {gw.lastSyncAt ? new Date(gw.lastSyncAt).toLocaleString('vi-VN') : 'Chưa đồng bộ'}
                       </td>
 
-                      {/* Actions */}
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePingTest(gw)}
-                            disabled={pingingId === gw.id}
-                            className="h-7 px-2 text-xs text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-slate-800"
-                            title="Đo độ trễ thời gian thực"
-                          >
-                            {pingingId === gw.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                            ) : (
-                              <Activity className="w-3 h-3 mr-1 text-emerald-600" />
-                            )}
-                            Ping
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSyncNow(gw)}
-                            disabled={syncingId === gw.id}
-                            className="h-7 px-2 text-xs text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-slate-800"
-                            title="Đồng bộ danh mục ngay"
-                          >
-                            {syncingId === gw.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                            ) : (
-                              <RefreshCw className="w-3 h-3 mr-1 text-slate-500" />
-                            )}
-                            Sync
-                          </Button>
-
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          {gw.endpoint && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={pingingId === gw.id}
+                              onClick={() => handlePingGateway(gw)}
+                              className="h-7 px-2.5 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40 rounded-lg"
+                              title="Kiểm tra phản hồi máy chủ HIS (không cần khóa bí mật)"
+                            >
+                              {pingingId === gw.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                              ) : (
+                                <Activity className="w-3 h-3 mr-1" />
+                              )}
+                              Ping
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setSelectedGateway(gw)}
-                            className="h-7 px-2 text-xs border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300"
+                            className="h-7 px-2.5 text-xs border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-lg"
                           >
+                            <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
                             Chi tiết
                           </Button>
                         </div>
@@ -603,77 +659,120 @@ function PlatformAdminHisSync() {
         </Card>
       )}
 
-      {/* 5. Tab: Nhật ký Hệ thống (Real Audit Logs from PostgreSQL) */}
+      {/* 5. Tab: Nhật ký đồng bộ HIS (Chuyên biệt HIS_CATALOG_SYNC) */}
       {activeTab === 'LOGS' && (
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+              <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold">
                 <tr>
                   <th className="py-3 px-4">Thời gian</th>
-                  <th className="py-3 px-4">Hành động</th>
-                  <th className="py-3 px-4">Đối tượng</th>
+                  <th className="py-3 px-4">Cơ sở y tế &amp; Endpoint</th>
                   <th className="py-3 px-4">Người thực hiện</th>
-                  <th className="py-3 px-4">Địa chỉ IP</th>
+                  <th className="py-3 px-4">Kết quả đồng bộ</th>
+                  <th className="py-3 px-4 text-center">Thời lượng</th>
                   <th className="py-3 px-4 text-center">Trạng thái</th>
-                  <th className="py-3 px-4 text-right">Chi tiết thay đổi</th>
+                  <th className="py-3 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-[11px]">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
                 {loadingAuditLogs ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400 font-sans text-xs">
-                      <Loader2 className="w-5 h-5 mx-auto animate-spin mb-2" />
-                      Đang tải nhật ký kiểm toán thực tế...
+                    <td colSpan={7} className="py-10 text-center text-slate-400">
+                      <Loader2 className="w-5 h-5 mx-auto animate-spin mb-2 text-emerald-600" />
+                      Đang tải nhật ký đồng bộ HIS thực tế...
                     </td>
                   </tr>
                 ) : filteredAuditLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400 font-sans text-xs">
-                      Không có bản ghi nhật ký nào.
+                    <td colSpan={7} className="py-10 text-center text-slate-400">
+                      {hisSyncLogs.length === 0
+                        ? 'Chưa ghi nhận phiên đồng bộ HIS nào trên toàn nền tảng.'
+                        : 'Không có phiên đồng bộ HIS nào phù hợp với bộ lọc hiện tại.'}
                     </td>
                   </tr>
                 ) : (
-                  filteredAuditLogs.map((log: any) => {
-                    const formattedDate = new Date(log.createdAt).toLocaleString('vi-VN');
-                    return (
-                      <tr key={log.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                          {formattedDate}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="font-semibold text-slate-900 dark:text-white">
-                            {log.action}
+                  filteredAuditLogs.map((log: any) => (
+                    <tr key={log.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        {new Date(log.createdAt).toLocaleString('vi-VN')}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <span>{log.hospitalName}</span>
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                            {log.authLabel}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
-                          {log.entityType} {log.entityId ? `(${log.entityId.substring(0, 8)}...)` : ''}
-                        </td>
-                        <td className="py-3 px-4 text-slate-600 dark:text-slate-400 font-sans">
-                          {log.user?.fullName || log.user?.email || 'Hệ thống'}
-                        </td>
-                        <td className="py-3 px-4 text-slate-500">
-                          {log.ipAddress || '127.0.0.1'}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-normal hover:bg-emerald-50">
-                            SUCCESS
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedAuditLog(log)}
-                            className="h-6 px-2 text-[11px] font-sans text-emerald-700 hover:bg-emerald-50"
+                        </div>
+                        <div
+                          className="font-mono text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[260px]"
+                          title={log.endpointUrl || ''}
+                        >
+                          {log.endpointUrl || log.hospitalCode}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        {log.actorName}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        {log.isSuccess ? (
+                          <div className="text-[11px] whitespace-nowrap">
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                              +{log.createdCount} mới
+                            </span>
+                            <span className="text-slate-300 dark:text-slate-600 mx-1.5">·</span>
+                            <span className="font-semibold text-sky-600 dark:text-sky-400">
+                              ↻{log.updatedCount} cập nhật
+                            </span>
+                            <span className="text-slate-300 dark:text-slate-600 mx-1.5">·</span>
+                            <span className="text-slate-500 dark:text-slate-400">
+                              ={log.unchangedCount} giữ nguyên
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            className="text-[11px] text-rose-600 dark:text-rose-400 truncate max-w-[260px]"
+                            title={log.errorMessage || ''}
                           >
-                            <Eye className="w-3 h-3 mr-1" />
-                            Xem Diff
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
+                            {log.errorMessage}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-center font-mono text-[11px] text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        {log.durationMs !== null ? `${log.durationMs} ms` : '—'}
+                      </td>
+
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        {log.isSuccess ? (
+                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium hover:bg-emerald-50">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Thành công
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-medium hover:bg-rose-50">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Thất bại
+                          </Badge>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedAuditLog(log)}
+                          className="h-7 px-2.5 text-xs border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-lg"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                          Chi tiết
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -681,218 +780,336 @@ function PlatformAdminHisSync() {
         </Card>
       )}
 
-      {/* 6. Modal: Chi tiết Cổng Gateway */}
+      {/* 6. Modal: Chi tiết cấu hình & Lịch sử đồng bộ HIS của cơ sở */}
       {selectedGateway && (
         <Dialog open={!!selectedGateway} onOpenChange={(open) => !open && setSelectedGateway(null)}>
-          <DialogContent className="max-w-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-            <DialogHeader>
-              <DialogTitle className="text-base font-semibold flex items-center gap-2">
-                <Network className="w-4 h-4 text-emerald-600" />
-                Cấu hình Cổng HIS: {selectedGateway.hospitalName}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500">
-                Thông số kết nối, khóa bảo mật API và trạng thái đồng bộ thực tế.
-              </DialogDescription>
+          <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl">
+            <DialogHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                    <Network className="w-4 h-4 text-emerald-600" />
+                    Giám sát tích hợp HIS: {selectedGateway.hospitalName}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                    Mã cơ sở: <strong className="font-mono text-slate-700 dark:text-slate-200">{selectedGateway.hospitalCode}</strong>
+                    {selectedGateway.configUpdatedAt
+                      ? ` · Cập nhật cấu hình: ${new Date(selectedGateway.configUpdatedAt).toLocaleString('vi-VN')}`
+                      : ' · Chưa thiết lập cấu hình cổng HIS'}
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
 
             <div className="space-y-4 py-2 text-xs">
-              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-800">
-                <div>
-                  <span className="text-slate-400">Mã cơ sở y tế:</span>
-                  <p className="font-mono font-medium text-slate-900 dark:text-white mt-0.5">{selectedGateway.hospitalCode}</p>
+              {/* Khối 1: Phân tách nguồn dữ liệu thật */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-xl border border-emerald-200/70 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20">
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" /> Bác sĩ từ HIS API
+                  </div>
+                  <div className="text-lg font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+                    {selectedGateway.apiDoctorCount}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-400">Nguồn tích hợp:</span>
-                  <p className="font-medium text-slate-900 dark:text-white mt-0.5">{selectedGateway.source}</p>
+                <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-slate-500" /> Bác sĩ nhập tay
+                  </div>
+                  <div className="text-lg font-bold text-slate-800 dark:text-white mt-1">
+                    {selectedGateway.manualDoctorCount}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-400">Giao thức:</span>
-                  <p className="font-mono font-medium text-slate-900 dark:text-white mt-0.5">{selectedGateway.protocol}</p>
+                <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                    <Layers className="w-3.5 h-3.5 text-sky-600" /> Chuyên khoa
+                  </div>
+                  <div className="text-lg font-bold text-slate-800 dark:text-white mt-1">
+                    {selectedGateway.specialtyCount}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-400">Độ trễ trung bình:</span>
-                  <p className="font-mono font-medium text-emerald-600 mt-0.5">{selectedGateway.latencyMs}ms (Online)</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-medium text-slate-700 dark:text-slate-300">Endpoint URL</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input value={selectedGateway.endpoint} readOnly className="font-mono text-xs bg-slate-50 dark:bg-slate-950" />
-                  <Button variant="outline" size="sm" onClick={() => handleCopy(selectedGateway.endpoint, 'Endpoint URL')}>
-                    <Copy className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-medium text-slate-700 dark:text-slate-300">Khóa xác thực API (X-API-KEY)</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input value={selectedGateway.apiKeyMasked} readOnly className="font-mono text-xs bg-slate-50 dark:bg-slate-950" />
-                  <Button variant="outline" size="sm" onClick={() => handleCopy(selectedGateway.apiKeyMasked, 'API Key')}>
-                    <Copy className="w-3.5 h-3.5" />
-                  </Button>
+                <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> Dịch vụ y tế
+                  </div>
+                  <div className="text-lg font-bold text-slate-800 dark:text-white mt-1">
+                    {selectedGateway.syncedServices}
+                  </div>
                 </div>
               </div>
 
-              <div className="p-3 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-lg">
-                <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-medium">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  Thống kê bản ghi đã đồng bộ
+              {/* Khối 2: Cấu hình Endpoint & Kiểm tra phản hồi (Ping) */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[11px] text-slate-400">Phương thức xác thực:</span>{' '}
+                    <strong className="text-slate-800 dark:text-slate-100">{selectedGateway.authLabel}</strong>
+                  </div>
+                  {selectedGateway.endpoint && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pingingId === selectedGateway.id}
+                      onClick={() => handlePingGateway(selectedGateway)}
+                      className="h-7 px-3 text-xs rounded-lg border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400"
+                    >
+                      {pingingId === selectedGateway.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                      ) : (
+                        <Activity className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      Kiểm tra phản hồi máy chủ (Ping)
+                    </Button>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-2 text-slate-700 dark:text-slate-300">
-                  <div>• Bác sĩ phụ trách: <span className="font-semibold text-slate-900 dark:text-white">{selectedGateway.syncedDoctors}</span> hồ sơ</div>
-                  <div>• Dịch vụ khám: <span className="font-semibold text-slate-900 dark:text-white">{selectedGateway.syncedServices}</span> dịch vụ</div>
+
+                <div>
+                  <label className="text-[11px] font-medium text-slate-500">Endpoint URL đã cấu hình</label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      value={selectedGateway.endpoint || 'Cơ sở y tế chưa cấu hình cổng HIS'}
+                      readOnly
+                      className="font-mono text-xs bg-white dark:bg-slate-950"
+                    />
+                    {selectedGateway.endpoint && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopy(selectedGateway.endpoint!, 'Endpoint URL')}
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                {pingResults[selectedGateway.id] && (
+                  <div
+                    className={`p-2.5 rounded-lg border text-[11px] flex items-center justify-between gap-2 ${
+                      pingResults[selectedGateway.id].online
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
+                        : 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:border-rose-800 dark:text-rose-300'
+                    }`}
+                  >
+                    <span className="font-medium">{pingResults[selectedGateway.id].message}</span>
+                    <span className="font-mono text-[10px] opacity-80 shrink-0">
+                      Lúc {pingResults[selectedGateway.id].checkedAt}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Khối 3: Lịch sử 5 phiên đồng bộ HIS gần nhất của riêng bệnh viện này */}
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                    Lịch sử đồng bộ HIS gần nhất ({selectedGateway.recentSyncLogs.length})
+                  </span>
+                </div>
+
+                {selectedGateway.recentSyncLogs.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="bg-slate-50/70 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500">
+                        <tr>
+                          <th className="py-2 px-3">Thời gian</th>
+                          <th className="py-2 px-3">Người thực hiện</th>
+                          <th className="py-2 px-3 text-center">Kết quả</th>
+                          <th className="py-2 px-3 text-center">Thời lượng</th>
+                          <th className="py-2 px-3 text-right">Trạng thái</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {selectedGateway.recentSyncLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="py-2 px-3 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                              {new Date(log.createdAt).toLocaleString('vi-VN')}
+                            </td>
+                            <td className="py-2 px-3 text-slate-700 dark:text-slate-300">
+                              {log.actorName}
+                            </td>
+                            <td className="py-2 px-3 text-center whitespace-nowrap">
+                              {log.success ? (
+                                <span className="text-slate-700 dark:text-slate-200">
+                                  <strong className="text-emerald-600">+{log.createdCount}</strong> mới ·{' '}
+                                  <strong className="text-sky-600">↻{log.updatedCount}</strong> cập nhật ·{' '}
+                                  <span className="text-slate-400">={log.unchangedCount}</span>
+                                </span>
+                              ) : (
+                                <span className="text-rose-600 truncate max-w-[180px] inline-block" title={log.errorMessage || ''}>
+                                  {log.errorMessage || 'Lỗi đồng bộ'}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-center font-mono text-slate-500 whitespace-nowrap">
+                              {log.durationMs !== null ? `${log.durationMs} ms` : '—'}
+                            </td>
+                            <td className="py-2 px-3 text-right whitespace-nowrap">
+                              {log.success ? (
+                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                                  Thành công
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]">
+                                  Thất bại
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-5 text-center text-slate-400 text-xs">
+                    Cơ sở y tế này chưa ghi nhận phiên đồng bộ HIS nào trên hệ thống.
+                  </div>
+                )}
               </div>
             </div>
 
-            <DialogFooter className="flex items-center justify-between">
-              <Button variant="ghost" size="sm" onClick={() => setSelectedGateway(null)}>
-                Đóng
+            <DialogFooter className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between sm:justify-between gap-2">
+              <Button asChild variant="outline" size="sm" className="rounded-lg text-xs">
+                <Link href={`/admin/hospitals/${selectedGateway.hospitalId}`}>
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                  Mở hồ sơ cơ sở y tế
+                </Link>
               </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  handleSyncNow(selectedGateway);
-                  setSelectedGateway(null);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                Đồng bộ ngay
+              <Button variant="outline" size="sm" onClick={() => setSelectedGateway(null)} className="rounded-lg text-xs">
+                Đóng
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
 
-      {/* 7. Modal: Xem chi tiết thay đổi Audit Log */}
+      {/* 7. Modal: Chi tiết phiên đồng bộ HIS */}
       {selectedAuditLog && (
         <Dialog open={!!selectedAuditLog} onOpenChange={(open) => !open && setSelectedAuditLog(null)}>
-          <DialogContent className="max-w-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl">
+            <DialogHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
               <DialogTitle className="text-base font-semibold flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-emerald-600" />
-                Chi tiết sự kiện kiểm toán: {selectedAuditLog.action}
+                Chi tiết phiên đồng bộ HIS: {selectedAuditLog.hospitalName}
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-500">
-                Ghi nhận lúc {new Date(selectedAuditLog.createdAt).toLocaleString('vi-VN')} bởi {selectedAuditLog.user?.fullName || selectedAuditLog.user?.email || 'Hệ thống'}
+                Thực hiện lúc {new Date(selectedAuditLog.createdAt).toLocaleString('vi-VN')} bởi{' '}
+                <strong className="text-slate-700 dark:text-slate-200">{selectedAuditLog.actorName}</strong>
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-3 py-2 text-xs">
-              <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded border border-slate-200 dark:border-slate-800">
-                <div><span className="text-slate-400">Thực thể:</span> <span className="font-medium">{selectedAuditLog.entityType}</span></div>
-                <div><span className="text-slate-400">ID đối tượng:</span> <span className="font-mono">{selectedAuditLog.entityId || 'N/A'}</span></div>
-                <div><span className="text-slate-400">IP:</span> <span className="font-mono">{selectedAuditLog.ipAddress || '127.0.0.1'}</span></div>
-                <div><span className="text-slate-400">Trạng thái:</span> <span className="text-emerald-600 font-medium">SUCCESS</span></div>
+            <div className="space-y-3.5 py-2 text-xs">
+              <div className="grid grid-cols-2 gap-2.5 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span className="text-slate-400">Cơ sở y tế:</span>{' '}
+                  <span className="font-semibold text-slate-800 dark:text-slate-100">
+                    {selectedAuditLog.hospitalName}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400">Mã HIS / Cơ sở:</span>{' '}
+                  <span className="font-mono text-slate-700 dark:text-slate-200">
+                    {selectedAuditLog.hospitalCode}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400">Xác thực:</span>{' '}
+                  <span className="font-medium">{selectedAuditLog.authLabel}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400">Thời lượng / Trạng thái:</span>{' '}
+                  <span className="font-mono mr-1.5">
+                    {selectedAuditLog.durationMs !== null ? `${selectedAuditLog.durationMs} ms` : '—'}
+                  </span>
+                  <span
+                    className={
+                      selectedAuditLog.isSuccess
+                        ? 'text-emerald-600 font-semibold'
+                        : 'text-rose-600 font-semibold'
+                    }
+                  >
+                    ({selectedAuditLog.isSuccess ? 'Thành công' : 'Thất bại'})
+                  </span>
+                </div>
+                {selectedAuditLog.endpointUrl && (
+                  <div className="col-span-2 pt-1 border-t border-slate-200/70 dark:border-slate-700/60 flex items-center justify-between gap-2">
+                    <div className="truncate">
+                      <span className="text-slate-400">Endpoint:</span>{' '}
+                      <span className="font-mono text-slate-700 dark:text-slate-200">
+                        {selectedAuditLog.endpointUrl}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopy(selectedAuditLog.endpointUrl, 'Endpoint URL')}
+                      className="h-6 px-2 shrink-0"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">Dữ liệu trước (Old Value):</p>
-                  <pre className="p-2.5 rounded bg-slate-950 text-slate-200 font-mono text-[10px] overflow-auto max-h-48">
-                    {selectedAuditLog.oldValue ? JSON.stringify(selectedAuditLog.oldValue, null, 2) : 'Không có dữ liệu trước'}
-                  </pre>
+              {selectedAuditLog.isSuccess ? (
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="p-2.5 rounded-xl border border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-800/50 dark:bg-emerald-950/20 text-center">
+                    <div className="text-[11px] text-slate-500">Thêm mới</div>
+                    <div className="text-base font-bold text-emerald-700 dark:text-emerald-400">
+                      +{selectedAuditLog.createdCount}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl border border-sky-200/70 bg-sky-50/50 dark:border-sky-800/50 dark:bg-sky-950/20 text-center">
+                    <div className="text-[11px] text-slate-500">Cập nhật</div>
+                    <div className="text-base font-bold text-sky-700 dark:text-sky-400">
+                      ↻{selectedAuditLog.updatedCount}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/40 text-center">
+                    <div className="text-[11px] text-slate-500">Giữ nguyên</div>
+                    <div className="text-base font-bold text-slate-700 dark:text-slate-200">
+                      ={selectedAuditLog.unchangedCount}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">Dữ liệu sau (New Value):</p>
-                  <pre className="p-2.5 rounded bg-slate-950 text-emerald-400 font-mono text-[10px] overflow-auto max-h-48">
-                    {selectedAuditLog.newValue ? JSON.stringify(selectedAuditLog.newValue, null, 2) : 'Không có dữ liệu mới'}
-                  </pre>
+              ) : (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs">
+                  <div className="font-semibold mb-1">Nguyên nhân thất bại:</div>
+                  <div className="font-mono text-[11px] break-words">
+                    {selectedAuditLog.errorMessage}
+                  </div>
                 </div>
+              )}
+
+              <div>
+                <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Dữ liệu kỹ thuật ghi nhận (Audit Payload):
+                </p>
+                <pre className="p-3 rounded-xl bg-slate-950 text-emerald-400 font-mono text-[11px] overflow-auto max-h-52">
+                  {selectedAuditLog.newValue ? JSON.stringify(selectedAuditLog.newValue, null, 2) : 'Không có'}
+                </pre>
               </div>
             </div>
 
-            <DialogFooter>
-              <Button size="sm" variant="outline" onClick={() => setSelectedAuditLog(null)}>
+            <DialogFooter className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between sm:justify-between gap-2">
+              {selectedAuditLog.entityId ? (
+                <Button asChild variant="outline" size="sm" className="rounded-lg text-xs">
+                  <Link href={`/admin/hospitals/${selectedAuditLog.entityId}`}>
+                    <ExternalLink className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                    Mở hồ sơ cơ sở y tế
+                  </Link>
+                </Button>
+              ) : (
+                <span />
+              )}
+              <Button size="sm" variant="outline" onClick={() => setSelectedAuditLog(null)} className="rounded-lg text-xs">
                 Đóng
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
-
-      {/* 8. Modal: Thêm Cổng HIS mới */}
-      <Dialog open={isAddGatewayOpen} onOpenChange={setIsAddGatewayOpen}>
-        <DialogContent className="max-w-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold">Cấu hình Cổng kết nối HIS Mới</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Chọn cơ sở y tế đối tác trong hệ thống và kích hoạt liên kết Gateway API.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2 text-xs">
-            <div>
-              <label className="font-medium text-slate-700 dark:text-slate-300">Cơ sở y tế đối tác</label>
-              <select
-                value={newGatewayForm.hospitalId}
-                onChange={(e) => setNewGatewayForm({ ...newGatewayForm, hospitalId: e.target.value })}
-                className="w-full mt-1 h-9 px-2.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white"
-              >
-                <option value="">-- Chọn bệnh viện từ cơ sở dữ liệu --</option>
-                {hospitalsList.map((h: any) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name} ({h.hospitalCode || h.externalId || h.id.substring(0, 6)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="font-medium text-slate-700 dark:text-slate-300">Giao thức kết nối</label>
-              <select
-                value={newGatewayForm.protocol}
-                onChange={(e) => setNewGatewayForm({ ...newGatewayForm, protocol: e.target.value as any })}
-                className="w-full mt-1 h-9 px-2.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white"
-              >
-                <option value="REST API v1">REST API v1 (Chuẩn NovaCare Gateway)</option>
-                <option value="HL7 FHIR R4">HL7 FHIR R4 (Tiêu chuẩn Y tế Quốc tế)</option>
-                <option value="Webhook Direct">Webhook Direct (Bắn sự kiện trực tiếp)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="font-medium text-slate-700 dark:text-slate-300">Endpoint URL của hệ thống HIS</label>
-              <Input
-                value={newGatewayForm.endpoint}
-                onChange={(e) => setNewGatewayForm({ ...newGatewayForm, endpoint: e.target.value })}
-                placeholder="http://localhost:5055/api/v1/his"
-                className="mt-1 h-9 font-mono text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="font-medium text-slate-700 dark:text-slate-300">Mã khóa API Key / Token</label>
-              <Input
-                value={newGatewayForm.apiKey}
-                onChange={(e) => setNewGatewayForm({ ...newGatewayForm, apiKey: e.target.value })}
-                className="mt-1 h-9 font-mono text-xs"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => setIsAddGatewayOpen(false)}>
-              Hủy
-            </Button>
-            <Button
-              size="sm"
-              disabled={!newGatewayForm.hospitalId}
-              onClick={async () => {
-                toast.success('Đã cấu hình Cổng kết nối HIS thành công!');
-                setIsAddGatewayOpen(false);
-                refetchHospitals();
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              Lưu cấu hình Gateway
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -901,11 +1118,9 @@ export default function AdminHisSyncPage() {
   const { user } = useAuthStore();
   const isHospitalAdmin = user?.role === 'HOSPITAL_ADMIN';
 
-  // Nếu là Hospital Admin (như AminAnBinh trong ảnh), hiển thị giao diện Kết nối HIS của Bệnh viện
   if (isHospitalAdmin) {
     return <HospitalIntegrationView />;
   }
 
-  // Nếu là Tổng Quản trị viên NovaCare, hiển thị Bảng Giám sát HIS Toàn sàn
   return <PlatformAdminHisSync />;
 }

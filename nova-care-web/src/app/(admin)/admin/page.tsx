@@ -260,7 +260,7 @@ export default function AdminDashboardPage() {
                       verticalAlign="bottom"
                       height={36}
                       iconType="circle"
-                      formatter={(val) => <span className={`text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{val}</span>}
+                      formatter={(val: any) => <span className={`text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{val}</span>}
                     />
                     <Bar dataKey="completed" name="Đã hoàn thành" stackId="a" fill="#10b981" />
                     <Bar dataKey="confirmed" name="Đã xác nhận" stackId="a" fill="#3b82f6" />

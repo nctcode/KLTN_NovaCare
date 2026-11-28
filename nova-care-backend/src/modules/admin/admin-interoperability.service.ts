@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { CatalogSyncService } from '@/modules/integration/catalog-sync/catalog-sync.service';
 
@@ -12,16 +12,78 @@ export class AdminInteroperabilityService {
   ) { }
 
   async testHisGateway(endpointUrl: string, authType?: string, authToken?: string) {
+    const targetUrl = endpointUrl?.trim();
+    if (!targetUrl) {
+      throw new BadRequestException('Endpoint HIS chưa được cấu hình');
+    }
+
     const startedAt = Date.now();
-    const catalog = await this.catalogSyncService.fetchHisCatalog(endpointUrl, authType, authToken);
-    return {
-      success: true,
-      latencyMs: Date.now() - startedAt,
-      hospitalCode: catalog.hospital_code,
-      hospitalName: catalog.hospital_name,
-      totalDoctors: catalog.doctors.length,
-      totalDepartments: catalog.departments?.length || 0,
-    };
+
+    // Nếu có authToken -> kiểm tra bắt tay đầy đủ kèm đọc catalog
+    if (authToken?.trim()) {
+      const catalog = await this.catalogSyncService.fetchHisCatalog(targetUrl, authType, authToken);
+      return {
+        success: true,
+        reachable: true,
+        mode: 'FULL_HANDSHAKE',
+        latencyMs: Date.now() - startedAt,
+        hospitalCode: catalog.hospital_code,
+        hospitalName: catalog.hospital_name,
+        totalDoctors: catalog.doctors.length,
+        totalDepartments: catalog.departments?.length || 0,
+      };
+    }
+
+    // Chế độ Ping / Reachability Check cho ADMIN nền tảng (không cần API Key bí mật của cơ sở)
+    let resolvedUrl = targetUrl;
+    if (
+      process.env.DATABASE_URL?.includes('postgres:5432') &&
+      (resolvedUrl.includes('localhost') || resolvedUrl.includes('127.0.0.1'))
+    ) {
+      resolvedUrl = resolvedUrl.replace(/localhost|127\.0\.0\.1/, 'host.docker.internal');
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(resolvedUrl);
+    } catch {
+      throw new BadRequestException('Định dạng Endpoint URL không hợp lệ');
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const response = await fetch(parsed.toString(), {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      const latencyMs = Date.now() - startedAt;
+
+      if (response.status >= 500) {
+        throw new BadRequestException(`Máy chủ HIS đang gặp sự cố nội bộ (HTTP ${response.status})`);
+      }
+
+      return {
+        success: true,
+        reachable: true,
+        mode: 'REACHABILITY',
+        statusCode: response.status,
+        latencyMs,
+        message:
+          response.status === 401 || response.status === 403
+            ? `Máy chủ HIS đang Online (${latencyMs} ms · cổng bảo vệ xác thực hoạt động bình thường)`
+            : `Máy chủ HIS đang Online (${latencyMs} ms · HTTP ${response.status})`,
+      };
+    } catch (error: any) {
+      if (error instanceof BadRequestException) throw error;
+      const reason =
+        error?.name === 'AbortError'
+          ? 'Hết thời gian chờ (Timeout > 5 giây)'
+          : error?.cause?.code || error?.message || 'Không thể kết nối đến máy chủ HIS';
+      throw new BadRequestException(`Máy chủ HIS không phản hồi (${reason})`);
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   /**

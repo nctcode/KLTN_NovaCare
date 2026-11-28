@@ -1,0 +1,78 @@
+@startuml
+title sd Thêm lịch làm việc bác sĩ (NovaCare)
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam sequence {
+  ArrowColor #0f172a
+  LifeLineBorderColor #475569
+  LifeLineBackgroundColor #7DD3FC
+  ParticipantBorderColor #0f172a
+  ParticipantBackgroundColor #7DD3FC
+  ActorBorderColor #0f172a
+  ActorBackgroundColor #7DD3FC
+  GroupBorderColor #1e293b
+  GroupBackgroundColor #F1F5F9
+}
+
+actor "Quản trị viên\ncơ sở y tế\n(HOSPITAL_ADMIN)" as Admin
+boundary "GD_ThemLich\nLamViec" as GD
+control "CTR_AdminDoctors\nService" as CTR
+entity "ObjSchedule_new" as ObjSched
+entity "E_doctors" as EDoc
+entity "E_doctor_\nschedules" as ESched
+
+activate Admin
+
+== Mở biểu mẫu & Chọn bác sĩ, chuyên khoa (Bước 1 - 3) ==
+Admin -> GD : 1: Nhấn nút "Thêm ca khám" tại trang "Lịch trực & Ca khám"
+activate GD
+GD -> CTR : 1.1: findAll(hospitalId, isActive=true)
+activate CTR
+CTR -> EDoc : 1.2: findMany(hospitalId, isActive=true)
+activate EDoc
+EDoc --> CTR : 1.3: Trả về danh sách chuyên khoa, bác sĩ & lịch hiện có
+deactivate EDoc
+CTR --> GD : 1.4: Trả về danh sách bác sĩ thuộc cơ sở y tế
+deactivate CTR
+GD --> Admin : 1.5: Mở hộp thoại "Thêm Ca Khám Định Kỳ Cho Bác Sĩ" (cố định cơ sở y tế)
+
+Admin -> GD : 2: Lọc theo chuyên khoa, chọn Bác sĩ và xác nhận Chuyên khoa công tác
+GD -> GD : 2.1: filterAvailableDays(existingScheduleDays)
+
+== Kiểm tra ngày trống & Tạo ca khám định kỳ (Bước 4 - 10, Alt 3.1, 4.1) ==
+alt Còn ngày trống trong tuần (availableDays.length > 0)
+  GD --> Admin : 2.2: Đánh dấu "Đã có" các thứ bị trùng và tự chọn sẵn thứ trống đầu tiên
+  Admin -> GD : 3: Chọn một hoặc nhiều ngày áp dụng trong tuần (hoặc nhóm nhanh T2-T6, T2/4/6, T3/5/7, Cả tuần)
+  Admin -> GD : 4: Chọn khung giờ ca khám (mẫu nhanh / tự nhập), giờ nghỉ giữa ca (nếu có) và trạng thái ca khám
+  Admin -> GD : 5: Nhấn nút "Tạo ca khám" (hoặc "Tạo N ca khám")
+  GD -> GD : 5.1: validateScheduleForm(workplace, selectedDays, time, breakTime)
+
+  loop Với từng dayOfWeek trong selectedDays
+    GD -> CTR : 5.2: createSchedule(workplaceId, data)
+    activate CTR
+    create ObjSched
+    CTR -->> ObjSched : 5.3: <<create>> CreateObjSchedule_new
+    activate ObjSched
+    ObjSched --> CTR : 5.4: Trả về ObjSchedule_new
+    CTR -> ESched : 5.5: create(ObjSchedule_new)
+    activate ESched
+    ESched -> ESched : 5.6: Lưu ca khám mới
+    destroy ObjSched
+    ESched --> CTR : 5.7: Trả về ca khám định kỳ mới tạo
+    deactivate ESched
+    CTR --> GD : 5.8: Trả về kết quả tạo ca khám thành công
+    deactivate CTR
+  end
+
+  GD --> Admin : 5.9: Đóng hộp thoại, thông báo "Đã thêm thành công N ca khám định kỳ" và làm mới lịch
+else Bác sĩ đã có đủ lịch cả 7 ngày trong tuần tại nơi công tác đã chọn (Alt 3.1, 4.1)
+  GD --> Admin : 2.3: Đánh dấu "Đã có" tất cả 7 nút ngày (vô hiệu hóa) và khóa nút "Tạo ca khám"
+end
+
+deactivate GD
+deactivate Admin
+@enduml

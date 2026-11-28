@@ -53,10 +53,27 @@ export class AdminHospitalsService {
         orderBy: { createdAt: 'desc' },
         include: {
           branches: { where: { deletedAt: null } },
+          integrationConfig: {
+            select: {
+              endpointUrl: true,
+              authType: true,
+              updatedAt: true,
+            },
+          },
+          _count: {
+            select: {
+              services: true,
+            },
+          },
           workPlaces: {
             select: {
               doctorId: true,
               specialtyId: true,
+              doctor: {
+                select: {
+                  source: true,
+                },
+              },
             },
           },
         },
@@ -69,12 +86,60 @@ export class AdminHospitalsService {
       this.prisma.doctorWorkplace.count({ where: doctorStatsWhere }),
     ]);
 
+    const hospitalIds = items.map((item) => item.id);
+    const syncLogs = hospitalIds.length > 0
+      ? await this.prisma.auditLog.findMany({
+          where: {
+            entityType: 'Hospital',
+            entityId: { in: hospitalIds },
+            action: 'HIS_CATALOG_SYNC',
+          },
+          orderBy: { createdAt: 'desc' },
+          take: hospitalIds.length * 5,
+          include: {
+            user: { select: { fullName: true, email: true } },
+          },
+        })
+      : [];
+
+    const syncLogsByHospital = new Map<string, any[]>();
+    for (const log of syncLogs) {
+      if (!log.entityId) continue;
+      const list = syncLogsByHospital.get(log.entityId) || [];
+      if (list.length < 5) {
+        list.push(log);
+        syncLogsByHospital.set(log.entityId, list);
+      }
+    }
+
     const formattedItems = items.map((item) => {
       const uniqueSpecialties = new Set(item.workPlaces.map((wp) => wp.specialtyId).filter(Boolean));
       const count = uniqueSpecialties.size || item.workPlaces.length;
+      const apiDoctorCount = item.workPlaces.filter((wp) => wp.doctor?.source === 'API').length;
+      const manualDoctorCount = item.workPlaces.length - apiDoctorCount;
+      const hospitalSyncLogs = syncLogsByHospital.get(item.id) || [];
+      const latestSync = hospitalSyncLogs[0] || null;
+      const syncPayload = (latestSync?.newValue || {}) as Record<string, any>;
+      const recentSyncLogs = hospitalSyncLogs.map((log) => {
+        const p = (log.newValue || {}) as Record<string, any>;
+        return {
+          id: log.id,
+          createdAt: log.createdAt,
+          success: log.success,
+          errorMessage: !log.success ? (log.description || p.errorMessage || null) : null,
+          endpointUrl: p.endpointUrl || item.integrationConfig?.endpointUrl || null,
+          createdCount: Number(p.createdCount ?? 0),
+          updatedCount: Number(p.updatedCount ?? 0),
+          unchangedCount: Number(p.unchangedCount ?? 0),
+          totalSynced: Number(p.totalSynced ?? 0),
+          durationMs: typeof p.durationMs === 'number' ? p.durationMs : null,
+          actorName: log.user?.fullName || log.user?.email || 'Quản trị cơ sở',
+        };
+      });
       return {
         id: item.id,
         name: item.name,
+        hospitalCode: item.hospitalCode || null,
         hotline: item.phone || item.hotline || '028 1234 5678',
         logoUrl: item.logoUrl || '',
         type: item.type === 'PUBLIC' ? 'Công' : item.type === 'PRIVATE' ? 'Tư nhân' : 'Quốc tế',
@@ -88,12 +153,22 @@ export class AdminHospitalsService {
         bedCount: item.bedCount || null,
         establishedYear: item.establishedYear || null,
         doctorCount: item.workPlaces.length,
+        apiDoctorCount,
+        manualDoctorCount,
+        serviceCount: item._count?.services ?? 0,
         specialtyCount: count,
         status: item.status === 'ACTIVE' ? 'Hoạt động' : item.status === 'PAUSED' ? 'Tạm ngưng' : 'Ngừng hợp tác',
         rawStatus: item.status,
         source: item.source,
         externalId: item.externalId,
+        integrationConfig: item.integrationConfig || null,
+        lastSyncAt: latestSync?.createdAt || null,
+        lastSyncStatus: latestSync ? (latestSync.success ? 'SUCCESS' : 'FAILED') : null,
+        lastSyncDurationMs: typeof syncPayload.durationMs === 'number' ? syncPayload.durationMs : null,
+        lastSyncError: latestSync && !latestSync.success ? (latestSync.description || syncPayload.errorMessage || null) : null,
+        recentSyncLogs,
         createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
       };
     });
 

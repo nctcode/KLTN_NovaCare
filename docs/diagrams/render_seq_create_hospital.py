@@ -5,16 +5,17 @@ import tempfile
 OUT_DIR = Path(__file__).resolve().parent
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Optimized for A4 Word reports: compact width (1600px) + LARGE 15px-17px bold typography
+# Visual Paradigm BCE UML Sequence Diagram - Thêm mới cơ sở y tế (Finalized Spec)
+# Width: 1600px, Height: 2390px, 2x PNG -> 3200 x 4780px
 # Includes UML Create Message (<<create>>) and Destruction Occurrence (X) for ObjHospital_new
-SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2720" viewBox="0 0 1600 2720">
+SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2390" viewBox="0 0 1600 2390">
   <defs>
     <style>
-      .lifeline-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.5px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
-      .lifeline-sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12.6px; font-weight: 600; fill: #334155; text-anchor: middle; }
-      .msg { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
-      .guard { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; font-weight: 800; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
-      .frag-tag { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: 800; fill: #0f172a; }
+      .lifeline-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14.6px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
+      .lifeline-sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12.2px; font-weight: 600; fill: #334155; text-anchor: middle; }
+      .msg { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14.2px; font-weight: 600; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .guard { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14.4px; font-weight: 800; fill: #0f172a; paint-order: stroke; stroke: #FFFFFF; stroke-width: 7px; stroke-linejoin: round; }
+      .frag-tag { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.5px; font-weight: 800; fill: #0f172a; }
       .lifeline { stroke: #475569; stroke-width: 1.8; stroke-dasharray: 7 6; }
       .act { fill: #7DD3FC; stroke: #0f172a; stroke-width: 1.6; }
       .arrow { stroke: #0f172a; stroke-width: 2.1px; fill: none; }
@@ -33,275 +34,234 @@ SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2720" view
   </defs>
 
   <!-- White Background -->
-  <rect x="0" y="0" width="1600" height="2720" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="1600" height="2390" fill="#FFFFFF"/>
 
   <!-- Frame -->
-  <rect x="14" y="14" width="1572" height="2692" fill="none" stroke="#64748b" stroke-width="1.6"/>
-  <polygon points="14,14 430,14 430,46 412,62 14,62" fill="#F1F5F9" stroke="#64748b" stroke-width="1.6"/>
+  <rect x="14" y="14" width="1572" height="2362" fill="none" stroke="#64748b" stroke-width="1.6"/>
+  <polygon points="14,14 450,14 450,46 432,62 14,62" fill="#F1F5F9" stroke="#64748b" stroke-width="1.6"/>
   <text x="30" y="45" class="frag-tag" style="font-size:17px;">sd Thêm mới cơ sở y tế (NovaCare)</text>
 
-  <!-- ================= LIFELINES (6 top + 1 dynamically created ObjHospital_new) ================= -->
-  <!-- X: Admin=90, GD_QuanLyCoSoYTe=325, GD_ThemBenhVien=575, CTR_AdminHospitalsService=855, ObjHospital_new=1105 (created mid-flow), E_hospitals=1315, E_audit_logs=1500 -->
+  <!-- ================= LIFELINES (5 top + dynamic ObjHospital_new at x=875) ================= -->
+  <!-- X: Admin=85, GD=325, CTR=615, [ObjHospital_new=875], E_hospitals=1135, E_audit_logs=1385 -->
 
   <!-- 1. Actor: Quản trị viên hệ thống -->
-  <g transform="translate(90, 110)">
+  <g transform="translate(85, 110)">
     <circle cx="0" cy="-18" r="12" class="icon-fill"/>
     <line x1="0" y1="-6" x2="0" y2="20" class="icon-stroke"/>
     <line x1="-18" y1="3" x2="18" y2="3" class="icon-stroke"/>
     <line x1="0" y1="20" x2="-14" y2="38" class="icon-stroke"/>
     <line x1="0" y1="20" x2="14" y2="38" class="icon-stroke"/>
-    <text x="0" y="56" class="lifeline-label">Quản trị viên</text>
-    <text x="0" y="73" class="lifeline-label">hệ thống</text>
-    <text x="0" y="89" class="lifeline-sub">(ADMIN)</text>
+    <text x="0" y="55" class="lifeline-label">Quản trị viên</text>
+    <text x="0" y="72" class="lifeline-label">hệ thống</text>
+    <text x="0" y="88" class="lifeline-sub">(ADMIN)</text>
   </g>
-  <line x1="90" y1="208" x2="90" y2="2678" class="lifeline"/>
+  <line x1="85" y1="208" x2="85" y2="2350" class="lifeline"/>
 
   <!-- 2. Boundary: GD_QuanLyCoSoYTe -->
   <g transform="translate(325, 124)">
-    <line x1="-30" y1="-19" x2="-30" y2="19" class="icon-stroke"/>
-    <line x1="-30" y1="0" x2="-18" y2="0" class="icon-stroke"/>
-    <circle cx="3" cy="0" r="21" class="icon-fill"/>
-    <text x="0" y="48" class="lifeline-label">GD_QuanLyCoSoYTe</text>
-    <text x="0" y="67" class="lifeline-sub">&lt;&lt;boundary&gt;&gt;</text>
+    <line x1="-29" y1="-19" x2="-29" y2="19" class="icon-stroke"/>
+    <line x1="-29" y1="0" x2="-17" y2="0" class="icon-stroke"/>
+    <circle cx="3" cy="0" r="20" class="icon-fill"/>
+    <text x="0" y="45" class="lifeline-label">GD_QuanLy</text>
+    <text x="0" y="62" class="lifeline-label">CoSoYTe</text>
+    <text x="0" y="78" class="lifeline-sub">&lt;&lt;boundary&gt;&gt;</text>
   </g>
-  <line x1="325" y1="208" x2="325" y2="2678" class="lifeline"/>
+  <line x1="325" y1="208" x2="325" y2="2350" class="lifeline"/>
 
-  <!-- 3. Boundary: GD_ThemBenhVien -->
-  <g transform="translate(575, 124)">
-    <line x1="-30" y1="-19" x2="-30" y2="19" class="icon-stroke"/>
-    <line x1="-30" y1="0" x2="-18" y2="0" class="icon-stroke"/>
-    <circle cx="3" cy="0" r="21" class="icon-fill"/>
-    <text x="0" y="48" class="lifeline-label">GD_ThemBenhVien</text>
-    <text x="0" y="67" class="lifeline-sub">&lt;&lt;boundary&gt;&gt;</text>
-  </g>
-  <line x1="575" y1="208" x2="575" y2="2678" class="lifeline"/>
-
-  <!-- 4. Control: CTR_AdminHospitalsService -->
-  <g transform="translate(855, 124)">
-    <circle cx="0" cy="0" r="21" class="icon-fill"/>
-    <path d="M -5,-27 L 5,-21 L -5,-15" fill="none" stroke="#0f172a" stroke-width="2"/>
+  <!-- 3. Control: CTR_AdminHospitalsService -->
+  <g transform="translate(615, 124)">
+    <circle cx="0" cy="0" r="20" class="icon-fill"/>
+    <path d="M -5,-26 L 5,-20 L -5,-14" fill="none" stroke="#0f172a" stroke-width="2"/>
     <text x="0" y="45" class="lifeline-label">CTR_AdminHospitals</text>
     <text x="0" y="62" class="lifeline-label">Service</text>
     <text x="0" y="78" class="lifeline-sub">&lt;&lt;control&gt;&gt;</text>
   </g>
-  <line x1="855" y1="208" x2="855" y2="2678" class="lifeline"/>
+  <line x1="615" y1="208" x2="615" y2="2350" class="lifeline"/>
 
-  <!-- 6. Entity: E_hospitals -->
-  <g transform="translate(1315, 124)">
-    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
-    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
+  <!-- 4. Entity: E_hospitals -->
+  <g transform="translate(1135, 124)">
+    <circle cx="0" cy="-2" r="20" class="icon-fill"/>
+    <line x1="-22" y1="20" x2="22" y2="20" class="icon-stroke"/>
     <text x="0" y="48" class="lifeline-label">E_hospitals</text>
-    <text x="0" y="67" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+    <text x="0" y="66" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
   </g>
-  <line x1="1315" y1="208" x2="1315" y2="2678" class="lifeline"/>
+  <line x1="1135" y1="208" x2="1135" y2="2350" class="lifeline"/>
 
-  <!-- 7. Entity: E_audit_logs -->
-  <g transform="translate(1500, 124)">
-    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
-    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
+  <!-- 5. Entity: E_audit_logs -->
+  <g transform="translate(1385, 124)">
+    <circle cx="0" cy="-2" r="20" class="icon-fill"/>
+    <line x1="-22" y1="20" x2="22" y2="20" class="icon-stroke"/>
     <text x="0" y="48" class="lifeline-label">E_audit_logs</text>
-    <text x="0" y="67" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+    <text x="0" y="66" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
   </g>
-  <line x1="1500" y1="208" x2="1500" y2="2678" class="lifeline"/>
+  <line x1="1385" y1="208" x2="1385" y2="2350" class="lifeline"/>
 
   <!-- ================= ACTIVATION BARS ================= -->
-  <!-- Quản trị viên hệ thống -->
-  <rect x="82" y="232" width="16" height="2414" class="act"/>
+  <!-- Actor -->
+  <rect x="77" y="232" width="16" height="2074" class="act"/>
 
   <!-- GD_QuanLyCoSoYTe -->
-  <rect x="317" y="248" width="16" height="2392" class="act"/>
-
-  <!-- GD_ThemBenhVien -->
-  <rect x="567" y="644" width="16" height="1964" class="act"/>
-  <rect x="575" y="794" width="14" height="24" class="act"/>
-  <rect x="575" y="1150" width="14" height="24" class="act"/>
-  <rect x="575" y="1526" width="14" height="24" class="act"/>
+  <rect x="317" y="244" width="16" height="2056" class="act"/>
+  <rect x="325" y="660" width="14" height="24" class="act"/>
+  <rect x="325" y="876" width="14" height="24" class="act"/>
+  <rect x="325" y="1090" width="14" height="24" class="act"/>
 
   <!-- CTR_AdminHospitalsService -->
-  <rect x="847" y="296" width="16" height="202" class="act"/>
-  <rect x="847" y="1598" width="16" height="956" class="act"/>
-  <rect x="855" y="1782" width="14" height="24" class="act"/>
+  <rect x="607" y="286" width="16" height="134" class="act"/>
+  <rect x="607" y="1160" width="16" height="710" class="act"/>
+  <rect x="615" y="1290" width="14" height="24" class="act"/>
 
   <!-- E_hospitals -->
-  <rect x="1307" y="342" width="16" height="106" class="act"/>
-  <rect x="1315" y="374" width="14" height="24" class="act"/>
-  <rect x="1307" y="1648" width="16" height="106" class="act"/>
-  <rect x="1315" y="1680" width="14" height="24" class="act"/>
-  <rect x="1307" y="2002" width="16" height="160" class="act"/>
-  <rect x="1315" y="2030" width="14" height="24" class="act"/>
+  <rect x="1127" y="328" width="16" height="50" class="act"/>
+  <rect x="1127" y="1206" width="16" height="56" class="act"/>
+  <rect x="1127" y="1524" width="16" height="118" class="act"/>
+  <rect x="1135" y="1554" width="14" height="24" class="act"/>
 
   <!-- E_audit_logs -->
-  <rect x="1492" y="2214" width="16" height="60" class="act"/>
+  <rect x="1377" y="1690" width="16" height="116" class="act"/>
+  <rect x="1385" y="1720" width="14" height="24" class="act"/>
 
-  <!-- ================= PHASE 1: TRUY CẬP DANH SÁCH & MỞ HỘP THOẠI 3 BƯỚC (Steps 1-4) ================= -->
-  <line x1="98" y1="250" x2="317" y2="250" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="108" y="240" class="msg">1: Truy cập trang "Quản lý Cơ sở y tế"</text>
+  <!-- ================= PHASE 1: TRUY CẬP TRANG & MỞ HỘP THOẠI (Steps 1 - 4) ================= -->
+  <line x1="93" y1="246" x2="317" y2="246" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="106" y="236" class="msg">1: Truy cập trang "Quản lý Cơ sở y tế"</text>
 
-  <line x1="333" y1="298" x2="847" y2="298" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="346" y="288" class="msg">1.1: findAll(params)</text>
+  <line x1="333" y1="288" x2="607" y2="288" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="348" y="278" class="msg">1.1: findAll(page, limit)</text>
 
-  <line x1="863" y1="344" x2="1307" y2="344" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="880" y="334" class="msg">1.2: findMany(filter)</text>
+  <line x1="623" y1="330" x2="1127" y2="330" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="745" y="320" class="msg">1.2: findMany(where, stats)</text>
 
-  <path d="M 1323 370 L 1363 370 L 1363 394 L 1329 394" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="1373" y="378" class="msg">1.3: Truy vấn danh sách</text>
-  <text x="1405" y="397" class="msg">bệnh viện</text>
+  <line x1="1127" y1="374" x2="623" y2="374" class="ret" marker-end="url(#openArrow)"/>
+  <text x="695" y="364" class="msg">1.3: Trả về danh sách cơ sở y tế &amp; số liệu thống kê</text>
 
-  <line x1="1307" y1="446" x2="863" y2="446" class="ret" marker-end="url(#openArrow)"/>
-  <text x="980" y="436" class="msg">1.4: Trả về danh sách bệnh viện</text>
+  <line x1="607" y1="416" x2="333" y2="416" class="ret" marker-end="url(#openArrow)"/>
+  <text x="348" y="406" class="msg">1.4: Trả về danh sách cơ sở y tế &amp; thống kê</text>
 
-  <line x1="847" y1="496" x2="333" y2="496" class="ret" marker-end="url(#openArrow)"/>
-  <text x="445" y="486" class="msg">1.5: Trả về danh sách bệnh viện và thống kê</text>
+  <line x1="317" y1="464" x2="93" y2="464" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="454" class="msg">1.5: Hiển thị màn hình danh sách cơ sở y tế đối tác, các thẻ thống kê tổng quan và nút "Thêm bệnh viện"</text>
 
-  <line x1="317" y1="546" x2="98" y2="546" class="ret" marker-end="url(#openArrow)"/>
-  <text x="108" y="536" class="msg">1.6: Hiển thị danh sách cơ sở y tế, thẻ thống kê và nút "Thêm bệnh viện"</text>
+  <line x1="93" y1="514" x2="317" y2="514" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="106" y="504" class="msg">2: Nhấn nút "Thêm bệnh viện"</text>
 
-  <line x1="98" y1="598" x2="317" y2="598" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="108" y="588" class="msg">2: Nhấn nút "Thêm bệnh viện"</text>
+  <line x1="317" y1="564" x2="93" y2="564" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="554" class="msg">2.1: Mở hộp thoại "Thêm bệnh viện đối tác" gồm 3 bước (hiển thị Bước 1/3 – Thông tin chung)</text>
 
-  <line x1="333" y1="646" x2="567" y2="646" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="345" y="636" class="msg">2.1: openCreateHospitalDialog()</text>
+  <!-- ================= BƯỚC 1/3: THÔNG TIN CHUNG (Steps 5 - 6, Alt 5.1, 6.1) ================= -->
+  <line x1="93" y1="632" x2="317" y2="632" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="106" y="604" class="msg">3: Nhập thông tin chung (tên bệnh viện, loại hình, năm thành lập, giường bệnh,</text>
+  <text x="124" y="622" class="msg">mô tả và hình ảnh tùy chọn); sau đó nhấn "Tiếp tục"</text>
 
-  <line x1="567" y1="694" x2="98" y2="694" class="ret" marker-end="url(#openArrow)"/>
-  <text x="108" y="684" class="msg">2.2: Hiển thị hộp thoại 3 bước — Bước 1/3: Thông tin chung</text>
+  <path d="M 333 656 L 378 656 L 378 680 L 339 680" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="388" y="674" class="msg">3.1: validateStep(1)</text>
 
-  <!-- ================= PHASE 2: BƯỚC 1/3 - THÔNG TIN CHUNG (Steps 5-6, Alt 5.1, 6.1) ================= -->
-  <line x1="98" y1="764" x2="567" y2="764" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="108" y="735" class="msg">3: Nhập tên bệnh viện, loại hình, năm thành lập, quy mô giường,</text>
-  <text x="138" y="754" class="msg">mô tả, hình ảnh (tùy chọn) và nhấn "Tiếp tục"</text>
+  <!-- OUTER ALT: Kiểm tra Bước 1 -->
+  <rect x="28" y="708" width="1544" height="1612" class="frag-box"/>
+  <polygon points="28,708 92,708 92,732 78,744 28,744" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="46" y="732" class="frag-tag">alt</text>
+  <text x="112" y="733" class="guard">[Dữ liệu Bước 1 hợp lệ (tên bệnh viện không để trống)]</text>
 
-  <path d="M 583 790 L 628 790 L 628 814 L 589 814" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="638" y="808" class="msg">3.1: validateStep(1)</text>
+  <line x1="317" y1="778" x2="93" y2="778" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="768" class="msg">3.2: Chuyển sang Bước 2/3 – Liên hệ &amp; địa chỉ</text>
 
-  <!-- ALT 1: Kiểm tra Bước 1 (Alt 5.1, 6.1) -->
-  <rect x="28" y="840" width="1544" height="204" class="frag-box"/>
-  <polygon points="28,840 92,840 92,864 78,876 28,876" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
-  <text x="46" y="864" class="frag-tag">alt</text>
-  <text x="112" y="865" class="guard">[Tên bệnh viện hợp lệ]</text>
+  <!-- ================= BƯỚC 2/3: LIÊN HỆ & ĐỊA CHỈ (Steps 7 - 8, Alt 7.1, 8.1) ================= -->
+  <line x1="93" y1="848" x2="317" y2="848" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="106" y="820" class="msg">4: Nhập thông tin liên hệ &amp; vị trí (hotline/SĐT, hotline cấp cứu, email, website,</text>
+  <text x="124" y="838" class="msg">tỉnh/thành phố, địa chỉ chi tiết, bản đồ/tọa độ GPS); sau đó nhấn "Tiếp tục"</text>
 
-  <line x1="567" y1="916" x2="98" y2="916" class="ret" marker-end="url(#openArrow)"/>
-  <text x="108" y="906" class="msg">3.2: Hiển thị Bước 2/3: Liên hệ &amp; địa chỉ</text>
+  <path d="M 333 872 L 378 872 L 378 896 L 339 896" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="388" y="890" class="msg">4.1: validateStep(2)</text>
 
-  <line x1="28" y1="942" x2="1572" y2="942" class="frag-div"/>
-  <text x="112" y="970" class="guard">[Bỏ trống tên bệnh viện (Alt 5.1, 6.1)]</text>
+  <!-- INNER ALT: Kiểm tra Bước 2 -->
+  <rect x="46" y="924" width="1508" height="1206" class="frag-box"/>
+  <polygon points="46,924 110,924 110,948 96,960 46,960" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
+  <text x="64" y="948" class="frag-tag">alt</text>
+  <text x="130" y="949" class="guard">[Dữ liệu Bước 2 hợp lệ (đủ hotline/SĐT, tỉnh/thành phố và địa chỉ chi tiết)]</text>
 
-  <line x1="567" y1="1020" x2="98" y2="1020" class="ret" marker-end="url(#openArrow)"/>
-  <text x="108" y="1010" class="msg">3.3: Giữ Bước 1 và hiển thị lỗi "Vui lòng nhập tên bệnh viện." (quay lại Bước 5)</text>
+  <line x1="317" y1="994" x2="93" y2="994" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="984" class="msg">4.2: Chuyển sang Bước 3/3 – Vận hành</text>
 
-  <!-- ================= PHASE 3: BƯỚC 2/3 - LIÊN HỆ & ĐỊA CHỈ (Steps 7-8, Alt 7.1, 8.1) ================= -->
-  <line x1="98" y1="1120" x2="567" y2="1120" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="108" y="1091" class="msg">4: Nhập hotline, số điện thoại, email, website, tỉnh/thành phố,</text>
-  <text x="138" y="1110" class="msg">địa chỉ chi tiết, Google Maps, tọa độ GPS và nhấn "Tiếp tục"</text>
+  <!-- ================= BƯỚC 3/3: VẬN HÀNH & LƯU HỒ SƠ (Steps 9 - 12) ================= -->
+  <line x1="93" y1="1062" x2="317" y2="1062" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="106" y="1034" class="msg">5: Thiết lập giờ làm việc, trạng thái hợp tác, tùy chọn hiển thị trên NovaCare,</text>
+  <text x="124" y="1052" class="msg">rà soát thông tin và nhấn "Tạo bệnh viện"</text>
 
-  <path d="M 583 1146 L 628 1146 L 628 1170 L 589 1170" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="638" y="1164" class="msg">4.1: validateStep(2)</text>
+  <path d="M 333 1086 L 378 1086 L 378 1110 L 339 1110" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="388" y="1104" class="msg">5.1: validateAndNormalizePayload(formData)</text>
 
-  <!-- ALT 2: Kiểm tra Bước 2 (Alt 7.1, 8.1) -->
-  <rect x="28" y="1196" width="1544" height="224" class="frag-box"/>
-  <polygon points="28,1196 92,1196 92,1220 78,1232 28,1232" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
-  <text x="46" y="1220" class="frag-tag">alt</text>
-  <text x="112" y="1221" class="guard">[Đủ hotline/SĐT, tỉnh/thành phố và địa chỉ chi tiết]</text>
+  <line x1="333" y1="1162" x2="607" y2="1162" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="348" y="1152" class="msg">5.2: create(payload, adminUserId)</text>
 
-  <line x1="567" y1="1272" x2="98" y2="1272" class="ret" marker-end="url(#openArrow)"/>
-  <text x="108" y="1262" class="msg">4.2: Hiển thị Bước 3/3: Vận hành &amp; "Kiểm tra trước khi tạo"</text>
+  <line x1="623" y1="1208" x2="1127" y2="1208" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="745" y="1198" class="msg">5.3: findMany(hospitalCode != null)</text>
 
-  <line x1="28" y1="1300" x2="1572" y2="1300" class="frag-div"/>
-  <text x="112" y="1328" class="guard">[Thiếu hotline &amp; SĐT, hoặc tỉnh/thành phố, hoặc địa chỉ chi tiết (Alt 7.1, 8.1)]</text>
+  <line x1="1127" y1="1258" x2="623" y2="1258" class="ret" marker-end="url(#openArrow)"/>
+  <text x="720" y="1248" class="msg">5.4: Trả về danh sách mã cơ sở y tế đã dùng</text>
 
-  <line x1="567" y1="1398" x2="98" y2="1398" class="ret" marker-end="url(#openArrow)"/>
-  <text x="108" y="1369" class="msg">4.3: Giữ Bước 2 và hiển thị lỗi tương ứng tại từng trường thiếu</text>
-  <text x="140" y="1388" class="msg">("Vui lòng nhập hotline hoặc số điện thoại." / "...tỉnh/thành phố." / "...địa chỉ chi tiết.")</text>
+  <path d="M 623 1286 L 668 1286 L 668 1310 L 629 1310" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="678" y="1304" class="msg">5.5: generateHospitalCode(usedCodes)  // Sinh mã BV-xxx</text>
 
-  <!-- ================= PHASE 4: BƯỚC 3/3 - KHỞI TẠO ĐỐI TƯỢNG MỚI & LƯU CSDL (Steps 9-12) ================= -->
-  <line x1="98" y1="1496" x2="567" y2="1496" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="108" y="1467" class="msg">5: Thiết lập giờ làm việc, trạng thái hợp tác, tùy chọn hiển thị,</text>
-  <text x="138" y="1486" class="msg">kiểm tra tóm tắt và nhấn "Tạo bệnh viện"</text>
+  <!-- Dynamic Object Creation: ObjHospital_new -->
+  <line x1="623" y1="1386" x2="845" y2="1386" class="ret" marker-end="url(#openArrow)"/>
+  <text x="676" y="1360" class="msg">5.6: &laquo;create&raquo;</text>
+  <text x="646" y="1378" class="msg">CreateObjHospital_new</text>
 
-  <path d="M 583 1522 L 628 1522 L 628 1546 L 589 1546" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="638" y="1540" class="msg">5.1: validateStep(1), validateStep(2) &amp; chuẩn hóa payload</text>
-
-  <line x1="583" y1="1600" x2="847" y2="1600" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="642" y="1590" class="msg">5.2: create(payload)</text>
-
-  <line x1="863" y1="1650" x2="1307" y2="1650" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="990" y="1640" class="msg">5.3: findMany(hospitalCode)</text>
-
-  <path d="M 1323 1676 L 1363 1676 L 1363 1700 L 1329 1700" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="1373" y="1684" class="msg">5.4: Truy vấn mã cơ sở</text>
-  <text x="1405" y="1703" class="msg">đã tồn tại</text>
-
-  <line x1="1307" y1="1752" x2="863" y2="1752" class="ret" marker-end="url(#openArrow)"/>
-  <text x="985" y="1742" class="msg">5.5: Trả về danh sách mã cơ sở</text>
-
-  <path d="M 863 1778 L 908 1778 L 908 1802 L 869 1802" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="918" y="1796" class="msg">5.6: Sinh mã cơ sở y tế mới (BV-xxx)</text>
-
-  <!-- ===== DYNAMIC OBJECT CREATION: ObjHospital_new (UML Create Message + Destroy X) ===== -->
-  <line x1="863" y1="1860" x2="1075" y2="1860" class="ret" marker-end="url(#openArrow)"/>
-  <text x="918" y="1833" class="msg">5.7: &laquo;create&raquo;</text>
-  <text x="880" y="1852" class="msg">CreateObjHospital_new</text>
-
-  <!-- Entity Icon created mid-flow -->
-  <g transform="translate(1105, 1860)">
-    <circle cx="0" cy="-2" r="21" class="icon-fill"/>
-    <line x1="-23" y1="21" x2="23" y2="21" class="icon-stroke"/>
-    <text x="0" y="42" class="lifeline-label" style="font-size:14.5px;">ObjHospital_new</text>
-    <text x="0" y="57" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
+  <g transform="translate(875, 1386)">
+    <circle cx="0" cy="-2" r="20" class="icon-fill"/>
+    <line x1="-22" y1="20" x2="22" y2="20" class="icon-stroke"/>
+    <text x="0" y="40" class="lifeline-label" style="font-size:13.8px;">ObjHospital_new</text>
+    <text x="0" y="55" class="lifeline-sub">&lt;&lt;entity&gt;&gt;</text>
   </g>
-  <!-- Short lifeline of ObjHospital_new until Destruction X -->
-  <line x1="1105" y1="1924" x2="1105" y2="2056" class="lifeline"/>
-  <rect x="1097" y="1938" width="16" height="28" class="act"/>
+  <line x1="875" y1="1446" x2="875" y2="1586" class="lifeline"/>
+  <rect x="867" y="1460" width="16" height="28" class="act"/>
 
-  <line x1="1097" y1="1954" x2="863" y2="1954" class="ret" marker-end="url(#openArrow)"/>
-  <text x="880" y="1944" class="msg">5.8: Trả về ObjHospital_new</text>
+  <line x1="867" y1="1476" x2="623" y2="1476" class="ret" marker-end="url(#openArrow)"/>
+  <text x="652" y="1466" class="msg">5.7: Trả về ObjHospital_new</text>
 
-  <line x1="863" y1="2004" x2="1307" y2="2004" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="885" y="1994" class="msg">5.9: create(ObjHospital_new)</text>
+  <line x1="623" y1="1526" x2="1127" y2="1526" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="900" y="1516" class="msg">5.8: create(ObjHospital_new)</text>
 
-  <path d="M 1323 2026 L 1363 2026 L 1363 2050 L 1329 2050" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="1373" y="2034" class="msg">5.10: Lưu hồ sơ</text>
-  <text x="1410" y="2053" class="msg">cơ sở y tế mới</text>
+  <path d="M 1143 1550 L 1180 1550 L 1180 1574 L 1149 1574" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1190" y="1558" class="msg" style="font-size:13.6px;">5.9: Lưu hồ sơ</text>
+  <text x="1214" y="1576" class="msg" style="font-size:13.6px;">cơ sở y tế mới</text>
 
-  <!-- UML Destruction Occurrence (X) for ObjHospital_new -->
-  <line x1="1091" y1="2042" x2="1119" y2="2070" stroke="#0f172a" stroke-width="2.4"/>
-  <line x1="1119" y1="2042" x2="1091" y2="2070" stroke="#0f172a" stroke-width="2.4"/>
+  <!-- UML Destruction X for ObjHospital_new -->
+  <line x1="861" y1="1572" x2="889" y2="1600" stroke="#0f172a" stroke-width="2.4"/>
+  <line x1="889" y1="1572" x2="861" y2="1600" stroke="#0f172a" stroke-width="2.4"/>
 
-  <!-- ALT 3: Kết quả lưu CSDL -->
-  <rect x="28" y="2088" width="1544" height="538" class="frag-box"/>
-  <polygon points="28,2088 92,2088 92,2112 78,2124 28,2124" fill="#F1F5F9" stroke="#1e293b" stroke-width="1.6"/>
-  <text x="46" y="2112" class="frag-tag">alt</text>
-  <text x="112" y="2113" class="guard">[Lưu cơ sở y tế thành công]</text>
+  <line x1="1127" y1="1636" x2="623" y2="1636" class="ret" marker-end="url(#openArrow)"/>
+  <text x="735" y="1626" class="msg">5.10: Trả về hồ sơ cơ sở y tế mới tạo (BV-xxx)</text>
 
-  <line x1="1307" y1="2160" x2="863" y2="2160" class="ret" marker-end="url(#openArrow)"/>
-  <text x="955" y="2150" class="msg">5.11: Trả về thông tin bệnh viện mới tạo</text>
+  <!-- Audit Log -->
+  <line x1="623" y1="1692" x2="1377" y2="1692" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="860" y="1682" class="msg">5.11: logAction(CREATE_HOSPITAL, hospitalId)</text>
 
-  <line x1="863" y1="2216" x2="1492" y2="2216" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="1035" y="2206" class="msg">5.12: logAction(CREATE_HOSPITAL)</text>
+  <path d="M 1393 1716 L 1428 1716 L 1428 1740 L 1399 1740" class="arrow" marker-end="url(#solidArrow)"/>
+  <text x="1436" y="1724" class="msg" style="font-size:13.4px;">5.12: Ghi nhật</text>
+  <text x="1450" y="1742" class="msg" style="font-size:13.4px;">ký thao tác</text>
 
-  <line x1="1492" y1="2272" x2="863" y2="2272" class="ret" marker-end="url(#openArrow)"/>
-  <text x="1065" y="2262" class="msg">5.13: Trả về kết quả ghi nhật ký</text>
+  <line x1="1377" y1="1800" x2="623" y2="1800" class="ret" marker-end="url(#openArrow)"/>
+  <text x="875" y="1790" class="msg">5.13: Hoàn tất ghi nhật ký thao tác</text>
 
-  <line x1="847" y1="2324" x2="583" y2="2324" class="ret" marker-end="url(#openArrow)"/>
-  <text x="605" y="2314" class="msg">5.14: Trả về thông tin bệnh viện</text>
+  <line x1="607" y1="1864" x2="333" y2="1864" class="ret" marker-end="url(#openArrow)"/>
+  <text x="348" y="1854" class="msg">5.14: Trả về kết quả tạo cơ sở y tế thành công</text>
 
-  <line x1="567" y1="2382" x2="333" y2="2382" class="arrow" marker-end="url(#solidArrow)"/>
-  <text x="348" y="2353" class="msg">5.15: resetForm(), onClose()</text>
-  <text x="380" y="2372" class="msg">&amp; onSuccess()</text>
+  <line x1="317" y1="1942" x2="93" y2="1942" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="1914" class="msg">5.15: Đóng hộp thoại, đặt lại biểu mẫu, hiển thị thông báo "Đã thêm bệnh viện mới thành công"</text>
+  <text x="140" y="1932" class="msg">và làm mới danh sách cơ sở y tế cùng các thẻ thống kê</text>
 
-  <line x1="317" y1="2436" x2="98" y2="2436" class="ret" marker-end="url(#openArrow)"/>
-  <text x="108" y="2426" class="msg">5.16: Đóng hộp thoại, làm mới danh sách và hiển thị thông báo "Đã thêm bệnh viện mới thành công"</text>
+  <!-- INNER ELSE: Thiếu trường bắt buộc Bước 2 (Alt 7.1, 8.1) -->
+  <line x1="46" y1="1986" x2="1554" y2="1986" class="frag-div"/>
+  <text x="130" y="2016" class="guard">[Bỏ trống đồng thời Hotline &amp; SĐT khác, Tỉnh/Thành phố hoặc Địa chỉ chi tiết (Alt 7.1, 8.1)]</text>
 
-  <!-- ELSE của ALT 3: Lỗi lưu phía máy chủ -->
-  <line x1="28" y1="2464" x2="1572" y2="2464" class="frag-div"/>
-  <text x="112" y="2492" class="guard">[Lỗi lưu dữ liệu phía máy chủ (trùng tên bệnh viện / lỗi kết nối)]</text>
+  <line x1="317" y1="2092" x2="93" y2="2092" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="2082" class="msg">4.3: Giữ nguyên Bước 2 và hiển thị thông báo lỗi tương ứng tại từng trường còn thiếu</text>
 
-  <line x1="847" y1="2548" x2="583" y2="2548" class="ret" marker-end="url(#openArrow)"/>
-  <text x="615" y="2519" class="msg">5.17: Trả về thông báo lỗi</text>
-  <text x="648" y="2538" class="msg">tạo bệnh viện</text>
+  <!-- OUTER ELSE: Bỏ trống Tên bệnh viện ở Bước 1 (Alt 5.1, 6.1) -->
+  <line x1="28" y1="2174" x2="1572" y2="2174" class="frag-div"/>
+  <text x="112" y="2204" class="guard">[Quản trị viên bỏ trống trường Tên bệnh viện ở Bước 1 (Alt 5.1, 6.1)]</text>
 
-  <line x1="567" y1="2602" x2="98" y2="2602" class="ret" marker-end="url(#openArrow)"/>
-  <text x="108" y="2573" class="msg">5.18: Giữ mở hộp thoại và hiển thị thông báo lỗi</text>
-  <text x="142" y="2592" class="msg">("Không thể tạo bệnh viện. Vui lòng kiểm tra thông tin và thử lại.")</text>
+  <line x1="317" y1="2280" x2="93" y2="2280" class="ret" marker-end="url(#openArrow)"/>
+  <text x="106" y="2270" class="msg">3.3: Giữ nguyên Bước 1 và hiển thị thông báo lỗi "Vui lòng nhập tên bệnh viện." ngay dưới trường nhập</text>
 </svg>
 """
 
@@ -309,49 +269,35 @@ svg_path = OUT_DIR / "seq_them_moi_co_so_y_te.svg"
 png_path = OUT_DIR / "seq_them_moi_co_so_y_te.png"
 svg_path.write_text(SVG, encoding="utf-8")
 
-html = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<style>
-  html, body {{ margin: 0; padding: 0; background: #ffffff; }}
-  svg {{ display: block; }}
-</style>
-</head>
-<body>
-{SVG}
-</body>
-</html>"""
-
-chrome_exe = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 try:
     from playwright.sync_api import sync_playwright
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(executable_path=chrome_exe)
-        page = browser.new_page(viewport={"width": 1600, "height": 2720}, device_scale_factor=2)
-        page.set_content(html)
-        page.locator("svg").screenshot(path=str(png_path))
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": 1600, "height": 2390}, device_scale_factor=2)
+        page.set_content(f'<html><body style="margin:0;padding:0;background:#fff;">{SVG}</body></html>')
+        page.screenshot(path=str(png_path), full_page=True)
         browser.close()
-except ImportError:
-    with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as tmp:
-        tmp.write(html)
-        tmp_path = Path(tmp.name)
+except Exception:
+    chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as f:
+        f.write(f'<!doctype html><html><body style="margin:0;padding:0;background:#fff;overflow:hidden;">{SVG}</body></html>')
+        html_path = f.name
     try:
         subprocess.run(
             [
-                chrome_exe,
+                chrome,
                 "--headless=new",
                 "--disable-gpu",
                 "--hide-scrollbars",
                 "--force-device-scale-factor=2",
-                "--window-size=1600,2720",
+                "--window-size=1600,2390",
                 f"--screenshot={png_path}",
-                tmp_path.as_uri(),
+                Path(html_path).as_uri(),
             ],
             check=True,
         )
     finally:
-        tmp_path.unlink(missing_ok=True)
+        Path(html_path).unlink(missing_ok=True)
 
-print(f"Rendered: {svg_path}")
-print(f"Rendered: {png_path}")
+print("Generated:", svg_path, png_path)

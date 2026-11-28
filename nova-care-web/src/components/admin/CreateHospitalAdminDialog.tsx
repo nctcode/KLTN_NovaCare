@@ -1,24 +1,26 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
+import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import {
-  ShieldAlert,
+  ShieldCheck,
   Building2,
   Mail,
-  Lock,
+  User,
   Loader2,
   CheckCircle2,
 } from 'lucide-react';
@@ -35,6 +37,8 @@ export function CreateHospitalAdminDialog({
   onSuccess,
 }: CreateHospitalAdminDialogProps) {
   const queryClient = useQueryClient();
+  const { theme } = useAdminTheme();
+  const isLight = theme === 'light';
 
   const [formData, setFormData] = useState({
     hospitalId: '',
@@ -42,35 +46,40 @@ export function CreateHospitalAdminDialog({
     email: '',
   });
 
-  // Query hospitals list for dropdown
+  useEffect(() => {
+    if (!open) {
+      setFormData({ hospitalId: '', fullName: '', email: '' });
+    }
+  }, [open]);
+
   const { data: hospitalsData, isLoading: isLoadingHospitals } = useQuery({
     queryKey: ['admin-hospitals-simple-list'],
     queryFn: () => adminService.getHospitals({ limit: 100 }),
     enabled: open,
   });
 
-  const hospitals: any[] = hospitalsData?.items || [];
+  const hospitals: any[] = (hospitalsData?.items || []).filter(
+    (h: any) => (h.rawStatus || h.status) !== 'TERMINATED' && h.status !== 'Ngừng hợp tác',
+  );
 
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) =>
       adminService.createHospitalAdmin({
-        ...data,
-        fullName: data.fullName,
+        hospitalId: data.hospitalId,
+        fullName: data.fullName.trim(),
+        email: data.email.trim(),
       }),
     onSuccess: () => {
-      toast.success('Đã tạo tài khoản và gửi link kích hoạt thành công!');
+      toast.success('Đã cấp tài khoản quản trị cơ sở và gửi email kích hoạt thành công!');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-roles-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-recent-audit-logs'] });
-      setFormData({
-        hospitalId: '',
-        fullName: '',
-        email: '',
-      });
+      setFormData({ hospitalId: '', fullName: '', email: '' });
       onOpenChange(false);
       onSuccess?.();
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Không thể cấp tài khoản Quản trị viên');
+      toast.error(err?.response?.data?.message || 'Không thể cấp tài khoản quản trị cơ sở y tế');
     },
   });
 
@@ -80,48 +89,66 @@ export function CreateHospitalAdminDialog({
       toast.error('Vui lòng chọn cơ sở y tế trực thuộc');
       return;
     }
+    if (!formData.fullName.trim()) {
+      toast.error('Vui lòng nhập họ và tên quản trị viên');
+      return;
+    }
     if (!formData.email.trim()) {
-      toast.error('Vui lòng nhập tài khoản / email đăng nhập');
+      toast.error('Vui lòng nhập email công vụ đăng nhập');
       return;
     }
     createMutation.mutate(formData);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] bg-slate-900 border-slate-800 text-slate-100 p-0 overflow-hidden shadow-2xl">
-        <div className="bg-gradient-to-r from-[#0c4b39] to-emerald-900 p-6 text-white border-b border-emerald-800/40">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-[#66FF33] shadow-inner">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-lg font-bold text-white tracking-tight">
-                  Kích hoạt tài khoản quản trị 
-                </DialogTitle>
-                <DialogDescription className="text-xs text-emerald-200/90 mt-0.5">
-                  Chỉ định cơ sở y tế, tài khoản đăng nhập và mật khẩu khởi tạo.
-                </DialogDescription>
-              </div>
+    <Dialog open={open} onOpenChange={(v) => !createMutation.isPending && onOpenChange(v)}>
+      <DialogContent
+        className={`sm:max-w-[460px] p-6 rounded-2xl ${
+          isLight
+            ? 'bg-white text-slate-900 border-slate-200'
+            : 'bg-slate-950 text-slate-100 border-slate-800'
+        }`}
+      >
+        <DialogHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-start gap-2.5">
+            <div
+              className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${
+                isLight
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-emerald-950/40 border-emerald-800 text-emerald-400'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
             </div>
-          </DialogHeader>
-        </div>
+            <div>
+              <DialogTitle className="text-sm font-bold">
+                Cấp tài khoản quản trị cơ sở y tế
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Tạo tài khoản bổ sung gắn vai trò HOSPITAL_ADMIN và gửi liên kết kích hoạt qua email (hiệu lực 24 giờ).
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
-          {/* 1. Chọn Cơ sở Bệnh viện */}
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2 text-xs">
+          {/* 1. Cơ sở y tế trực thuộc */}
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-emerald-400" />
-              Cơ sở y tế trực thuộc <span className="text-rose-400">*</span>
+            <label className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              Cơ sở y tế trực thuộc <span className="text-rose-500">*</span>
             </label>
             <select
               value={formData.hospitalId}
               onChange={(e) => setFormData({ ...formData, hospitalId: e.target.value })}
-              className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
+              className={`w-full h-10 px-3 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-emerald-600 ${
+                isLight
+                  ? 'bg-white border-slate-300 text-slate-900'
+                  : 'bg-slate-900 border-slate-700 text-white'
+              }`}
               required
             >
-              <option value="">-- Chọn cơ sở bệnh viện quản lý --</option>
+              <option value="">-- Chọn cơ sở y tế đối tác --</option>
               {hospitals.map((h) => (
                 <option key={h.id} value={h.id}>
                   {h.name} {h.city ? `(${h.city})` : ''}
@@ -129,65 +156,92 @@ export function CreateHospitalAdminDialog({
               ))}
             </select>
             {isLoadingHospitals && (
-              <span className="text-[11px] text-slate-500 flex items-center gap-1">
+              <span className="text-[11px] text-slate-400 flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> Đang tải danh sách cơ sở...
               </span>
             )}
           </div>
 
+          {/* 2. Họ và tên */}
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-300">Họ và tên quản trị viên <span className="text-rose-400">*</span></label>
-            <Input value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} placeholder="Nhập họ và tên" className="bg-slate-950 border-slate-700 text-white text-xs h-10" required />
+            <label className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              Họ và tên quản trị viên <span className="text-rose-500">*</span>
+            </label>
+            <Input
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              placeholder="VD: Nguyễn Minh Anh — Phòng Kế hoạch Tổng hợp"
+              className={`text-xs h-10 rounded-lg ${
+                isLight
+                  ? 'bg-white border-slate-300 text-slate-900'
+                  : 'bg-slate-900 border-slate-700 text-white'
+              }`}
+              required
+            />
           </div>
 
-          {/* 2. Tài khoản / Email */}
+          {/* 3. Email công vụ */}
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-emerald-400" />
-              Tài khoản / Email đăng nhập <span className="text-rose-400">*</span>
+            <label className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              <Mail className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              Email công vụ đăng nhập <span className="text-rose-500">*</span>
             </label>
             <Input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="admin.bv@novacare.vn"
-              className="bg-slate-950 border-slate-700 text-white text-xs h-10"
+              placeholder="quantri@benhvien.vn"
+              className={`text-xs h-10 rounded-lg ${
+                isLight
+                  ? 'bg-white border-slate-300 text-slate-900'
+                  : 'bg-slate-900 border-slate-700 text-white'
+              }`}
               required
             />
           </div>
 
-          {/* Mật khẩu được thiết lập bởi người nhận qua liên kết email */}
-          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] leading-relaxed">
-            * Tài khoản này được tự động gán quyền <strong>HOSPITAL_ADMIN</strong> và chỉ được phép quản lý dữ liệu nội bộ thuộc cơ sở y tế được chọn.
+          {/* Ghi chú bảo mật */}
+          <div
+            className={`p-3 rounded-xl border text-[11px] leading-relaxed ${
+              isLight
+                ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                : 'bg-emerald-950/30 border-emerald-800/60 text-emerald-200'
+            }`}
+          >
+            Tài khoản được tự động gán vai trò <strong>HOSPITAL_ADMIN</strong> trong phạm vi cơ sở y tế đã chọn và ở trạng thái chờ kích hoạt cho đến khi người nhận tự thiết lập mật khẩu qua email.
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <DialogFooter className="pt-3 border-t border-slate-200 dark:border-slate-800 gap-2">
             <Button
               type="button"
               variant="outline"
+              size="sm"
+              disabled={createMutation.isPending}
               onClick={() => onOpenChange(false)}
-              className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-9"
+              className="text-xs rounded-lg"
             >
               Hủy
             </Button>
             <Button
               type="submit"
+              size="sm"
               disabled={createMutation.isPending}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs h-9 px-4 rounded-lg shadow-sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg gap-1.5"
             >
               {createMutation.isPending ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  Đang tạo...
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Đang cấp tài khoản...
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                  Tạo và gửi link kích hoạt
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Cấp tài khoản &amp; gửi email
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

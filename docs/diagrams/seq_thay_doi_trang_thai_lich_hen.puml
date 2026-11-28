@@ -1,0 +1,78 @@
+@startuml seq_thay_doi_trang_thai_lich_hen
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam participantBorderColor #0f172a
+skinparam participantBackgroundColor #7DD3FC
+skinparam actorBorderColor #0f172a
+skinparam actorBackgroundColor #7DD3FC
+
+title sd Thay đổi trạng thái lịch hẹn (NovaCare)
+
+actor "Quản trị viên cơ sở y tế\n(HOSPITAL_ADMIN)" as Admin
+boundary "GD_QuanLyLichHen" as GD
+control "CTR_AdminAppointmentsService" as CTR
+entity "E_appointments" as E_APPT
+entity "E_appointment_slots" as E_SLOT
+entity "E_history_notifications" as E_LOG
+
+activate Admin
+Admin -> GD : 1: Chọn dòng lịch hẹn và nhấn thao tác trạng thái\n(Xác nhận / Hoàn thành khám / Hủy lịch / Vắng mặt / Khôi phục)
+activate GD
+
+opt Nếu chọn Hủy lịch / Vắng mặt / Khôi phục
+  opt Nếu chọn "Vắng mặt" (NO_SHOW)
+    GD -> CTR : 1.1: checkNoShowEligibility(appointmentId)
+    activate CTR
+    CTR -> E_APPT : 1.2: findUnique(id, contactLogs, encounter)
+    activate E_APPT
+    E_APPT --> CTR : 1.3: Trả về lịch hẹn, nhật ký liên hệ & cấu hình ân hạn
+    deactivate E_APPT
+    CTR --> GD : 1.4: Trả về kết quả thẩm định (eligible, details, reasons)
+    deactivate CTR
+  end
+
+  GD --> Admin : 1.5: Mở hộp thoại tương ứng (nhập lý do hủy/khôi phục hoặc bảng điều kiện NO_SHOW)
+  Admin -> GD : 2: Nhập lý do (nếu có) và nhấn nút xác nhận trên hộp thoại
+end
+
+alt Hợp lệ: đúng cơ sở, đúng luật chuyển trạng thái và đủ điều kiện nghiệp vụ
+  GD -> CTR : 2.1: updateStatus(id, status, note) / revertNoShow(id, reason)
+  activate CTR
+  CTR -> E_APPT : 2.2: findUnique(id, slot, medicalEncounter)
+  activate E_APPT
+  E_APPT --> CTR : 2.3: Trả về thông tin lịch hẹn hiện tại
+  deactivate E_APPT
+
+  CTR -> CTR : 2.4: validateTransitionAndPolicy(existing, status, note)
+
+  CTR -> E_APPT : 2.5: update(id, status, timestamps)
+  activate E_APPT
+  E_APPT -> E_APPT : 2.6: Cập nhật trạng thái lịch hẹn
+  E_APPT --> CTR : 2.7: Trả về lịch hẹn đã cập nhật
+  deactivate E_APPT
+
+  opt Khi Hủy (CANCELLED), Vắng mặt (NO_SHOW) hoặc Khôi phục (NO_SHOW -> CONFIRMED)
+    CTR -> E_SLOT : 2.8: updateSlotCapacity(slotId, delta)
+    activate E_SLOT
+    E_SLOT -> E_SLOT : 2.9: Cập nhật bookedCount & isAvailable
+    E_SLOT --> CTR : 2.10: Trả về suất khám đã cập nhật
+    deactivate E_SLOT
+  end
+
+  CTR -> E_LOG : 2.11: recordHistoryPaymentNotification(appt, status, note)
+  activate E_LOG
+  E_LOG -> E_LOG : 2.12: Lưu lịch sử, thanh toán,\nthông báo & Audit Log
+  E_LOG --> CTR : 2.13: Hoàn tất lưu lịch sử, thanh toán (nếu COMPLETED), thông báo & Audit Log
+  deactivate E_LOG
+
+  CTR --> GD : 2.14: Trả về lịch hẹn đã cập nhật thành công
+  deactivate CTR
+  GD --> Admin : 2.15: Đóng hộp thoại (nếu có), hiển thị thông báo thành công và làm mới danh sách & thống kê
+else Thiếu lý do, chưa đủ điều kiện NO_SHOW, đã có hồ sơ khám hoặc chuyển trạng thái không hợp lệ (Alt 3.1 - 3.3)
+  CTR --> GD : 2.16: Trả về lỗi kiểm tra điều kiện nghiệp vụ (400 Bad Request)
+  GD --> Admin : 2.17: Khóa nút xác nhận hoặc giữ nguyên giao diện và hiển thị thông báo lỗi tương ứng
+end
+
+deactivate GD
+deactivate Admin
+@enduml

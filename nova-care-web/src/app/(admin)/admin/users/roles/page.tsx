@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
+import { useAuthStore } from '@/stores/auth.store';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,19 +23,18 @@ import {
   ShieldCheck,
   Users,
   Building2,
-  KeyRound,
-  Check,
-  Minus,
   Search,
-  Lock,
   Plus,
   Loader2,
   Shield,
-  UserCheck,
   Stethoscope,
   ChevronLeft,
   ChevronRight,
-  UserCog,
+  ArrowLeftRight,
+  Info,
+  CheckCircle2,
+  Clock,
+  Ban,
 } from 'lucide-react';
 
 interface PermissionMatrixItem {
@@ -49,29 +49,22 @@ interface PermissionMatrixItem {
   }[];
 }
 
+// Đồng bộ 100% với phân quyền thực thi tại Backend (@Roles Guard & phạm vi hospitalId)
 const PERMISSION_MATRIX: PermissionMatrixItem[] = [
   {
-    category: 'Quản trị Người dùng & Phân quyền',
+    category: 'Quản trị người dùng & Phân quyền',
     permissions: [
       {
-        name: 'Xem danh sách người dùng',
-        description: 'Tra cứu hồ sơ tài khoản hệ thống',
-        admin: 'Toàn hệ thống',
-        hospitalAdmin: 'Bệnh nhân thuộc viện',
-        doctor: 'Không',
-        patient: 'Không',
-      },
-      {
-        name: 'Khóa / Mở khóa tài khoản',
-        description: 'Kiểm soát truy cập tài khoản vi phạm',
+        name: 'Quản lý tài khoản & Khóa / Mở khóa',
+        description: 'Tra cứu tài khoản, xem lịch sử hoạt động và kiểm soát truy cập',
         admin: 'Toàn hệ thống',
         hospitalAdmin: 'Không',
         doctor: 'Không',
         patient: 'Không',
       },
       {
-        name: 'Gán & Thay đổi vai trò',
-        description: 'Chỉ định quyền Admin / Hospital Admin',
+        name: 'Cấp tài khoản & Điều chuyển cơ sở quản trị',
+        description: 'Cấp tài khoản quản trị cơ sở (email kích hoạt 24h) và điều chuyển phạm vi bệnh viện',
         admin: 'Toàn hệ thống',
         hospitalAdmin: 'Không',
         doctor: 'Không',
@@ -80,380 +73,523 @@ const PERMISSION_MATRIX: PermissionMatrixItem[] = [
     ],
   },
   {
-    category: 'Quản lý Cơ sở Y tế & Bác sĩ',
+    category: 'Quản lý cơ sở y tế, bác sĩ & lịch trực',
     permissions: [
       {
-        name: 'Cấu hình Bệnh viện & Chuyên khoa',
-        description: 'Thêm/Sửa/Xóa thông tin cơ sở',
+        name: 'Quản lý cơ sở y tế & Duyệt hợp tác',
+        description: 'Tạo mới bệnh viện đối tác, duyệt yêu cầu hợp tác và cập nhật hồ sơ cơ sở',
         admin: 'Toàn hệ thống',
-        hospitalAdmin: 'Cơ sở quản lý',
+        hospitalAdmin: 'Hồ sơ cơ sở mình',
         doctor: 'Không',
         patient: 'Chỉ xem',
       },
       {
-        name: 'Quản lý Bác sĩ & Lịch trực',
-        description: 'Tạo ca khám, phân công bác sĩ',
-        admin: 'Toàn hệ thống',
-        hospitalAdmin: 'Bác sĩ thuộc viện',
+        name: 'Quản lý đội ngũ bác sĩ & Lịch làm việc',
+        description: 'Thêm hồ sơ bác sĩ, thiết lập ca khám định kỳ và quản lý dịch vụ y tế',
+        admin: 'Giám sát toàn hệ thống',
+        hospitalAdmin: 'Trong cơ sở mình',
         doctor: 'Xem lịch cá nhân',
         patient: 'Chỉ xem',
       },
     ],
   },
   {
-    category: 'Quản lý Lịch hẹn & Tiếp nhận khám',
+    category: 'Quản lý lịch hẹn & Tiếp nhận khám',
     permissions: [
       {
-        name: 'Xem danh sách đặt lịch',
-        description: 'Theo dõi ca khám đặt qua cổng',
-        admin: 'Toàn hệ thống',
-        hospitalAdmin: 'Ca khám thuộc viện',
-        doctor: 'Ca khám phụ trách',
+        name: 'Tra cứu danh sách lịch hẹn',
+        description: 'Theo dõi lịch đặt khám và thống kê tình trạng tiếp nhận',
+        admin: 'Giám sát toàn hệ thống',
+        hospitalAdmin: 'Lịch thuộc cơ sở mình',
+        doctor: 'Lịch phụ trách',
         patient: 'Lịch của tôi',
       },
       {
-        name: 'Tiếp nhận & Cập nhật kết quả',
-        description: 'Hoàn thành khám / Hủy ca khám',
-        admin: 'Toàn quyền',
-        hospitalAdmin: 'Ca khám thuộc viện',
-        doctor: 'Ca khám phụ trách',
-        patient: 'Hủy lịch (trước giờ)',
+        name: 'Cập nhật trạng thái lịch hẹn',
+        description: 'Xác nhận, Check-in, Hoàn thành khám, Hủy lịch, đánh dấu Vắng mặt & Khôi phục',
+        admin: 'Chỉ xem',
+        hospitalAdmin: 'Trong cơ sở mình',
+        doctor: 'Ghi nhận khám',
+        patient: 'Hủy trước giờ hẹn',
       },
     ],
   },
   {
-    category: 'Giám sát Liên thông Bệnh án (HIE)',
+    category: 'Đồng bộ HIS & Liên thông bệnh án (HIE)',
     permissions: [
       {
-        name: 'Giám sát lưu lượng & Cổng HIS',
-        description: 'Theo dõi metrics và tình trạng Node',
-        admin: 'Toàn hệ thống',
-        hospitalAdmin: 'Cổng của viện',
+        name: 'Cấu hình cổng HIS & Đồng bộ danh mục',
+        description: 'Kết nối API đối tác HIS, kiểm tra kết nối và đồng bộ bác sĩ / lịch khám',
+        admin: 'Giám sát toàn hệ thống',
+        hospitalAdmin: 'Cổng của cơ sở mình',
         doctor: 'Không',
         patient: 'Không',
       },
       {
-        name: 'Tra cứu hồ sơ liên viện (FHIR)',
-        description: 'Truy xuất lịch sử khám đa viện bằng PIN',
+        name: 'Tra cứu hồ sơ bệnh án liên viện (FHIR)',
+        description: 'Truy xuất lịch sử khám đa viện theo mã PIN xác thực của người bệnh',
         admin: 'Xem Audit Log',
         hospitalAdmin: 'Không',
-        doctor: 'Được bệnh nhân cấp PIN',
-        patient: 'Hồ sơ bản thân',
+        doctor: 'Khi bệnh nhân cấp PIN',
+        patient: 'Hồ sơ cá nhân',
       },
     ],
   },
 ];
 
+const ROLE_CARDS = [
+  {
+    code: 'ADMIN',
+    title: 'Quản trị nền tảng',
+    desc: 'Điều phối đối tác, giám sát toàn hệ thống & phân quyền cơ sở',
+    icon: ShieldCheck,
+    accentLight: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    accentDark: 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60',
+  },
+  {
+    code: 'HOSPITAL_ADMIN',
+    title: 'Quản trị cơ sở y tế',
+    desc: 'Vận hành bác sĩ, lịch trực, lịch hẹn & cổng HIS của cơ sở mình',
+    icon: Building2,
+    accentLight: 'bg-sky-50 text-sky-700 border-sky-200',
+    accentDark: 'bg-sky-950/40 text-sky-400 border-sky-800/60',
+  },
+  {
+    code: 'DOCTOR',
+    title: 'Bác sĩ khám bệnh',
+    desc: 'Xem lịch phụ trách, khám bệnh & tra cứu hồ sơ khi có PIN',
+    icon: Stethoscope,
+    accentLight: 'bg-teal-50 text-teal-700 border-teal-200',
+    accentDark: 'bg-teal-950/40 text-teal-400 border-teal-800/60',
+  },
+  {
+    code: 'PATIENT',
+    title: 'Người bệnh',
+    desc: 'Đặt lịch khám, thanh toán & quản lý sổ sức khỏe cá nhân',
+    icon: Users,
+    accentLight: 'bg-slate-100 text-slate-700 border-slate-200',
+    accentDark: 'bg-slate-800/80 text-slate-300 border-slate-700',
+  },
+];
+
 export default function AdminRolesPage() {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuthStore();
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
 
-  const [activeTab, setActiveTab] = useState<'matrix' | 'users'>('matrix');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState<'matrix' | 'admins'>('matrix');
+  const [roleFilter, setRoleFilter] = useState<'ALL_ADMIN' | 'HOSPITAL_ADMIN' | 'ADMIN'>('ALL_ADMIN');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const [selectedUserForRole, setSelectedUserForRole] = useState<any | null>(null);
-  const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
-  const [newSelectedRole, setNewSelectedRole] = useState<string>('PATIENT');
+  const [selectedAdminForTransfer, setSelectedAdminForTransfer] = useState<any | null>(null);
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>('');
+  const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
 
   const cardStyle = isLight
-    ? 'bg-white border-slate-200 text-slate-900 shadow-sm'
-    : 'bg-slate-950 border-slate-800 text-white shadow-sm';
+    ? 'bg-white border-slate-200/90 text-slate-900 shadow-xs rounded-xl'
+    : 'bg-slate-950 border-slate-800 text-slate-100 shadow-xs rounded-xl';
 
   const tableHeaderStyle = isLight
-    ? 'bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-xs'
-    : 'bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-xs';
+    ? 'bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs'
+    : 'bg-slate-900/80 border-b border-slate-800 text-slate-400 font-semibold text-xs';
 
-  // Fetch users with roles
+  // Chỉ tải danh sách tài khoản quản trị (ADMIN & HOSPITAL_ADMIN) — tách bạch hoàn toàn với PATIENT / DOCTOR
   const { data: usersData, isLoading: loadingUsers } = useQuery({
     queryKey: ['admin-roles-users', page, search, roleFilter],
     queryFn: () =>
       adminService.getUsers({
         page,
         limit: 10,
-        search,
-        role: roleFilter !== 'all' ? roleFilter : undefined,
+        search: search.trim() || undefined,
+        ...(roleFilter === 'ALL_ADMIN'
+          ? { roles: ['HOSPITAL_ADMIN', 'ADMIN'] }
+          : { role: roleFilter }),
       }),
   });
 
-  // Query hospitals list for dropdown
+  // Danh sách cơ sở y tế phục vụ điều chuyển
   const { data: hospitalsData, isLoading: loadingHospitals } = useQuery({
     queryKey: ['admin-hospitals-simple-list'],
     queryFn: () => adminService.getHospitals({ limit: 100 }),
   });
-  const hospitals: any[] = hospitalsData?.items || [];
 
-  // Role mutation
-  const updateRoleMutation = useMutation({
-    mutationFn: ({
-      userId,
-      role,
-      hospitalId,
-    }: {
-      userId: string;
-      role: string;
-      hospitalId?: string | null;
-    }) => adminService.updateUserRole(userId, role, hospitalId),
-    onSuccess: () => {
-      toast.success('Đã cập nhật vai trò người dùng thành công!');
+  const activeHospitals: any[] = (hospitalsData?.items || []).filter(
+    (h: any) => (h.rawStatus || h.status) !== 'TERMINATED' && h.status !== 'Ngừng hợp tác',
+  );
+
+  // Điều chuyển cơ sở y tế phụ trách cho HOSPITAL_ADMIN
+  const transferScopeMutation = useMutation({
+    mutationFn: ({ userId, hospitalId }: { userId: string; hospitalId: string }) =>
+      adminService.updateUserRole(userId, 'HOSPITAL_ADMIN', hospitalId),
+    onSuccess: (res: any) => {
+      toast.success(
+        res?.message || 'Đã điều chuyển cơ sở y tế phụ trách và thu hồi phiên đăng nhập cũ thành công',
+      );
       queryClient.invalidateQueries({ queryKey: ['admin-roles-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setSelectedUserForRole(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-recent-audit-logs'] });
+      setSelectedAdminForTransfer(null);
+      setSelectedHospitalId('');
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Không thể cập nhật vai trò');
+      toast.error(err?.response?.data?.message || 'Không thể điều chuyển cơ sở y tế phụ trách');
     },
   });
 
-  const handleOpenRoleModal = (user: any) => {
-    setSelectedUserForRole(user);
-    setNewSelectedRole(user.role || 'PATIENT');
-    setSelectedHospitalId(user.hospitalId || user.hospital?.id || '');
+  const handleOpenTransferModal = (adminAccount: any) => {
+    setSelectedAdminForTransfer(adminAccount);
+    setSelectedHospitalId(adminAccount.hospitalId || adminAccount.hospital?.id || '');
   };
 
-  const handleSaveRole = () => {
-    if (!selectedUserForRole) return;
-    if (newSelectedRole === 'HOSPITAL_ADMIN' && !selectedHospitalId) {
-      toast.error('Vui lòng chọn cơ sở y tế cho Quản trị viên Bệnh viện');
+  const handleSaveTransfer = () => {
+    if (!selectedAdminForTransfer) return;
+    if (!selectedHospitalId) {
+      toast.error('Vui lòng chọn cơ sở y tế phụ trách mới');
       return;
     }
-    updateRoleMutation.mutate({
-      userId: selectedUserForRole.id,
-      role: newSelectedRole,
-      hospitalId: newSelectedRole === 'HOSPITAL_ADMIN' ? selectedHospitalId : null,
+    const currentHospitalId =
+      selectedAdminForTransfer.hospitalId || selectedAdminForTransfer.hospital?.id || '';
+    if (selectedHospitalId === currentHospitalId) {
+      toast.error('Vui lòng chọn một cơ sở y tế khác với cơ sở hiện tại');
+      return;
+    }
+    transferScopeMutation.mutate({
+      userId: selectedAdminForTransfer.id,
+      hospitalId: selectedHospitalId,
     });
   };
 
-  const renderBadge = (text: string) => {
-    if (text === 'Toàn hệ thống' || text === 'Toàn quyền') {
+  const renderPermissionBadge = (text: string) => {
+    if (text === 'Toàn hệ thống') {
       return (
-        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold">
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium border ${
+            isLight
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-emerald-950/40 text-emerald-400 border-emerald-800/70'
+          }`}
+        >
           {text}
-        </Badge>
+        </span>
       );
     }
-    if (text.includes('thuộc viện') || text.includes('quản lý') || text.includes('phụ trách')) {
+    if (
+      text.includes('cơ sở mình') ||
+      text.includes('phụ trách') ||
+      text.includes('cá nhân') ||
+      text.includes('Ghi nhận')
+    ) {
       return (
-        <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30 text-[11px] font-semibold">
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium border ${
+            isLight
+              ? 'bg-sky-50 text-sky-700 border-sky-200'
+              : 'bg-sky-950/40 text-sky-400 border-sky-800/70'
+          }`}
+        >
           {text}
-        </Badge>
+        </span>
       );
     }
-    if (text.includes('PIN') || text.includes('của tôi') || text.includes('Chỉ xem') || text.includes('Audit')) {
+    if (
+      text.includes('Giám sát') ||
+      text.includes('Chỉ xem') ||
+      text.includes('PIN') ||
+      text.includes('Audit') ||
+      text.includes('của tôi') ||
+      text.includes('Hủy trước')
+    ) {
       return (
-        <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[11px] font-semibold">
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium border ${
+            isLight
+              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : 'bg-amber-950/40 text-amber-400 border-amber-800/70'
+          }`}
+        >
           {text}
-        </Badge>
+        </span>
       );
     }
     return (
-      <Badge variant="outline" className="text-slate-400 text-[11px] font-normal">
-        {text}
-      </Badge>
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] ${
+          isLight ? 'text-slate-400' : 'text-slate-500'
+        }`}
+      >
+        —
+      </span>
     );
   };
 
+  const renderAccountStatus = (u: any) => {
+    if (u.isActive) {
+      return (
+        <span
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border ${
+            isLight
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
+          }`}
+        >
+          <CheckCircle2 className="w-3 h-3" /> Hoạt động
+        </span>
+      );
+    }
+    if (!u.lastLoginAt) {
+      return (
+        <span
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border ${
+            isLight
+              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : 'bg-amber-950/40 text-amber-400 border-amber-800/60'
+          }`}
+        >
+          <Clock className="w-3 h-3" /> Chờ kích hoạt
+        </span>
+      );
+    }
+    return (
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border ${
+          isLight
+            ? 'bg-rose-50 text-rose-700 border-rose-200'
+            : 'bg-rose-950/40 text-rose-400 border-rose-800/60'
+        }`}
+      >
+        <Ban className="w-3 h-3" /> Đã khóa
+      </span>
+    );
+  };
+
+  const totalPages = usersData?.totalPages || 1;
+  const currentHospitalId =
+    selectedAdminForTransfer?.hospitalId || selectedAdminForTransfer?.hospital?.id || '';
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-slate-900 text-white shadow-sm">
-            <KeyRound className="w-5 h-5 text-emerald-400" />
+      {/* Header đơn giản chuẩn y tế */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-start gap-3">
+          <div
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+              isLight
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-emerald-950/50 border-emerald-800/60 text-emerald-400'
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className={`text-xl font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-              Vai Trò & Phân Quyền Hệ Thống
+            <h1 className={`text-lg font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              Vai trò &amp; Phân quyền hệ thống
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Thiết lập ma trận quyền hạn (RBAC), kiểm soát vai trò quản trị viên và tài khoản vận hành.
+            <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              Quy định ma trận phân quyền y tế (RBAC), cấp tài khoản quản trị cơ sở y tế bổ sung và điều chuyển phạm vi phụ trách.
             </p>
           </div>
         </div>
 
         <Button
           onClick={() => setIsCreateAdminOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold gap-2 shadow-sm"
+          size="sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold gap-1.5 h-9 px-3.5 shadow-xs shrink-0"
         >
           <Plus className="w-4 h-4" />
-          Kích hoạt tài khoản quản trị cơ sở
+          Cấp tài khoản quản trị cơ sở
         </Button>
       </div>
 
-      {/* Role Cards Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className={cardStyle}>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quản Trị Tối Cao</p>
-              <h3 className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">ADMIN</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Toàn quyền hệ thống NovaCare</p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={cardStyle}>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quản Trị Bệnh Viện</p>
-              <h3 className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1">HOSPITAL_ADMIN</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Vận hành ca khám, bác sĩ tại viện</p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-              <Building2 className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={cardStyle}>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Bác Sĩ Khám</p>
-              <h3 className="text-lg font-black text-indigo-600 dark:text-indigo-400 mt-1">DOCTOR</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Khám bệnh, tra cứu hồ sơ đa viện</p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-              <Stethoscope className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={cardStyle}>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Bệnh Nhân</p>
-              <h3 className="text-lg font-black text-slate-700 dark:text-slate-300 mt-1">PATIENT</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Đặt lịch, sổ khám, thanh toán</p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-slate-500/10 text-slate-500 flex items-center justify-center">
-              <Users className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tóm tắt 4 vai trò cố định */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {ROLE_CARDS.map((role) => {
+          const Icon = role.icon;
+          return (
+            <Card key={role.code} className={cardStyle}>
+              <CardContent className="p-4 flex items-start gap-3">
+                <div
+                  className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${
+                    isLight ? role.accentLight : role.accentDark
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      {role.title}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {role.code}
+                  </span>
+                  <p className={`text-[11px] leading-relaxed mt-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {role.desc}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Navigation Switcher */}
-      <div className={`flex border-b ${isLight ? 'border-slate-200' : 'border-slate-800'} gap-6 text-xs sm:text-sm font-bold`}>
+      {/* Thanh chuyển 2 Tab */}
+      <div className={`flex border-b ${isLight ? 'border-slate-200' : 'border-slate-800'} gap-6 text-xs sm:text-sm font-semibold`}>
         <button
+          type="button"
           onClick={() => setActiveTab('matrix')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'matrix'
-              ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400'
-            }`}
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'matrix'
+              ? 'border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
         >
           <Shield className="w-4 h-4" />
-          <span>Ma Trận Phân Quyền (RBAC Matrix)</span>
+          <span>Ma trận phân quyền (RBAC)</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('users')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'users'
-              ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400'
-            }`}
+          type="button"
+          onClick={() => setActiveTab('admins')}
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'admins'
+              ? 'border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
         >
-          <UserCog className="w-4 h-4" />
-          <span>Phân Quyền & Gán Vai Trò Tài Khoản</span>
+          <Building2 className="w-4 h-4" />
+          <span>Tài khoản quản trị &amp; Phạm vi cơ sở</span>
         </button>
       </div>
 
-      {/* TAB 1: PERMISSION MATRIX */}
+      {/* TAB 1: MA TRẬN PHÂN QUYỀN */}
       {activeTab === 'matrix' && (
-        <Card className={`${cardStyle} overflow-hidden`}>
-          <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800">
-            <CardTitle className="text-sm font-bold">Quyền Hạn Chi Tiết Theo Từng Vai Trò</CardTitle>
-            <CardDescription className="text-xs">
-              Bảng quy định phạm vi truy cập dữ liệu và tác vụ nghiệp vụ của từng nhóm người dùng trên hệ thống.
-            </CardDescription>
-          </CardHeader>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className={tableHeaderStyle}>
-                <tr>
-                  <th className="p-3.5 pl-5">Tác Vụ Nghiệp Vụ</th>
-                  <th className="p-3.5 text-center">ADMIN</th>
-                  <th className="p-3.5 text-center">HOSPITAL_ADMIN</th>
-                  <th className="p-3.5 text-center">DOCTOR</th>
-                  <th className="p-3.5 text-center pr-5">PATIENT</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {PERMISSION_MATRIX.map((group, gIdx) => (
-                  <React.Fragment key={gIdx}>
-                    <tr className={isLight ? 'bg-slate-50/80 font-bold text-slate-700' : 'bg-slate-900/60 font-bold text-slate-300'}>
-                      <td colSpan={5} className="py-2.5 px-5 text-[11px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        {group.category}
-                      </td>
-                    </tr>
-                    {group.permissions.map((perm, pIdx) => (
-                      <tr
-                        key={pIdx}
-                        className={`transition-colors ${isLight ? 'hover:bg-slate-50/60' : 'hover:bg-slate-900/40'
-                          }`}
-                      >
-                        <td className="py-3 px-5">
-                          <div className="font-semibold text-slate-900 dark:text-white">{perm.name}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">{perm.description}</div>
-                        </td>
-                        <td className="py-3 px-3.5 text-center">{renderBadge(perm.admin)}</td>
-                        <td className="py-3 px-3.5 text-center">{renderBadge(perm.hospitalAdmin)}</td>
-                        <td className="py-3 px-3.5 text-center">{renderBadge(perm.doctor)}</td>
-                        <td className="py-3 px-3.5 text-center pr-5">{renderBadge(perm.patient)}</td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+        <div className="space-y-4">
+          <div
+            className={`flex items-start gap-2.5 px-4 py-3 rounded-xl border text-xs ${
+              isLight
+                ? 'bg-emerald-50/70 border-emerald-200/80 text-emerald-900'
+                : 'bg-emerald-950/30 border-emerald-800/60 text-emerald-200'
+            }`}
+          >
+            <Info className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              Chính sách phân quyền theo vai trò (<strong>RBAC</strong>) được cố định và thực thi bắt buộc ở tầng máy chủ để bảo vệ dữ liệu y tế và tách bạch danh tính giữa người bệnh, bác sĩ và đơn vị quản trị.
+            </p>
           </div>
-        </Card>
+
+          <Card className={`${cardStyle} overflow-hidden`}>
+            <CardHeader className="py-3.5 px-5 border-b border-slate-100 dark:border-slate-800">
+              <CardTitle className="text-sm font-semibold">Phạm vi quyền hạn theo từng vai trò</CardTitle>
+              <CardDescription className="text-xs">
+                Đối chiếu trực tiếp với quyền truy cập thực tế trên các phân hệ của nền tảng NovaCare.
+              </CardDescription>
+            </CardHeader>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className={tableHeaderStyle}>
+                  <tr>
+                    <th className="py-3 pl-5 pr-3">Chức năng nghiệp vụ</th>
+                    <th className="py-3 px-3 text-center whitespace-nowrap">ADMIN</th>
+                    <th className="py-3 px-3 text-center whitespace-nowrap">HOSPITAL_ADMIN</th>
+                    <th className="py-3 px-3 text-center whitespace-nowrap">DOCTOR</th>
+                    <th className="py-3 pl-3 pr-5 text-center whitespace-nowrap">PATIENT</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                  {PERMISSION_MATRIX.map((group, gIdx) => (
+                    <React.Fragment key={gIdx}>
+                      <tr className={isLight ? 'bg-slate-50/90' : 'bg-slate-900/50'}>
+                        <td
+                          colSpan={5}
+                          className="py-2 px-5 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
+                        >
+                          {group.category}
+                        </td>
+                      </tr>
+                      {group.permissions.map((perm, pIdx) => (
+                        <tr
+                          key={pIdx}
+                          className={isLight ? 'hover:bg-slate-50/70 transition-colors' : 'hover:bg-slate-900/40 transition-colors'}
+                        >
+                          <td className="py-3 pl-5 pr-3">
+                            <div className={`font-medium ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                              {perm.name}
+                            </div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              {perm.description}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-center whitespace-nowrap">{renderPermissionBadge(perm.admin)}</td>
+                          <td className="py-3 px-3 text-center whitespace-nowrap">{renderPermissionBadge(perm.hospitalAdmin)}</td>
+                          <td className="py-3 px-3 text-center whitespace-nowrap">{renderPermissionBadge(perm.doctor)}</td>
+                          <td className="py-3 pl-3 pr-5 text-center whitespace-nowrap">{renderPermissionBadge(perm.patient)}</td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
       )}
 
-      {/* TAB 2: USER ROLES MANAGEMENT */}
-      {activeTab === 'users' && (
+      {/* TAB 2: TÀI KHOẢN QUẢN TRỊ & ĐIỀU CHUYỂN PHẠM VI CƠ SỞ */}
+      {activeTab === 'admins' && (
         <div className="space-y-4">
-          <Card className={`${cardStyle} p-4`}>
+          <div
+            className={`flex items-start gap-2.5 px-4 py-3 rounded-xl border text-xs ${
+              isLight
+                ? 'bg-slate-50 border-slate-200 text-slate-700'
+                : 'bg-slate-900/70 border-slate-800 text-slate-300'
+            }`}
+          >
+            <Info className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              Danh sách chỉ quản lý tài khoản quản trị (<strong>HOSPITAL_ADMIN</strong> và <strong>ADMIN</strong>). Tài khoản bệnh nhân và bác sĩ được tách biệt để bảo đảm an toàn dữ liệu y tế; việc khóa/mở khóa tài khoản thực hiện tại mục <strong>Quản lý người dùng</strong>.
+            </p>
+          </div>
+
+          <Card className={`${cardStyle} p-3.5`}>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   type="text"
-                  placeholder="Tìm theo Tên, Email hoặc Số điện thoại người dùng..."
+                  placeholder="Tìm theo họ tên, email hoặc số điện thoại quản trị viên..."
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className={`pl-9 text-xs rounded-xl ${isLight
-                      ? 'bg-white border-slate-300 text-slate-900'
-                      : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
+                  className={`pl-9 text-xs h-9 rounded-lg ${
+                    isLight
+                      ? 'bg-white border-slate-200 text-slate-900'
+                      : 'bg-slate-900 border-slate-700 text-white'
+                  }`}
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <select
-                  value={roleFilter}
-                  onChange={(e) => {
-                    setRoleFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className={`border text-xs px-3 py-2 rounded-xl focus:outline-none ${isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
-                >
-                  <option value="all">Tất cả vai trò</option>
-                  <option value="ADMIN">Quản trị viên (ADMIN)</option>
-                  <option value="HOSPITAL_ADMIN">Quản trị viện (HOSPITAL_ADMIN)</option>
-                  <option value="PATIENT">Bệnh nhân (PATIENT)</option>
-                </select>
-              </div>
+              <select
+                value={roleFilter}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value as any);
+                  setPage(1);
+                }}
+                className={`border text-xs px-3 h-9 rounded-lg focus:outline-none ${
+                  isLight
+                    ? 'bg-white border-slate-200 text-slate-800'
+                    : 'bg-slate-900 border-slate-700 text-white'
+                }`}
+              >
+                <option value="ALL_ADMIN">Tất cả tài khoản quản trị</option>
+                <option value="HOSPITAL_ADMIN">Quản trị cơ sở y tế (HOSPITAL_ADMIN)</option>
+                <option value="ADMIN">Quản trị nền tảng (ADMIN)</option>
+              </select>
             </div>
           </Card>
 
@@ -462,70 +598,112 @@ export default function AdminRolesPage() {
               <table className="w-full text-left text-xs">
                 <thead className={tableHeaderStyle}>
                   <tr>
-                    <th className="p-3.5 pl-5">Người Dùng</th>
-                    <th className="p-3.5">Liên Hệ</th>
-                    <th className="p-3.5 text-center">Vai Trò Hiện Tại</th>
-                    <th className="p-3.5">Bệnh Viện Phụ Trách</th>
-                    <th className="p-3.5 text-right pr-5">Thao Tác</th>
+                    <th className="py-3 pl-5 pr-3">Quản trị viên</th>
+                    <th className="py-3 px-3">Liên hệ</th>
+                    <th className="py-3 px-3 text-center">Vai trò</th>
+                    <th className="py-3 px-3">Cơ sở y tế phụ trách</th>
+                    <th className="py-3 px-3 text-center">Trạng thái</th>
+                    <th className="py-3 pl-3 pr-5 text-right">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
                   {loadingUsers ? (
                     <tr>
-                      <td colSpan={5} className="py-12 text-center text-slate-400">
-                        <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-600 mb-2" />
-                        Đang tải danh sách người dùng...
+                      <td colSpan={6} className="py-12 text-center text-slate-400">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto text-emerald-600 mb-2" />
+                        Đang tải danh sách tài khoản quản trị...
                       </td>
                     </tr>
                   ) : usersData?.items && usersData.items.length > 0 ? (
-                    usersData.items.map((user: any) => (
-                      <tr
-                        key={user.id}
-                        className={`transition-colors ${isLight ? 'hover:bg-slate-50/60' : 'hover:bg-slate-900/40'
-                          }`}
-                      >
-                        <td className="py-3 px-5">
-                          <div className="font-bold text-slate-900 dark:text-white">
-                            {user.fullName || user.name || 'Người dùng hệ thống'}
-                          </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">ID: {user.id}</div>
-                        </td>
-                        <td className="py-3 px-3.5">
-                          <div className="text-slate-700 dark:text-slate-300">{user.email || '—'}</div>
-                          <div className="text-[11px] text-slate-400">{user.phone || user.phoneNumber || '—'}</div>
-                        </td>
-                        <td className="py-3 px-3.5 text-center">
-                          <Badge
-                            className={`text-[11px] font-bold ${user.role === 'ADMIN'
-                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
-                                : user.role === 'HOSPITAL_ADMIN'
-                                  ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30'
-                                  : 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/30'
+                    usersData.items.map((account: any) => {
+                      const isSelf = currentUser?.id === account.id;
+                      const isHospitalAdminRow = account.role === 'HOSPITAL_ADMIN';
+
+                      return (
+                        <tr
+                          key={account.id}
+                          className={isLight ? 'hover:bg-slate-50/70 transition-colors' : 'hover:bg-slate-900/40 transition-colors'}
+                        >
+                          <td className="py-3 pl-5 pr-3">
+                            <div className={`font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                              {account.fullName || 'Quản trị viên'}
+                              {isSelf && (
+                                <span className="ml-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                  Bạn
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                              {account.id.slice(0, 8)}…
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3">
+                            <div className={isLight ? 'text-slate-700' : 'text-slate-300'}>
+                              {account.email || '—'}
+                            </div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">
+                              {account.phone || '—'}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 text-center whitespace-nowrap">
+                            <Badge
+                              className={`text-[11px] font-semibold ${
+                                account.role === 'ADMIN'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                                  : 'bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-800'
                               }`}
-                          >
-                            {user.role || 'PATIENT'}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3.5 text-slate-600 dark:text-slate-400 text-xs">
-                          {user.hospital?.name || (user.role === 'HOSPITAL_ADMIN' ? 'Chưa gán bệnh viện' : '—')}
-                        </td>
-                        <td className="py-3 px-5 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenRoleModal(user)}
-                            className="text-xs rounded-lg h-8 gap-1.5"
-                          >
-                            <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
-                            Đổi vai trò
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
+                            >
+                              {account.role}
+                            </Badge>
+                          </td>
+
+                          <td className="py-3 px-3">
+                            {isHospitalAdminRow ? (
+                              <span className={`font-medium ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                                {account.hospital?.name || 'Chưa gán cơ sở y tế'}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">Toàn nền tảng NovaCare</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3 text-center whitespace-nowrap">
+                            {renderAccountStatus(account)}
+                          </td>
+
+                          <td className="py-3 pl-3 pr-5 text-right whitespace-nowrap">
+                            {isHospitalAdminRow && !isSelf ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenTransferModal(account)}
+                                className={`text-xs rounded-lg h-8 gap-1.5 font-medium ${
+                                  isLight
+                                    ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                                    : 'border-emerald-800 text-emerald-400 hover:bg-emerald-950/40'
+                                }`}
+                              >
+                                <ArrowLeftRight className="w-3.5 h-3.5" />
+                                Điều chuyển cơ sở
+                              </Button>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1 text-[11px] text-slate-400 px-2 py-1"
+                                title="Vai trò quản trị nền tảng cố định theo chính sách bảo mật"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600/70" /> Vai trò cố định
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={5} className="py-12 text-center text-slate-400">
-                        Không tìm thấy tài khoản nào phù hợp bộ lọc.
+                      <td colSpan={6} className="py-12 text-center text-slate-400">
+                        Không tìm thấy tài khoản quản trị nào phù hợp bộ lọc.
                       </td>
                     </tr>
                   )}
@@ -533,10 +711,11 @@ export default function AdminRolesPage() {
               </table>
             </div>
 
-            {/* Pagination */}
-            {usersData?.total > 10 && (
-              <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-                <span>Tổng: {usersData.total} tài khoản</span>
+            {totalPages > 1 && (
+              <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                <span>
+                  Trang <strong>{page}</strong> / <strong>{totalPages}</strong> (Tổng {usersData?.total || 0} tài khoản quản trị)
+                </span>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -547,12 +726,11 @@ export default function AdminRolesPage() {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <span>Trang {page}</span>
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={usersData.items.length < 10}
-                    onClick={() => setPage((p) => p + 1)}
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     className="h-8 px-2.5 text-xs rounded-lg"
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -564,102 +742,126 @@ export default function AdminRolesPage() {
         </div>
       )}
 
-      {/* Change Role Dialog */}
-      <Dialog open={!!selectedUserForRole} onOpenChange={(open) => !open && setSelectedUserForRole(null)}>
-        <DialogContent className={cardStyle}>
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-emerald-500" />
-              Thay Đổi Vai Trò Người Dùng
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-400">
-              Gán lại vai trò mới cho tài khoản: <b>{selectedUserForRole?.fullName || selectedUserForRole?.email}</b>
-            </DialogDescription>
+      {/* Hộp thoại Điều chuyển cơ sở y tế phụ trách */}
+      <Dialog
+        open={!!selectedAdminForTransfer}
+        onOpenChange={(open) => !open && !transferScopeMutation.isPending && setSelectedAdminForTransfer(null)}
+      >
+        <DialogContent
+          className={`max-w-md p-6 rounded-2xl ${
+            isLight
+              ? 'bg-white text-slate-900 border-slate-200'
+              : 'bg-slate-950 text-slate-100 border-slate-800'
+          }`}
+        >
+          <DialogHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
+                  isLight
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    : 'bg-emerald-950/40 border-emerald-800 text-emerald-400'
+                }`}
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+              </div>
+              <div>
+                <DialogTitle className="text-sm font-bold">
+                  Điều chuyển cơ sở y tế phụ trách
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Tài khoản: <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>{selectedAdminForTransfer?.fullName || selectedAdminForTransfer?.email}</strong>
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Chọn vai trò mới:
-              </label>
-              <select
-                value={newSelectedRole}
-                onChange={(e) => setNewSelectedRole(e.target.value)}
-                className={`w-full border text-xs px-3 py-2 rounded-xl focus:outline-none ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-                  }`}
-              >
-                <option value="PATIENT">Bệnh nhân (PATIENT) - Người dùng cơ bản</option>
-                <option value="HOSPITAL_ADMIN">Quản trị viên Bệnh viện (HOSPITAL_ADMIN)</option>
-                <option value="ADMIN">Quản trị viên Tối cao (ADMIN) - Toàn quyền</option>
-              </select>
+          <div className="space-y-4 py-2 text-xs">
+            <div
+              className={`p-3 rounded-xl border space-y-1 ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
+              }`}
+            >
+              <div className="text-[11px] text-slate-500">Cơ sở y tế phụ trách hiện tại</div>
+              <div className={`font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                {selectedAdminForTransfer?.hospital?.name || 'Chưa gán cơ sở y tế'}
+              </div>
             </div>
 
-            {newSelectedRole === 'HOSPITAL_ADMIN' && (
-              <div className="space-y-1.5 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <label className="text-xs font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-blue-500" />
-                  Cơ sở y tế trực thuộc: <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={selectedHospitalId}
-                  onChange={(e) => setSelectedHospitalId(e.target.value)}
-                  className={`w-full border text-xs px-3 py-2 rounded-xl focus:outline-none ${
-                    isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-                  }`}
-                  required
-                >
-                  <option value="">-- Chọn bệnh viện quản lý --</option>
-                  {hospitals.map((h: any) => (
-                    <option key={h.id} value={h.id}>
-                      {h.name} {h.city ? `(${h.city})` : ''}
-                    </option>
-                  ))}
-                </select>
-                {loadingHospitals && (
-                  <p className="text-[11px] text-slate-400">Đang tải danh sách cơ sở...</p>
-                )}
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                  Tài khoản này sẽ chỉ có quyền truy cập dữ liệu (bác sĩ, lịch hẹn, dịch vụ) của bệnh viện được chọn.
-                </p>
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <label className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                Cơ sở y tế phụ trách mới <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={selectedHospitalId}
+                onChange={(e) => setSelectedHospitalId(e.target.value)}
+                className={`w-full h-10 border text-xs px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-600 ${
+                  isLight
+                    ? 'bg-white border-slate-300 text-slate-900'
+                    : 'bg-slate-900 border-slate-700 text-white'
+                }`}
+              >
+                <option value="">-- Chọn cơ sở y tế mới --</option>
+                {activeHospitals.map((h: any) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name}
+                    {h.city ? ` (${h.city})` : ''}
+                    {h.id === currentHospitalId ? ' — Hiện tại' : ''}
+                  </option>
+                ))}
+              </select>
+              {loadingHospitals && (
+                <p className="text-[11px] text-slate-400">Đang tải danh sách cơ sở y tế...</p>
+              )}
+            </div>
 
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
-              <p className="font-semibold flex items-center gap-1.5 mb-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> Chú ý phân quyền:
-              </p>
-              Việc nâng quyền lên Quản trị viên (ADMIN) sẽ cho phép tài khoản này có toàn quyền thao tác dữ liệu, cấu hình cơ sở và kiểm soát toàn bộ người dùng khác trên hệ thống.
+            <div
+              className={`p-3 rounded-xl border text-[11px] leading-relaxed ${
+                isLight
+                  ? 'bg-amber-50 border-amber-200 text-amber-800'
+                  : 'bg-amber-950/30 border-amber-800/60 text-amber-300'
+              }`}
+            >
+              Sau khi xác nhận, hệ thống sẽ <strong>tự động thu hồi phiên đăng nhập cũ</strong> (buộc quản trị viên đăng nhập lại theo phạm vi cơ sở mới) và ghi nhận toàn bộ lịch sử điều chuyển vào <strong>Audit Log</strong>.
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="pt-3 border-t border-slate-200 dark:border-slate-800 gap-2">
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={() => setSelectedUserForRole(null)}
-              className="text-xs rounded-xl"
+              disabled={transferScopeMutation.isPending}
+              onClick={() => setSelectedAdminForTransfer(null)}
+              className="text-xs rounded-lg"
             >
-              Hủy bỏ
+              Hủy
             </Button>
             <Button
+              type="button"
               size="sm"
-              disabled={updateRoleMutation.isPending}
-              onClick={handleSaveRole}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl gap-1.5"
+              disabled={
+                transferScopeMutation.isPending ||
+                !selectedHospitalId ||
+                selectedHospitalId === currentHospitalId
+              }
+              onClick={handleSaveTransfer}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg gap-1.5"
             >
-              {updateRoleMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Lưu thay đổi vai trò
+              {transferScopeMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Xác nhận điều chuyển
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Hộp thoại Cấp tài khoản quản trị cơ sở y tế bổ sung */}
       <CreateHospitalAdminDialog
         open={isCreateAdminOpen}
         onOpenChange={setIsCreateAdminOpen}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['admin-roles-users'] })}
       />
-
     </div>
   );
 }

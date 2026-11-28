@@ -203,6 +203,34 @@ export class AdminAppointmentsService {
     const graceTime = new Date(slotStartTime.getTime() + gracePeriodMinutes * 60 * 1000);
     const now = new Date();
 
+    const hasCheckedIn = Boolean(appt.checkInAt);
+    const hasEncounter = Boolean(appt.medicalEncounter && appt.medicalEncounter.status !== 'CANCELLED');
+    const isOverdue = now.getTime() >= graceTime.getTime();
+    const contactCount = appt.contactLogs.length;
+    const lastContact = contactCount > 0 ? appt.contactLogs[contactCount - 1] : null;
+
+    let intervalPassed = false;
+    if (minContactAttempts <= 1) {
+      intervalPassed = contactCount >= minContactAttempts;
+    } else if (contactCount >= 2) {
+      const prev = appt.contactLogs[contactCount - 2];
+      const diffMinutes = (lastContact!.contactedAt.getTime() - prev.contactedAt.getTime()) / (60 * 1000);
+      intervalPassed = diffMinutes >= minContactIntervalMinutes;
+    }
+
+    const details = {
+      isOverdue,
+      gracePeriodMinutes,
+      gracePeriodEndsAt: graceTime.toISOString(),
+      hasCheckedIn,
+      hasEncounter,
+      contactCount,
+      minContactAttempts,
+      intervalPassed,
+      minIntervalMinutes: minContactIntervalMinutes,
+      lastContactAt: lastContact ? lastContact.contactedAt.toISOString() : null,
+    };
+
     const reasons: string[] = [];
 
     if (appt.status === AppointmentStatus.NO_SHOW) {
@@ -213,37 +241,33 @@ export class AdminAppointmentsService {
         gracePeriodMinutes,
         graceTime,
         minContactAttempts,
-        contactAttempts: appt.contactLogs.length,
+        contactAttempts: contactCount,
         remainingGraceMinutes: 0,
+        details,
       };
     }
 
-    if (!([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.PAID] as AppointmentStatus[]).includes(appt.status)) {
+    if (!([AppointmentStatus.CONFIRMED, AppointmentStatus.PAID] as AppointmentStatus[]).includes(appt.status)) {
       reasons.push(`Không thể xác nhận NO_SHOW từ trạng thái ${appt.status}`);
     }
 
-    if (appt.checkInAt) {
-      reasons.push(`Bệnh nhân đã làm thủ tục check-in tại quầy lúc ${new Date(appt.checkInAt).toLocaleTimeString('vi-VN')}`);
+    if (hasCheckedIn) {
+      reasons.push(`Bệnh nhân đã làm thủ tục check-in tại quầy lúc ${new Date(appt.checkInAt!).toLocaleTimeString('vi-VN')}`);
     }
 
-    if (appt.medicalEncounter && appt.medicalEncounter.status !== 'CANCELLED') {
+    if (hasEncounter) {
       reasons.push('Bệnh nhân đã được tiếp nhận và có hồ sơ khám bệnh');
     }
 
-    if (now.getTime() < graceTime.getTime()) {
+    if (!isOverdue) {
       const remainingMinutes = Math.ceil((graceTime.getTime() - now.getTime()) / (60 * 1000));
       reasons.push(`Chưa hết thời gian ân hạn (${gracePeriodMinutes} phút sau giờ hẹn). Cần chờ thêm ${remainingMinutes} phút (sau ${graceTime.toLocaleTimeString('vi-VN')})`);
     }
 
-    if (appt.contactLogs.length < minContactAttempts) {
-      reasons.push(`Chưa đủ số lần liên hệ tối thiểu theo chính sách (yêu cầu: ${minContactAttempts} lần, hiện có: ${appt.contactLogs.length} lần)`);
-    } else if (appt.contactLogs.length >= 2) {
-      const last = appt.contactLogs[appt.contactLogs.length - 1];
-      const prev = appt.contactLogs[appt.contactLogs.length - 2];
-      const diffMinutes = (last.contactedAt.getTime() - prev.contactedAt.getTime()) / (60 * 1000);
-      if (diffMinutes < minContactIntervalMinutes) {
-        reasons.push(`Khoảng cách giữa 2 lần liên hệ gần nhất chưa đủ ${minContactIntervalMinutes} phút`);
-      }
+    if (contactCount < minContactAttempts) {
+      reasons.push(`Chưa đủ số lần liên hệ tối thiểu theo chính sách (yêu cầu: ${minContactAttempts} lần, hiện có: ${contactCount} lần)`);
+    } else if (contactCount >= 2 && !intervalPassed) {
+      reasons.push(`Khoảng cách giữa 2 lần liên hệ gần nhất chưa đủ ${minContactIntervalMinutes} phút`);
     }
 
     const remainingGraceMinutes = Math.max(0, Math.ceil((graceTime.getTime() - now.getTime()) / (60 * 1000)));
@@ -255,8 +279,9 @@ export class AdminAppointmentsService {
       gracePeriodMinutes,
       graceTime,
       minContactAttempts,
-      contactAttempts: appt.contactLogs.length,
+      contactAttempts: contactCount,
       remainingGraceMinutes,
+      details,
     };
   }
 
@@ -368,9 +393,14 @@ export class AdminAppointmentsService {
     ipAddress?: string,
     userAgent?: string,
   ) {
+    const trimmedReason = dto?.reason?.trim();
+    if (!trimmedReason || trimmedReason.length < 5) {
+      throw new BadRequestException('Vui lòng nhập lý do khôi phục rõ ràng (tối thiểu 5 ký tự)');
+    }
+
     const existing = await this.prisma.appointment.findUnique({
       where: { id },
-      include: { payment: true },
+      include: { payment: true, slot: true },
     });
 
     if (!existing) throw new NotFoundException('Lịch khám không tồn tại');
@@ -378,8 +408,7 @@ export class AdminAppointmentsService {
       throw new BadRequestException(`Lịch khám không ở trạng thái NO_SHOW (hiện tại: ${existing.status}). Không thể khôi phục.`);
     }
 
-    const restoredStatus: AppointmentStatus =
-      existing.payment?.status === 'PAID' ? AppointmentStatus.PAID : AppointmentStatus.CONFIRMED;
+    const restoredStatus: AppointmentStatus = AppointmentStatus.CONFIRMED;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const appt = await tx.appointment.update({
@@ -390,11 +419,24 @@ export class AdminAppointmentsService {
         },
       });
 
+      if (existing.slotId && tx.appointmentSlot) {
+        const updatedSlot = await tx.appointmentSlot.update({
+          where: { id: existing.slotId },
+          data: { bookedCount: { increment: 1 } },
+        });
+        if (updatedSlot && updatedSlot.bookedCount >= updatedSlot.capacity && updatedSlot.isAvailable) {
+          await tx.appointmentSlot.update({
+            where: { id: existing.slotId },
+            data: { isAvailable: false },
+          });
+        }
+      }
+
       await tx.appointmentStatusHistory.create({
         data: {
           appointmentId: id,
           status: restoredStatus,
-          note: `Khôi phục lịch khám: ${dto.reason}`,
+          note: `Khôi phục lịch khám: ${trimmedReason}`,
         },
       });
 
@@ -403,7 +445,7 @@ export class AdminAppointmentsService {
           userId: existing.userId,
           type: 'SYSTEM',
           title: 'Khôi phục lịch khám',
-          content: `Lịch hẹn ${existing.bookingCode} đã được cơ sở tiếp nhận và khôi phục trạng thái. Lý do: ${dto.reason}`,
+          content: `Lịch hẹn ${existing.bookingCode} đã được cơ sở tiếp nhận và khôi phục trạng thái. Lý do: ${trimmedReason}`,
           data: { appointmentId: id },
         },
       });
@@ -418,7 +460,7 @@ export class AdminAppointmentsService {
         entityType: 'Appointment',
         entityId: id,
         oldValue: { status: AppointmentStatus.NO_SHOW },
-        newValue: { status: updated.status, reason: dto.reason },
+        newValue: { status: updated.status, reason: trimmedReason },
         ipAddress,
         userAgent,
       });
@@ -440,14 +482,48 @@ export class AdminAppointmentsService {
       include: {
         slot: { include: { doctorWorkplace: true } },
         medicalEncounter: true,
+        payment: true,
       },
     });
     if (!existing) throw new NotFoundException('Lịch khám không tồn tại');
 
-    if (status === AppointmentStatus.NO_SHOW) {
-      if (existing.status === AppointmentStatus.NO_SHOW) {
-        return existing; // Idempotent no-op
+    // Idempotent no-op when target status equals current status
+    if (status === existing.status) {
+      return existing;
+    }
+
+    // Enforce valid state machine transitions
+    const allowedTransitions: Record<string, AppointmentStatus[]> = {
+      [AppointmentStatus.CONFIRMED]: [AppointmentStatus.PENDING],
+      [AppointmentStatus.COMPLETED]: [AppointmentStatus.CONFIRMED, AppointmentStatus.PAID],
+      [AppointmentStatus.CANCELLED]: [
+        AppointmentStatus.PENDING,
+        AppointmentStatus.CONFIRMED,
+        AppointmentStatus.PAID,
+      ],
+      [AppointmentStatus.NO_SHOW]: [AppointmentStatus.CONFIRMED, AppointmentStatus.PAID],
+    };
+
+    if (!allowedTransitions[status]?.includes(existing.status)) {
+      throw new BadRequestException(
+        `Không thể chuyển trạng thái lịch hẹn từ ${existing.status} sang ${status}`,
+      );
+    }
+
+    const trimmedNote = note?.trim();
+
+    if (status === AppointmentStatus.CANCELLED) {
+      if (!trimmedNote) {
+        throw new BadRequestException('Vui lòng nhập lý do hủy lịch hẹn');
       }
+      if (existing.medicalEncounter && existing.medicalEncounter.status !== 'CANCELLED') {
+        throw new BadRequestException(
+          'Không thể hủy lịch đã phát sinh hồ sơ khám; cần xử lý hồ sơ theo quy trình riêng',
+        );
+      }
+    }
+
+    if (status === AppointmentStatus.NO_SHOW) {
       const eligibility = await this.validateNoShowEligibility(id);
       if (!eligibility.eligible) {
         throw new BadRequestException(`Không đủ điều kiện xác nhận NO_SHOW: ${eligibility.reasons.join('. ')}`);
@@ -455,56 +531,114 @@ export class AdminAppointmentsService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
       const appt = await tx.appointment.update({
         where: { id },
         data: {
           status,
-          noShowAt: status === AppointmentStatus.NO_SHOW ? new Date() : existing.noShowAt,
-          completedAt: status === AppointmentStatus.COMPLETED ? new Date() : existing.completedAt,
+          noShowAt: status === AppointmentStatus.NO_SHOW ? now : existing.noShowAt,
+          completedAt: status === AppointmentStatus.COMPLETED ? now : existing.completedAt,
+          cancelledAt: status === AppointmentStatus.CANCELLED ? now : existing.cancelledAt,
         },
       });
+
+      // Release slot capacity when appointment is cancelled or marked NO_SHOW
+      if (
+        (status === AppointmentStatus.CANCELLED || status === AppointmentStatus.NO_SHOW) &&
+        existing.slotId &&
+        tx.appointmentSlot
+      ) {
+        await tx.appointmentSlot.updateMany({
+          where: { id: existing.slotId, bookedCount: { gt: 0 } },
+          data: { bookedCount: { decrement: 1 } },
+        });
+        const refreshedSlot = await tx.appointmentSlot.findUnique({
+          where: { id: existing.slotId },
+        });
+        if (refreshedSlot && refreshedSlot.bookedCount < refreshedSlot.capacity && !refreshedSlot.isAvailable) {
+          await tx.appointmentSlot.update({
+            where: { id: existing.slotId },
+            data: { isAvailable: true },
+          });
+        }
+      }
+
+      const historyNote =
+        status === AppointmentStatus.CANCELLED
+          ? `Hủy lịch hẹn: ${trimmedNote}`
+          : status === AppointmentStatus.NO_SHOW
+            ? trimmedNote || 'Xác nhận bệnh nhân không đến khám (đã quá giờ ân hạn và hoàn tất liên hệ)'
+            : status === AppointmentStatus.CONFIRMED
+              ? trimmedNote || 'Cơ sở y tế đã xác nhận lịch hẹn'
+              : status === AppointmentStatus.COMPLETED
+                ? trimmedNote || 'Đã hoàn thành khám bệnh'
+                : trimmedNote || `Admin cập nhật trạng thái lịch khám sang ${status}`;
 
       await tx.appointmentStatusHistory.create({
         data: {
           appointmentId: id,
           status,
-          note: note || (status === AppointmentStatus.NO_SHOW
-            ? 'Xác nhận bệnh nhân không đến khám (đã quá giờ ân hạn và hoàn tất liên hệ)'
-            : `Admin cập nhật trạng thái lịch khám sang ${status}`),
+          note: historyNote,
         },
       });
 
       if (status === AppointmentStatus.COMPLETED) {
-        await tx.paymentTransaction.upsert({
-          where: { appointmentId: id },
-          update: {
-            status: 'PAID',
-            paidAt: new Date(),
-          },
-          create: {
-            appointmentId: id,
-            amount: existing.totalPrice,
-            paymentMethod: 'CASH',
-            transactionCode: `CASH-${existing.bookingCode}`,
-            status: 'PAID',
-            paidAt: new Date(),
-          },
-        });
+        if (existing.payment?.status !== 'PAID') {
+          await tx.paymentTransaction.upsert({
+            where: { appointmentId: id },
+            update: {
+              status: 'PAID',
+              paidAt: now,
+            },
+            create: {
+              appointmentId: id,
+              amount: existing.totalPrice,
+              paymentMethod: 'CASH',
+              transactionCode: `CASH-${existing.bookingCode}`,
+              status: 'PAID',
+              paidAt: now,
+            },
+          });
+        }
       }
 
-      if (status !== existing.status) {
-        await tx.notification.create({
-          data: {
-            userId: existing.userId,
-            type: status === AppointmentStatus.CANCELLED ? 'CANCELLED' : 'SYSTEM',
-            title: status === AppointmentStatus.NO_SHOW ? 'Thông báo lịch khám' : 'Cập nhật lịch khám',
-            content: status === AppointmentStatus.NO_SHOW
-              ? `Cơ sở y tế đã ghi nhận bạn không đến khám theo lịch hẹn ${existing.bookingCode}. Nếu có nhầm lẫn hoặc cần hỗ trợ, vui lòng liên hệ cơ sở y tế.`
-              : `Lịch ${existing.bookingCode} đã được cập nhật: ${note || status}.`,
-            data: { appointmentId: id, status },
-          },
-        });
-      }
+      const notificationTitle =
+        status === AppointmentStatus.CANCELLED
+          ? 'Lịch khám đã bị hủy'
+          : status === AppointmentStatus.CONFIRMED
+            ? 'Lịch khám đã được xác nhận'
+            : status === AppointmentStatus.COMPLETED
+              ? 'Hoàn thành buổi khám'
+              : status === AppointmentStatus.NO_SHOW
+                ? 'Thông báo lịch khám'
+                : 'Cập nhật lịch khám';
+
+      const notificationContent =
+        status === AppointmentStatus.NO_SHOW
+          ? `Cơ sở y tế đã ghi nhận bạn không đến khám theo lịch hẹn ${existing.bookingCode}. Nếu có nhầm lẫn hoặc cần hỗ trợ, vui lòng liên hệ cơ sở y tế.`
+          : status === AppointmentStatus.CANCELLED
+            ? `Lịch hẹn ${existing.bookingCode} đã bị hủy bởi cơ sở y tế. Lý do: ${trimmedNote}.`
+            : status === AppointmentStatus.CONFIRMED
+              ? `Lịch hẹn ${existing.bookingCode} của bạn đã được cơ sở y tế xác nhận.`
+              : status === AppointmentStatus.COMPLETED
+                ? `Lịch hẹn ${existing.bookingCode} đã hoàn thành khám. Cảm ơn bạn đã sử dụng dịch vụ của NovaCare.`
+                : `Lịch ${existing.bookingCode} đã được cập nhật: ${trimmedNote || status}.`;
+
+      await tx.notification.create({
+        data: {
+          userId: existing.userId,
+          type:
+            status === AppointmentStatus.CANCELLED
+              ? 'CANCELLED'
+              : status === AppointmentStatus.CONFIRMED
+                ? 'BOOKING_CONFIRMED'
+                : 'SYSTEM',
+          title: notificationTitle,
+          content: notificationContent,
+          data: { appointmentId: id, status },
+        },
+      });
+
       return appt;
     });
 
@@ -515,7 +649,7 @@ export class AdminAppointmentsService {
         entityType: 'Appointment',
         entityId: id,
         oldValue: { status: existing.status },
-        newValue: { status: updated.status, note },
+        newValue: { status: updated.status, note: trimmedNote },
         ipAddress,
         userAgent,
       });

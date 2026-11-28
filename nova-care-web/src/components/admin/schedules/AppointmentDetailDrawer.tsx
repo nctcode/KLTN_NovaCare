@@ -1,17 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth.store';
+import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/services/admin.service';
 import { useAdminTheme } from '@/components/admin/AdminThemeContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Phone, RotateCcw, Pencil } from 'lucide-react';
-import { toast } from 'sonner';
-import { RecordContactModal } from './RecordContactModal';
-import { NoShowConfirmModal } from './NoShowConfirmModal';
-import { RevertNoShowModal } from './RevertNoShowModal';
+import { Loader2 } from 'lucide-react';
 import { AiScreeningAppointmentCard } from './AiScreeningAppointmentCard';
 
 const STATUS_BADGE: Record<string, { label: string; styleDark: string; styleLight: string }> = {
@@ -31,49 +25,13 @@ interface AppointmentDetailDrawerProps {
 }
 
 export function AppointmentDetailDrawer({ appointmentId, open, onClose }: AppointmentDetailDrawerProps) {
-  const queryClient = useQueryClient();
-  const { user: currentUser } = useAuthStore();
-  const canOperateAppointments = currentUser?.role === 'HOSPITAL_ADMIN';
   const { theme } = useAdminTheme();
   const isLight = theme === 'light';
-
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [showNoShowModal, setShowNoShowModal] = useState(false);
-  const [showRevertModal, setShowRevertModal] = useState(false);
-  const [showStatusEditor, setShowStatusEditor] = useState(false);
-  const [nextStatus, setNextStatus] = useState('');
-  const [statusNote, setStatusNote] = useState('');
 
   const { data: appt, isLoading } = useQuery({
     queryKey: ['admin-appointment-detail', appointmentId],
     queryFn: () => adminService.getAppointmentDetail(appointmentId!),
     enabled: !!appointmentId && open,
-  });
-
-  const checkInMutation = useMutation({
-    mutationFn: () => adminService.checkInAppointment(appointmentId!, { note: 'Tiếp đón tại quầy' }),
-    onSuccess: () => {
-      toast.success('Xác nhận tiếp đón và check-in thành công');
-      queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-appointment-detail', appointmentId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || err.message || 'Không thể check-in');
-    },
-  });
-
-  const statusMutation = useMutation({
-    mutationFn: () => adminService.updateAppointmentStatus(appointmentId!, nextStatus, statusNote.trim() || undefined),
-    onSuccess: () => {
-      toast.success('Cập nhật trạng thái lịch hẹn thành công');
-      setShowStatusEditor(false);
-      setStatusNote('');
-      queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-appointment-detail', appointmentId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-appointment-stats'] });
-    },
-    onError: (err: any) => toast.error(err?.response?.data?.message || err.message || 'Không thể cập nhật trạng thái'),
   });
 
   const st = appt ? STATUS_BADGE[appt.status] || { label: appt.status, styleDark: 'bg-slate-800 text-slate-300 border-slate-700', styleLight: 'bg-slate-100 text-slate-700 border-slate-200' } : null;
@@ -87,9 +45,6 @@ export function AppointmentDetailDrawer({ appointmentId, open, onClose }: Appoin
   const user = appt?.user;
   const payment = appt?.payment;
   const service = appt?.medicalService;
-
-  const editableStatuses = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
-  const requiresStatusNote = nextStatus === 'CANCELLED';
 
   const slotStartTime = slot?.startTime ? new Date(slot.startTime) : null;
   const slotEndTime = slot?.endTime ? new Date(slot.endTime) : null;
